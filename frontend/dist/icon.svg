@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A8A" />
+      <stop offset="100%" stop-color="#2563EB" />
+    </linearGradient>
+    <linearGradient id="box" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+  </defs>
+  <!-- Background with rounded corners -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  
+  <!-- Isometric Box / Inventory symbol -->
+  <g transform="translate(256, 260)">
+    <!-- Top Face -->
+    <polygon points="0,-120 120,-50 0,20 -120,-50" fill="#60A5FA" />
+    <!-- Left Face -->
+    <polygon points="-120,-50 0,20 0,140 -120,70" fill="url(#box)" />
+    <!-- Right Face -->
+    <polygon points="0,20 120,-50 120,70 0,140" fill="#0369A1" />
+    <!-- Tape / Ribbon -->
+    <polygon points="-30,-67 0,-50 0,140 -30,123" fill="#F59E0B" opacity="0.9" />
+    <polygon points="0,-50 30,-67 30,123 0,140" fill="#D97706" opacity="0.9" />
+    <!-- Scanner beam line -->
+    <line x1="-160" y1="-10" x2="160" y2="-10" stroke="#34D399" stroke-width="8" stroke-linecap="round" />
+  </g>
+</svg>
