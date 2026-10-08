@@ -1,10 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import QRCode from 'qrcode';
 import jsPDF from 'jspdf';
-import { X, Printer, Download, ExternalLink, QrCode as QrIcon, CheckCircle2 } from 'lucide-react';
+import { X, Printer, Download, QrCode as QrIcon, CheckCircle2 } from 'lucide-react';
 import { Location } from '../types/database';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE_URL } from '../lib/supabase';
 
 interface LocationLabelModalProps {
   location: Location | null;
@@ -201,7 +200,6 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
   const handleDownloadClientPDF = async () => {
     try {
       setIsExporting(true);
-      // Crear documento jsPDF con formato exacto de tarjeta de crédito (85.6 x 53.9 mm)
       const doc = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
@@ -280,30 +278,30 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
         {/* Cabecera */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-800">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-blue-600/20 text-blue-400 rounded-lg">
+            <div className="p-2 bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl">
               <QrIcon className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-semibold text-white text-base">Etiqueta de Ubicación</h3>
-              <p className="text-xs text-slate-400">Dimensiones de Tarjeta de Crédito (85.6 mm × 53.9 mm)</p>
+              <h3 className="font-bold text-slate-900 dark:text-white text-base">Etiqueta de Ubicación</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Dimensiones de Tarjeta de Crédito (85.6 mm × 53.9 mm)</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Vista previa en escala real */}
-        <div className="p-6 bg-slate-950 flex flex-col items-center justify-center">
-          <div className="text-xs text-slate-500 mb-3 flex items-center gap-1.5">
+        <div className="p-6 bg-slate-100 dark:bg-slate-950 flex flex-col items-center justify-center">
+          <div className="text-xs text-slate-500 mb-3 flex items-center gap-1.5 font-medium">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
             Vista previa exacta para impresión térmica / tarjeta plástica
           </div>
@@ -359,7 +357,7 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
         </div>
 
         {/* Acciones */}
-        <div className="p-4 bg-slate-900 border-t border-slate-800 flex flex-wrap gap-2.5 justify-end">
+        <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex flex-wrap gap-2.5 justify-end">
           <button
             onClick={handlePrint}
             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95"
@@ -370,7 +368,7 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
           <button
             onClick={handleDownloadClientPDF}
             disabled={isExporting}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition-all active:scale-95"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 transition-all active:scale-95"
           >
             <Download className="w-4 h-4" /> Exportar a PDF (85.6×53.9 mm)
           </button>

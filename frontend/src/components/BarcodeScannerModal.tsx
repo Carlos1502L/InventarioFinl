@@ -150,17 +150,17 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
         {/* Cabecera */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/80">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/80">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-blue-600/20 text-blue-400 rounded-lg">
+            <div className="p-2 bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl">
               <Camera className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-semibold text-white text-base">{title}</h3>
-              <p className="text-xs text-slate-400">Escáner Óptico de Alta Velocidad</p>
+              <h3 className="font-bold text-slate-900 dark:text-white text-base">{title}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Escáner Óptico de Alta Velocidad</p>
             </div>
           </div>
           <button
@@ -168,7 +168,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
               stopScanner();
               onClose();
             }}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -200,7 +200,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
               <p className="text-sm text-slate-200 mb-4">{errorMsg}</p>
               <button
                 onClick={() => startScanner(selectedCameraId)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow transition-all active:scale-95"
               >
                 <RefreshCw className="w-3.5 h-3.5" /> Reintentar Conexión
               </button>
@@ -209,19 +209,19 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
         </div>
 
         {/* Controles y Selector de Cámara */}
-        <div className="p-4 bg-slate-900 border-t border-slate-800 space-y-3">
-          <p className="text-xs text-slate-400 text-center">{instructions}</p>
+        <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 space-y-3">
+          <p className="text-xs text-slate-500 dark:text-slate-400 text-center">{instructions}</p>
 
           {cameras.length > 1 && (
-            <div className="flex items-center justify-between text-xs text-slate-300 bg-slate-800/60 p-2 rounded-xl">
-              <span className="text-slate-400">Cámara:</span>
+            <div className="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="text-slate-500 dark:text-slate-400">Cámara:</span>
               <select
                 value={selectedCameraId}
                 onChange={(e) => {
                   setSelectedCameraId(e.target.value);
                   startScanner(e.target.value);
                 }}
-                className="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-blue-500 outline-none"
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-blue-500 outline-none"
               >
                 {cameras.map((cam, idx) => (
                   <option key={cam.id} value={cam.id}>
@@ -232,7 +232,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
             </div>
           )}
 
-          <div className="flex items-center justify-center gap-2 text-[11px] text-slate-500">
+          <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 dark:text-slate-500">
             <Volume2 className="w-3 h-3" /> Pitido y vibración háptica activados al detectar
           </div>
         </div>

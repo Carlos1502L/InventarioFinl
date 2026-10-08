@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { X, Layers, Plus, CheckCircle, Shield, Users, ArrowRight, Loader2 } from 'lucide-react';
-import { Inventory } from '../types/database';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -77,19 +76,19 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/85 backdrop-blur-md p-4 animate-in fade-in">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
         {/* Cabecera */}
-        <div className="p-6 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl">
+            <div className="p-2.5 bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-2xl">
               <Layers className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-extrabold text-white">
+              <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
                 ¿A qué inventario deseas ingresar hoy?
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Selecciona tu espacio de trabajo o crea uno nuevo
               </p>
             </div>
@@ -97,7 +96,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
           {currentInventory && (
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
+              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -107,7 +106,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
         {/* Lista de Inventarios o Formulario de Creación */}
         <div className="p-6 overflow-y-auto max-h-[60vh] space-y-3">
           {errorMsg && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-400">
+            <div className="p-3 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-xl text-xs text-rose-600 dark:text-rose-400">
               {errorMsg}
             </div>
           )}
@@ -127,20 +126,20 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                     }}
                     className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group ${
                       isSelected
-                        ? 'bg-blue-600/10 border-blue-500 ring-1 ring-blue-500'
-                        : 'bg-slate-800/50 border-slate-800 hover:border-slate-700 hover:bg-slate-800'
+                        ? 'bg-blue-50/80 dark:bg-blue-600/10 border-blue-500 ring-2 ring-blue-500/20'
+                        : 'bg-slate-50/70 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-100/70 dark:hover:bg-slate-800'
                     }`}
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-white text-base group-hover:text-blue-400 transition-colors">
+                        <h4 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           {inv.name}
                         </h4>
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 ${
                             isOwner
-                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                              : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                              ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30'
+                              : 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30'
                           }`}
                         >
                           {isOwner ? <Shield className="w-2.5 h-2.5" /> : <Users className="w-2.5 h-2.5" />}
@@ -148,9 +147,9 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                         </span>
                       </div>
                       {inv.description && (
-                        <p className="text-xs text-slate-400 line-clamp-1">{inv.description}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{inv.description}</p>
                       )}
-                      <span className="text-[11px] text-slate-500 font-mono block">
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono block">
                         Moneda: {inv.currency || 'USD'}
                       </span>
                     </div>
@@ -161,7 +160,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                           <CheckCircle className="w-4 h-4" />
                         </div>
                       ) : (
-                        <div className="p-2 text-slate-500 group-hover:text-slate-200 rounded-xl transition-colors">
+                        <div className="p-2 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 rounded-xl transition-colors">
                           <ArrowRight className="w-4 h-4" />
                         </div>
                       )}
@@ -173,7 +172,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsCreatingNew(true)}
-                className="w-full mt-2 p-3.5 border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-2xl text-xs font-semibold text-slate-400 hover:text-blue-400 transition-all flex items-center justify-center gap-2 bg-slate-800/30"
+                className="w-full mt-2 p-3.5 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-2xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all flex items-center justify-center gap-2 bg-slate-50/50 dark:bg-slate-800/30"
               >
                 <Plus className="w-4 h-4" /> Crear un Nuevo Inventario
               </button>
@@ -182,8 +181,8 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
             /* Formulario de Nuevo Inventario */
             <form onSubmit={handleCreateInventory} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Nombre del Inventario <span className="text-blue-400">*</span>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Nombre del Inventario <span className="text-blue-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -191,12 +190,12 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                   onChange={e => setNewInvName(e.target.value)}
                   placeholder="Ej: Sucursal Norte, Depósito Central..."
                   required
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Descripción (Opcional)
                 </label>
                 <input
@@ -204,18 +203,18 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                   value={newInvDesc}
                   onChange={e => setNewInvDesc(e.target.value)}
                   placeholder="Ej: Inventario de herramientas y repuestos de Lima..."
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Moneda Predeterminada
                 </label>
                 <select
                   value={newInvCurrency}
                   onChange={e => setNewInvCurrency(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
                 >
                   <option value="USD">Dólar Estadounidense ($ USD)</option>
                   <option value="PEN">Soles Peruanos (S/ PEN)</option>
@@ -229,14 +228,14 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsCreatingNew(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 rounded-xl"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
                 >
                   Volver a la Lista
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-50 transition-all active:scale-95"
                 >
                   {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                   Crear e Ingresar

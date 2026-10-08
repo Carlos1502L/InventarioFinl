@@ -4,13 +4,7 @@ import {
   Download,
   FileSpreadsheet,
   FileCode,
-  Filter,
-  Package,
-  MapPin,
-  Tag,
-  DollarSign,
-  Loader2,
-  Calendar
+  Loader2
 } from 'lucide-react';
 import { Product, Category, Subcategory, Location } from '../types/database';
 import { formatCurrency, API_BASE_URL } from '../lib/supabase';
@@ -64,7 +58,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
   const totalUnits = reportProducts.reduce((sum, p) => sum + (p.stock || 0), 0);
   const totalValuation = reportProducts.reduce((sum, p) => sum + ((p.stock || 0) * (p.price || 0)), 0);
 
-  // 1. Exportar PDF (Intenta Backend Render, con fallback de jsPDF en el navegador)
+  // 1. Exportar PDF
   const handleExportPDF = async () => {
     if (!currentInventory) return;
     try {
@@ -100,7 +94,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         }
       }
 
-      // Fallback nativo en cliente usando jsPDF si el backend de Render aún no está conectado
+      // Fallback nativo en cliente usando jsPDF
       if (!downloadedFromBackend) {
         const doc = new jsPDF();
         doc.setFontSize(16);
@@ -175,11 +169,10 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
             downloadedFromBackend = true;
           }
         } catch {
-          // Continuar a fallback
+          // Fallback a CSV
         }
       }
 
-      // Si no hay backend, exportar CSV estructurado con extensión legible por Excel
       if (!downloadedFromBackend) {
         handleExportCSV();
       }
@@ -223,13 +216,13 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
   return (
     <div className="space-y-6 pb-20 sm:pb-8">
       {/* 1. Cabecera y Resumen Ejecutivo */}
-      <div className="bg-slate-800/60 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 shadow-sm transition-colors">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-extrabold text-white flex items-center gap-2.5">
-              <FileText className="w-6 h-6 text-blue-400" /> Generador de Reportes de Inventario
+            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2.5">
+              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" /> Generador de Reportes de Inventario
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Filtra por almacén o categoría y exporta en formatos ejecutivos
             </p>
           </div>
@@ -239,7 +232,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
             <button
               onClick={handleExportPDF}
               disabled={isExportingPDF || reportProducts.length === 0}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-rose-600/20 disabled:opacity-50 transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-xl shadow-md shadow-rose-500/20 disabled:opacity-50 transition-all active:scale-95"
             >
               {isExportingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
               PDF
@@ -248,7 +241,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
             <button
               onClick={handleExportExcel}
               disabled={isExportingExcel || reportProducts.length === 0}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-emerald-600/20 disabled:opacity-50 transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-500/20 disabled:opacity-50 transition-all active:scale-95"
             >
               {isExportingExcel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
               Excel (.xlsx)
@@ -257,7 +250,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
             <button
               onClick={handleExportCSV}
               disabled={isExportingCSV || reportProducts.length === 0}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-xl border border-slate-600 disabled:opacity-50 transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-50 transition-all active:scale-95"
             >
               {isExportingCSV ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileCode className="w-3.5 h-3.5" />}
               CSV
@@ -266,20 +259,20 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         </div>
 
         {/* Tarjetas de Métricas del Reporte */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-700/60">
-          <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
-            <span className="text-[11px] text-slate-400 font-semibold block">Productos Seleccionados</span>
-            <span className="text-lg font-extrabold text-white">{reportProducts.length} ítems</span>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-750">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Productos Seleccionados</span>
+            <span className="text-lg font-extrabold text-slate-900 dark:text-white">{reportProducts.length} ítems</span>
           </div>
 
-          <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
-            <span className="text-[11px] text-slate-400 font-semibold block">Total de Unidades</span>
-            <span className="text-lg font-extrabold text-blue-400">{totalUnits} uds</span>
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-750">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Total de Unidades</span>
+            <span className="text-lg font-extrabold text-blue-600 dark:text-blue-400">{totalUnits} uds</span>
           </div>
 
-          <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 col-span-2 sm:col-span-1">
-            <span className="text-[11px] text-slate-400 font-semibold block">Valorización Total</span>
-            <span className="text-lg font-extrabold text-emerald-400">
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-750 col-span-2 sm:col-span-1">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Valorización Total</span>
+            <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">
               {formatCurrency(totalValuation, currentInventory?.currency)}
             </span>
           </div>
@@ -287,16 +280,16 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
       </div>
 
       {/* 2. Filtros de Generación */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-4 gap-3 shadow-sm transition-colors">
         <div>
-          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Filtrar por Categoría</label>
+          <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Filtrar por Categoría</label>
           <select
             value={filterCategory}
             onChange={e => {
               setFilterCategory(e.target.value);
               setFilterSubcategory('ALL');
             }}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="ALL">Todas las Categorías</option>
             {categories.map(c => (
@@ -306,12 +299,12 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         </div>
 
         <div>
-          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Filtrar por Subcategoría</label>
+          <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Filtrar por Subcategoría</label>
           <select
             value={filterSubcategory}
             onChange={e => setFilterSubcategory(e.target.value)}
             disabled={filterCategory === 'ALL' || activeSubcategories.length === 0}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
           >
             <option value="ALL">Todas las Subcategorías</option>
             {activeSubcategories.map(s => (
@@ -321,11 +314,11 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         </div>
 
         <div>
-          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Filtrar por Ubicación Física</label>
+          <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Filtrar por Ubicación Física</label>
           <select
             value={filterLocation}
             onChange={e => setFilterLocation(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="ALL">Todas las Ubicaciones</option>
             {locations.map(l => (
@@ -335,11 +328,11 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         </div>
 
         <div>
-          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Filtrar por Estado</label>
+          <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Filtrar por Estado</label>
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="ALL">Todos los Estados</option>
             <option value="ACTIVE">Activos en Stock</option>
@@ -349,9 +342,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
       </div>
 
       {/* 3. Tabla Interactiva de Datos */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-300">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm transition-colors">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
             Vista Previa de Datos del Reporte ({reportProducts.length} registros)
           </span>
         </div>
@@ -359,7 +352,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-800/80 text-slate-300 border-b border-slate-700">
+              <tr className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
                 <th className="p-3 font-semibold">CÓDIGO</th>
                 <th className="p-3 font-semibold">PRODUCTO</th>
                 <th className="p-3 font-semibold">CATEGORÍA</th>
@@ -370,32 +363,32 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
                 <th className="p-3 font-semibold text-center">ESTADO</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {reportProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-500">
+                  <td colSpan={8} className="p-8 text-center text-slate-400">
                     No hay productos que coincidan con los filtros seleccionados.
                   </td>
                 </tr>
               ) : (
                 reportProducts.map(p => (
-                  <tr key={p.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="p-3 font-mono font-medium text-blue-400">{p.code}</td>
-                    <td className="p-3 font-bold text-white max-w-[200px] truncate">{p.name}</td>
-                    <td className="p-3 text-slate-300">{p.categories?.name || 'General'}</td>
-                    <td className="p-3 text-slate-300">{p.locations?.name || '-'}</td>
-                    <td className="p-3 text-right text-slate-200">
+                  <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="p-3 font-mono font-medium text-blue-600 dark:text-blue-400">{p.code}</td>
+                    <td className="p-3 font-bold text-slate-900 dark:text-white max-w-[200px] truncate">{p.name}</td>
+                    <td className="p-3 text-slate-600 dark:text-slate-300">{p.categories?.name || 'General'}</td>
+                    <td className="p-3 text-slate-600 dark:text-slate-300">{p.locations?.name || '-'}</td>
+                    <td className="p-3 text-right text-slate-700 dark:text-slate-200">
                       {formatCurrency(p.price, currentInventory?.currency)}
                     </td>
-                    <td className="p-3 text-right font-bold text-white">{p.stock}</td>
-                    <td className="p-3 text-right font-bold text-emerald-400">
+                    <td className="p-3 text-right font-bold text-slate-900 dark:text-white">{p.stock}</td>
+                    <td className="p-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
                       {formatCurrency((p.price || 0) * (p.stock || 0), currentInventory?.currency)}
                     </td>
                     <td className="p-3 text-center">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                         p.status === 'ACTIVE'
-                          ? 'bg-emerald-500/10 text-emerald-400'
-                          : 'bg-rose-500/10 text-rose-400'
+                          ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
+                          : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20'
                       }`}>
                         {p.status === 'ACTIVE' ? 'Activo' : 'Baja'}
                       </span>

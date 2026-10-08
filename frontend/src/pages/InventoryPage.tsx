@@ -3,15 +3,10 @@ import {
   Search,
   Plus,
   Camera,
-  Filter,
   Grid,
   List,
   MapPin,
-  Tag,
   Package,
-  AlertTriangle,
-  Layers,
-  ChevronDown,
   RefreshCw,
   SlidersHorizontal
 } from 'lucide-react';
@@ -95,7 +90,6 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
   // Manejar escaneo desde la barra de búsqueda
   const handleBarcodeSearch = (scannedCode: string) => {
     setSearchTerm(scannedCode);
-    // Si hay coincidencia exacta de producto, abrirlo de inmediato
     const exactMatch = products.find(p => p.code.toLowerCase() === scannedCode.toLowerCase());
     if (exactMatch) {
       onSelectProduct(exactMatch);
@@ -115,22 +109,22 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Buscar por nombre, SKU o código..."
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-white"
+                className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-white"
               >
                 ✕
               </button>
             )}
           </div>
 
-          {/* Botón de Escaneo Directo desde la Barra de Búsqueda */}
+          {/* Botón de Escaneo Directo */}
           <button
             onClick={() => setSearchScannerOpen(true)}
-            className="px-3.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-xl flex items-center justify-center transition-all active:scale-95"
+            className="px-3.5 bg-blue-50 dark:bg-blue-600/20 hover:bg-blue-100 dark:hover:bg-blue-600/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 rounded-xl flex items-center justify-center transition-all active:scale-95 shadow-sm"
             title="Escanear código de producto con la cámara"
           >
             <Camera className="w-4 h-4" />
@@ -139,10 +133,10 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
           {/* Toggle de Filtros Avanzados */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`px-3.5 rounded-xl border flex items-center justify-center transition-all ${
+            className={`px-3.5 rounded-xl border flex items-center justify-center transition-all shadow-sm ${
               showFilters || selectedCategory !== 'ALL' || selectedLocation !== 'ALL'
-                ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-600/20'
-                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-blue-500/20'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750'
             }`}
             title="Filtros"
           >
@@ -152,11 +146,13 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
         {/* Acciones de la Derecha: Toggle de Vista y Botón Nuevo */}
         <div className="flex items-center gap-2 justify-between sm:justify-end">
-          <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
+          <div className="flex items-center bg-white dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
             <button
               onClick={() => setViewMode('grid')}
               className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'grid' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                viewMode === 'grid'
+                  ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-white'
               }`}
               title="Vista en Cuadrícula"
             >
@@ -165,7 +161,9 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             <button
               onClick={() => setViewMode('list')}
               className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'list' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                viewMode === 'list'
+                  ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-white'
               }`}
               title="Vista en Lista"
             >
@@ -175,7 +173,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
           <button
             onClick={onOpenCreateModal}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95 whitespace-nowrap"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition-all active:scale-95 whitespace-nowrap"
           >
             <Plus className="w-4 h-4" /> Nuevo Producto
           </button>
@@ -184,17 +182,16 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
       {/* 2. Panel Desplegable de Filtros */}
       {showFilters && (
-        <div className="p-4 bg-slate-800/80 border border-slate-700/80 rounded-2xl grid grid-cols-1 sm:grid-cols-4 gap-3 animate-in fade-in">
-          {/* Categoría */}
+        <div className="p-4 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-2xl grid grid-cols-1 sm:grid-cols-4 gap-3 shadow-sm animate-in fade-in transition-colors">
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 mb-1">Categoría</label>
+            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Categoría</label>
             <select
               value={selectedCategory}
               onChange={e => {
                 setSelectedCategory(e.target.value);
                 setSelectedSubcategory('ALL');
               }}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="ALL">Todas las Categorías</option>
               {categories.map(c => (
@@ -203,14 +200,13 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </select>
           </div>
 
-          {/* Subcategoría */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 mb-1">Subcategoría</label>
+            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Subcategoría</label>
             <select
               value={selectedSubcategory}
               onChange={e => setSelectedSubcategory(e.target.value)}
               disabled={selectedCategory === 'ALL' || activeSubcategories.length === 0}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
             >
               <option value="ALL">Todas las Subcategorías</option>
               {activeSubcategories.map(s => (
@@ -219,13 +215,12 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </select>
           </div>
 
-          {/* Ubicación */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 mb-1">Ubicación Física</label>
+            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Ubicación Física</label>
             <select
               value={selectedLocation}
               onChange={e => setSelectedLocation(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="ALL">Todas las Ubicaciones</option>
               {locations.map(l => (
@@ -234,13 +229,12 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </select>
           </div>
 
-          {/* Estado */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 mb-1">Estado</label>
+            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Estado</label>
             <select
               value={selectedStatus}
               onChange={e => setSelectedStatus(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="ALL">Todos los Estados</option>
               <option value="ACTIVE">Activos en Stock</option>
@@ -251,13 +245,13 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
       )}
 
       {/* 3. Conteo de Resultados y Feedback */}
-      <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
         <span>
-          Mostrando <strong>{filteredProducts.length}</strong> de {products.length} productos
+          Mostrando <strong className="text-slate-800 dark:text-slate-200">{filteredProducts.length}</strong> de {products.length} productos
         </span>
         <button
           onClick={onRefresh}
-          className="inline-flex items-center gap-1 text-slate-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Actualizar
         </button>
@@ -265,23 +259,23 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
       {/* 4. Lista o Grid de Productos */}
       {filteredProducts.length === 0 ? (
-        <div className="p-12 text-center bg-slate-900/50 rounded-2xl border border-slate-800 space-y-3">
-          <Package className="w-12 h-12 text-slate-600 mx-auto" />
-          <h4 className="text-base font-bold text-slate-300">No se encontraron productos</h4>
+        <div className="p-12 text-center bg-white dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-sm transition-colors">
+          <Package className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto" />
+          <h4 className="text-base font-bold text-slate-800 dark:text-slate-300">No se encontraron productos</h4>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
             {searchTerm || selectedCategory !== 'ALL' || selectedLocation !== 'ALL'
               ? 'Prueba modificando tus filtros de búsqueda o escanea otro código.'
-              : 'Empieza a construir tu inventario agregando tu primer producto.'}
+              : 'Empieza a registrar existencias pulsando el botón a continuación.'}
           </p>
           <button
             onClick={onOpenCreateModal}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-500/20"
           >
             <Plus className="w-4 h-4" /> Agregar Producto
           </button>
         </div>
       ) : viewMode === 'grid' ? (
-        /* VISTA GRID (Mobile-First 2 columnas en móvil, 4 en desktop) */
+        /* VISTA GRID (Blanco Moderno por defecto) */
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {filteredProducts.map(product => {
             const isLow = product.stock <= (product.min_stock || 5);
@@ -291,10 +285,10 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
               <div
                 key={product.id}
                 onClick={() => onSelectProduct(product)}
-                className="bg-slate-800/60 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden shadow-lg transition-all active:scale-[0.98] cursor-pointer flex flex-col group"
+                className="bg-white dark:bg-slate-800/60 hover:bg-slate-50/80 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer flex flex-col group"
               >
                 {/* Imagen del Producto */}
-                <div className="aspect-square bg-slate-900 relative overflow-hidden flex items-center justify-center">
+                <div className="aspect-square bg-slate-100 dark:bg-slate-900 relative overflow-hidden flex items-center justify-center">
                   {mainPhoto ? (
                     <img
                       src={mainPhoto}
@@ -303,7 +297,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                       loading="lazy"
                     />
                   ) : (
-                    <Package className="w-10 h-10 text-slate-700" />
+                    <Package className="w-10 h-10 text-slate-300 dark:text-slate-700" />
                   )}
 
                   {/* Badge de Stock en la foto */}
@@ -311,7 +305,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md shadow-sm ${
                         product.status !== 'ACTIVE'
-                          ? 'bg-rose-500/90 text-white'
+                          ? 'bg-rose-600/90 text-white'
                           : isLow
                           ? 'bg-amber-500/90 text-white animate-pulse'
                           : 'bg-emerald-600/90 text-white'
@@ -323,7 +317,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
                   {/* Badge de Código en foto */}
                   <div className="absolute bottom-2 left-2">
-                    <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-black/70 text-slate-200 backdrop-blur-md">
+                    <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-black/70 text-white backdrop-blur-md">
                       {product.code}
                     </span>
                   </div>
@@ -332,19 +326,19 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                 {/* Contenido de la tarjeta */}
                 <div className="p-3 flex-1 flex flex-col justify-between space-y-2">
                   <div>
-                    <h4 className="font-bold text-white text-xs sm:text-sm line-clamp-1 group-hover:text-blue-400 transition-colors">
+                    <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                       {product.name}
                     </h4>
                     
                     {/* Ubicación */}
-                    <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-1 truncate">
-                      <MapPin className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                    <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 mt-1 truncate">
+                      <MapPin className="w-3 h-3 text-amber-500 flex-shrink-0" />
                       <span className="truncate">{product.locations?.name || 'Sin ubicación'}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-700/50">
-                    <span className="text-xs sm:text-sm font-extrabold text-white">
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-700/50">
+                    <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white">
                       {formatCurrency(product.price, currentInventory?.currency)}
                     </span>
                     <span className="text-[10px] text-slate-400 truncate max-w-[80px]">
@@ -367,29 +361,29 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
               <div
                 key={product.id}
                 onClick={() => onSelectProduct(product)}
-                className="p-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all active:scale-[0.99] group"
+                className="p-3 bg-white dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all active:scale-[0.99] group shadow-sm"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-700 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex-shrink-0 overflow-hidden flex items-center justify-center">
                     {mainPhoto ? (
                       <img src={mainPhoto} alt={product.name} className="w-full h-full object-cover" />
                     ) : (
-                      <Package className="w-5 h-5 text-slate-600" />
+                      <Package className="w-5 h-5 text-slate-400 dark:text-slate-600" />
                     )}
                   </div>
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-white text-xs sm:text-sm truncate group-hover:text-blue-400 transition-colors">
+                      <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {product.name}
                       </h4>
-                      <span className="font-mono text-[10px] text-slate-400 px-1.5 py-0.2 bg-slate-900 rounded border border-slate-700">
+                      <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 px-1.5 py-0.2 bg-slate-100 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
                         {product.code}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-0.5">
+                    <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                       <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-amber-400" /> {product.locations?.name || '-'}
+                        <MapPin className="w-3 h-3 text-amber-500" /> {product.locations?.name || '-'}
                       </span>
                       <span>•</span>
                       <span>{product.categories?.name || 'General'}</span>
@@ -398,10 +392,10 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                 </div>
 
                 <div className="text-right flex-shrink-0">
-                  <p className="text-xs sm:text-sm font-extrabold text-white">
+                  <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white">
                     {formatCurrency(product.price, currentInventory?.currency)}
                   </p>
-                  <span className={`text-[11px] font-bold ${isLow ? 'text-amber-400' : 'text-slate-400'}`}>
+                  <span className={`text-[11px] font-bold ${isLow ? 'text-amber-500' : 'text-slate-500 dark:text-slate-400'}`}>
                     {product.stock} uds
                   </span>
                 </div>

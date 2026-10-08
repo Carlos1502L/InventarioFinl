@@ -23,10 +23,10 @@ import { CollaboratorsModal } from './components/CollaboratorsModal';
 import { InventorySelectorModal } from './components/InventorySelectorModal';
 import { BarcodeScannerModal } from './components/BarcodeScannerModal';
 
-import { Loader2, Layers } from 'lucide-react';
+import { Loader2, Layers, Plus, Sparkles, AlertCircle } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
-  const { user, loading: authLoading, currentInventory, needsInventorySelection, setNeedsInventorySelection } = useAuth();
+  const { user, loading: authLoading, currentInventory, needsInventorySelection, setNeedsInventorySelection, refreshInventories } = useAuth();
 
   // Estado de Navegación
   const [activeTab, setActiveTab] = useState<TabType>('inventory');
@@ -143,12 +143,12 @@ export const AppContent: React.FC = () => {
   // 1. Pantalla de Carga Inicial
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
-        <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-600/30 animate-pulse">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center space-y-4">
+        <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-500/30 animate-pulse">
           <Layers className="w-6 h-6 text-white" />
         </div>
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
           <span>Iniciando plataforma de inventario...</span>
         </div>
       </div>
@@ -161,7 +161,7 @@ export const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white transition-colors duration-200">
       {/* Barra de Navegación Superior */}
       <Navbar
         onOpenInventorySelector={() => setInventorySelectorOpen(true)}
@@ -172,44 +172,69 @@ export const AppContent: React.FC = () => {
 
       {/* Contenedor Principal Responsive */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 pt-5">
+        {/* Banner si el usuario no tiene inventario activo */}
+        {!currentInventory && (
+          <div className="mb-6 p-6 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-900/50 rounded-3xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-2xl">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  ¡Bienvenido a InventarioCoop!
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Para comenzar a gestionar productos y existencias, crea tu primer inventario de trabajo.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setInventorySelectorOpen(true)}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+            >
+              <Plus className="w-4 h-4" /> Crear Mi Primer Inventario
+            </button>
+          </div>
+        )}
+
         {/* Pestañas de Navegación Desktop */}
-        <div className="hidden sm:flex items-center gap-2 mb-6 border-b border-slate-800 pb-3">
+        <div className="hidden sm:flex items-center gap-2 mb-6 border-b border-slate-200 dark:border-slate-800 pb-3">
           <button
             onClick={() => setActiveTab('inventory')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
               activeTab === 'inventory'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-blue-600 text-white shadow-blue-500/20'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             📦 Módulo Inventario
           </button>
           <button
             onClick={() => setActiveTab('reports')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
               activeTab === 'reports'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-blue-600 text-white shadow-blue-500/20'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             📄 Reportes y Exportación
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
               activeTab === 'analytics'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-blue-600 text-white shadow-blue-500/20'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             📊 Estadísticas y Ocupación
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
               activeTab === 'settings'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-blue-600 text-white shadow-blue-500/20'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             ⚙️ Configuración y Catálogo
@@ -314,7 +339,6 @@ export const AppContent: React.FC = () => {
         onMoved={() => {
           fetchInventoryData();
           if (selectedProduct) {
-            // Refrescar producto seleccionado
             supabase
               .from('products')
               .select('*, categories(*), subcategories(*), locations(*)')

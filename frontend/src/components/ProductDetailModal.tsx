@@ -70,18 +70,18 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const isLowStock = product.stock <= (product.min_stock || 5);
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl my-auto overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl my-auto overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
         {/* Cabecera */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/90 sticky top-0 z-10">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 sticky top-0 z-10">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-lg text-blue-400 font-semibold">
+            <span className="font-mono text-xs px-2.5 py-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-blue-600 dark:text-blue-400 font-semibold">
               {product.code}
             </span>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+            <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
               product.status === 'ACTIVE'
-                ? isLowStock ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                ? isLowStock ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20' : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
+                : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20'
             }`}>
               {product.status === 'ACTIVE' ? (isLowStock ? 'Bajo Stock' : 'Activo') : 'Retirado'}
             </span>
@@ -90,14 +90,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => onEdit(product)}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
               title="Editar Producto"
             >
               <Edit className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -109,7 +109,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           {/* 1. Galería de Fotos (Hasta 3 fotos) */}
           {photos.length > 0 ? (
             <div className="space-y-2">
-              <div className="relative aspect-video sm:aspect-[2/1] rounded-2xl overflow-hidden bg-black/60 border border-slate-800">
+              <div className="relative aspect-video sm:aspect-[2/1] rounded-2xl overflow-hidden bg-slate-100 dark:bg-black/60 border border-slate-200 dark:border-slate-800">
                 <img
                   src={photos[activePhotoIdx]}
                   alt={product.name}
@@ -119,13 +119,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <>
                     <button
                       onClick={() => setActivePhotoIdx((prev) => (prev > 0 ? prev - 1 : photos.length - 1))}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/60 hover:bg-black/90 text-white rounded-full transition-all"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-white/80 dark:bg-black/60 hover:bg-white dark:hover:bg-black/90 text-slate-800 dark:text-white rounded-full shadow transition-all"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setActivePhotoIdx((prev) => (prev < photos.length - 1 ? prev + 1 : 0))}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/60 hover:bg-black/90 text-white rounded-full transition-all"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white/80 dark:bg-black/60 hover:bg-white dark:hover:bg-black/90 text-slate-800 dark:text-white rounded-full shadow transition-all"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -139,8 +139,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     <button
                       key={i}
                       onClick={() => setActivePhotoIdx(i)}
-                      className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${
-                        activePhotoIdx === i ? 'border-blue-500 scale-105' : 'border-slate-800 opacity-60'
+                      className={`w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${
+                        activePhotoIdx === i ? 'border-blue-500 scale-105' : 'border-slate-200 dark:border-slate-800 opacity-60'
                       }`}
                     >
                       <img src={url} alt={`Thumb ${i + 1}`} className="w-full h-full object-cover" />
@@ -150,7 +150,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               )}
             </div>
           ) : (
-            <div className="h-28 rounded-2xl bg-slate-800/40 border border-dashed border-slate-700/60 flex flex-col items-center justify-center text-slate-500">
+            <div className="h-28 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-700/60 flex flex-col items-center justify-center text-slate-400">
               <Package className="w-8 h-8 mb-1 opacity-50" />
               <span className="text-xs">Sin fotografías registradas</span>
             </div>
@@ -158,9 +158,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
           {/* 2. Título, Descripción y Precios */}
           <div>
-            <h2 className="text-xl font-extrabold text-white">{product.name}</h2>
+            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">{product.name}</h2>
             {product.description && (
-              <p className="text-sm text-slate-300 mt-1 leading-relaxed">
+              <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
                 {product.description}
               </p>
             )}
@@ -168,83 +168,83 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
           {/* 3. Métricas Destacadas (Precio, Stock, Ubicación) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="p-3 bg-slate-800/70 border border-slate-700/60 rounded-xl">
-              <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
-                <DollarSign className="w-3.5 h-3.5 text-emerald-400" /> Precio
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-2xl">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
+                <DollarSign className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" /> Precio
               </div>
-              <p className="text-base font-extrabold text-white">
+              <p className="text-base font-extrabold text-slate-900 dark:text-white">
                 {formatCurrency(product.price, currentInventory?.currency)}
               </p>
             </div>
 
-            <div className="p-3 bg-slate-800/70 border border-slate-700/60 rounded-xl">
-              <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
-                <Package className="w-3.5 h-3.5 text-blue-400" /> Stock Actual
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-2xl">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
+                <Package className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" /> Stock Actual
               </div>
-              <p className={`text-base font-extrabold ${isLowStock ? 'text-amber-400' : 'text-white'}`}>
-                {product.stock} <span className="text-xs font-normal text-slate-400">uds (mín: {product.min_stock})</span>
+              <p className={`text-base font-extrabold ${isLowStock ? 'text-amber-500 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
+                {product.stock} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">uds (mín: {product.min_stock})</span>
               </p>
             </div>
 
-            <div className="p-3 bg-slate-800/70 border border-slate-700/60 rounded-xl col-span-2 sm:col-span-1">
-              <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
-                <MapPin className="w-3.5 h-3.5 text-amber-400" /> Ubicación
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-2xl col-span-2 sm:col-span-1">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
+                <MapPin className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" /> Ubicación
               </div>
-              <p className="text-sm font-bold text-white truncate">
+              <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
                 {currentLocation?.name || 'No asignada'}
               </p>
-              <p className="text-[10px] font-mono text-slate-400">{currentLocation?.code}</p>
+              <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400">{currentLocation?.code}</p>
             </div>
           </div>
 
           {/* Categoría y Subcategoría */}
           <div className="flex flex-wrap gap-2 text-xs">
-            <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-800 text-slate-300 rounded-lg border border-slate-700">
-              <Tag className="w-3 h-3 text-blue-400" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-700 font-medium">
+              <Tag className="w-3 h-3 text-blue-500 dark:text-blue-400" />
               Categoría: <strong>{product.categories?.name || 'General'}</strong>
             </span>
             {product.subcategories?.name && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-800 text-slate-300 rounded-lg border border-slate-700">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-700 font-medium">
                 Subcategoría: <strong>{product.subcategories.name}</strong>
               </span>
             )}
           </div>
 
           {/* 4. Botones de Acción Operativa */}
-          <div className="p-3 bg-slate-800/40 rounded-xl border border-slate-800 flex flex-wrap gap-2.5">
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap gap-2.5">
             <button
               onClick={() => onMove(product)}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-semibold transition-all active:scale-95"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-amber-50 dark:bg-amber-600/20 hover:bg-amber-100 dark:hover:bg-amber-600/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 rounded-xl text-xs font-semibold transition-all active:scale-95"
             >
               <ArrowRightLeft className="w-4 h-4" /> Mover de Ubicación
             </button>
             <button
               onClick={() => onWithdraw(product)}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-semibold transition-all active:scale-95"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-50 dark:bg-rose-600/20 hover:bg-rose-100 dark:hover:bg-rose-600/30 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 rounded-xl text-xs font-semibold transition-all active:scale-95"
             >
               <Archive className="w-4 h-4" /> Retirar / Dar de baja
             </button>
           </div>
 
-          {/* 5. Trazabilidad e Historial de Auditoría (Exigido en los requerimientos) */}
+          {/* 5. Trazabilidad e Historial de Auditoría */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-blue-400" />
-                <h4 className="text-sm font-bold text-white">Trazabilidad e Historial</h4>
+                <History className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">Trazabilidad e Historial</h4>
               </div>
-              <span className="text-[11px] text-slate-400">{auditLogs.length} eventos</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">{auditLogs.length} eventos</span>
             </div>
 
             {/* Etiqueta de Última Modificación */}
-            <div className="p-3 bg-blue-950/30 border border-blue-900/50 rounded-xl flex items-center justify-between text-xs">
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-2xl flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <User className="w-3.5 h-3.5 text-blue-400" />
-                <span className="text-slate-300">
-                  Modificado por: <strong className="text-blue-300">{product.last_modified_by_email || 'Sistema'}</strong>
+                <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <span className="text-slate-700 dark:text-slate-300">
+                  Modificado por: <strong className="text-blue-600 dark:text-blue-300">{product.last_modified_by_email || 'Sistema'}</strong>
                 </span>
               </div>
-              <span className="text-[10px] text-slate-400 flex items-center gap-1">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
                 <Clock className="w-3 h-3" /> {formatDate(product.updated_at)}
               </span>
             </div>
@@ -252,19 +252,19 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             {/* Lista cronológica de cambios */}
             <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
               {loadingAudit ? (
-                <div className="text-center py-4 text-xs text-slate-500">Cargando trazabilidad...</div>
+                <div className="text-center py-4 text-xs text-slate-400">Cargando trazabilidad...</div>
               ) : auditLogs.length === 0 ? (
-                <div className="text-center py-4 text-xs text-slate-500">No hay registros de auditoría anteriores</div>
+                <div className="text-center py-4 text-xs text-slate-400">No hay registros de auditoría anteriores</div>
               ) : (
                 auditLogs.map((log) => (
-                  <div key={log.id} className="p-2.5 bg-slate-800/60 rounded-lg border border-slate-800 text-xs space-y-1">
+                  <div key={log.id} className="p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-200">{log.action_type}</span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">{log.action_type}</span>
                       <span className="text-[10px] text-slate-400">{formatDate(log.created_at)}</span>
                     </div>
-                    <p className="text-slate-300 text-[11px]">{log.details}</p>
-                    <div className="text-[10px] text-slate-500">
-                      Por: <span className="text-slate-400">{log.user_email}</span>
+                    <p className="text-slate-600 dark:text-slate-300 text-[11px]">{log.details}</p>
+                    <div className="text-[10px] text-slate-400 dark:text-slate-500">
+                      Por: <span className="text-slate-600 dark:text-slate-400">{log.user_email}</span>
                     </div>
                   </div>
                 ))

@@ -32,11 +32,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentInventory, setCurrentInventory] = useState<Inventory | null>(null);
   const [needsInventorySelection, setNeedsInventorySelection] = useState<boolean>(false);
 
+  // Auto-recuperación si el usuario no tiene ningún inventario
+  const autoInitializeInventory = async (currentUser: User): Promise<Inventory | null> => {
+    try {
+      // 1. Intentar vía función RPC segura en PostgreSQL
+      const { data: invId, error: rpcErr } = await supabase.rpc('initialize_user_inventory');
+      if (!rpcErr && invId) {
+        const { data: fetchedInv } = await supabase
+          .from('inventories')
+          .select('*')
+          .eq('id', invId)
+          .single();
+        if (fetchedInv) {
+          return { ...fetchedInv, role: 'owner', is_owner: true };
+        }
+      }
+
+      // 2. Fallback: Inserción directa en cliente
+      const { data: directInv, error: insertErr } = await supabase
+        .from('inventories')
+        .insert({
+          name: 'Mi Inventario Principal',
+          description: 'Inventario inicial de trabajo',
+          currency: 'USD',
+          owner_id: currentUser.id
+        })
+        .select()
+        .single();
+
+      if (!insertErr && directInv) {
+        await supabase.from('inventory_users').insert({
+          inventory_id: directInv.id,
+          user_id: currentUser.id,
+          role: 'owner'
+        });
+
+        // Crear una ubicación física básica
+        await supabase.from('locations').insert({
+          inventory_id: directInv.id,
+          name: 'Almacén Central',
+          code: 'LOC-ALM-001',
+          description: 'Almacén físico principal'
+        });
+
+        // Crear una categoría básica
+        await supabase.from('categories').insert({
+          inventory_id: directInv.id,
+          name: 'General',
+          color: '#3B82F6',
+          description: 'Categoría predeterminada'
+        });
+
+        return { ...directInv, role: 'owner', is_owner: true };
+      }
+    } catch (e) {
+      console.warn('Auto-inicialización no completada:', e);
+    }
+    return null;
+  };
+
   // Cargar inventarios asociados al usuario (dueño o colaborador)
   const fetchInventories = async (currentUser: User) => {
     try {
       // 1. Inventarios donde es colaborador o dueño vía inventory_users
-      const { data: memberInvs, error: errMember } = await supabase
+      const { data: memberInvs } = await supabase
         .from('inventory_users')
         .select(`
           role,
@@ -52,13 +111,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         `)
         .eq('user_id', currentUser.id);
 
-      // 2. Inventarios donde es dueño directo (por si aún no está en inventory_users)
-      const { data: ownedInvs, error: errOwned } = await supabase
+      // 2. Inventarios donde es dueño directo
+      const { data: ownedInvs } = await supabase
         .from('inventories')
         .select('*')
         .eq('owner_id', currentUser.id);
 
-      const invList: Inventory[] = [];
+      let invList: Inventory[] = [];
       const seenIds = new Set<string>();
 
       if (ownedInvs) {
@@ -85,6 +144,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
 
+      // Si aún no tiene ningún inventario, ejecutar auto-inicialización inmediata
+      if (invList.length === 0) {
+        const autoInv = await autoInitializeInventory(currentUser);
+        if (autoInv) {
+          invList = [autoInv];
+        }
+      }
+
       setInventories(invList);
 
       // Manejar la selección del inventario activo
@@ -94,8 +161,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (invList.length > 1) {
         if (savedInv) {
           setCurrentInventory(savedInv);
+          setNeedsInventorySelection(false);
         } else {
-          // Mostrar pantalla/modal de selección al login
           setNeedsInventorySelection(true);
           setCurrentInventory(invList[0]);
         }
@@ -103,8 +170,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentInventory(invList[0]);
         setNeedsInventorySelection(false);
       } else {
+        // Si falló cualquier creación, abrir el modal para que el usuario pueda crearlo con 1 clic
         setCurrentInventory(null);
-        setNeedsInventorySelection(false);
+        setNeedsInventorySelection(true);
       }
     } catch (err) {
       console.error('Error cargando inventarios:', err);
