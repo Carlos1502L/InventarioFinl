@@ -59,6 +59,22 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
         description: 'Ubicación física predeterminada'
       });
 
+      // 4. Crear categorías predeterminadas
+      await supabase.from('categories').insert([
+        {
+          inventory_id: newInv.id,
+          name: 'General',
+          color: '#3B82F6',
+          description: 'Artículos diversos'
+        },
+        {
+          inventory_id: newInv.id,
+          name: 'Herramientas',
+          color: '#F59E0B',
+          description: 'Equipos e insumos'
+        }
+      ]);
+
       await refreshInventories();
       selectInventory({
         ...newInv,

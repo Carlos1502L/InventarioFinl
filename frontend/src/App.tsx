@@ -26,7 +26,7 @@ import { BarcodeScannerModal } from './components/BarcodeScannerModal';
 import { Loader2, Layers, Plus, Sparkles, AlertCircle } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
-  const { user, loading: authLoading, currentInventory, needsInventorySelection, setNeedsInventorySelection, refreshInventories } = useAuth();
+  const { user, loading: authLoading, inventories, currentInventory, needsInventorySelection, setNeedsInventorySelection, refreshInventories } = useAuth();
 
   // Estado de Navegación
   const [activeTab, setActiveTab] = useState<TabType>('inventory');
@@ -385,7 +385,7 @@ export const AppContent: React.FC = () => {
 
       {/* 8. Selector de Inventario ("¿A qué inventario deseas ingresar hoy?") */}
       <InventorySelectorModal
-        isOpen={inventorySelectorOpen || needsInventorySelection}
+        isOpen={inventorySelectorOpen || (needsInventorySelection && inventories.length > 1)}
         onClose={() => {
           setInventorySelectorOpen(false);
           setNeedsInventorySelection(false);

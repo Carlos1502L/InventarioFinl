@@ -155,24 +155,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setInventories(invList);
 
       // Manejar la selección del inventario activo
-      const savedInvId = localStorage.getItem(`active_inventory_${currentUser.id}`);
-      const savedInv = invList.find((i) => i.id === savedInvId);
-
-      if (invList.length > 1) {
-        if (savedInv) {
-          setCurrentInventory(savedInv);
-          setNeedsInventorySelection(false);
-        } else {
-          setNeedsInventorySelection(true);
-          setCurrentInventory(invList[0]);
-        }
-      } else if (invList.length === 1) {
+      if (invList.length === 1) {
+        // EXACTAMENTE 1 inventario: ENTRAR DIRECTO SIN MOSTRAR MODAL
         setCurrentInventory(invList[0]);
         setNeedsInventorySelection(false);
-      } else {
-        // Si falló cualquier creación, abrir el modal para que el usuario pueda crearlo con 1 clic
-        setCurrentInventory(null);
+        localStorage.setItem(`active_inventory_${currentUser.id}`, invList[0].id);
+      } else if (invList.length > 1) {
+        // TIENE MÁS DE 1 INVENTARIO (Colaborativo o múltiples personales)
+        // Desplegar la pantalla de selección "¿A qué inventario deseas ingresar hoy?"
+        const savedInvId = localStorage.getItem(`active_inventory_${currentUser.id}`);
+        const savedInv = invList.find((i) => i.id === savedInvId);
+        setCurrentInventory(savedInv || invList[0]);
         setNeedsInventorySelection(true);
+      } else {
+        // Sin inventarios disponibles
+        setCurrentInventory(null);
+        setNeedsInventorySelection(false);
       }
     } catch (err) {
       console.error('Error cargando inventarios:', err);
