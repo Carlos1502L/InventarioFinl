@@ -1,6 +1,6 @@
 -- ==============================================================================
 -- PLATAFORMA DE GESTIÓN DE INVENTARIOS COLABORATIVA (PWA)
--- ESQUEMA COMPLETO, IDEMPOTENTE Y 100% LIBRE DE RECURSIÓN RLS
+-- ESQUEMA COMPLETO, IDEMPOTENTE, CON PERMISOS GRANT Y LIBRE DE RECURSIÓN
 -- ==============================================================================
 
 -- 1. Extensiones requeridas
@@ -139,7 +139,19 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
 );
 
 -- ==============================================================================
--- 11. ÍNDICES DE RENDIMIENTO
+-- 11. PRIVILEGIOS DE ACCESO SQL (CRÍTICO: SOLUCIONA ERROR 42501 PERMISSION DENIED)
+-- ==============================================================================
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
+
+-- ==============================================================================
+-- 12. ÍNDICES DE RENDIMIENTO
 -- ==============================================================================
 CREATE INDEX IF NOT EXISTS idx_inventory_users_user ON public.inventory_users(user_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_users_inv ON public.inventory_users(inventory_id);
@@ -153,10 +165,9 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_product ON public.audit_logs(product_i
 CREATE INDEX IF NOT EXISTS idx_audit_logs_inventory ON public.audit_logs(inventory_id);
 
 -- ==============================================================================
--- 12. FUNCIONES DE SEGURIDAD PARA RLS (SECURITY DEFINER = CERO RECURSIÓN)
+-- 13. FUNCIONES DE SEGURIDAD PARA RLS (SECURITY DEFINER = CERO RECURSIÓN)
 -- ==============================================================================
 
--- Función 1: Verificar si el usuario tiene acceso (dueño o colaborador) al inventario
 CREATE OR REPLACE FUNCTION public.has_inventory_access(p_inv_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -171,7 +182,6 @@ AS $$
   );
 $$;
 
--- Función 2: Verificar si el usuario es dueño del inventario
 CREATE OR REPLACE FUNCTION public.is_inventory_owner(p_inv_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -185,8 +195,7 @@ AS $$
 $$;
 
 -- ==============================================================================
--- 13. LIMPIEZA DINÁMICA DE TODAS LAS POLÍTICAS PREVIAS EN SCHEMA PUBLIC
--- (Elimina cualquier política residual que causaba bucles o recursión infinita)
+-- 14. LIMPIEZA DINÁMICA DE TODAS LAS POLÍTICAS PREVIAS EN SCHEMA PUBLIC
 -- ==============================================================================
 DO $$ 
 DECLARE 
@@ -202,7 +211,7 @@ BEGIN
 END $$;
 
 -- ==============================================================================
--- 14. HABILITACIÓN DE ROW LEVEL SECURITY (RLS)
+-- 15. HABILITACIÓN DE ROW LEVEL SECURITY (RLS)
 -- ==============================================================================
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inventories ENABLE ROW LEVEL SECURITY;
@@ -215,15 +224,15 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- ==============================================================================
--- 15. POLÍTICAS RLS LIMPIAS Y BLINDADAS
+-- 16. POLÍTICAS RLS LIMPIAS Y BLINDADAS
 -- ==============================================================================
 
--- 15.1 profiles
+-- 16.1 profiles
 CREATE POLICY "profiles_select" ON public.profiles FOR SELECT USING (true);
 CREATE POLICY "profiles_insert" ON public.profiles FOR INSERT WITH CHECK (id = auth.uid());
 CREATE POLICY "profiles_update" ON public.profiles FOR UPDATE USING (id = auth.uid());
 
--- 15.2 inventories
+-- 16.2 inventories
 CREATE POLICY "inventories_select" ON public.inventories FOR SELECT TO authenticated
     USING (owner_id = auth.uid() OR public.has_inventory_access(id));
 
@@ -236,7 +245,7 @@ CREATE POLICY "inventories_update" ON public.inventories FOR UPDATE TO authentic
 CREATE POLICY "inventories_delete" ON public.inventories FOR DELETE TO authenticated
     USING (owner_id = auth.uid());
 
--- 15.3 inventory_users (usa is_inventory_owner que es SECURITY DEFINER para evitar recursión)
+-- 16.3 inventory_users
 CREATE POLICY "inv_users_select" ON public.inventory_users FOR SELECT TO authenticated
     USING (user_id = auth.uid() OR public.is_inventory_owner(inventory_id));
 
@@ -246,7 +255,7 @@ CREATE POLICY "inv_users_insert" ON public.inventory_users FOR INSERT TO authent
 CREATE POLICY "inv_users_delete" ON public.inventory_users FOR DELETE TO authenticated
     USING (user_id = auth.uid() OR public.is_inventory_owner(inventory_id));
 
--- 15.4 inventory_invitations
+-- 16.4 inventory_invitations
 CREATE POLICY "invitations_select" ON public.inventory_invitations FOR SELECT TO authenticated
     USING (public.is_inventory_owner(inventory_id) OR LOWER(email) = LOWER(auth.jwt()->>'email'));
 
@@ -259,33 +268,33 @@ CREATE POLICY "invitations_update" ON public.inventory_invitations FOR UPDATE TO
 CREATE POLICY "invitations_delete" ON public.inventory_invitations FOR DELETE TO authenticated
     USING (public.is_inventory_owner(inventory_id));
 
--- 15.5 categories
+-- 16.5 categories
 CREATE POLICY "categories_all" ON public.categories FOR ALL TO authenticated
     USING (public.has_inventory_access(inventory_id))
     WITH CHECK (public.has_inventory_access(inventory_id));
 
--- 15.6 subcategories
+-- 16.6 subcategories
 CREATE POLICY "subcategories_all" ON public.subcategories FOR ALL TO authenticated
     USING (public.has_inventory_access(inventory_id))
     WITH CHECK (public.has_inventory_access(inventory_id));
 
--- 15.7 locations
+-- 16.7 locations
 CREATE POLICY "locations_all" ON public.locations FOR ALL TO authenticated
     USING (public.has_inventory_access(inventory_id))
     WITH CHECK (public.has_inventory_access(inventory_id));
 
--- 15.8 products
+-- 16.8 products
 CREATE POLICY "products_all" ON public.products FOR ALL TO authenticated
     USING (public.has_inventory_access(inventory_id))
     WITH CHECK (public.has_inventory_access(inventory_id));
 
--- 15.9 audit_logs
+-- 16.9 audit_logs
 CREATE POLICY "audit_logs_all" ON public.audit_logs FOR ALL TO authenticated
     USING (public.has_inventory_access(inventory_id))
     WITH CHECK (public.has_inventory_access(inventory_id));
 
 -- ==============================================================================
--- 16. FUNCIÓN RPC: AUTO-INICIALIZACIÓN DE INVENTARIO
+-- 17. FUNCIÓN RPC: AUTO-INICIALIZACIÓN DE INVENTARIO
 -- ==============================================================================
 CREATE OR REPLACE FUNCTION public.initialize_user_inventory()
 RETURNS UUID AS $$
@@ -359,7 +368,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- Trigger para nuevos usuarios
+-- Trigger para nuevos registros
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -404,7 +413,7 @@ CREATE TRIGGER on_auth_user_created
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ==============================================================================
--- 17. SUPABASE STORAGE (Bucket product-images)
+-- 18. SUPABASE STORAGE (Bucket product-images)
 -- ==============================================================================
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('product-images', 'product-images', true)
@@ -428,7 +437,7 @@ CREATE POLICY "storage_delete_product_images" ON storage.objects
     FOR DELETE USING (bucket_id = 'product-images' AND auth.role() = 'authenticated');
 
 -- ==============================================================================
--- 18. AUTO-REPARACIÓN DE CUENTAS EXISTENTES (Backfill)
+-- 19. AUTO-REPARACIÓN DE CUENTAS EXISTENTES (Backfill)
 -- ==============================================================================
 DO $$
 DECLARE
