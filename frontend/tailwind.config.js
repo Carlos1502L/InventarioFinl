@@ -8,6 +8,25 @@ export default {
   theme: {
     extend: {
       colors: {
+        navy: {
+          DEFAULT: '#1A2035',
+          dark: '#121624',
+          light: '#242B45',
+          lighter: '#2E3655',
+          subtle: '#3A4468',
+        },
+        orange: {
+          DEFAULT: '#FF6B00',
+          hover: '#E55F00',
+          light: '#FFF2E8',
+          subtle: '#FFE6D5'
+        },
+        surface: {
+          DEFAULT: '#F8F9FA',
+          white: '#FFFFFF',
+          card: '#FFFFFF',
+          muted: '#F1F3F5'
+        },
         brand: {
           50: '#eff6ff',
           100: '#dbeafe',
@@ -20,6 +39,9 @@ export default {
           800: '#1e40af',
           900: '#1e3a8a',
         }
+      },
+      borderRadius: {
+        'card': '12px'
       }
     },
   },
