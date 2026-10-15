@@ -6,8 +6,10 @@ import { Product, Category, Subcategory, Location } from './types/database';
 // Componentes y Vistas
 import { Navbar } from './components/Navbar';
 import { BottomNav, TabType } from './components/BottomNav';
+import { PendingInvitationsBanner } from './components/PendingInvitationsBanner';
 import { AuthPage } from './pages/AuthPage';
 import { InventoryPage } from './pages/InventoryPage';
+import { SalesPage } from './pages/SalesPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -23,10 +25,10 @@ import { CollaboratorsModal } from './components/CollaboratorsModal';
 import { InventorySelectorModal } from './components/InventorySelectorModal';
 import { BarcodeScannerModal } from './components/BarcodeScannerModal';
 
-import { Loader2, Layers, Plus, Sparkles, AlertCircle } from 'lucide-react';
+import { Loader2, Layers, Plus, Sparkles } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
-  const { user, loading: authLoading, inventories, currentInventory, needsInventorySelection, setNeedsInventorySelection, refreshInventories } = useAuth();
+  const { user, loading: authLoading, currentInventory, refreshInventories } = useAuth();
 
   // Estado de Navegación
   const [activeTab, setActiveTab] = useState<TabType>('inventory');
@@ -172,6 +174,9 @@ export const AppContent: React.FC = () => {
 
       {/* Contenedor Principal Responsive */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 pt-5">
+        {/* RF-05.1: Banner de Invitaciones Pendientes con Aceptación Explícita */}
+        <PendingInvitationsBanner />
+
         {/* Banner si el usuario no tiene inventario activo */}
         {!currentInventory && (
           <div className="mb-6 p-6 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-900/50 rounded-3xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -208,6 +213,16 @@ export const AppContent: React.FC = () => {
             }`}
           >
             📦 Módulo Inventario
+          </button>
+          <button
+            onClick={() => setActiveTab('sales')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
+              activeTab === 'sales'
+                ? 'bg-blue-600 text-white shadow-blue-500/20'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            💳 Ventas y Cobros
           </button>
           <button
             onClick={() => setActiveTab('reports')}
@@ -261,6 +276,14 @@ export const AppContent: React.FC = () => {
           />
         )}
 
+        {/* RF-06: Módulo de Ventas y Cobros */}
+        {activeTab === 'sales' && (
+          <SalesPage
+            products={products}
+            onSaleCompleted={fetchInventoryData}
+          />
+        )}
+
         {activeTab === 'reports' && (
           <ReportsPage
             products={products}
@@ -293,6 +316,7 @@ export const AppContent: React.FC = () => {
         activeTab={activeTab}
         onChangeTab={setActiveTab}
         onQuickScan={() => setQuickScanOpen(true)}
+        isBusiness={currentInventory?.inventory_type !== 'PERSONAL'}
       />
 
       {/* --- MODALES OPERATIVOS --- */}
@@ -306,6 +330,7 @@ export const AppContent: React.FC = () => {
         categories={categories}
         subcategories={subcategories}
         locations={locations}
+        products={products}
       />
 
       {/* 2. Modal de Detalle de Producto con Trazabilidad y Galería */}
@@ -331,28 +356,16 @@ export const AppContent: React.FC = () => {
         locations={locations}
       />
 
-      {/* 3. Modal de Mover Ubicación Física */}
+      {/* 3. Modal de Traslado de Ubicación */}
       <MoveProductModal
         product={selectedProduct}
         isOpen={moveModalOpen}
         onClose={() => setMoveModalOpen(false)}
-        onMoved={() => {
-          fetchInventoryData();
-          if (selectedProduct) {
-            supabase
-              .from('products')
-              .select('*, categories(*), subcategories(*), locations(*)')
-              .eq('id', selectedProduct.id)
-              .single()
-              .then(({ data }) => {
-                if (data) setSelectedProduct(data);
-              });
-          }
-        }}
+        onMoved={fetchInventoryData}
         locations={locations}
       />
 
-      {/* 4. Modal de Retirar / Dar de Baja */}
+      {/* 4. Modal de Retiro / Baja de Stock */}
       <WithdrawProductModal
         product={selectedProduct}
         isOpen={withdrawModalOpen}
@@ -360,7 +373,7 @@ export const AppContent: React.FC = () => {
         onWithdrawn={fetchInventoryData}
       />
 
-      {/* 5. Modal de Categorías y Subcategorías Dinámicas */}
+      {/* 5. Modales de Configuración */}
       <CategoriesManagementModal
         isOpen={categoriesModalOpen}
         onClose={() => setCategoriesModalOpen(false)}
@@ -369,7 +382,6 @@ export const AppContent: React.FC = () => {
         onRefresh={fetchInventoryData}
       />
 
-      {/* 6. Modal de Ubicaciones Físicas y Etiquetas (85.6 × 53.9 mm) */}
       <LocationsManagementModal
         isOpen={locationsModalOpen}
         onClose={() => setLocationsModalOpen(false)}
@@ -377,33 +389,27 @@ export const AppContent: React.FC = () => {
         onRefresh={fetchInventoryData}
       />
 
-      {/* 7. Modal de Colaboradores e Invitaciones */}
       <CollaboratorsModal
         isOpen={collaboratorsModalOpen}
         onClose={() => setCollaboratorsModalOpen(false)}
       />
 
-      {/* 8. Selector de Inventario ("¿A qué inventario deseas ingresar hoy?") */}
       <InventorySelectorModal
-        isOpen={inventorySelectorOpen || (needsInventorySelection && inventories.length > 1)}
-        onClose={() => {
-          setInventorySelectorOpen(false);
-          setNeedsInventorySelection(false);
-        }}
+        isOpen={inventorySelectorOpen}
+        onClose={() => setInventorySelectorOpen(false)}
       />
 
-      {/* 9. Escáner Rápido de Cámara (Bottom Bar) */}
+      {/* Escáner Rápido Global (Barra Inferior) */}
       <BarcodeScannerModal
         isOpen={quickScanOpen}
         onClose={() => setQuickScanOpen(false)}
         onScanSuccess={handleQuickScanSuccess}
-        title="Escáner Rápido de Código"
-        instructions="Escanea cualquier código de producto o QR de ubicación física para abrirlo al instante."
+        title="Escáner Rápido de Producto o Ubicación"
+        instructions="Apunta la cámara al código de barras o QR de cualquier producto o estantería."
       />
     </div>
   );
 };
 
-export default function App() {
-  return <AppContent />;
-}
+export default AppContent;
+

@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { Inventory, Profile } from '../types/database';
+import { Inventory, Profile, InventoryInvitation } from '../types/database';
 
 interface AuthContextType {
   user: User | null;
@@ -11,9 +11,12 @@ interface AuthContextType {
   inventories: Inventory[];
   currentInventory: Inventory | null;
   needsInventorySelection: boolean;
+  pendingInvitations: InventoryInvitation[];
   selectInventory: (inventory: Inventory) => void;
   refreshInventories: () => Promise<void>;
   setNeedsInventorySelection: (show: boolean) => void;
+  acceptInvitation: (invitationId: string, inventoryId: string, role: string) => Promise<void>;
+  rejectInvitation: (invitationId: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -31,6 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [inventories, setInventories] = useState<Inventory[]>([]);
   const [currentInventory, setCurrentInventory] = useState<Inventory | null>(null);
   const [needsInventorySelection, setNeedsInventorySelection] = useState<boolean>(false);
+  const [pendingInvitations, setPendingInvitations] = useState<InventoryInvitation[]>([]);
 
   // Auto-recuperación si el usuario no tiene ningún inventario
   const autoInitializeInventory = async (currentUser: User): Promise<Inventory | null> => {
@@ -55,7 +59,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: 'Mi Inventario Principal',
           description: 'Inventario inicial de trabajo',
           currency: 'USD',
-          owner_id: currentUser.id
+          owner_id: currentUser.id,
+          inventory_type: 'BUSINESS'
         })
         .select()
         .single();
@@ -91,8 +96,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return null;
   };
 
+  // RF-05.1: Cargar invitaciones pendientes de colaboradores
+  const fetchPendingInvitations = useCallback(async (email: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('inventory_invitations')
+        .select(`
+          *,
+          inventories (id, name, description, currency, owner_id)
+        `)
+        .eq('email', email.trim().toLowerCase())
+        .eq('status', 'pending');
+
+      if (!error && data) {
+        setPendingInvitations(data as InventoryInvitation[]);
+      }
+    } catch (err) {
+      console.warn('Error cargando invitaciones pendientes:', err);
+    }
+  }, []);
+
   // Cargar inventarios asociados al usuario (dueño o colaborador)
-  const fetchInventories = async (currentUser: User) => {
+  const fetchInventories = useCallback(async (currentUser: User) => {
     try {
       // 1. Inventarios donde es colaborador o dueño vía inventory_users
       const { data: memberInvs } = await supabase
@@ -104,6 +129,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name,
             description,
             currency,
+            inventory_type,
+            yape_phone,
+            yape_qr_url,
+            plin_phone,
+            plin_qr_url,
+            payment_instructions,
             owner_id,
             created_at,
             updated_at
@@ -154,28 +185,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setInventories(invList);
 
-      // Manejar la selección del inventario activo
+      // RNF-02: Persistencia del inventario seleccionado
+      // Al cambiar de pestaña o bloquear el teléfono, NO volver a preguntar si ya había uno seleccionado
+      const savedInvId = localStorage.getItem(`active_inventory_${currentUser.id}`);
+      const savedInv = invList.find((i) => i.id === savedInvId);
+
       if (invList.length === 1) {
-        // EXACTAMENTE 1 inventario: ENTRAR DIRECTO SIN MOSTRAR MODAL
+        // Solo un inventario disponible
         setCurrentInventory(invList[0]);
         setNeedsInventorySelection(false);
         localStorage.setItem(`active_inventory_${currentUser.id}`, invList[0].id);
       } else if (invList.length > 1) {
-        // TIENE MÁS DE 1 INVENTARIO (Colaborativo o múltiples personales)
-        // Desplegar la pantalla de selección "¿A qué inventario deseas ingresar hoy?"
-        const savedInvId = localStorage.getItem(`active_inventory_${currentUser.id}`);
-        const savedInv = invList.find((i) => i.id === savedInvId);
-        setCurrentInventory(savedInv || invList[0]);
-        setNeedsInventorySelection(true);
+        if (savedInv) {
+          // Ya tenía un inventario seleccionado previamente: persistir sin modal
+          setCurrentInventory(savedInv);
+          setNeedsInventorySelection(false);
+        } else {
+          // Primera vez con múltiples inventarios: preguntar
+          setCurrentInventory(invList[0]);
+          setNeedsInventorySelection(true);
+        }
       } else {
-        // Sin inventarios disponibles
         setCurrentInventory(null);
         setNeedsInventorySelection(false);
       }
     } catch (err) {
       console.error('Error cargando inventarios:', err);
     }
-  };
+  }, []);
 
   const selectInventory = (inventory: Inventory) => {
     setCurrentInventory(inventory);
@@ -188,8 +225,84 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshInventories = async () => {
     if (user) {
       await fetchInventories(user);
+      if (user.email) {
+        await fetchPendingInvitations(user.email);
+      }
     }
   };
+
+  // RF-05.1: Aceptar explícitamente una invitación a colaborar
+  const acceptInvitation = async (invitationId: string, inventoryId: string, role: string) => {
+    if (!user) return;
+    try {
+      const { error: memberError } = await supabase.from('inventory_users').insert({
+        inventory_id: inventoryId,
+        user_id: user.id,
+        role: role || 'collaborator'
+      });
+
+      if (memberError && memberError.code !== '23505') {
+        throw memberError;
+      }
+
+      await supabase
+        .from('inventory_invitations')
+        .update({ status: 'accepted' })
+        .eq('id', invitationId);
+
+      if (user.email) {
+        await fetchPendingInvitations(user.email);
+      }
+      await fetchInventories(user);
+    } catch (err: any) {
+      console.error('Error aceptando invitación:', err);
+      alert('Error al aceptar invitación: ' + (err.message || 'Error desconocido'));
+    }
+  };
+
+  // RF-05.1: Rechazar explícitamente una invitación
+  const rejectInvitation = async (invitationId: string) => {
+    if (!user) return;
+    try {
+      await supabase
+        .from('inventory_invitations')
+        .update({ status: 'rejected' })
+        .eq('id', invitationId);
+
+      if (user.email) {
+        await fetchPendingInvitations(user.email);
+      }
+    } catch (err: any) {
+      console.error('Error rechazando invitación:', err);
+    }
+  };
+
+  // RNF-03: Control de Sesión en PWA - Expiración por inactividad tras 15 minutos
+  useEffect(() => {
+    if (!user) return;
+
+    let lastActivity = Date.now();
+    const INACTIVITY_LIMIT_MS = 15 * 60 * 1000; // 15 minutos
+
+    const updateActivity = () => {
+      lastActivity = Date.now();
+    };
+
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'pointerdown'];
+    events.forEach((ev) => window.addEventListener(ev, updateActivity, { passive: true }));
+
+    const interval = setInterval(() => {
+      if (Date.now() - lastActivity > INACTIVITY_LIMIT_MS) {
+        alert('Tu sesión ha expirado por inactividad (15 minutos). Por seguridad, vuelve a iniciar sesión.');
+        signOut();
+      }
+    }, 30000); // Revisión periódica cada 30 segundos
+
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, updateActivity));
+      clearInterval(interval);
+    };
+  }, [user]);
 
   useEffect(() => {
     // 1. Obtener sesión activa inicial
@@ -198,6 +311,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchInventories(session.user);
+        if (session.user.email) {
+          fetchPendingInvitations(session.user.email);
+        }
       }
       setLoading(false);
     });
@@ -208,10 +324,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchInventories(session.user);
+        if (session.user.email) {
+          fetchPendingInvitations(session.user.email);
+        }
       } else {
         setInventories([]);
         setCurrentInventory(null);
         setNeedsInventorySelection(false);
+        setPendingInvitations([]);
       }
       setLoading(false);
     });
@@ -219,12 +339,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchInventories, fetchPendingInvitations]);
 
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (!error && data.user) {
       await fetchInventories(data.user);
+      if (data.user.email) {
+        await fetchPendingInvitations(data.user.email);
+      }
     }
     return { error };
   };
@@ -243,10 +366,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    if (user) {
+      localStorage.removeItem(`active_inventory_${user.id}`);
+    }
     await supabase.auth.signOut();
-    localStorage.removeItem('active_inventory');
     setCurrentInventory(null);
     setInventories([]);
+    setPendingInvitations([]);
   };
 
   return (
@@ -259,9 +385,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         inventories,
         currentInventory,
         needsInventorySelection,
+        pendingInvitations,
         selectInventory,
         refreshInventories,
         setNeedsInventorySelection,
+        acceptInvitation,
+        rejectInvitation,
         signIn,
         signUp,
         signOut

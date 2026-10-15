@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Settings,
   Tag,
@@ -10,11 +10,16 @@ import {
   ChevronRight,
   LogOut,
   Moon,
-  Sun
+  Sun,
+  QrCode,
+  Briefcase,
+  User,
+  Sliders
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatDate } from '../lib/supabase';
+import { EditInventoryModal } from '../components/EditInventoryModal';
 
 interface SettingsPageProps {
   onOpenCategories: () => void;
@@ -29,8 +34,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   onOpenCollaborators,
   onOpenInventorySelector
 }) => {
-  const { currentInventory, user, signOut } = useAuth();
+  const { currentInventory, user, signOut, refreshInventories } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [editInventoryOpen, setEditInventoryOpen] = useState(false);
 
   return (
     <div className="space-y-6 pb-24 sm:pb-8 max-w-3xl mx-auto">
@@ -62,27 +68,54 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </button>
       </div>
 
-      {/* 2. Tarjeta del Inventario Activo */}
+      {/* 2. Tarjeta del Inventario Activo (RF-02) */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-2xl">
               <Layers className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-wider">
-                Inventario Activo
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-wider">
+                  Inventario Activo
+                </span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                  currentInventory?.inventory_type === 'PERSONAL'
+                    ? 'bg-purple-50 dark:bg-purple-600/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30'
+                    : 'bg-blue-50 dark:bg-blue-600/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30'
+                }`}>
+                  {currentInventory?.inventory_type === 'PERSONAL' ? (
+                    <>
+                      <User className="w-2.5 h-2.5" /> Personal
+                    </>
+                  ) : (
+                    <>
+                      <Briefcase className="w-2.5 h-2.5" /> Negocio
+                    </>
+                  )}
+                </span>
+              </div>
               <h3 className="font-extrabold text-slate-900 dark:text-white text-lg">{currentInventory?.name}</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">{currentInventory?.description || 'Sin descripción'}</p>
             </div>
           </div>
-          <button
-            onClick={onOpenInventorySelector}
-            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow transition-all active:scale-95"
-          >
-            Cambiar
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setEditInventoryOpen(true)}
+              className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 transition-all active:scale-95 flex items-center gap-1.5"
+            >
+              <Sliders className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              Gestionar
+            </button>
+            <button
+              onClick={onOpenInventorySelector}
+              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow transition-all active:scale-95"
+            >
+              Cambiar
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300">
@@ -103,6 +136,23 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
       {/* 3. Menú de Configuración Libre */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-slate-800">
+        {/* Ajustes del Inventario y Pagos Yape/Plin (RF-02.1 & RF-06.3) */}
+        <button
+          onClick={() => setEditInventoryOpen(true)}
+          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors text-left group"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 rounded-xl group-hover:scale-105 transition-transform">
+              <QrCode className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 dark:text-white text-sm">Pasarela de Pagos (Yape / Plin)</h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Configura tus códigos QR y números para cobrar a clientes</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
+        </button>
+
         {/* Categorías */}
         <button
           onClick={onOpenCategories}
@@ -190,6 +240,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           <LogOut className="w-3.5 h-3.5" /> Cerrar Sesión
         </button>
       </div>
+
+      {/* Modal de Edición de Inventario */}
+      <EditInventoryModal
+        isOpen={editInventoryOpen}
+        onClose={() => setEditInventoryOpen(false)}
+        inventory={currentInventory}
+        onUpdated={refreshInventories}
+      />
     </div>
   );
 };

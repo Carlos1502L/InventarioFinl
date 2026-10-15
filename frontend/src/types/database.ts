@@ -1,6 +1,8 @@
 export type InventoryRole = 'owner' | 'collaborator';
+export type InventoryType = 'PERSONAL' | 'BUSINESS';
 export type ProductStatus = 'ACTIVE' | 'WITHDRAWN' | 'ARCHIVED';
-export type ActionType = 'CREATE' | 'UPDATE' | 'MOVE' | 'WITHDRAW' | 'RESTOCK' | 'DELETE';
+export type ActionType = 'CREATE' | 'UPDATE' | 'MOVE' | 'WITHDRAW' | 'RESTOCK' | 'DELETE' | 'SALE';
+export type PaymentMethod = 'CASH' | 'YAPE' | 'PLIN' | 'CARD' | 'TRANSFER' | 'OTHER';
 
 export interface Profile {
   id: string;
@@ -17,6 +19,12 @@ export interface Inventory {
   description: string | null;
   currency: string;
   owner_id: string;
+  inventory_type?: InventoryType; // RF-01.1 vs RF-01.2
+  yape_phone?: string | null; // RF-06.3
+  yape_qr_url?: string | null;
+  plin_phone?: string | null;
+  plin_qr_url?: string | null;
+  payment_instructions?: string | null;
   created_at: string;
   updated_at: string;
   role?: InventoryRole; // Rol del usuario actual en este inventario
@@ -40,6 +48,7 @@ export interface InventoryInvitation {
   status: 'pending' | 'accepted' | 'rejected';
   invited_by: string;
   created_at: string;
+  inventories?: Inventory;
 }
 
 export interface Category {
@@ -80,9 +89,11 @@ export interface Product {
   name: string;
   code: string;
   description: string | null;
-  price: number;
+  price: number; // Precio de Venta Final o Precio Base Personal
+  cost_price?: number; // RF-01.2: Precio de Costo
+  markup_percentage?: number; // RF-01.2: Porcentaje de Ganancia
   stock: number;
-  min_stock: number;
+  min_stock: number; // RF-04.1: Configurable desde 1
   category_id: string | null;
   subcategory_id: string | null;
   location_id: string;
@@ -91,6 +102,11 @@ export interface Product {
   withdrawal_reason?: string | null;
   last_modified_by: string | null;
   last_modified_by_email: string | null;
+  // RF-03.1: Variantes de productos
+  parent_id?: string | null;
+  is_variant?: boolean;
+  variant_attributes?: Record<string, string>; // Ej: { "Color": "Rojo", "Región": "USA" }
+  variants?: Product[];
   created_at: string;
   updated_at: string;
   categories?: {
@@ -119,5 +135,33 @@ export interface AuditLog {
   action_type: ActionType;
   details: string;
   metadata: Record<string, any>;
+  created_at: string;
+}
+
+// RF-06: Módulo de Ventas
+export interface Sale {
+  id: string;
+  inventory_id: string;
+  seller_id: string | null;
+  seller_email: string;
+  total_amount: number;
+  payment_method: PaymentMethod;
+  customer_name?: string | null;
+  customer_contact?: string | null;
+  notes?: string | null;
+  created_at: string;
+  items?: SaleItem[];
+}
+
+export interface SaleItem {
+  id: string;
+  sale_id: string;
+  product_id: string | null;
+  product_name: string;
+  product_code: string;
+  quantity: number;
+  unit_price: number;
+  cost_price?: number;
+  subtotal: number;
   created_at: string;
 }

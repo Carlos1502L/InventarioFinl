@@ -24,17 +24,23 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 });
 
+import { compressImage } from './imageCompression';
+
 /**
  * Sube una fotografía al bucket 'product-images' en Supabase Storage
+ * Comprime y redimensiona automáticamente la foto antes de subir (RNF-04)
  */
 export async function uploadProductImage(file: File, inventoryId: string): Promise<string> {
-  const fileExt = file.name.split('.').pop() || 'jpg';
+  // RNF-04: Compresión automática antes de subir
+  const optimizedFile = await compressImage(file, 1200, 1200, 0.75);
+
+  const fileExt = optimizedFile.name.split('.').pop() || 'jpg';
   const cleanFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
   const filePath = `${inventoryId}/${cleanFileName}`;
 
   const { error: uploadError } = await supabase.storage
     .from('product-images')
-    .upload(filePath, file, {
+    .upload(filePath, optimizedFile, {
       cacheControl: '3600',
       upsert: false
     });
@@ -64,7 +70,7 @@ export async function logAuditAction({
   inventoryId: string;
   productId?: string | null;
   productName?: string | null;
-  actionType: 'CREATE' | 'UPDATE' | 'MOVE' | 'WITHDRAW' | 'RESTOCK' | 'DELETE';
+  actionType: 'CREATE' | 'UPDATE' | 'MOVE' | 'WITHDRAW' | 'RESTOCK' | 'DELETE' | 'SALE';
   details: string;
   metadata?: Record<string, any>;
 }) {
