@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase';
 import { Product, Category, Subcategory, Location } from './types/database';
 
 // Componentes y Vistas
+import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
 import { BottomNav, TabType } from './components/BottomNav';
 import { PendingInvitationsBanner } from './components/PendingInvitationsBanner';
@@ -27,7 +28,7 @@ import { CollaboratorsModal } from './components/CollaboratorsModal';
 import { InventorySelectorModal } from './components/InventorySelectorModal';
 import { BarcodeScannerModal } from './components/BarcodeScannerModal';
 
-import { Loader2, Layers, Plus, Sparkles, LayoutDashboard, Package, ShoppingCart, Receipt, FileText, BarChart3, Settings } from 'lucide-react';
+import { Loader2, Layers, Plus, Sparkles } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
   const { user, loading: authLoading, currentInventory, refreshInventories } = useAuth();
@@ -66,7 +67,7 @@ export const AppContent: React.FC = () => {
   const [collaboratorsModalOpen, setCollaboratorsModalOpen] = useState(false);
   const [inventorySelectorOpen, setInventorySelectorOpen] = useState(false);
 
-  // Escáner Rápido Global (Bottom Nav)
+  // Escáner Rápido Global (Bottom Nav / Sidebar)
   const [quickScanOpen, setQuickScanOpen] = useState(false);
 
   // Cargar datos del inventario seleccionado
@@ -156,13 +157,13 @@ export const AppContent: React.FC = () => {
   // 1. Pantalla de Carga Inicial
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center space-y-4 font-mono text-black">
-        <div className="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center animate-pulse">
+      <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center space-y-4 font-mono text-[#1E3A5F]">
+        <div className="w-12 h-12 rounded-2xl bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center shadow-md animate-pulse">
           <Layers className="w-6 h-6 stroke-[1.5]" />
         </div>
         <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#616161]">
-          <Loader2 className="w-4 h-4 animate-spin text-black" />
-          <span>INICIANDO MANIFIESTO DE INVENTARIO...</span>
+          <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
+          <span>INICIANDO CATÁLOGO AWWWARDS...</span>
         </div>
       </div>
     );
@@ -174,142 +175,62 @@ export const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white text-black flex flex-col font-normal selection:bg-black selection:text-white transition-colors duration-200">
+    <div className="min-h-screen bg-[#F8F9FA] text-[#1E3A5F] flex flex-col font-normal selection:bg-[#1E3A5F] selection:text-white transition-colors duration-200">
+      {/* Sidebar Lateral Fijo Desktop (>= 1024px) */}
+      <Sidebar
+        activeTab={activeTab}
+        onChangeTab={setActiveTab}
+        onOpenCreateModal={() => {
+          setProductToEdit(null);
+          setProductFormOpen(true);
+        }}
+        onQuickScan={() => setQuickScanOpen(true)}
+        onOpenInventorySelector={() => setInventorySelectorOpen(true)}
+        onOpenCategories={() => setCategoriesModalOpen(true)}
+        onOpenLocations={() => setLocationsModalOpen(true)}
+        onOpenCollaborators={() => setCollaboratorsModalOpen(true)}
+        isBusiness={isBusiness}
+      />
+
       {/* Barra de Navegación Superior */}
       <Navbar
+        activeTab={activeTab}
         onOpenInventorySelector={() => setInventorySelectorOpen(true)}
         onOpenCollaborators={() => setCollaboratorsModalOpen(true)}
         onOpenLocations={() => setLocationsModalOpen(true)}
         onOpenCategories={() => setCategoriesModalOpen(true)}
+        onQuickScan={() => setQuickScanOpen(true)}
       />
 
-      {/* Contenedor Principal Responsive */}
-      <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 pt-5">
+      {/* Contenedor Principal Responsive con offset para el Sidebar en Desktop */}
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 pt-5 lg:pl-[266px] pb-32 lg:pb-12">
         {/* Banner de Invitaciones Pendientes */}
         <PendingInvitationsBanner />
 
         {/* Banner si el usuario no tiene inventario activo */}
         {!currentInventory && (
-          <div className="mb-6 p-6 bg-white border border-[#cacaca] flex flex-col sm:flex-row items-center justify-between gap-4 font-mono">
+          <div className="mb-6 p-6 bg-[#ffffff] border border-[#E5E7EB] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm font-mono">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center flex-shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-5 h-5 stroke-[1.5]" />
               </div>
               <div>
-                <h3 className="text-sm font-normal uppercase tracking-wider text-black">
+                <h3 className="text-sm font-light uppercase tracking-wider text-[#1E3A5F]">
                   INVENTARIO DE TRABAJO NO SELECCIONADO
                 </h3>
-                <p className="text-xs text-[#616161] uppercase mt-0.5">
+                <p className="text-xs text-[#616161] mt-0.5 font-light">
                   Para comenzar a indexar existencias y mercancía, selecciona o crea tu primer depósito.
                 </p>
               </div>
             </div>
             <button
               onClick={() => setInventorySelectorOpen(true)}
-              className="w-full sm:w-auto min-h-[44px] px-6 rounded-full bg-black hover:bg-[#1a1b1e] text-white text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-auto min-h-[44px] px-6 rounded-full bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm"
             >
-              <Plus className="w-4 h-4 stroke-[1.5]" /> CREAR O SELECCIONAR DEPÓSITO
+              <Plus className="w-4 h-4 stroke-[1.5] text-[#E8B4A0]" /> CREAR O SELECCIONAR DEPÓSITO
             </button>
           </div>
         )}
-
-        {/* Pestañas de Navegación Desktop (Píldoras Monocromáticas Suizas) */}
-        <div className="hidden sm:flex items-center gap-2 mb-6 border-b border-[#cacaca] pb-3 flex-wrap font-mono">
-          {/* Pestaña 1: HOME */}
-          <button
-            onClick={() => setActiveTab('home')}
-            className={`min-h-[38px] px-4 rounded-full text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-              activeTab === 'home'
-                ? 'bg-black text-white border border-black'
-                : 'bg-white border border-[#cacaca] text-[#616161] hover:text-black hover:border-black'
-            }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            <span>HOME // RESUMEN</span>
-          </button>
-
-          {/* Pestaña 2: STOCK (CATÁLOGO) */}
-          <button
-            onClick={() => setActiveTab('inventory')}
-            className={`min-h-[38px] px-4 rounded-full text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-              activeTab === 'inventory'
-                ? 'bg-black text-white border border-black'
-                : 'bg-white border border-[#cacaca] text-[#616161] hover:text-black hover:border-black'
-            }`}
-          >
-            <Package className="w-3.5 h-3.5" />
-            <span>STOCK // CATÁLOGO</span>
-          </button>
-
-          {/* Pestaña 3: VENTAS (POS) - Solo NEGOCIO */}
-          {isBusiness && (
-            <button
-              onClick={() => setActiveTab('sales')}
-              className={`min-h-[38px] px-4 rounded-full text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-                activeTab === 'sales'
-                  ? 'bg-black text-white border border-black'
-                  : 'bg-white border border-[#cacaca] text-[#616161] hover:text-black hover:border-black'
-              }`}
-            >
-              <ShoppingCart className="w-3.5 h-3.5" />
-              <span>TERMINAL POS</span>
-            </button>
-          )}
-
-          {/* Pestaña 4: HISTORIAL DE VENTAS - Solo NEGOCIO */}
-          {isBusiness && (
-            <button
-              onClick={() => setActiveTab('sales-history')}
-              className={`min-h-[38px] px-4 rounded-full text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-                activeTab === 'sales-history'
-                  ? 'bg-black text-white border border-black'
-                  : 'bg-white border border-[#cacaca] text-[#616161] hover:text-black hover:border-black'
-              }`}
-            >
-              <Receipt className="w-3.5 h-3.5" />
-              <span>HISTORIAL VENTAS</span>
-            </button>
-          )}
-
-          {/* Pestaña 5: REPORTES */}
-          <button
-            onClick={() => setActiveTab('reports')}
-            className={`min-h-[38px] px-4 rounded-full text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-              activeTab === 'reports'
-                ? 'bg-black text-white border border-black'
-                : 'bg-white border border-[#cacaca] text-[#616161] hover:text-black hover:border-black'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>REPORTES</span>
-          </button>
-
-          {/* Pestaña 6: TELEMETRÍA Y OCUPACIÓN */}
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`min-h-[38px] px-4 rounded-full text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-              activeTab === 'analytics'
-                ? 'bg-black text-white border border-black'
-                : 'bg-white border border-[#cacaca] text-[#616161] hover:text-black hover:border-black'
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            <span>TELEMETRÍA</span>
-          </button>
-
-          {/* Pestaña 7: AJUSTES Y CONFIGURACIÓN */}
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`min-h-[38px] px-4 rounded-full text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-              activeTab === 'settings'
-                ? 'bg-black text-white border border-black'
-                : 'bg-white border border-[#cacaca] text-[#616161] hover:text-black hover:border-black'
-            }`}
-          >
-            <Settings className="w-3.5 h-3.5" />
-            <span>AJUSTES</span>
-          </button>
-        </div>
 
         {/* =========================================================
             VISTAS DE PANTALLA PRINCIPAL

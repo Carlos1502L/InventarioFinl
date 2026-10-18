@@ -12,9 +12,7 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
-  GitBranch,
-  AlertTriangle,
-  ArrowUpRight
+  GitBranch
 } from 'lucide-react';
 import { Product, Category, Subcategory, Location } from '../types/database';
 import { formatCurrency } from '../lib/supabase';
@@ -116,15 +114,6 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
     });
   }, [products, searchTerm, selectedCategory, selectedSubcategory, selectedLocation, selectedStatus]);
 
-  // Métricas técnicas del manifiesto
-  const metrics = useMemo(() => {
-    const totalUnits = products.reduce((acc, p) => acc + (p.stock || 0), 0);
-    const lowStockCount = products.filter(p => p.status === 'ACTIVE' && p.stock <= (p.min_stock || 1)).length;
-    const totalValue = products.reduce((acc, p) => acc + ((p.price || 0) * (p.stock || 0)), 0);
-
-    return { totalUnits, lowStockCount, totalValue };
-  }, [products]);
-
   // Paginación
   const totalPages = Math.ceil(filteredProducts.length / pageSize) || 1;
   const paginatedProducts = useMemo(() => {
@@ -148,98 +137,50 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-28 sm:pb-16 max-w-[1440px] mx-auto font-normal text-black selection:bg-black selection:text-white">
+    <div className="space-y-6 pb-28 lg:pb-16 max-w-[1440px] mx-auto text-[#1E3A5F]">
       
       {/* =========================================================
-          1. HEADER // TECHNICAL INVENTORY MANIFEST BANNER
+          1. ENCABEZADO DE STOCK (SIN BLOQUE DE KPIS)
          ========================================================= */}
-      <div className="border border-[#cacaca] bg-white p-4 sm:p-6 transition-all">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#cacaca] pb-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="w-2 h-2 rounded-full bg-black inline-block" />
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#616161]">
-                INVENTORY MANIFEST // SPECIFICATION SHEET
-              </p>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-normal uppercase tracking-tight text-black">
-              CATÁLOGO DE EXISTENCIAS & RECURSOS
-            </h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-[#1E3A5F] inline-block" />
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#616161]">
+              CATÁLOGO GENERAL DE STOCK
+            </p>
           </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onRefresh}
-              className="min-h-[44px] px-5 rounded-full border border-[#cacaca] hover:border-black text-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors active:bg-[#f1f1f1]"
-              title="Sincronizar existencias"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>ACTUALIZAR</span>
-            </button>
-
-            <button
-              onClick={onOpenCreateModal}
-              className="min-h-[44px] px-6 rounded-full bg-black hover:bg-[#1a1b1e] text-white text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-            >
-              <Plus className="w-4 h-4 stroke-[1.5]" />
-              <span>NUEVO PRODUCTO</span>
-            </button>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-[#1E3A5F] uppercase">
+            EXISTENCIAS & RECURSOS
+          </h1>
         </div>
 
-        {/* Telemetría y Contadores Estampados */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 font-mono">
-          <div className="border-l border-[#cacaca] pl-3">
-            <span className="text-[10px] text-[#616161] uppercase tracking-[0.15em] block">
-              TOTAL SKUS REGISTRADOS
-            </span>
-            <span className="text-lg sm:text-xl font-normal tabular-nums text-black">
-              {products.length.toString().padStart(4, '0')}
-            </span>
-          </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onRefresh}
+            className="min-h-[44px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-colors active:bg-[#F8F9FA] shadow-sm"
+            title="Sincronizar existencias"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">ACTUALIZAR</span>
+          </button>
 
-          <div className="border-l border-[#cacaca] pl-3">
-            <span className="text-[10px] text-[#616161] uppercase tracking-[0.15em] block">
-              UNIDADES DISPONIBLES
-            </span>
-            <span className="text-lg sm:text-xl font-normal tabular-nums text-black">
-              {metrics.totalUnits.toLocaleString('es-PE')} <span className="text-xs text-[#616161]">UDS</span>
-            </span>
-          </div>
-
-          <div className="border-l border-[#cacaca] pl-3">
-            <span className="text-[10px] text-[#616161] uppercase tracking-[0.15em] block">
-              STOCK BAJO / ALERTA
-            </span>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-normal tabular-nums tracking-wider ${
-                metrics.lowStockCount > 0 
-                  ? 'bg-[#ffdd00] text-black border border-black' 
-                  : 'border border-[#cacaca] text-black'
-              }`}>
-                {metrics.lowStockCount > 0 && <span className="w-1.5 h-1.5 rounded-full bg-black mr-1.5 inline-block" />}
-                {metrics.lowStockCount} {metrics.lowStockCount === 1 ? 'ÍTEM' : 'ÍTEMS'}
-              </span>
-            </div>
-          </div>
-
-          <div className="border-l border-[#cacaca] pl-3">
-            <span className="text-[10px] text-[#616161] uppercase tracking-[0.15em] block">
-              VALUACIÓN DE STOCK
-            </span>
-            <span className="text-lg sm:text-xl font-normal tabular-nums text-black">
-              {formatCurrency(metrics.totalValue, currentInventory?.currency)}
-            </span>
-          </div>
+          <button
+            onClick={onOpenCreateModal}
+            className="min-h-[44px] px-6 rounded-full bg-[#1E3A5F] hover:bg-[#172E4C] text-white text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm"
+          >
+            <Plus className="w-4 h-4 stroke-[1.5]" />
+            <span>NUEVO PRODUCTO</span>
+          </button>
         </div>
       </div>
 
       {/* =========================================================
-          2. BARRA DE CONTROL // MOBILE-FIRST SEARCH & ACTIONS
+          2. BARRA DE BÚSQUEDA Y CONTROLES DIRECTOS
          ========================================================= */}
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
-          {/* Input de Búsqueda Tipo Manifiesto */}
+          {/* Input de Búsqueda */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-[#616161] absolute left-4 top-3.5 pointer-events-none" />
             <input
@@ -250,7 +191,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                 setCurrentPage(1);
               }}
               placeholder="BUSCAR POR NOMBRE, SKU, SERIAL O DESCRIPCIÓN..."
-              className="w-full min-h-[44px] bg-white border border-[#cacaca] focus:border-black rounded-full pl-11 pr-10 py-2.5 text-xs font-mono uppercase tracking-wider text-black placeholder-[#616161] focus:outline-none transition-colors"
+              className="w-full min-h-[44px] bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-full pl-11 pr-10 py-2.5 text-xs font-mono uppercase tracking-wider text-[#1E3A5F] placeholder-[#616161] focus:outline-none transition-colors shadow-sm"
             />
             {searchTerm && (
               <button
@@ -258,7 +199,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                   setSearchTerm('');
                   setCurrentPage(1);
                 }}
-                className="absolute right-4 top-3 text-xs text-[#616161] hover:text-black min-w-[24px] min-h-[24px] flex items-center justify-center"
+                className="absolute right-4 top-3 text-xs text-[#616161] hover:text-[#1E3A5F] min-w-[24px] min-h-[24px] flex items-center justify-center"
               >
                 ✕
               </button>
@@ -270,61 +211,61 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             {/* Escáner de Cámara */}
             <button
               onClick={() => setSearchScannerOpen(true)}
-              className="min-h-[44px] px-4 rounded-full border border-[#cacaca] hover:border-black bg-white text-black flex items-center justify-center gap-2 transition-all active:bg-[#f1f1f1]"
+              className="min-h-[44px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white text-[#1E3A5F] flex items-center justify-center gap-2 transition-all active:bg-[#F8F9FA] shadow-sm"
               title="Escanear código de barras o QR"
             >
               <Camera className="w-4 h-4 stroke-[1.5]" />
-              <span className="text-xs uppercase tracking-wider hidden md:inline">ESCANEAR</span>
+              <span className="text-xs font-mono uppercase tracking-wider hidden md:inline">ESCANEAR</span>
             </button>
 
             {/* Toggle de Filtros */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`min-h-[44px] px-4 rounded-full border transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider ${
+              className={`min-h-[44px] px-4 rounded-full border transition-all flex items-center justify-center gap-2 text-xs font-mono uppercase tracking-wider shadow-sm ${
                 showFilters || hasActiveFilters
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white text-black border-[#cacaca] hover:border-black'
+                  ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
+                  : 'bg-white text-[#1E3A5F] border-[#E5E7EB] hover:border-[#1E3A5F]'
               }`}
               title="Desplegar filtros técnicos"
             >
               <SlidersHorizontal className="w-4 h-4 stroke-[1.5]" />
               <span>FILTROS</span>
               {hasActiveFilters && (
-                <span className="w-2 h-2 rounded-full bg-[#ffdd00]" />
+                <span className="w-2 h-2 rounded-full bg-[#E8B4A0]" />
               )}
             </button>
 
-            {/* Selector de Vista: Retícula / Manifiesto Lista */}
-            <div className="flex items-center border border-[#cacaca] rounded-full p-1 bg-white">
+            {/* Selector de Vista */}
+            <div className="flex items-center border border-[#E5E7EB] rounded-full p-1 bg-white shadow-sm">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`min-h-[34px] px-3 rounded-full text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors ${
+                className={`min-h-[34px] px-3.5 rounded-full text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors ${
                   viewMode === 'grid'
-                    ? 'bg-black text-white'
-                    : 'text-[#616161] hover:text-black'
+                    ? 'bg-[#1E3A5F] text-white'
+                    : 'text-[#616161] hover:text-[#1E3A5F]'
                 }`}
-                title="Vista en Retícula Modular"
+                title="Vista en Retícula"
               >
                 <Grid className="w-3.5 h-3.5" />
                 <span className="hidden lg:inline text-[10px]">RETÍCULA</span>
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`min-h-[34px] px-3 rounded-full text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors ${
+                className={`min-h-[34px] px-3.5 rounded-full text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors ${
                   viewMode === 'list'
-                    ? 'bg-black text-white'
-                    : 'text-[#616161] hover:text-black'
+                    ? 'bg-[#1E3A5F] text-white'
+                    : 'text-[#616161] hover:text-[#1E3A5F]'
                 }`}
-                title="Vista en Manifiesto Técnico"
+                title="Vista en Manifiesto"
               >
                 <List className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline text-[10px]">MANIFIESTO</span>
+                <span className="hidden lg:inline text-[10px]">LISTA</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Barra de Filtros Rápidos por Categoría (Pill chips horizontales) */}
+        {/* Chips de Categorías */}
         {categories.length > 0 && (
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
             <button
@@ -333,10 +274,10 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                 setSelectedSubcategory('ALL');
                 setCurrentPage(1);
               }}
-              className={`min-h-[36px] px-4 rounded-full text-[11px] uppercase tracking-wider whitespace-nowrap transition-all border ${
+              className={`min-h-[36px] px-4 rounded-full text-[11px] font-mono uppercase tracking-wider whitespace-nowrap transition-all border shadow-sm ${
                 selectedCategory === 'ALL'
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white text-[#404040] border-[#cacaca] hover:border-black'
+                  ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
+                  : 'bg-white text-[#616161] border-[#E5E7EB] hover:border-[#1E3A5F]'
               }`}
             >
               TODAS LAS CATEGORÍAS ({products.length})
@@ -351,10 +292,10 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                     setSelectedSubcategory('ALL');
                     setCurrentPage(1);
                   }}
-                  className={`min-h-[36px] px-4 rounded-full text-[11px] uppercase tracking-wider whitespace-nowrap transition-all border ${
+                  className={`min-h-[36px] px-4 rounded-full text-[11px] font-mono uppercase tracking-wider whitespace-nowrap transition-all border shadow-sm ${
                     selectedCategory === c.id
-                      ? 'bg-black text-white border-black'
-                      : 'bg-white text-[#404040] border-[#cacaca] hover:border-black'
+                      ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
+                      : 'bg-white text-[#616161] border-[#E5E7EB] hover:border-[#1E3A5F]'
                   }`}
                 >
                   {c.name} ({count})
@@ -364,11 +305,11 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
           </div>
         )}
 
-        {/* Panel Desplegable de Filtros Técnicos */}
+        {/* Panel Desplegable de Filtros */}
         {showFilters && (
-          <div className="p-4 sm:p-5 bg-[#f1f1f1] border border-[#cacaca] rounded-none grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-200">
+          <div className="p-5 bg-white border border-[#E5E7EB] rounded-2xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shadow-sm animate-in fade-in duration-200">
             <div>
-              <label className="block text-[10px] font-mono text-[#404040] uppercase tracking-[0.15em] mb-1.5">
+              <label className="block text-[10px] font-mono text-[#616161] uppercase tracking-[0.15em] mb-1.5">
                 [01] CATEGORÍA PRINCIPAL
               </label>
               <select
@@ -378,7 +319,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                   setSelectedSubcategory('ALL');
                   setCurrentPage(1);
                 }}
-                className="w-full min-h-[44px] bg-white border border-[#cacaca] focus:border-black rounded-full px-4 text-xs font-mono uppercase tracking-wider text-black focus:outline-none"
+                className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl px-4 text-xs font-mono uppercase tracking-wider text-[#1E3A5F] focus:outline-none"
               >
                 <option value="ALL">TODAS LAS CATEGORÍAS</option>
                 {categories.map(c => (
@@ -388,7 +329,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-mono text-[#404040] uppercase tracking-[0.15em] mb-1.5">
+              <label className="block text-[10px] font-mono text-[#616161] uppercase tracking-[0.15em] mb-1.5">
                 [02] SUBCATEGORÍA / TIPO
               </label>
               <select
@@ -398,7 +339,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                   setCurrentPage(1);
                 }}
                 disabled={selectedCategory === 'ALL' || activeSubcategories.length === 0}
-                className="w-full min-h-[44px] bg-white border border-[#cacaca] focus:border-black rounded-full px-4 text-xs font-mono uppercase tracking-wider text-black focus:outline-none disabled:opacity-40"
+                className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl px-4 text-xs font-mono uppercase tracking-wider text-[#1E3A5F] focus:outline-none disabled:opacity-40"
               >
                 <option value="ALL">TODAS LAS SUBCATEGORÍAS</option>
                 {activeSubcategories.map(s => (
@@ -408,7 +349,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-mono text-[#404040] uppercase tracking-[0.15em] mb-1.5">
+              <label className="block text-[10px] font-mono text-[#616161] uppercase tracking-[0.15em] mb-1.5">
                 [03] UBICACIÓN FÍSICA / RACK
               </label>
               <select
@@ -417,7 +358,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                   setSelectedLocation(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full min-h-[44px] bg-white border border-[#cacaca] focus:border-black rounded-full px-4 text-xs font-mono uppercase tracking-wider text-black focus:outline-none"
+                className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl px-4 text-xs font-mono uppercase tracking-wider text-[#1E3A5F] focus:outline-none"
               >
                 <option value="ALL">TODAS LAS UBICACIONES</option>
                 {locations.map(l => (
@@ -427,7 +368,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-mono text-[#404040] uppercase tracking-[0.15em] mb-1.5">
+              <label className="block text-[10px] font-mono text-[#616161] uppercase tracking-[0.15em] mb-1.5">
                 [04] ESTADO DE INVENTARIO
               </label>
               <select
@@ -436,7 +377,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                   setSelectedStatus(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full min-h-[44px] bg-white border border-[#cacaca] focus:border-black rounded-full px-4 text-xs font-mono uppercase tracking-wider text-black focus:outline-none"
+                className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl px-4 text-xs font-mono uppercase tracking-wider text-[#1E3A5F] focus:outline-none"
               >
                 <option value="ALL">TODOS LOS ESTADOS</option>
                 <option value="ACTIVE">ACTIVOS (EN VENTA/USO)</option>
@@ -446,16 +387,16 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
           </div>
         )}
 
-        {/* Resumen de resultados y reset */}
+        {/* Resumen de resultados */}
         <div className="flex items-center justify-between text-xs font-mono text-[#616161] px-1">
           <span className="uppercase tracking-wider">
-            MOSTRANDO <span className="text-black">{filteredProducts.length}</span> DE {products.length} ÍTEMS EN CATÁLOGO
+            MOSTRANDO <span className="text-[#1E3A5F] font-semibold">{filteredProducts.length}</span> DE {products.length} ÍTEMS EN CATÁLOGO
           </span>
 
           {hasActiveFilters && (
             <button
               onClick={handleClearFilters}
-              className="min-h-[32px] px-3 rounded-full border border-black text-black hover:bg-black hover:text-white text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+              className="min-h-[32px] px-3.5 rounded-full border border-[#1E3A5F] text-[#1E3A5F] hover:bg-[#1E3A5F] hover:text-white text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition-colors"
             >
               <RotateCcw className="w-3 h-3" />
               <span>REINICIAR FILTROS</span>
@@ -465,16 +406,16 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
       </div>
 
       {/* =========================================================
-          3. PRODUCT MATRIX / MANIFEST (SWISS INDUSTRIAL CATALOG)
+          3. PRODUCT MATRIX // LIST (AWWWARDS EDITORIAL GALLERY)
          ========================================================= */}
       {filteredProducts.length === 0 ? (
-        <div className="border border-[#cacaca] bg-white p-12 text-center space-y-4">
-          <div className="w-12 h-12 border border-[#cacaca] rounded-full mx-auto flex items-center justify-center">
+        <div className="border border-[#E5E7EB] bg-white rounded-2xl p-12 text-center space-y-4 shadow-sm">
+          <div className="w-12 h-12 border border-[#E5E7EB] rounded-full mx-auto flex items-center justify-center">
             <Package className="w-6 h-6 stroke-[1.2] text-[#616161]" />
           </div>
           <div>
-            <h3 className="text-sm font-normal uppercase tracking-wider text-black">
-              SIN REGISTROS EN EL MANIFIESTO
+            <h3 className="text-sm font-normal uppercase tracking-wider text-[#1E3A5F]">
+              SIN REGISTROS EN EL CATÁLOGO
             </h3>
             <p className="text-xs text-[#616161] font-mono mt-1 max-w-md mx-auto uppercase">
               {hasActiveFilters
@@ -486,24 +427,22 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             {hasActiveFilters && (
               <button
                 onClick={handleClearFilters}
-                className="min-h-[44px] px-5 rounded-full border border-[#cacaca] hover:border-black text-xs uppercase tracking-wider transition-colors"
+                className="min-h-[44px] px-5 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] text-xs uppercase tracking-wider transition-colors"
               >
                 LIMPIAR FILTROS
               </button>
             )}
             <button
               onClick={onOpenCreateModal}
-              className="min-h-[44px] px-6 rounded-full bg-black text-white hover:bg-[#1a1b1e] text-xs uppercase tracking-wider flex items-center gap-2"
+              className="min-h-[44px] px-6 rounded-full bg-[#1E3A5F] text-white hover:bg-[#172E4C] text-xs uppercase tracking-wider flex items-center gap-2 shadow-sm"
             >
               <Plus className="w-4 h-4" /> REGISTRAR PRODUCTO
             </button>
           </div>
         </div>
       ) : viewMode === 'grid' ? (
-        /* ---------------------------------------------------------
-           VISTA A: RETÍCULA MODULAR SUIZA (GRID WITH 1PX HAIRLINE)
-           --------------------------------------------------------- */
-        <div className="border border-[#cacaca] bg-[#cacaca] grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[1px]">
+        /* VISTA RETÍCULA EN TARJETAS ROUNDED-2XL */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {paginatedProducts.map(product => {
             const isLow = product.stock <= (product.min_stock || 1);
             const isInactive = product.status !== 'ACTIVE';
@@ -513,7 +452,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
               <div
                 key={product.id}
                 onClick={() => onSelectProduct(product)}
-                className="bg-white p-4 hover:bg-[#fafafa] transition-colors cursor-pointer group flex flex-col justify-between"
+                className="bg-white border border-[#E5E7EB] hover:border-[#1E3A5F] rounded-2xl p-4 transition-all cursor-pointer group flex flex-col justify-between shadow-sm hover:shadow-md"
               >
                 {/* Cabecera Técnica del Ítem */}
                 <div className="flex items-start justify-between gap-2 mb-3">
@@ -521,7 +460,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                     <span className="font-mono text-[10px] tracking-wider text-[#616161] uppercase block truncate">
                       REF // {product.code}
                     </span>
-                    <h3 className="text-sm font-normal uppercase tracking-wide text-black truncate group-hover:underline mt-0.5">
+                    <h3 className="text-sm font-normal uppercase tracking-wide text-[#1E3A5F] truncate group-hover:text-[#1E3A5F] group-hover:underline mt-0.5">
                       {product.name}
                     </h3>
                   </div>
@@ -529,24 +468,24 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                   {/* Badge de Stock en Píldora */}
                   <div className="flex-shrink-0">
                     {isInactive ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-wider bg-black text-white">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-wider bg-[#1E3A5F] text-white">
                         RETIRADO
                       </span>
                     ) : isLow ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-wider bg-[#ffdd00] text-black border border-black">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-wider bg-[#ffdd00] text-black border border-black/20">
                         <span className="w-1.5 h-1.5 rounded-full bg-black mr-1 inline-block animate-pulse" />
                         {product.stock} UDS
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-wider border border-[#cacaca] text-black">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-wider border border-[#E5E7EB] text-[#1E3A5F]">
                         {product.stock} UDS
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Lienzo de Fotografía (El único elemento cromático: la lona de producto) */}
-                <div className="aspect-square bg-white border border-[#cacaca] relative overflow-hidden flex items-center justify-center my-1">
+                {/* Fotografía de Producto */}
+                <div className="aspect-square bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] relative overflow-hidden flex items-center justify-center my-1">
                   {mainPhoto ? (
                     <img
                       src={mainPhoto}
@@ -557,36 +496,35 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                     />
                   ) : (
                     <div className="text-center p-4">
-                      <Package className="w-8 h-8 stroke-[1] text-[#cacaca] mx-auto mb-1" />
+                      <Package className="w-8 h-8 stroke-[1] text-[#616161] mx-auto mb-1 opacity-40" />
                       <span className="font-mono text-[9px] uppercase tracking-widest text-[#616161]">
                         SIN FOTO
                       </span>
                     </div>
                   )}
 
-                  {/* Tag Variante Técnica */}
                   {product.is_variant && (
                     <div className="absolute top-2 left-2">
-                      <span className="font-mono text-[9px] uppercase px-2 py-0.5 rounded-full bg-black text-white flex items-center gap-1">
+                      <span className="font-mono text-[9px] uppercase px-2.5 py-0.5 rounded-full bg-[#1E3A5F] text-white flex items-center gap-1 shadow-sm">
                         <GitBranch className="w-2.5 h-2.5" /> VARIANTE
                       </span>
                     </div>
                   )}
                 </div>
 
-                {/* Pie de Ficha con Metadatos Técnicos */}
-                <div className="pt-3 mt-2 border-t border-[#cacaca] flex items-center justify-between text-xs">
+                {/* Pie con Metadatos */}
+                <div className="pt-3 mt-2 border-t border-[#E5E7EB] flex items-center justify-between text-xs">
                   <div className="min-w-0 pr-2">
                     <span className="font-mono text-[10px] text-[#616161] uppercase tracking-wider block truncate">
                       LOC: {product.locations?.name || 'SIN ASIGNAR'}
                     </span>
-                    <span className="font-mono text-[10px] text-[#616161] uppercase tracking-wider block truncate">
+                    <span className="font-mono text-[10px] text-[#E8B4A0] uppercase tracking-wider block truncate font-medium">
                       CAT: {product.categories?.name || 'GENERAL'}
                     </span>
                   </div>
 
                   <div className="text-right flex-shrink-0">
-                    <span className="text-base font-normal tabular-nums text-black block tracking-tight">
+                    <span className="text-base font-normal tabular-nums text-[#1E3A5F] block tracking-tight">
                       {formatCurrency(product.price, currentInventory?.currency)}
                     </span>
                   </div>
@@ -596,12 +534,9 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
           })}
         </div>
       ) : (
-        /* ---------------------------------------------------------
-           VISTA B: MANIFIESTO TÉCNICO EN LISTA (SHIPPING MANIFEST TABLE)
-           --------------------------------------------------------- */
-        <div className="border border-[#cacaca] bg-white overflow-hidden">
-          {/* Cabecera de Tabla (Desktop) */}
-          <div className="hidden md:grid grid-cols-12 gap-2 p-3 bg-[#f1f1f1] border-b border-[#cacaca] font-mono text-[10px] uppercase tracking-[0.15em] text-[#404040]">
+        /* VISTA MANIFIESTO EN LISTA */
+        <div className="border border-[#E5E7EB] bg-white rounded-2xl overflow-hidden shadow-sm">
+          <div className="hidden md:grid grid-cols-12 gap-2 p-3.5 bg-[#F8F9FA] border-b border-[#E5E7EB] font-mono text-[10px] uppercase tracking-[0.15em] text-[#616161]">
             <div className="col-span-1">FOTO</div>
             <div className="col-span-2">SKU // REF</div>
             <div className="col-span-4">DESCRIPCIÓN TÉCNICA</div>
@@ -611,8 +546,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             <div className="col-span-1 text-center">ESTADO</div>
           </div>
 
-          {/* Filas del Manifiesto */}
-          <div className="divide-y divide-[#cacaca]">
+          <div className="divide-y divide-[#E5E7EB]">
             {paginatedProducts.map(product => {
               const isLow = product.stock <= (product.min_stock || 1);
               const isInactive = product.status !== 'ACTIVE';
@@ -622,11 +556,10 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                 <div
                   key={product.id}
                   onClick={() => onSelectProduct(product)}
-                  className="p-3 sm:p-4 hover:bg-[#fafafa] transition-colors cursor-pointer group flex flex-col md:grid md:grid-cols-12 md:items-center gap-3"
+                  className="p-3.5 sm:p-4 hover:bg-[#F8F9FA] transition-colors cursor-pointer group flex flex-col md:grid md:grid-cols-12 md:items-center gap-3"
                 >
-                  {/* Celda Foto */}
                   <div className="col-span-1 flex items-center">
-                    <div className="w-12 h-12 border border-[#cacaca] bg-white flex-shrink-0 overflow-hidden flex items-center justify-center">
+                    <div className="w-12 h-12 border border-[#E5E7EB] bg-[#F8F9FA] rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center">
                       {mainPhoto ? (
                         <img
                           src={mainPhoto}
@@ -635,25 +568,23 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                           loading="lazy"
                         />
                       ) : (
-                        <Package className="w-4 h-4 stroke-[1] text-[#cacaca]" />
+                        <Package className="w-4 h-4 stroke-[1] text-[#616161] opacity-50" />
                       )}
                     </div>
                   </div>
 
-                  {/* Celda SKU */}
-                  <div className="col-span-2 font-mono text-xs uppercase tracking-wider text-black">
+                  <div className="col-span-2 font-mono text-xs uppercase tracking-wider text-[#1E3A5F]">
                     <span className="text-[#616161] md:hidden text-[10px] block">SKU:</span>
                     {product.code}
                     {product.is_variant && (
-                      <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full border border-black text-black">
+                      <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full border border-[#1E3A5F] text-[#1E3A5F]">
                         VAR
                       </span>
                     )}
                   </div>
 
-                  {/* Celda Nombre y Categoría */}
                   <div className="col-span-4 min-w-0">
-                    <h4 className="text-xs sm:text-sm font-normal uppercase tracking-wide text-black group-hover:underline truncate">
+                    <h4 className="text-xs sm:text-sm font-normal uppercase tracking-wide text-[#1E3A5F] group-hover:underline truncate">
                       {product.name}
                     </h4>
                     <span className="font-mono text-[10px] text-[#616161] uppercase tracking-wider block truncate">
@@ -661,36 +592,32 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                     </span>
                   </div>
 
-                  {/* Celda Ubicación */}
-                  <div className="col-span-2 font-mono text-xs uppercase tracking-wider text-[#404040] flex items-center gap-1 truncate">
-                    <MapPin className="w-3.5 h-3.5 stroke-[1.5] text-black flex-shrink-0" />
+                  <div className="col-span-2 font-mono text-xs uppercase tracking-wider text-[#616161] flex items-center gap-1 truncate">
+                    <MapPin className="w-3.5 h-3.5 stroke-[1.5] text-[#1E3A5F] flex-shrink-0" />
                     <span className="truncate">{product.locations?.name || 'SIN ASIGNAR'}</span>
                   </div>
 
-                  {/* Celda Precio */}
-                  <div className="col-span-1 text-left md:text-right font-normal text-xs sm:text-sm tabular-nums text-black">
+                  <div className="col-span-1 text-left md:text-right font-normal text-xs sm:text-sm tabular-nums text-[#1E3A5F]">
                     <span className="text-[#616161] md:hidden text-[10px] font-mono uppercase block">PRECIO:</span>
                     {formatCurrency(product.price, currentInventory?.currency)}
                   </div>
 
-                  {/* Celda Stock */}
-                  <div className="col-span-1 text-left md:text-right font-mono text-xs tabular-nums text-black">
+                  <div className="col-span-1 text-left md:text-right font-mono text-xs tabular-nums text-[#1E3A5F]">
                     <span className="text-[#616161] md:hidden text-[10px] uppercase block">CANTIDAD:</span>
                     {product.stock} <span className="text-[10px] text-[#616161]">UDS</span>
                   </div>
 
-                  {/* Celda Estado Pill */}
                   <div className="col-span-1 flex md:justify-center">
                     {isInactive ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono tracking-wider bg-black text-white">
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono tracking-wider bg-[#1E3A5F] text-white">
                         BAJA
                       </span>
                     ) : isLow ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono tracking-wider bg-[#ffdd00] text-black border border-black">
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono tracking-wider bg-[#ffdd00] text-black border border-black/20">
                         CRÍTICO
                       </span>
                     ) : (
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono tracking-wider border border-[#cacaca] text-black">
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono tracking-wider border border-[#E5E7EB] text-[#1E3A5F]">
                         ACTIVO
                       </span>
                     )}
@@ -703,20 +630,20 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
       )}
 
       {/* =========================================================
-          4. PAGINACIÓN TÉCNICA // SWISS PILL PAGINATION
+          4. PAGINACIÓN
          ========================================================= */}
       {totalPages > 1 && (
-        <div className="border border-[#cacaca] bg-white p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 font-mono text-xs">
+        <div className="border border-[#E5E7EB] bg-white rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 font-mono text-xs shadow-sm">
           <span className="text-[#616161] uppercase tracking-wider">
-            HOJA DE MANIFIESTO <strong className="text-black font-normal">{currentPage.toString().padStart(2, '0')}</strong> DE {totalPages.toString().padStart(2, '0')}
+            HOJA <strong className="text-[#1E3A5F] font-normal">{currentPage.toString().padStart(2, '0')}</strong> DE {totalPages.toString().padStart(2, '0')}
           </span>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="min-h-[40px] px-3.5 rounded-full border border-[#cacaca] hover:border-black bg-white disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-colors"
-              title="Hoja Anterior"
+              className="min-h-[40px] px-3.5 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-colors text-[#1E3A5F]"
+              title="Página Anterior"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -733,8 +660,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                   onClick={() => setCurrentPage(pageNum)}
                   className={`min-h-[40px] min-w-[40px] rounded-full text-xs font-mono uppercase transition-all flex items-center justify-center ${
                     currentPage === pageNum
-                      ? 'bg-black text-white'
-                      : 'border border-[#cacaca] hover:border-black text-black bg-white'
+                      ? 'bg-[#1E3A5F] text-white shadow-sm'
+                      : 'border border-[#E5E7EB] hover:border-[#1E3A5F] text-[#1E3A5F] bg-white'
                   }`}
                 >
                   {pageNum.toString().padStart(2, '0')}
@@ -745,8 +672,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="min-h-[40px] px-3.5 rounded-full border border-[#cacaca] hover:border-black bg-white disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-colors"
-              title="Hoja Siguiente"
+              className="min-h-[40px] px-3.5 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-colors text-[#1E3A5F]"
+              title="Página Siguiente"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

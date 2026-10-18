@@ -151,16 +151,16 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
+      <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-md overflow-hidden shadow-xl flex flex-col font-mono">
         {/* Cabecera */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/80">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl">
-              <Camera className="w-5 h-5" />
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center">
+              <Camera className="w-5 h-5 text-[#1E3A5F]" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 dark:text-white text-base">{title}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Escáner Óptico de Alta Velocidad</p>
+              <h3 className="font-light text-[#1E3A5F] text-base uppercase tracking-tight">{title}</h3>
+              <p className="text-[11px] text-[#616161]">Escáner Óptico de Alta Velocidad</p>
             </div>
           </div>
           <button
@@ -168,9 +168,9 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
               stopScanner();
               onClose();
             }}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -181,26 +181,26 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
           {/* Guía visual de enfoque superpuesta */}
           {isScanning && !errorMsg && (
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <div className="w-64 h-64 border-2 border-dashed border-blue-400/80 rounded-2xl relative">
+              <div className="w-64 h-64 border-2 border-dashed border-[#E8B4A0] rounded-2xl relative">
                 {/* Esquinas resaltadas */}
-                <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-blue-500 rounded-tl" />
-                <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-blue-500 rounded-tr" />
-                <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-blue-500 rounded-bl" />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-blue-500 rounded-br" />
+                <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-[#1E3A5F] rounded-tl" />
+                <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-[#1E3A5F] rounded-tr" />
+                <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-[#1E3A5F] rounded-bl" />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-[#1E3A5F] rounded-br" />
                 {/* Línea de escaneo láser */}
-                <div className="absolute inset-x-0 top-1/2 h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent animate-pulse shadow-[0_0_8px_#ef4444]" />
+                <div className="absolute inset-x-0 top-1/2 h-0.5 bg-gradient-to-r from-transparent via-[#E8B4A0] to-transparent animate-pulse shadow-[0_0_8px_#E8B4A0]" />
               </div>
             </div>
           )}
 
           {/* Mensaje de Error */}
           {errorMsg && (
-            <div className="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center p-6 text-center">
-              <AlertCircle className="w-12 h-12 text-rose-500 mb-3" />
-              <p className="text-sm text-slate-200 mb-4">{errorMsg}</p>
+            <div className="absolute inset-0 bg-[#1E3A5F]/95 flex flex-col items-center justify-center p-6 text-center">
+              <AlertCircle className="w-12 h-12 text-[#E8B4A0] mb-3" />
+              <p className="text-sm text-white mb-4">{errorMsg}</p>
               <button
                 onClick={() => startScanner(selectedCameraId)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow transition-all active:scale-95"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-[#1E3A5F] text-xs font-semibold rounded-xl shadow transition-all active:scale-95"
               >
                 <RefreshCw className="w-3.5 h-3.5" /> Reintentar Conexión
               </button>
@@ -209,19 +209,19 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
         </div>
 
         {/* Controles y Selector de Cámara */}
-        <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 space-y-3">
-          <p className="text-xs text-slate-500 dark:text-slate-400 text-center">{instructions}</p>
+        <div className="p-4 bg-[#F8F9FA] border-t border-[#E5E7EB] space-y-3">
+          <p className="text-xs text-[#616161] text-center">{instructions}</p>
 
           {cameras.length > 1 && (
-            <div className="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
-              <span className="text-slate-500 dark:text-slate-400">Cámara:</span>
+            <div className="flex items-center justify-between text-xs text-[#1E3A5F] bg-white p-2.5 rounded-xl border border-[#E5E7EB]">
+              <span className="text-[#616161]">Cámara:</span>
               <select
                 value={selectedCameraId}
                 onChange={(e) => {
                   setSelectedCameraId(e.target.value);
                   startScanner(e.target.value);
                 }}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-blue-500 outline-none"
+                className="bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] text-xs rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-[#1E3A5F] outline-none"
               >
                 {cameras.map((cam, idx) => (
                   <option key={cam.id} value={cam.id}>
@@ -232,8 +232,8 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
             </div>
           )}
 
-          <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 dark:text-slate-500">
-            <Volume2 className="w-3 h-3" /> Pitido y vibración háptica activados al detectar
+          <div className="flex items-center justify-center gap-2 text-[11px] text-[#616161]">
+            <Volume2 className="w-3 h-3 text-[#1E3A5F]" /> Señal háptica y auditiva al detectar
           </div>
         </div>
       </div>

@@ -131,64 +131,64 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+      <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-md overflow-hidden shadow-xl flex flex-col">
         {/* Cabecera */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-rose-50 dark:bg-rose-600/20 text-rose-600 dark:text-rose-400 rounded-xl">
-              <Archive className="w-5 h-5" />
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center">
+              <Archive className="w-5 h-5 text-[#1E3A5F]" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 dark:text-white text-base">Retirar o Dar de Baja</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Salida de stock y control de mermas</p>
+              <h3 className="font-light text-[#1E3A5F] text-base uppercase tracking-tight">Retirar o Dar de Baja</h3>
+              <p className="text-[11px] text-[#616161]">Salida de stock y control de mermas</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Formulario */}
-        <form onSubmit={handleWithdraw} className="p-5 space-y-4">
+        <form onSubmit={handleWithdraw} className="p-6 space-y-4 font-mono">
           {errorMsg && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-xl text-xs text-rose-600 dark:text-rose-400">
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
               {errorMsg}
             </div>
           )}
 
           {/* Resumen del producto */}
-          <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700/50">
-            <p className="text-sm font-bold text-slate-900 dark:text-white">{product.name}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">Código: {product.code}</p>
-            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-              Stock disponible: <strong className="text-blue-600 dark:text-blue-400">{maxStock} unidades</strong>
+          <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] space-y-1">
+            <p className="text-sm font-medium text-[#1E3A5F] uppercase">{product.name}</p>
+            <p className="text-xs text-[#616161] font-mono">REF: {product.code}</p>
+            <p className="text-xs text-[#1E3A5F] pt-1">
+              Stock disponible: <strong className="font-semibold">{maxStock} unidades</strong>
             </p>
           </div>
 
           {/* Selector de Modo */}
-          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+          <div className="grid grid-cols-2 gap-2 p-1 bg-[#F8F9FA] border border-[#E5E7EB] rounded-2xl text-xs">
             <button
               type="button"
               onClick={() => setWithdrawMode('partial')}
-              className={`py-2 text-xs font-semibold rounded-xl transition-all ${
+              className={`min-h-[40px] uppercase tracking-wider rounded-xl transition-all ${
                 withdrawMode === 'partial'
-                  ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-[#1E3A5F] text-white shadow-sm'
+                  : 'text-[#616161] hover:text-[#1E3A5F]'
               }`}
             >
-              Descontar Cantidad
+              Descontar Unidades
             </button>
             <button
               type="button"
               onClick={() => setWithdrawMode('full')}
-              className={`py-2 text-xs font-semibold rounded-xl transition-all ${
+              className={`min-h-[40px] uppercase tracking-wider rounded-xl transition-all ${
                 withdrawMode === 'full'
-                  ? 'bg-rose-600 text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-rose-700 text-white shadow-sm'
+                  : 'text-[#616161] hover:text-rose-700'
               }`}
             >
               Dar de Baja Total
@@ -198,8 +198,8 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
           {/* Cantidad a retirar (si es parcial) */}
           {withdrawMode === 'partial' ? (
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                Cantidad de unidades a retirar <span className="text-rose-500">*</span>
+              <label className="block text-xs uppercase tracking-wider text-[#1E3A5F] mb-1.5">
+                CANTIDAD DE UNIDADES A RETIRAR <span className="text-[#E8B4A0]">*</span>
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -209,15 +209,15 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
                   value={quantity}
                   onChange={e => setQuantity(parseInt(e.target.value, 10) || 1)}
                   required
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white dark:focus:bg-slate-800"
+                  className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                 />
-                <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">de {maxStock} uds</span>
+                <span className="text-xs text-[#616161] whitespace-nowrap">de {maxStock} uds</span>
               </div>
             </div>
           ) : (
-            <div className="p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl flex items-start gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-700 dark:text-amber-300">
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-rose-800">
                 El producto se marcará como <strong>RETIRADO</strong> y dejará de figurar en el inventario activo de ventas.
               </p>
             </div>
@@ -225,13 +225,13 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
 
           {/* Motivo */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-              Motivo del Retiro / Baja
+            <label className="block text-xs uppercase tracking-wider text-[#1E3A5F] mb-1.5">
+              MOTIVO DEL RETIRO / BAJA
             </label>
             <select
               value={reason}
               onChange={e => setReason(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white dark:focus:bg-slate-800 mb-2"
+              className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] mb-2"
             >
               <option value="Venta regular">Venta regular</option>
               <option value="Dañado / Defectuoso">Dañado / Defectuoso</option>
@@ -248,32 +248,34 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
                 onChange={e => setCustomReason(e.target.value)}
                 placeholder="Escribe el motivo detallado..."
                 required
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white dark:focus:bg-slate-800"
+                className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm text-[#1E3A5F] placeholder:text-[#616161]/50 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
               />
             )}
           </div>
 
           {/* Acciones */}
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2.5">
+          <div className="pt-3 border-t border-[#E5E7EB] flex justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+              className="min-h-[44px] px-5 text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting || maxStock <= 0}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-rose-600/20 disabled:opacity-50 transition-all active:scale-95"
+              className="min-h-[44px] inline-flex items-center gap-2 px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50 transition-all active:scale-95"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Procesando...
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>Procesando...</span>
                 </>
               ) : (
                 <>
-                  <Check className="w-3.5 h-3.5" /> Confirmar Retiro
+                  <Check className="w-4 h-4 text-[#E8B4A0]" />
+                  <span>Confirmar Retiro</span>
                 </>
               )}
             </button>

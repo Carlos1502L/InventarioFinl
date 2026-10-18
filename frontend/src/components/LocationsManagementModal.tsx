@@ -99,31 +99,31 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+        <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
           {/* Cabecera */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-amber-50 dark:bg-amber-600/20 text-amber-600 dark:text-amber-400 rounded-xl">
-                <MapPin className="w-5 h-5" />
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center">
+                <MapPin className="w-5 h-5 text-[#1E3A5F]" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 dark:text-white text-base">Gestión de Ubicaciones Físicas</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Almacenes, estantes y generador de etiquetas imprimibles</p>
+                <h3 className="font-light text-[#1E3A5F] text-base uppercase tracking-tight">Ubicaciones Físicas</h3>
+                <p className="text-[11px] text-[#616161]">Depósitos, estantes y etiquetas QR imprimibles</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Contenido con scroll */}
-          <div className="p-5 overflow-y-auto space-y-6">
+          <div className="p-6 overflow-y-auto space-y-6 font-mono">
             {errorMsg && (
-              <div className="p-3 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-xl text-xs text-rose-600 dark:text-rose-400">
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
                 {errorMsg}
               </div>
             )}

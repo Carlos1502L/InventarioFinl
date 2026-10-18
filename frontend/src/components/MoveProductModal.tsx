@@ -241,60 +241,61 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+        <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-md overflow-hidden shadow-xl flex flex-col">
           {/* Cabecera */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-amber-50 dark:bg-amber-600/20 text-amber-600 dark:text-amber-400 rounded-xl">
-                <ArrowRightLeft className="w-5 h-5" />
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center">
+                <ArrowRightLeft className="w-5 h-5 text-[#1E3A5F]" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 dark:text-white text-base">Mover de Ubicación</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Transferencia entre almacenes</p>
+                <h3 className="font-light text-[#1E3A5F] text-base uppercase tracking-tight">Mover de Ubicación</h3>
+                <p className="text-[11px] text-[#616161]">Transferencia entre depósitos</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Formulario */}
-          <form onSubmit={handleMove} className="p-5 space-y-4">
+          <form onSubmit={handleMove} className="p-6 space-y-4 font-mono">
             {errorMsg && (
-              <div className="p-3 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-xl text-xs text-rose-600 dark:text-rose-400">
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
                 {errorMsg}
               </div>
             )}
 
             {/* Información del producto y ubicación actual */}
-            <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700/50 space-y-1">
-              <span className="text-[10px] text-slate-400 dark:text-slate-400 uppercase font-bold tracking-wider">Producto</span>
-              <p className="text-sm font-bold text-slate-900 dark:text-white">{product.name}</p>
-              <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 pt-1">
-                <MapPin className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-                <span>Ubicación actual: <strong>{currentLocation?.name || 'Desconocida'}</strong> ({currentLocation?.code})</span>
+            <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] space-y-1">
+              <span className="text-[10px] text-[#616161] uppercase tracking-wider">PRODUCTO</span>
+              <p className="text-sm font-medium text-[#1E3A5F] uppercase">{product.name}</p>
+              <div className="flex items-center gap-1.5 text-xs text-[#1E3A5F] pt-1">
+                <MapPin className="w-3.5 h-3.5 text-[#E8B4A0]" />
+                <span>ORIGEN: <strong className="font-semibold">{currentLocation?.name || 'Desconocida'}</strong> ({currentLocation?.code})</span>
               </div>
             </div>
-            {/* Cantidad a Mover (Transferencia Parcial si stock > 1) */}
+
+            {/* Cantidad a Mover */}
             {product.stock > 1 ? (
-              <div className="p-3.5 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 rounded-2xl space-y-2">
+              <div className="p-4 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Cantidad a Trasladar <span className="text-amber-500">*</span>
+                  <label className="text-xs uppercase tracking-wider text-[#1E3A5F]">
+                    CANTIDAD A TRASLADAR <span className="text-[#E8B4A0]">*</span>
                   </label>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Total disponible: <strong className="text-amber-600 dark:text-amber-400">{product.stock} uds</strong>
+                  <span className="text-[10px] text-[#616161] uppercase">
+                    DISPONIBLE: <strong className="text-[#1E3A5F]">{product.stock} UDS</strong>
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setQuantityToMove(q => Math.max(1, q - 1))}
-                    className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 transition-colors"
+                    className="w-10 h-10 rounded-xl border border-[#E5E7EB] bg-white flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] transition-colors"
                   >
                     -
                   </button>
@@ -307,39 +308,39 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                       const val = parseInt(e.target.value) || 1;
                       setQuantityToMove(Math.max(1, Math.min(product.stock, val)));
                     }}
-                    className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-center text-sm font-extrabold text-slate-900 dark:text-white"
+                    className="flex-1 min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3 py-1.5 text-center text-sm font-medium text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                   />
                   <button
                     type="button"
                     onClick={() => setQuantityToMove(q => Math.min(product.stock, q + 1))}
-                    className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 transition-colors"
+                    className="w-10 h-10 rounded-xl border border-[#E5E7EB] bg-white flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] transition-colors"
                   >
                     +
                   </button>
                   <button
                     type="button"
                     onClick={() => setQuantityToMove(product.stock)}
-                    className="px-3 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/60 rounded-xl transition-colors whitespace-nowrap"
+                    className="px-3 min-h-[40px] text-[11px] uppercase tracking-wider text-[#1E3A5F] bg-[#E8B4A0]/20 hover:bg-[#E8B4A0]/30 border border-[#E8B4A0]/40 rounded-xl transition-colors whitespace-nowrap"
                   >
                     Todas ({product.stock})
                   </button>
                 </div>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                <p className="text-[10px] text-[#616161]">
                   {quantityToMove < product.stock 
                     ? `Se moverán ${quantityToMove} uds y permanecerán ${product.stock - quantityToMove} uds en la ubicación actual.`
-                    : `Se trasladará la totalidad del inventario de este producto.`}
+                    : `Se trasladará la totalidad de las existencias.`}
                 </p>
               </div>
             ) : (
-              <div className="px-3 py-2 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/40 text-[11px] text-slate-500">
+              <div className="p-3 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] text-xs text-[#616161]">
                 Traslado de unidad única (1 ud).
               </div>
             )}
 
-            {/* Selección de nueva ubicación con Escáner QR (RF-08.1) */}
+            {/* Selección de nueva ubicación con Escáner QR */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                Nueva Ubicación de Destino <span className="text-amber-500">*</span>
+              <label className="block text-xs uppercase tracking-wider text-[#1E3A5F] mb-1.5">
+                NUEVA UBICACIÓN DE DESTINO <span className="text-[#E8B4A0]">*</span>
               </label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -347,7 +348,7 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                     value={selectedLocationId}
                     onChange={e => setSelectedLocationId(e.target.value)}
                     required
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white dark:focus:bg-slate-800"
+                    className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                   >
                     <option value="" disabled>Selecciona la nueva ubicación...</option>
                     {availableDestinations.map(loc => (
@@ -356,59 +357,61 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                       </option>
                     ))}
                   </select>
-                  <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <MapPin className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
                 </div>
                 <button
                   type="button"
                   onClick={() => setScannerOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-600/20 dark:hover:bg-amber-600/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 rounded-xl text-xs font-semibold transition-all active:scale-95 whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 px-4 min-h-[44px] bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs uppercase tracking-wider transition-all whitespace-nowrap active:scale-95"
                   title="Escanear QR de ubicación de destino"
                 >
-                  <Camera className="w-4 h-4" /> Escanear QR
+                  <Camera className="w-4 h-4 text-[#1E3A5F]" /> QR
                 </button>
               </div>
               {selectedLocation && (
-                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1.5 flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> Destino seleccionado: {selectedLocation.name} ({selectedLocation.code})
+                <p className="text-[11px] text-[#1E3A5F] font-medium mt-1.5 flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5 text-[#E8B4A0]" /> Destino: {selectedLocation.name} ({selectedLocation.code})
                 </p>
               )}
             </div>
 
             {/* Motivo de traslado */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                Motivo o Justificación del Traslado
+              <label className="block text-xs uppercase tracking-wider text-[#1E3A5F] mb-1.5">
+                MOTIVO O JUSTIFICACIÓN DEL TRASLADO
               </label>
               <input
                 type="text"
                 value={reason}
                 onChange={e => setReason(e.target.value)}
-                placeholder="Ej: Reorganización de estantes, exhibición en vitrina..."
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white dark:focus:bg-slate-800"
+                placeholder="Ej: Reorganización de vitrina, reposición..."
+                className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm text-[#1E3A5F] placeholder:text-[#616161]/50 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
               />
             </div>
 
             {/* Acciones */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2.5">
+            <div className="pt-3 border-t border-[#E5E7EB] flex justify-end gap-2.5">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                className="min-h-[44px] px-5 text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] transition-colors"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || !selectedLocationId}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-amber-600/20 disabled:opacity-50 transition-all active:scale-95"
+                className="min-h-[44px] inline-flex items-center gap-2 px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50 transition-all active:scale-95"
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Moviendo...
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Moviendo...</span>
                   </>
                 ) : (
                   <>
-                    <Check className="w-3.5 h-3.5" /> Confirmar Traslado
+                    <Check className="w-4 h-4 text-[#E8B4A0]" />
+                    <span>Confirmar Traslado</span>
                   </>
                 )}
               </button>

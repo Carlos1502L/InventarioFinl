@@ -388,464 +388,584 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
+  const selectedLocationObj = locations.find(l => l.id === locationId);
+  const selectedCategoryObj = categories.find(c => c.id === categoryId);
+  const selectedSubcategoryObj = subcategories.find(s => s.id === subcategoryId);
+  const numStock = Number(stock || 0);
+  const numMinStock = Number(minStock || 0);
+  const isStockLow = numStock <= numMinStock;
 
   return (
     <>
-      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-xl my-auto overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
-          {/* Cabecera */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 sticky top-0 z-10">
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto animate-in fade-in">
+        <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-5xl my-auto overflow-hidden shadow-xl flex flex-col max-h-[92vh]">
+          {/* Cabecera Editorial Awwwards */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] sticky top-0 z-20">
             <div>
-              <h3 className="font-bold text-slate-900 dark:text-white text-lg">
-                {productToEdit ? 'Editar Producto' : 'Nuevo Producto'}
+              <span className="text-[10px] tracking-widest uppercase font-mono text-[#E8B4A0] block">
+                {productToEdit ? 'EDICIÓN DE MANIFIESTO' : 'NUEVO REGISTRO EN CATÁLOGO'}
+              </span>
+              <h3 className="font-light text-[#1E3A5F] text-lg uppercase tracking-tight">
+                {productToEdit ? 'Modificar Ficha Técnica' : 'Registrar Nuevo Ítem'}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {isBusiness ? 'Modalidad Negocio (Costos y Precios calculados)' : 'Modalidad Colección / Personal'}
-              </p>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Formulario */}
-          <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-4">
-            {errorMsg && (
-              <div className="p-3 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-xl text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
+          {/* Formulario Asimétrico 2 Columnas (60% Formulario / 40% Previsualización en Vivo) */}
+          <form onSubmit={handleSubmit} className="overflow-y-auto p-4 sm:p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* =========================================================
+                  PANEL IZQUIERDO (~60%): ENTRADA Y FORMULARIO
+                 ========================================================= */}
+              <div className="lg:col-span-7 space-y-4">
+                {errorMsg && (
+                  <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                    <span>{errorMsg}</span>
+                  </div>
+                )}
 
-            {/* 1. Nombre */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Nombre del Producto <span className="text-blue-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Ej: Taladro Inalámbrico 20V"
-                required
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
-              />
-            </div>
-
-            {/* 2. Código con Escáner de Cámara */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Código / SKU / Código de Barras <span className="text-blue-500">*</span>
-              </label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
+                {/* 1. Nombre */}
+                <div>
+                  <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
+                    Nombre del Producto <span className="text-[#E8B4A0]">*</span>
+                  </label>
                   <input
                     type="text"
-                    value={code}
-                    onChange={e => setCode(e.target.value)}
-                    placeholder="Ej: 7751234567890 o SKU-001"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="Ej: Pulsera Minimalista Plata 925"
                     required
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3.5 py-2.5 text-sm font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
+                    className="w-full min-h-[44px] bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-4 py-2.5 text-sm text-[#1E3A5F] placeholder:text-[#616161]/50 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] focus:border-[#1E3A5F] transition-all"
                   />
-                  <Barcode className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setScanTarget('productCode');
-                    setScannerOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-600/20 dark:hover:bg-blue-600/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 rounded-xl text-xs font-semibold transition-all active:scale-95 whitespace-nowrap"
-                >
-                  <Camera className="w-4 h-4" /> Escanear QR/Barra
-                </button>
-              </div>
-            </div>
 
-            {/* RF-03.1: Sección de Variantes del Producto */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700/60 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <GitBranch className="w-4 h-4 text-indigo-500" />
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    ¿Es una variante de otro producto?
-                  </span>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isVariant}
-                    onChange={e => setIsVariant(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-                </label>
-              </div>
-
-              {isVariant && (
-                <div className="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-3 animate-in fade-in">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                      Producto Base (Padre)
-                    </label>
-                    <select
-                      value={parentId}
-                      onChange={e => setParentId(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                {/* 2. Código / SKU con Escáner de Cámara */}
+                <div>
+                  <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
+                    Código / SKU / Código de Barras <span className="text-[#E8B4A0]">*</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={code}
+                        onChange={e => setCode(e.target.value)}
+                        placeholder="Ej: SKU-9821-PLT"
+                        required
+                        className="w-full min-h-[44px] bg-[#ffffff] border border-[#E5E7EB] rounded-xl pl-10 pr-3.5 py-2.5 text-sm font-mono text-[#1E3A5F] placeholder:text-[#616161]/50 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] focus:border-[#1E3A5F] transition-all uppercase"
+                      />
+                      <Barcode className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setScanTarget('productCode');
+                        setScannerOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 min-h-[44px] bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs uppercase tracking-wider transition-all whitespace-nowrap active:scale-95"
                     >
-                      <option value="">Selecciona el producto principal...</option>
-                      {candidateParents.map(parent => (
-                        <option key={parent.id} value={parent.id}>
-                          {parent.name} ({parent.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 mb-1">Color</label>
-                      <input
-                        type="text"
-                        value={variantColor}
-                        onChange={e => setVariantColor(e.target.value)}
-                        placeholder="Ej: Rojo, Azul"
-                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 mb-1">Talla / Tamaño</label>
-                      <input
-                        type="text"
-                        value={variantSize}
-                        onChange={e => setVariantSize(e.target.value)}
-                        placeholder="Ej: M, XL, 500ml"
-                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 mb-1">Región / Versión</label>
-                      <input
-                        type="text"
-                        value={variantRegion}
-                        onChange={e => setVariantRegion(e.target.value)}
-                        placeholder="Ej: USA, Global"
-                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs"
-                      />
-                    </div>
+                      <Camera className="w-4 h-4 text-[#1E3A5F]" /> Escanear
+                    </button>
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* 3. Ubicación Asignada con Escáner de QR */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Ubicación Física Asignada <span className="text-blue-500">*</span>
-              </label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <select
-                    value={locationId}
-                    onChange={e => setLocationId(e.target.value)}
-                    required
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
-                  >
-                    <option value="" disabled>Selecciona una ubicación...</option>
-                    {locations.map(loc => (
-                      <option key={loc.id} value={loc.id}>
-                        {loc.name} ({loc.code})
-                      </option>
-                    ))}
-                  </select>
-                  <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setScanTarget('locationCode');
-                    setScannerOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-600/20 dark:hover:bg-indigo-600/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 rounded-xl text-xs font-semibold transition-all active:scale-95 whitespace-nowrap"
-                >
-                  <Camera className="w-4 h-4" /> Escanear QR
-                </button>
-              </div>
-            </div>
-
-            {/* 4. Categoría y Subcategoría en Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Categoría</label>
-                <div className="relative">
-                  <select
-                    value={categoryId}
-                    onChange={e => {
-                      setCategoryId(e.target.value);
-                      setSubcategoryId('');
-                    }}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
-                  >
-                    <option value="">Sin Categoría</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                  <Tag className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Subcategoría</label>
-                <div className="relative">
-                  <select
-                    value={subcategoryId}
-                    onChange={e => setSubcategoryId(e.target.value)}
-                    disabled={!categoryId || filteredSubcategories.length === 0}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800 disabled:opacity-50"
-                  >
-                    <option value="">Ninguna</option>
-                    {filteredSubcategories.map(sub => (
-                      <option key={sub.id} value={sub.id}>
-                        {sub.name}
-                      </option>
-                    ))}
-                  </select>
-                  <Layers className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                </div>
-              </div>
-            </div>
-
-            {/* RF-01: Precios (Negocio vs Personal) y Stock */}
-            {isBusiness ? (
-              <div className="p-3.5 bg-blue-50/50 dark:bg-blue-950/20 rounded-2xl border border-blue-100 dark:border-blue-900/40 space-y-3">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-blue-300">
-                  <Sparkles className="w-3.5 h-3.5" /> Estructura de Precios (Negocio)
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Precio Costo ({currentInventory?.currency || 'USD'})
+                {/* RF-03.1: Sección de Variantes del Producto */}
+                <div className="p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <GitBranch className="w-4 h-4 text-[#1E3A5F]" />
+                      <span className="text-xs font-medium text-[#1E3A5F] uppercase tracking-wider">
+                        ¿Es variante de otro ítem?
+                      </span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isVariant}
+                        onChange={e => setIsVariant(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-10 h-5 bg-[#E5E7EB] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1E3A5F]"></div>
                     </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={costPrice}
-                      onChange={e => handleCostChange(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                  </div>
+
+                  {isVariant && (
+                    <div className="pt-3 border-t border-[#E5E7EB] space-y-3 animate-in fade-in">
+                      <div>
+                        <label className="block text-[11px] font-medium text-[#616161] uppercase tracking-wider mb-1">
+                          Producto Principal (Padre)
+                        </label>
+                        <select
+                          value={parentId}
+                          onChange={e => setParentId(e.target.value)}
+                          className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                        >
+                          <option value="">Selecciona el producto principal...</option>
+                          {candidateParents.map(parent => (
+                            <option key={parent.id} value={parent.id}>
+                              {parent.name} ({parent.code})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-[10px] text-[#616161] uppercase tracking-wider mb-1">Color</label>
+                          <input
+                            type="text"
+                            value={variantColor}
+                            onChange={e => setVariantColor(e.target.value)}
+                            placeholder="Ej: Dorado"
+                            className="w-full bg-white border border-[#E5E7EB] rounded-lg px-2.5 py-1.5 text-xs text-[#1E3A5F]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-[#616161] uppercase tracking-wider mb-1">Talla</label>
+                          <input
+                            type="text"
+                            value={variantSize}
+                            onChange={e => setVariantSize(e.target.value)}
+                            placeholder="Ej: 18cm"
+                            className="w-full bg-white border border-[#E5E7EB] rounded-lg px-2.5 py-1.5 text-xs text-[#1E3A5F]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-[#616161] uppercase tracking-wider mb-1">Versión</label>
+                          <input
+                            type="text"
+                            value={variantRegion}
+                            onChange={e => setVariantRegion(e.target.value)}
+                            placeholder="Ej: Especial"
+                            className="w-full bg-white border border-[#E5E7EB] rounded-lg px-2.5 py-1.5 text-xs text-[#1E3A5F]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Ubicación Asignada con Escáner de QR */}
+                <div>
+                  <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
+                    Ubicación Física Asignada <span className="text-[#E8B4A0]">*</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <select
+                        value={locationId}
+                        onChange={e => setLocationId(e.target.value)}
+                        required
+                        className="w-full min-h-[44px] bg-[#ffffff] border border-[#E5E7EB] rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] transition-all"
+                      >
+                        <option value="" disabled>Selecciona una ubicación...</option>
+                        {locations.map(loc => (
+                          <option key={loc.id} value={loc.id}>
+                            {loc.name} ({loc.code})
+                          </option>
+                        ))}
+                      </select>
+                      <MapPin className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setScanTarget('locationCode');
+                        setScannerOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 min-h-[44px] bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs uppercase tracking-wider transition-all whitespace-nowrap active:scale-95"
+                    >
+                      <Camera className="w-4 h-4 text-[#1E3A5F]" /> QR Estante
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. Categoría y Subcategoría */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">Categoría</label>
+                    <div className="relative">
+                      <select
+                        value={categoryId}
+                        onChange={e => {
+                          setCategoryId(e.target.value);
+                          setSubcategoryId('');
+                        }}
+                        className="w-full min-h-[44px] bg-[#ffffff] border border-[#E5E7EB] rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] transition-all"
+                      >
+                        <option value="">Sin Categoría</option>
+                        {categories.map(cat => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
+                      <Tag className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Ganancia (%)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      value={markupPercentage}
-                      onChange={e => handleMarkupChange(e.target.value)}
-                      placeholder="Ej: 20"
-                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">Subcategoría</label>
+                    <div className="relative">
+                      <select
+                        value={subcategoryId}
+                        onChange={e => setSubcategoryId(e.target.value)}
+                        disabled={!categoryId || filteredSubcategories.length === 0}
+                        className="w-full min-h-[44px] bg-[#ffffff] border border-[#E5E7EB] rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] disabled:opacity-50 transition-all"
+                      >
+                        <option value="">Ninguna</option>
+                        {filteredSubcategories.map(sub => (
+                          <option key={sub.id} value={sub.id}>
+                            {sub.name}
+                          </option>
+                        ))}
+                      </select>
+                      <Layers className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                    </div>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-[11px] font-bold text-blue-600 dark:text-blue-400 mb-1">
-                      Precio Venta
+                {/* RF-01: Precios (Negocio vs Personal) */}
+                {isBusiness ? (
+                  <div className="p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3">
+                    <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#1E3A5F]">
+                      <Sparkles className="w-3.5 h-3.5 text-[#E8B4A0]" />
+                      <span>Estructura Financiera (Modo Comercial)</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] text-[#616161] uppercase tracking-wider mb-1">
+                          Costo ({currentInventory?.currency || 'USD'})
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={costPrice}
+                          onChange={e => handleCostChange(e.target.value)}
+                          className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] text-[#616161] uppercase tracking-wider mb-1">
+                          Margen (%)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={markupPercentage}
+                          onChange={e => handleMarkupChange(e.target.value)}
+                          placeholder="20"
+                          className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
+                          Venta Final
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={price}
+                          onChange={e => handlePriceChange(e.target.value)}
+                          className="w-full min-h-[40px] bg-white border-2 border-[#1E3A5F] rounded-xl px-3 py-2 text-sm font-semibold text-[#1E3A5F] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB]">
+                    <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
+                      Valor Base Estimado ({currentInventory?.currency || 'USD'})
                     </label>
                     <input
                       type="number"
                       step="0.01"
                       min="0"
                       value={price}
-                      onChange={e => handlePriceChange(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-800 border-2 border-blue-500 rounded-xl px-3 py-2 text-sm font-bold text-blue-700 dark:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={e => setPrice(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                    />
+                  </div>
+                )}
+
+                {/* Stock Actual y Stock Mínimo */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
+                      Stock Actual <span className="text-[#E8B4A0]">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={stock}
+                      onChange={e => setStock(e.target.value)}
+                      required
+                      className="w-full min-h-[44px] bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-4 py-2.5 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
+                      Stock Mínimo (Alerta)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={minStock}
+                      onChange={e => setMinStock(e.target.value)}
+                      required
+                      placeholder="1"
+                      className="w-full min-h-[44px] bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-4 py-2.5 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                     />
                   </div>
                 </div>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                  Fórmula automática: <span className="font-mono">Costo × (1 + Ganancia% / 100)</span>
-                </p>
-              </div>
-            ) : (
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700">
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Valor Base Estimado ({currentInventory?.currency || 'USD'})
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={price}
-                  onChange={e => setPrice(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                  Utilizado para reportes de valorización personal de la colección.
-                </p>
-              </div>
-            )}
 
-            {/* Stock Actual y Stock Mínimo (RF-04.1) */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Stock Actual <span className="text-blue-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={stock}
-                  onChange={e => setStock(e.target.value)}
-                  required
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Stock Mínimo (Alerta)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={minStock}
-                  onChange={e => setMinStock(e.target.value)}
-                  required
-                  placeholder="1"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
-                />
-                <span className="text-[10px] text-slate-400">Umbral configurable desde 1 unidad</span>
-              </div>
-            </div>
-
-            {/* 6. Descripción */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
-              <textarea
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                placeholder="Detalles adicionales, marca, modelo o especificaciones..."
-                rows={2}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
-              />
-            </div>
-
-            {/* 7. Fotos del Producto (Hasta 3 fotos) */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Fotografías del Producto <span className="text-slate-400">({images.length}/3 máx)</span>
-                </label>
-                {images.length < 3 && (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploadingImage}
-                    className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 disabled:opacity-50"
-                  >
-                    {isUploadingImage ? (
-                      <>
-                        <Loader2 className="w-3 h-3 animate-spin" /> Optimizando...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-3 h-3" /> Subir foto
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-
-              {images.length === 0 ? (
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 rounded-2xl p-4 text-center cursor-pointer transition-colors bg-slate-50/50 dark:bg-slate-800/30"
-                >
-                  <Camera className="w-6 h-6 text-slate-400 mx-auto mb-1" />
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Pulsa para tomar fotos con la cámara o seleccionar de la galería
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Se comprimen automáticamente antes de subir para ahorrar datos y espacio
-                  </p>
+                {/* Descripción */}
+                <div>
+                  <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
+                    Descripción y Notas
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    placeholder="Detalles de fabricación, aleación, serie o especificaciones técnicas..."
+                    rows={2}
+                    className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-4 py-2.5 text-sm text-[#1E3A5F] placeholder:text-[#616161]/50 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                  />
                 </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {images.map((imgUrl, idx) => (
-                    <div key={idx} className="relative group rounded-xl overflow-hidden aspect-square border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
-                      <img
-                        src={imgUrl}
-                        alt={`Foto ${idx + 1}`}
-                        loading="lazy"
-                        className="w-full h-full object-cover"
-                      />
+
+                {/* Fotografías */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-medium text-[#1E3A5F] uppercase tracking-wider">
+                      Fotografías del Ítem ({images.length}/3 máx)
+                    </label>
+                    {images.length < 3 && (
                       <button
                         type="button"
-                        onClick={() => removeImage(idx)}
-                        className="absolute top-1.5 right-1.5 p-1 bg-black/70 hover:bg-rose-600 text-white rounded-lg opacity-80 group-hover:opacity-100 transition-all"
-                        title="Eliminar foto"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingImage}
+                        className="text-xs font-medium text-[#1E3A5F] hover:text-[#E8B4A0] flex items-center gap-1 disabled:opacity-50 transition-colors"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        {isUploadingImage ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" /> Comprimiendo...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-3 h-3" /> Subir foto
+                          </>
+                        )}
                       </button>
-                    </div>
-                  ))}
-                  {images.length < 3 && (
+                    )}
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+
+                  {images.length === 0 ? (
                     <div
                       onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-blue-400 rounded-xl aspect-square flex flex-col items-center justify-center cursor-pointer text-slate-400 hover:text-blue-500 transition-colors"
+                      className="border-2 border-dashed border-[#E5E7EB] hover:border-[#1E3A5F] rounded-2xl p-5 text-center cursor-pointer transition-colors bg-[#F8F9FA]"
                     >
-                      <Plus className="w-5 h-5 mb-1" />
-                      <span className="text-[10px] font-semibold">Añadir</span>
+                      <Camera className="w-6 h-6 text-[#1E3A5F]/60 mx-auto mb-1" />
+                      <p className="text-xs text-[#1E3A5F] font-light">
+                        Toma foto con la cámara o selecciona desde tu galería
+                      </p>
+                      <p className="text-[10px] text-[#616161] mt-0.5 font-mono">
+                        Compresión automática a WebP sin pérdida de nitidez
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2">
+                      {images.map((imgUrl, idx) => (
+                        <div key={idx} className="relative group rounded-xl overflow-hidden aspect-square border border-[#E5E7EB] bg-[#F8F9FA]">
+                          <img
+                            src={imgUrl}
+                            alt={`Foto ${idx + 1}`}
+                            loading="lazy"
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(idx)}
+                            className="absolute top-1.5 right-1.5 p-1 bg-black/70 hover:bg-rose-600 text-white rounded-lg transition-all"
+                            title="Eliminar foto"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      {images.length < 3 && (
+                        <div
+                          onClick={() => fileInputRef.current?.click()}
+                          className="border-2 border-dashed border-[#E5E7EB] hover:border-[#1E3A5F] rounded-xl aspect-square flex flex-col items-center justify-center cursor-pointer text-[#616161] hover:text-[#1E3A5F] transition-colors"
+                        >
+                          <Plus className="w-5 h-5 mb-0.5" />
+                          <span className="text-[10px] uppercase font-mono">Añadir</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Acciones */}
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2.5 sticky bottom-0 bg-white dark:bg-slate-900 pb-1">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting || isUploadingImage}
-                className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-500/20 disabled:opacity-50 transition-all active:scale-95"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Guardando...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-3.5 h-3.5" /> {productToEdit ? 'Guardar Cambios' : 'Registrar Producto'}
-                  </>
-                )}
-              </button>
+              {/* =========================================================
+                  PANEL DERECHO (~40%): PREVISUALIZACIÓN REACTIVA EN VIVO
+                 ========================================================= */}
+              <div className="lg:col-span-5 sticky top-0 space-y-4">
+                <div className="bg-[#F8F9FA] border border-[#E5E7EB] rounded-2xl p-5 flex flex-col justify-between shadow-sm">
+                  
+                  {/* Encabezado de la Ficha en Vivo */}
+                  <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#E8B4A0] animate-pulse"></span>
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-[#1E3A5F]">
+                        PREVISUALIZACIÓN EN VIVO
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-white border border-[#E5E7EB] text-[#1E3A5F]">
+                      {code ? code.toUpperCase() : 'SKU PENDIENTE'}
+                    </span>
+                  </div>
+
+                  {/* Imagen Principal Reactiva */}
+                  <div className="my-4 aspect-[4/3] rounded-xl overflow-hidden bg-white border border-[#E5E7EB] flex items-center justify-center relative">
+                    {images.length > 0 ? (
+                      <img
+                        src={images[0]}
+                        alt="Previsualización"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-center p-4">
+                        <Barcode className="w-10 h-10 text-[#1E3A5F]/20 mx-auto mb-2" />
+                        <p className="text-xs text-[#616161] font-mono uppercase">
+                          Sin imagen de portada
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Badge de Stock en Vivo sobre la imagen */}
+                    <div className="absolute top-2.5 right-2.5">
+                      {isStockLow ? (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#ffdd00] text-black text-[10px] font-mono font-medium shadow-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-black animate-ping"></span>
+                          <span>STOCK BAJO ({numStock} UDS)</span>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm border border-[#E5E7EB] text-[#1E3A5F] text-[10px] font-mono">
+                          <span>{numStock} UDS DISPONIBLES</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Datos del Ítem Reactivo */}
+                  <div className="space-y-3 font-mono">
+                    <div>
+                      <h4 className="font-light text-base text-[#1E3A5F] uppercase tracking-tight line-clamp-2">
+                        {name || 'NOMBRE DEL PRODUCTO'}
+                      </h4>
+                      <p className="text-[11px] text-[#616161] mt-0.5 line-clamp-2">
+                        {description || 'Sin notas descriptivas adicionales.'}
+                      </p>
+                    </div>
+
+                    {/* Metadata Pills */}
+                    <div className="flex flex-wrap gap-1.5 text-[10px]">
+                      {selectedCategoryObj && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E8B4A0]/50 uppercase">
+                          {selectedCategoryObj.name}
+                        </span>
+                      )}
+                      {selectedSubcategoryObj && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-white border border-[#E5E7EB] text-[#616161] uppercase">
+                          {selectedSubcategoryObj.name}
+                        </span>
+                      )}
+                      {selectedLocationObj && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] border border-[#1E3A5F]/20 uppercase">
+                          <MapPin className="w-3 h-3 text-[#1E3A5F]" />
+                          {selectedLocationObj.name}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Bloque Financiero Reactivo */}
+                    <div className="p-3 bg-white border border-[#E5E7EB] rounded-xl flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-[#616161] uppercase block">
+                          {isBusiness ? 'PRECIO DE VENTA' : 'VALUACIÓN ESTIMADA'}
+                        </span>
+                        <span className="text-lg font-light text-[#1E3A5F]">
+                          {formatCurrency(Number(price || 0), currentInventory?.currency)}
+                        </span>
+                      </div>
+                      {isBusiness && costPrice && (
+                        <div className="text-right">
+                          <span className="text-[10px] text-[#616161] uppercase block">
+                            COSTO: {formatCurrency(Number(costPrice || 0), currentInventory?.currency)}
+                          </span>
+                          <span className="text-[10px] font-mono text-[#E8B4A0] block">
+                            +{markupPercentage || 0}% MARGEN
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Botones de Acción (Confirmación / Cancelación) */}
+                  <div className="mt-5 pt-4 border-t border-[#E5E7EB] flex flex-col sm:flex-row gap-2">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="min-h-[44px] px-4 text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-white rounded-xl border border-[#E5E7EB] transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || isUploadingImage}
+                      className="min-h-[44px] flex-1 inline-flex items-center justify-center gap-2 px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50 transition-all active:scale-95"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-white" />
+                          <span>Guardando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4 text-[#E8B4A0]" />
+                          <span>{productToEdit ? 'Guardar Cambios' : 'Confirmar Registro'}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+
             </div>
           </form>
         </div>
@@ -853,35 +973,35 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
       {/* RF-06.2: Modal Interactivo de Producto Duplicado detectado por Escáner */}
       {duplicateDetectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-5 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-2xl">
-                <Barcode className="w-6 h-6" />
+              <div className="w-10 h-10 rounded-full bg-[#ffdd00]/20 text-black flex items-center justify-center flex-shrink-0">
+                <Barcode className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 dark:text-white text-sm">
-                  ¡Producto Existente Detectado!
+                <h4 className="font-light text-[#1E3A5F] text-base uppercase tracking-tight">
+                  Producto Existente Detectado
                 </h4>
-                <p className="text-xs text-slate-500">
-                  Código: <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{duplicateDetectedProduct.code}</span>
+                <p className="text-xs text-[#616161] font-mono">
+                  REF: <span className="text-[#1E3A5F] font-semibold">{duplicateDetectedProduct.code}</span>
                 </p>
               </div>
             </div>
 
-            <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-1.5">
-              <p className="font-bold text-slate-900 dark:text-white text-sm">{duplicateDetectedProduct.name}</p>
-              <p className="text-slate-600 dark:text-slate-400">
-                Stock actual: <strong className="text-blue-600 dark:text-blue-400">{duplicateDetectedProduct.stock} unidades</strong>
+            <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] text-xs space-y-1.5 font-mono">
+              <p className="font-medium text-[#1E3A5F] text-sm uppercase">{duplicateDetectedProduct.name}</p>
+              <p className="text-[#616161]">
+                Stock actual: <strong className="text-[#1E3A5F]">{duplicateDetectedProduct.stock} unidades</strong>
               </p>
-              <p className="text-slate-600 dark:text-slate-400">
-                Precio: <strong>{formatCurrency(duplicateDetectedProduct.price, currentInventory?.currency)}</strong>
+              <p className="text-[#616161]">
+                Precio: <strong className="text-[#1E3A5F]">{formatCurrency(duplicateDetectedProduct.price, currentInventory?.currency)}</strong>
               </p>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
-                ¿Desea añadir stock a este producto?
+              <label className="block text-xs font-mono uppercase tracking-wider text-[#1E3A5F]">
+                ¿Añadir stock a este registro?
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -889,39 +1009,39 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   min="1"
                   value={duplicateAddQuantity}
                   onChange={e => setDuplicateAddQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                  className="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-center font-bold"
+                  className="w-24 min-h-[44px] bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm text-center font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                 />
                 <button
                   type="button"
                   onClick={handleConfirmAddStock}
                   disabled={isAddingStockDirectly}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 disabled:opacity-50"
+                  className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 px-4 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm active:scale-95 disabled:opacity-50 transition-all"
                 >
                   {isAddingStockDirectly ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
                   ) : (
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4 text-[#E8B4A0]" />
                   )}
-                  Sumar al Stock
+                  <span>Sumar al Stock</span>
                 </button>
               </div>
             </div>
 
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+            <div className="pt-3 border-t border-[#E5E7EB] flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setCode(duplicateDetectedProduct.code);
                   setDuplicateDetectedProduct(null);
                 }}
-                className="text-xs text-slate-500 hover:underline"
+                className="text-xs text-[#616161] hover:text-[#1E3A5F] transition-colors"
               >
                 Usar código de todas formas
               </button>
               <button
                 type="button"
                 onClick={() => setDuplicateDetectedProduct(null)}
-                className="px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                className="px-3.5 py-1.5 text-xs font-medium text-[#1E3A5F] hover:bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] transition-colors"
               >
                 Cerrar
               </button>

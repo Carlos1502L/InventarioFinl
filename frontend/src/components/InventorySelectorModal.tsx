@@ -92,37 +92,37 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/85 backdrop-blur-md p-4 animate-in fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+      <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-lg overflow-hidden shadow-xl flex flex-col">
         {/* Cabecera */}
-        <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-2xl">
-              <Layers className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center">
+              <Layers className="w-5 h-5 text-[#1E3A5F]" />
             </div>
             <div>
-              <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
-                ¿A qué inventario deseas ingresar hoy?
+              <h2 className="text-base font-light text-[#1E3A5F] uppercase tracking-tight">
+                Espacios de Inventario
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Selecciona tu espacio de trabajo o crea uno nuevo
+              <p className="text-[11px] text-[#616161]">
+                Selecciona tu depósito de trabajo o crea uno nuevo
               </p>
             </div>
           </div>
           {currentInventory && (
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>
 
         {/* Lista de Inventarios o Formulario de Creación */}
-        <div className="p-6 overflow-y-auto max-h-[60vh] space-y-3">
+        <div className="p-6 overflow-y-auto max-h-[60vh] space-y-3 font-mono">
           {errorMsg && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-xl text-xs text-rose-600 dark:text-rose-400">
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
               {errorMsg}
             </div>
           )}
@@ -142,20 +142,20 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                     }}
                     className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group ${
                       isSelected
-                        ? 'bg-blue-50/80 dark:bg-blue-600/10 border-blue-500 ring-2 ring-blue-500/20'
-                        : 'bg-slate-50/70 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-100/70 dark:hover:bg-slate-800'
+                        ? 'bg-[#E8B4A0]/10 border-[#1E3A5F] ring-1 ring-[#1E3A5F]'
+                        : 'bg-white border-[#E5E7EB] hover:border-[#1E3A5F] hover:bg-[#F8F9FA]'
                     }`}
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        <h4 className="font-medium text-[#1E3A5F] text-sm group-hover:text-[#1E3A5F] transition-colors uppercase">
                           {inv.name}
                         </h4>
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 ${
+                          className={`text-[9px] uppercase px-2 py-0.5 rounded-full tracking-wider flex items-center gap-1 ${
                             isOwner
-                              ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30'
-                              : 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30'
+                              ? 'bg-[#1E3A5F] text-white'
+                              : 'bg-[#F8F9FA] text-[#616161] border border-[#E5E7EB]'
                           }`}
                         >
                           {isOwner ? <Shield className="w-2.5 h-2.5" /> : <Users className="w-2.5 h-2.5" />}
@@ -163,20 +163,20 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                         </span>
                       </div>
                       {inv.description && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{inv.description}</p>
+                        <p className="text-[11px] text-[#616161] line-clamp-1">{inv.description}</p>
                       )}
-                      <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono block">
-                        Moneda: {inv.currency || 'USD'}
+                      <span className="text-[10px] text-[#616161] block">
+                        MONEDA // {inv.currency || 'USD'}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2">
                       {isSelected ? (
-                        <div className="p-2 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-600/30">
+                        <div className="w-8 h-8 rounded-full bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center shadow-sm">
                           <CheckCircle className="w-4 h-4" />
                         </div>
                       ) : (
-                        <div className="p-2 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 rounded-xl transition-colors">
+                        <div className="w-8 h-8 rounded-full text-[#616161] group-hover:text-[#1E3A5F] flex items-center justify-center transition-colors">
                           <ArrowRight className="w-4 h-4" />
                         </div>
                       )}
@@ -188,52 +188,52 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsCreatingNew(true)}
-                className="w-full mt-2 p-3.5 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-2xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all flex items-center justify-center gap-2 bg-slate-50/50 dark:bg-slate-800/30"
+                className="w-full mt-2 min-h-[44px] p-3 border-2 border-dashed border-[#E5E7EB] hover:border-[#1E3A5F] rounded-2xl text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-[#F8F9FA] transition-all flex items-center justify-center gap-2"
               >
-                <Plus className="w-4 h-4" /> Crear un Nuevo Inventario
+                <Plus className="w-4 h-4 text-[#E8B4A0]" /> Crear Nuevo Depósito
               </button>
             </>
           ) : (
             /* Formulario de Nuevo Inventario */
             <form onSubmit={handleCreateInventory} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Nombre del Inventario <span className="text-blue-500">*</span>
+                <label className="block text-xs uppercase tracking-wider text-[#1E3A5F] mb-1">
+                  Nombre del Depósito <span className="text-[#E8B4A0]">*</span>
                 </label>
                 <input
                   type="text"
                   value={newInvName}
                   onChange={e => setNewInvName(e.target.value)}
-                  placeholder="Ej: Sucursal Norte, Depósito Central..."
+                  placeholder="Ej: Depósito Central, Vitrina 1..."
                   required
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
+                  className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm text-[#1E3A5F] placeholder:text-[#616161]/50 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs uppercase tracking-wider text-[#1E3A5F] mb-1">
                   Descripción (Opcional)
                 </label>
                 <input
                   type="text"
                   value={newInvDesc}
                   onChange={e => setNewInvDesc(e.target.value)}
-                  placeholder="Ej: Inventario de herramientas y repuestos de Lima..."
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
+                  placeholder="Ej: Stock de accesorios finos..."
+                  className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm text-[#1E3A5F] placeholder:text-[#616161]/50 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs uppercase tracking-wider text-[#1E3A5F] mb-1">
                   Moneda Predeterminada
                 </label>
                 <select
                   value={newInvCurrency}
                   onChange={e => setNewInvCurrency(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
+                  className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                 >
-                  <option value="USD">Dólar Estadounidense ($ USD)</option>
                   <option value="PEN">Soles Peruanos (S/ PEN)</option>
+                  <option value="USD">Dólar Estadounidense ($ USD)</option>
                   <option value="EUR">Euros (€ EUR)</option>
                   <option value="MXN">Pesos Mexicanos ($ MXN)</option>
                   <option value="COP">Pesos Colombianos ($ COP)</option>
@@ -244,16 +244,16 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsCreatingNew(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                  className="min-h-[44px] px-4 text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] transition-colors"
                 >
                   Volver a la Lista
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-50 transition-all active:scale-95"
+                  className="min-h-[44px] inline-flex items-center gap-2 px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50 transition-all active:scale-95"
                 >
-                  {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                  {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <Plus className="w-3.5 h-3.5 text-[#E8B4A0]" />}
                   Crear e Ingresar
                 </button>
               </div>
