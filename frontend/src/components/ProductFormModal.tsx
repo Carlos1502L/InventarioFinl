@@ -388,6 +388,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }
   };
 
+  if (!isOpen) return null;
+
   const selectedLocationObj = locations.find(l => l.id === locationId);
   const selectedCategoryObj = categories.find(c => c.id === categoryId);
   const selectedSubcategoryObj = subcategories.find(s => s.id === subcategoryId);
@@ -398,7 +400,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto animate-in fade-in">
-        <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-5xl my-auto overflow-hidden shadow-xl flex flex-col max-h-[92vh]">
+        <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl md:max-w-5xl my-auto overflow-hidden shadow-xl flex flex-col max-h-[92vh]">
           {/* Cabecera Editorial Awwwards */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] sticky top-0 z-20">
             <div>
@@ -417,14 +419,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             </button>
           </div>
 
-          {/* Formulario Asimétrico 2 Columnas (60% Formulario / 40% Previsualización en Vivo) */}
+          {/* Formulario Asimétrico 2 Columnas (60% Formulario / 40% Previsualización en Vivo en Tablets y Desktop) */}
           <form onSubmit={handleSubmit} className="overflow-y-auto p-4 sm:p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
               
               {/* =========================================================
                   PANEL IZQUIERDO (~60%): ENTRADA Y FORMULARIO
                  ========================================================= */}
-              <div className="lg:col-span-7 space-y-4">
+              <div className="w-full md:col-span-7 space-y-4">
                 {errorMsg && (
                   <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
@@ -828,12 +830,41 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     </div>
                   )}
                 </div>
+
+                {/* Botones de Acción para Dispositivos Móviles (< md: sin panel de previsualización) */}
+                <div className="pt-4 border-t border-[#E5E7EB] flex flex-col sm:flex-row gap-2 md:hidden">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="min-h-[44px] px-4 text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || isUploadingImage}
+                    className="min-h-[44px] flex-1 inline-flex items-center justify-center gap-2 px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50 transition-all active:scale-95"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        <span>Guardando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4 text-[#E8B4A0]" />
+                        <span>{productToEdit ? 'Guardar Cambios' : 'Confirmar Registro'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* =========================================================
                   PANEL DERECHO (~40%): PREVISUALIZACIÓN REACTIVA EN VIVO
+                  (Exclusivo para Tablets y Desktop: >= md)
                  ========================================================= */}
-              <div className="lg:col-span-5 sticky top-0 space-y-4">
+              <div className="hidden md:block md:col-span-5 sticky top-0 space-y-4">
                 <div className="bg-[#F8F9FA] border border-[#E5E7EB] rounded-2xl p-5 flex flex-col justify-between shadow-sm">
                   
                   {/* Encabezado de la Ficha en Vivo */}
