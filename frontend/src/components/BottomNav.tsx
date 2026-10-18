@@ -186,11 +186,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   };
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 flex flex-col items-center pointer-events-none lg:hidden pb-safe select-none">
+    <div className="fixed bottom-0 inset-x-0 z-50 flex flex-col items-center pointer-events-none lg:hidden select-none">
       
       {/* Botón Flotante para reabrir cuando el carrusel está oculto (swipe up / tap) */}
       {isCollapsed && (
-        <div className="pointer-events-auto mb-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="pointer-events-auto mb-3 pb-[env(safe-area-inset-bottom,0.5rem)] animate-in fade-in slide-in-from-bottom-2 duration-200">
           <button
             type="button"
             onClick={() => setIsCollapsed(false)}
@@ -242,19 +242,19 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
 
-          {/* Arco Semicircular Interactivo Fino (Altura reducida a 58px) */}
+          {/* Arco Semicircular Interactivo Fino y Pegado al Fondo */}
           <div
             ref={containerRef}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
-            className={`relative w-[320px] sm:w-[350px] h-[58px] bg-white/90 backdrop-blur-xl border-t border-x border-[#E5E7EB] rounded-t-[160px] shadow-[0_-4px_18px_rgba(30,58,95,0.06)] flex items-center justify-center overflow-hidden touch-none select-none ${
+            className={`relative w-[320px] sm:w-[350px] h-[50px] bg-white/95 backdrop-blur-xl border-t border-x border-[#E5E7EB] rounded-t-[160px] shadow-[0_-4px_18px_rgba(30,58,95,0.06)] flex items-center justify-center overflow-hidden touch-none select-none ${
               isDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
           >
             {/* Guía decorativa en semicírculo fino de Nude */}
-            <div className="absolute inset-x-7 top-2 bottom-0 border-t border-dashed border-[#E8B4A0]/35 rounded-t-[140px] pointer-events-none" />
+            <div className="absolute inset-x-7 top-1.5 bottom-0 border-t border-dashed border-[#E8B4A0]/35 rounded-t-[140px] pointer-events-none" />
 
             {/* Marcador del Ápex (Centro Superior) */}
             <div className="absolute top-1 w-5 h-0.5 rounded-full bg-[#1E3A5F]/25 pointer-events-none" />
@@ -274,7 +274,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
                 // Coordenadas calculadas para el semicírculo fino
                 const x = Math.sin(angleRad) * radius;
-                const y = (1 - Math.cos(angleRad)) * 26 + 3;
+                const y = (1 - Math.cos(angleRad)) * 22 + 2;
 
                 const distFromCenter = Math.abs(angleDeg);
                 const isAtApex = distFromCenter < angleStep / 2;

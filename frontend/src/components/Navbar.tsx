@@ -43,8 +43,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-3">
           {/* Logo en Móvil (Visible solo en < lg) */}
           <div className="flex lg:hidden items-center gap-2">
-            <div className="w-9 h-9 rounded-full bg-[#1E3A5F] flex items-center justify-center flex-shrink-0 text-white">
-              <Layers className="w-4 h-4 stroke-[2]" />
+            <div className="w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] overflow-hidden flex items-center justify-center flex-shrink-0 shadow-xs">
+              <img src="/logo.png" alt="Stockly" className="w-full h-full object-cover" />
             </div>
             <button
               onClick={onOpenInventorySelector}

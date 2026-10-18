@@ -61,15 +61,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* 1. SECCIÓN SUPERIOR: LOGO Y SELECTOR DE DEPÓSITO */}
       <div className="p-5 border-b border-white/10">
         <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-9 h-9 rounded-full bg-[#E8B4A0] flex items-center justify-center flex-shrink-0 text-[#1E3A5F]">
-            <Layers className="w-5 h-5 stroke-[2]" />
+          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center flex-shrink-0 overflow-hidden border border-white/20 shadow-xs">
+            <img src="/logo.png" alt="Stockly" className="w-full h-full object-cover" />
           </div>
           <div>
-            <span className="font-mono text-xs uppercase tracking-[0.2em] text-[#E8B4A0] font-semibold block leading-tight">
-              INVENTARIO
+            <span className="font-mono text-sm uppercase tracking-[0.2em] text-[#E8B4A0] font-bold block leading-tight">
+              STOCKLY
             </span>
-            <span className="text-xs text-white/70 font-light tracking-wider uppercase block">
-              COOPERATIVO PWA
+            <span className="text-[10px] text-white/70 font-semibold tracking-wider uppercase block">
+              INVENTORY APP
             </span>
           </div>
         </div>
