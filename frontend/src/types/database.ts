@@ -1,8 +1,22 @@
 export type InventoryRole = 'owner' | 'collaborator';
 export type InventoryType = 'PERSONAL' | 'BUSINESS';
-export type ProductStatus = 'ACTIVE' | 'WITHDRAWN' | 'ARCHIVED';
+export type ProductStatus = 'ACTIVE' | 'INACTIVE' | 'WITHDRAWN' | 'ARCHIVED';
 export type ActionType = 'CREATE' | 'UPDATE' | 'MOVE' | 'WITHDRAW' | 'RESTOCK' | 'DELETE' | 'SALE';
 export type PaymentMethod = 'CASH' | 'YAPE' | 'PLIN' | 'CARD' | 'TRANSFER' | 'OTHER';
+export type DiscountType = 'PERCENTAGE' | 'FIXED';
+export type CouponStatus = 'ACTIVE' | 'INACTIVE';
+
+export interface Coupon {
+  id: string;
+  inventory_id: string;
+  code: string;
+  discount_type: DiscountType;
+  discount_value: number;
+  status: CouponStatus;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface Profile {
   id: string;

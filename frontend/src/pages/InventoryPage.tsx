@@ -12,15 +12,12 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
-  Printer,
-  Tag,
   GitBranch
 } from 'lucide-react';
 import { Product, Category, Subcategory, Location } from '../types/database';
-import { formatCurrency } from '../lib/supabase';
+import { formatCurrency } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
-import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
-import { BatchLabelsModal } from '../components/BatchLabelsModal';
+import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 
 interface InventoryPageProps {
   products: Product[];
@@ -54,23 +51,20 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
 
-  // RNF-01: Paginación
+  // Paginación técnica
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const pageSize = viewMode === 'grid' ? 12 : 15;
+  const pageSize = viewMode === 'grid' ? 12 : 16;
 
   // Escáner de Búsqueda Rápida
   const [searchScannerOpen, setSearchScannerOpen] = useState(false);
 
-  // RF-09: Modal de Impresión de Etiquetas en Lote
-  const [batchLabelsOpen, setBatchLabelsOpen] = useState(false);
-
-  // Subcategorías según la categoría seleccionada
+  // Subcategorías según categoría activa
   const activeSubcategories = useMemo(() => {
     if (selectedCategory === 'ALL') return [];
     return subcategories.filter(s => s.category_id === selectedCategory);
   }, [selectedCategory, subcategories]);
 
-  // RF-07.2: Detectar si algún filtro está activo para mostrar botón limpiar
+  // Detección de filtros activos
   const hasActiveFilters = useMemo(() => {
     return Boolean(
       searchTerm.trim() ||
@@ -81,7 +75,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
     );
   }, [searchTerm, selectedCategory, selectedSubcategory, selectedLocation, selectedStatus]);
 
-  // RF-07.2: Función para reiniciar todos los filtros inmediatamente
+  // Reiniciar filtros
   const handleClearFilters = () => {
     setSearchTerm('');
     setSelectedCategory('ALL');
@@ -91,10 +85,9 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
     setCurrentPage(1);
   };
 
-  // Filtrado reactivo en tiempo real
+  // Filtrado reactivo
   const filteredProducts = useMemo(() => {
     return products.filter((prod) => {
-      // 1. Búsqueda por texto (nombre o código SKU)
       const term = searchTerm.toLowerCase().trim();
       const matchSearch =
         !term ||
@@ -102,41 +95,39 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
         prod.code.toLowerCase().includes(term) ||
         (prod.description && prod.description.toLowerCase().includes(term));
 
-      // 2. Filtro de Categoría
       const matchCategory =
         selectedCategory === 'ALL' || prod.category_id === selectedCategory;
 
-      // 3. Filtro de Subcategoría
       const matchSubcategory =
         selectedSubcategory === 'ALL' || prod.subcategory_id === selectedSubcategory;
 
-      // 4. Filtro de Ubicación
       const matchLocation =
         selectedLocation === 'ALL' || prod.location_id === selectedLocation;
 
-      // 5. Filtro de Estado
+      const isProductInactive = prod.status === 'INACTIVE' || prod.status === 'WITHDRAWN';
       const matchStatus =
-        selectedStatus === 'ALL' || prod.status === selectedStatus;
+        selectedStatus === 'ALL' ||
+        (selectedStatus === 'ACTIVE' && prod.status === 'ACTIVE') ||
+        (selectedStatus === 'INACTIVE' && isProductInactive);
 
       return matchSearch && matchCategory && matchSubcategory && matchLocation && matchStatus;
     });
   }, [products, searchTerm, selectedCategory, selectedSubcategory, selectedLocation, selectedStatus]);
 
-  // RNF-01: Cálculo de paginación
+  // Paginación
   const totalPages = Math.ceil(filteredProducts.length / pageSize) || 1;
   const paginatedProducts = useMemo(() => {
     const startIdx = (currentPage - 1) * pageSize;
     return filteredProducts.slice(startIdx, startIdx + pageSize);
   }, [filteredProducts, currentPage, pageSize]);
 
-  // Cambiar página cuando cambian los filtros
+  // Reset de página si la longitud cambia
   useMemo(() => {
     if (currentPage > totalPages) {
       setCurrentPage(1);
     }
   }, [filteredProducts.length, totalPages, currentPage]);
 
-  // Manejar escaneo desde la barra de búsqueda
   const handleBarcodeSearch = (scannedCode: string) => {
     setSearchTerm(scannedCode);
     const exactMatch = products.find(p => p.code.toLowerCase() === scannedCode.toLowerCase());
@@ -146,13 +137,52 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
   };
 
   return (
-    <div className="space-y-4 pb-20 sm:pb-8">
-      {/* 1. Barra de Búsqueda y Botones Rápidos (Mobile First) */}
-      <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
-        <div className="flex-1 flex gap-2">
+    <div className="space-y-6 pb-28 lg:pb-16 max-w-[1440px] mx-auto text-[#1E3A5F]">
+      
+      {/* =========================================================
+          1. ENCABEZADO DE STOCK (SIN BLOQUE DE KPIS)
+         ========================================================= */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-[#1E3A5F] inline-block" />
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#616161]">
+              CATÁLOGO GENERAL DE STOCK
+            </p>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1E3A5F] uppercase">
+            EXISTENCIAS & RECURSOS
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onRefresh}
+            className="min-h-[44px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-colors active:bg-[#F8F9FA] shadow-sm"
+            title="Sincronizar existencias"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">ACTUALIZAR</span>
+          </button>
+
+          <button
+            onClick={onOpenCreateModal}
+            className="min-h-[44px] px-6 rounded-full bg-[#1E3A5F] hover:bg-[#172E4C] text-white text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm"
+          >
+            <Plus className="w-4 h-4 stroke-[1.5]" />
+            <span>NUEVO PRODUCTO</span>
+          </button>
+        </div>
+      </div>
+
+      {/* =========================================================
+          2. BARRA DE BÚSQUEDA Y CONTROLES DIRECTOS
+         ========================================================= */}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
           {/* Input de Búsqueda */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            <Search className="w-4 h-4 text-[#616161] absolute left-4 top-3.5 pointer-events-none" />
             <input
               type="text"
               value={searchTerm}
@@ -160,8 +190,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Buscar por nombre, SKU o código..."
-              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              placeholder="BUSCAR POR NOMBRE, SKU, SERIAL O DESCRIPCIÓN..."
+              className="w-full min-h-[44px] bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-full pl-11 pr-10 py-2.5 text-xs font-mono uppercase tracking-wider text-[#1E3A5F] placeholder-[#616161] focus:outline-none transition-colors shadow-sm"
             />
             {searchTerm && (
               <button
@@ -169,290 +199,333 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                   setSearchTerm('');
                   setCurrentPage(1);
                 }}
-                className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                className="absolute right-4 top-3 text-xs text-[#616161] hover:text-[#1E3A5F] min-w-[24px] min-h-[24px] flex items-center justify-center"
               >
                 ✕
               </button>
             )}
           </div>
 
-          {/* Botón de Escaneo Directo */}
-          <button
-            onClick={() => setSearchScannerOpen(true)}
-            className="px-3.5 bg-blue-50 dark:bg-blue-600/20 hover:bg-blue-100 dark:hover:bg-blue-600/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 rounded-xl flex items-center justify-center transition-all active:scale-95 shadow-sm"
-            title="Escanear código de producto con la cámara"
-          >
-            <Camera className="w-4 h-4" />
-          </button>
-
-          {/* Toggle de Filtros Avanzados */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`px-3.5 rounded-xl border flex items-center justify-center transition-all shadow-sm ${
-              showFilters || hasActiveFilters
-                ? 'bg-blue-600 text-white border-blue-600 shadow-blue-500/20'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750'
-            }`}
-            title="Filtros"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Acciones de la Derecha: Impresión en Lote, Vistas y Nuevo */}
-        <div className="flex items-center gap-2 justify-between sm:justify-end">
-          {/* RF-09.1: Botón de Impresión de Etiquetas en Lote */}
-          <button
-            onClick={() => setBatchLabelsOpen(true)}
-            disabled={products.length === 0}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 whitespace-nowrap"
-            title="Imprimir etiquetas de productos en lote"
-          >
-            <Printer className="w-4 h-4 text-blue-600" />
-            <span className="hidden sm:inline">Etiquetas en Lote</span>
-          </button>
-
-          <div className="flex items-center bg-white dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          {/* Botones de Control en Píldora */}
+          <div className="flex items-center gap-2">
+            {/* Escáner de Cámara */}
             <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'grid'
-                  ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-white'
-              }`}
-              title="Vista en Cuadrícula"
+              onClick={() => setSearchScannerOpen(true)}
+              className="min-h-[44px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white text-[#1E3A5F] flex items-center justify-center gap-2 transition-all active:bg-[#F8F9FA] shadow-sm"
+              title="Escanear código de barras o QR"
             >
-              <Grid className="w-4 h-4" />
+              <Camera className="w-4 h-4 stroke-[1.5]" />
+              <span className="text-xs font-mono uppercase tracking-wider hidden md:inline">ESCANEAR</span>
             </button>
+
+            {/* Toggle de Filtros */}
             <button
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-white'
+              onClick={() => setShowFilters(!showFilters)}
+              className={`min-h-[44px] px-4 rounded-full border transition-all flex items-center justify-center gap-2 text-xs font-mono uppercase tracking-wider shadow-sm ${
+                showFilters || hasActiveFilters
+                  ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
+                  : 'bg-white text-[#1E3A5F] border-[#E5E7EB] hover:border-[#1E3A5F]'
               }`}
-              title="Vista en Lista"
+              title="Desplegar filtros técnicos"
             >
-              <List className="w-4 h-4" />
+              <SlidersHorizontal className="w-4 h-4 stroke-[1.5]" />
+              <span>FILTROS</span>
+              {hasActiveFilters && (
+                <span className="w-2 h-2 rounded-full bg-[#E8B4A0]" />
+              )}
             </button>
+
+            {/* Selector de Vista */}
+            <div className="flex items-center border border-[#E5E7EB] rounded-full p-1 bg-white shadow-sm">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`min-h-[34px] px-3.5 rounded-full text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-[#1E3A5F] text-white'
+                    : 'text-[#616161] hover:text-[#1E3A5F]'
+                }`}
+                title="Vista en Retícula"
+              >
+                <Grid className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline text-[10px]">RETÍCULA</span>
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`min-h-[34px] px-3.5 rounded-full text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-[#1E3A5F] text-white'
+                    : 'text-[#616161] hover:text-[#1E3A5F]'
+                }`}
+                title="Vista en Manifiesto"
+              >
+                <List className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline text-[10px]">LISTA</span>
+              </button>
+            </div>
           </div>
-
-          <button
-            onClick={onOpenCreateModal}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition-all active:scale-95 whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" /> Nuevo Producto
-          </button>
         </div>
-      </div>
 
-      {/* 2. Panel Desplegable de Filtros */}
-      {showFilters && (
-        <div className="p-4 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-2xl grid grid-cols-1 sm:grid-cols-4 gap-3 shadow-sm animate-in fade-in transition-colors">
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Categoría</label>
-            <select
-              value={selectedCategory}
-              onChange={e => {
-                setSelectedCategory(e.target.value);
+        {/* Chips de Categorías */}
+        {categories.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            <button
+              onClick={() => {
+                setSelectedCategory('ALL');
                 setSelectedSubcategory('ALL');
                 setCurrentPage(1);
               }}
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className={`min-h-[36px] px-4 rounded-full text-[11px] font-mono uppercase tracking-wider whitespace-nowrap transition-all border shadow-sm ${
+                selectedCategory === 'ALL'
+                  ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
+                  : 'bg-white text-[#616161] border-[#E5E7EB] hover:border-[#1E3A5F]'
+              }`}
             >
-              <option value="ALL">Todas las Categorías</option>
-              {categories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+              TODAS LAS CATEGORÍAS ({products.length})
+            </button>
+            {categories.map(c => {
+              const count = products.filter(p => p.category_id === c.id).length;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    setSelectedCategory(c.id);
+                    setSelectedSubcategory('ALL');
+                    setCurrentPage(1);
+                  }}
+                  className={`min-h-[36px] px-4 rounded-full text-[11px] font-mono uppercase tracking-wider whitespace-nowrap transition-all border shadow-sm ${
+                    selectedCategory === c.id
+                      ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
+                      : 'bg-white text-[#616161] border-[#E5E7EB] hover:border-[#1E3A5F]'
+                  }`}
+                >
+                  {c.name} ({count})
+                </button>
+              );
+            })}
           </div>
+        )}
 
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Subcategoría</label>
-            <select
-              value={selectedSubcategory}
-              onChange={e => {
-                setSelectedSubcategory(e.target.value);
-                setCurrentPage(1);
-              }}
-              disabled={selectedCategory === 'ALL' || activeSubcategories.length === 0}
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-            >
-              <option value="ALL">Todas las Subcategorías</option>
-              {activeSubcategories.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
+        {/* Panel Desplegable de Filtros */}
+        {showFilters && (
+          <div className="p-5 bg-white border border-[#E5E7EB] rounded-2xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shadow-sm animate-in fade-in duration-200">
+            <div>
+              <label className="block text-[10px] font-mono font-semibold text-[#1E3A5F] uppercase tracking-[0.15em] mb-1.5">
+                [01] CATEGORÍA PRINCIPAL
+              </label>
+              <select
+                value={selectedCategory}
+                onChange={e => {
+                  setSelectedCategory(e.target.value);
+                  setSelectedSubcategory('ALL');
+                  setCurrentPage(1);
+                }}
+                className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl px-4 text-xs font-mono uppercase tracking-wider text-[#1E3A5F] focus:outline-none"
+              >
+                <option value="ALL">TODAS LAS CATEGORÍAS</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-mono font-semibold text-[#1E3A5F] uppercase tracking-[0.15em] mb-1.5">
+                [02] SUBCATEGORÍA / TIPO
+              </label>
+              <select
+                value={selectedSubcategory}
+                onChange={e => {
+                  setSelectedSubcategory(e.target.value);
+                  setCurrentPage(1);
+                }}
+                disabled={selectedCategory === 'ALL' || activeSubcategories.length === 0}
+                className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl px-4 text-xs font-mono uppercase tracking-wider text-[#1E3A5F] focus:outline-none disabled:opacity-40"
+              >
+                <option value="ALL">TODAS LAS SUBCATEGORÍAS</option>
+                {activeSubcategories.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-mono font-semibold text-[#1E3A5F] uppercase tracking-[0.15em] mb-1.5">
+                [03] UBICACIÓN FÍSICA / RACK
+              </label>
+              <select
+                value={selectedLocation}
+                onChange={e => {
+                  setSelectedLocation(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl px-4 text-xs font-mono uppercase tracking-wider text-[#1E3A5F] focus:outline-none"
+              >
+                <option value="ALL">TODAS LAS UBICACIONES</option>
+                {locations.map(l => (
+                  <option key={l.id} value={l.id}>{l.name} [{l.code}]</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-mono font-semibold text-[#1E3A5F] uppercase tracking-[0.15em] mb-1.5">
+                [04] ESTADO DE INVENTARIO
+              </label>
+              <select
+                value={selectedStatus}
+                onChange={e => {
+                  setSelectedStatus(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl px-4 text-xs font-mono uppercase tracking-wider text-[#1E3A5F] focus:outline-none"
+              >
+                <option value="ALL">TODOS LOS ESTADOS</option>
+                <option value="ACTIVE">ACTIVOS (EN VENTA/USO)</option>
+                <option value="INACTIVE">RETIRADOS / INACTIVOS</option>
+              </select>
+            </div>
           </div>
+        )}
 
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Ubicación Física</label>
-            <select
-              value={selectedLocation}
-              onChange={e => {
-                setSelectedLocation(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="ALL">Todas las Ubicaciones</option>
-              {locations.map(l => (
-                <option key={l.id} value={l.id}>{l.name} ({l.code})</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Estado</label>
-            <select
-              value={selectedStatus}
-              onChange={e => {
-                setSelectedStatus(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="ALL">Todos los Estados</option>
-              <option value="ACTIVE">Activos en Stock</option>
-              <option value="WITHDRAWN">Retirados / Baja</option>
-            </select>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Conteo de Resultados, Botón Limpiar Filtros (RF-07.2) y Actualizar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 px-1">
-        <div className="flex items-center gap-2.5">
-          <span>
-            Mostrando <strong className="text-slate-800 dark:text-slate-200">{filteredProducts.length}</strong> de {products.length} productos
+        {/* Resumen de resultados */}
+        <div className="flex items-center justify-between text-xs font-mono text-[#616161] px-1">
+          <span className="uppercase tracking-wider">
+            MOSTRANDO <span className="text-[#1E3A5F] font-semibold">{filteredProducts.length}</span> DE {products.length} ÍTEMS EN CATÁLOGO
           </span>
 
-          {/* RF-07.2: Botón Limpiar Filtros */}
           {hasActiveFilters && (
             <button
               onClick={handleClearFilters}
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 text-[11px] font-bold rounded-lg transition-colors"
-              title="Restablecer todos los filtros"
+              className="min-h-[32px] px-3.5 rounded-full border border-[#1E3A5F] text-[#1E3A5F] hover:bg-[#1E3A5F] hover:text-white text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition-colors"
             >
-              <RotateCcw className="w-3 h-3" /> Limpiar Filtros
+              <RotateCcw className="w-3 h-3" />
+              <span>REINICIAR FILTROS</span>
             </button>
           )}
         </div>
-
-        <button
-          onClick={onRefresh}
-          className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Actualizar
-        </button>
       </div>
 
-      {/* 4. Lista o Grid de Productos Paginados */}
+      {/* =========================================================
+          3. PRODUCT MATRIX // LIST (AWWWARDS EDITORIAL GALLERY)
+         ========================================================= */}
       {filteredProducts.length === 0 ? (
-        <div className="p-12 text-center bg-white dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-sm transition-colors">
-          <Package className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto" />
-          <h4 className="text-base font-bold text-slate-800 dark:text-slate-300">No se encontraron productos</h4>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            {hasActiveFilters
-              ? 'Prueba modificando tus filtros de búsqueda o escanea otro código.'
-              : 'Empieza a registrar existencias pulsando el botón a continuación.'}
-          </p>
-          <div className="flex items-center justify-center gap-2">
+        <div className="border border-[#E5E7EB] bg-white rounded-2xl p-12 text-center space-y-4 shadow-sm">
+          <div className="w-12 h-12 border border-[#E5E7EB] rounded-full mx-auto flex items-center justify-center">
+            <Package className="w-6 h-6 stroke-[1.2] text-[#616161]" />
+          </div>
+          <div>
+            <h3 className="text-sm font-normal uppercase tracking-wider text-[#1E3A5F]">
+              SIN REGISTROS EN EL CATÁLOGO
+            </h3>
+            <p className="text-xs text-[#616161] font-mono mt-1 max-w-md mx-auto uppercase">
+              {hasActiveFilters
+                ? 'Ningún producto coincide con los parámetros de búsqueda o filtros seleccionados.'
+                : 'No existen existencias registradas en este inventario de trabajo.'}
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-3 pt-2">
             {hasActiveFilters && (
               <button
                 onClick={handleClearFilters}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl"
+                className="min-h-[44px] px-5 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] text-xs uppercase tracking-wider transition-colors"
               >
-                <RotateCcw className="w-3.5 h-3.5" /> Quitar Filtros
+                LIMPIAR FILTROS
               </button>
             )}
             <button
               onClick={onOpenCreateModal}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-500/20"
+              className="min-h-[44px] px-6 rounded-full bg-[#1E3A5F] text-white hover:bg-[#172E4C] text-xs uppercase tracking-wider flex items-center gap-2 shadow-sm"
             >
-              <Plus className="w-4 h-4" /> Agregar Producto
+              <Plus className="w-4 h-4" /> REGISTRAR PRODUCTO
             </button>
           </div>
         </div>
       ) : viewMode === 'grid' ? (
-        /* VISTA GRID */
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+        /* VISTA RETÍCULA EN TARJETAS ROUNDED-2XL */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {paginatedProducts.map(product => {
             const isLow = product.stock <= (product.min_stock || 1);
+            const isInactive = product.status !== 'ACTIVE';
             const mainPhoto = product.images?.[0];
 
             return (
               <div
                 key={product.id}
                 onClick={() => onSelectProduct(product)}
-                className="bg-white dark:bg-slate-800/60 hover:bg-slate-50/80 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer flex flex-col group"
+                className="bg-white border border-[#E5E7EB] hover:border-[#1E3A5F] rounded-2xl p-4 transition-all cursor-pointer group flex flex-col justify-between shadow-sm hover:shadow-md"
               >
-                {/* Imagen del Producto con RNF-04 Lazy Loading */}
-                <div className="aspect-square bg-slate-100 dark:bg-slate-900 relative overflow-hidden flex items-center justify-center">
+                {/* Cabecera Técnica del Ítem */}
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="min-w-0">
+                    <span className="font-mono text-[10px] tracking-wider text-[#616161] uppercase block truncate">
+                      REF // {product.code}
+                    </span>
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-[#1E3A5F] truncate group-hover:text-[#1E3A5F] group-hover:underline mt-0.5">
+                      {product.name}
+                    </h3>
+                  </div>
+
+                  {/* Badge de Stock en Píldora */}
+                  <div className="flex-shrink-0">
+                    {isInactive ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-wider bg-[#1E3A5F] text-white">
+                        RETIRADO
+                      </span>
+                    ) : isLow ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-wider bg-[#ffdd00] text-black border border-black/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-black mr-1 inline-block animate-pulse" />
+                        {product.stock} UDS
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-wider border border-[#E5E7EB] text-[#1E3A5F]">
+                        {product.stock} UDS
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Fotografía de Producto */}
+                <div className="aspect-square bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] relative overflow-hidden flex items-center justify-center my-1">
                   {mainPhoto ? (
                     <img
                       src={mainPhoto}
                       alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       loading="lazy"
                       decoding="async"
                     />
                   ) : (
-                    <Package className="w-10 h-10 text-slate-300 dark:text-slate-700" />
-                  )}
-
-                  {/* Badge de Stock en la foto */}
-                  <div className="absolute top-2 right-2">
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md shadow-sm ${
-                        product.status !== 'ACTIVE'
-                          ? 'bg-rose-600/90 text-white'
-                          : isLow
-                          ? 'bg-amber-500/90 text-white animate-pulse'
-                          : 'bg-emerald-600/90 text-white'
-                      }`}
-                    >
-                      {product.status !== 'ACTIVE' ? 'Retirado' : `${product.stock} uds`}
-                    </span>
-                  </div>
-
-                  {/* Badge de Variante RF-03.1 */}
-                  {product.is_variant && (
-                    <div className="absolute top-2 left-2">
-                      <span className="font-bold text-[9px] px-1.5 py-0.5 rounded bg-indigo-600/90 text-white backdrop-blur-md flex items-center gap-1">
-                        <GitBranch className="w-2.5 h-2.5" /> Var
+                    <div className="text-center p-4">
+                      <Package className="w-8 h-8 stroke-[1] text-[#616161] mx-auto mb-1 opacity-40" />
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-[#616161]">
+                        SIN FOTO
                       </span>
                     </div>
                   )}
 
-                  {/* Badge de Código en foto */}
-                  <div className="absolute bottom-2 left-2">
-                    <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-black/70 text-white backdrop-blur-md">
-                      {product.code}
-                    </span>
-                  </div>
+                  {product.is_variant && (
+                    <div className="absolute top-2 left-2">
+                      <span className="font-mono text-[9px] uppercase px-2.5 py-0.5 rounded-full bg-[#1E3A5F] text-white flex items-center gap-1 shadow-sm">
+                        <GitBranch className="w-2.5 h-2.5" /> VARIANTE
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Contenido de la tarjeta */}
-                <div className="p-3 flex-1 flex flex-col justify-between space-y-2">
-                  <div>
-                    <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                      {product.name}
-                    </h4>
-                    
-                    {/* Ubicación */}
-                    <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 mt-1 truncate">
-                      <MapPin className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                      <span className="truncate">{product.locations?.name || 'Sin ubicación'}</span>
-                    </div>
+                {/* Pie con Metadatos */}
+                <div className="pt-3 mt-2 border-t border-[#E5E7EB] flex items-center justify-between text-xs">
+                  <div className="min-w-0 pr-2">
+                    <span className="font-mono text-[10px] text-[#616161] uppercase tracking-wider block truncate">
+                      LOC: {product.locations?.name || 'SIN ASIGNAR'}
+                    </span>
+                    <span className="font-mono text-[10px] text-[#E8B4A0] uppercase tracking-wider block truncate font-medium">
+                      CAT: {product.categories?.name || 'GENERAL'}
+                    </span>
                   </div>
 
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-700/50">
-                    <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white">
+                  <div className="text-right flex-shrink-0">
+                    <span className="text-base font-bold tabular-nums text-[#1E3A5F] block tracking-tight">
                       {formatCurrency(product.price, currentInventory?.currency)}
-                    </span>
-                    <span className="text-[10px] text-slate-400 truncate max-w-[80px]">
-                      {product.categories?.name || 'General'}
                     </span>
                   </div>
                 </div>
@@ -461,80 +534,120 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
           })}
         </div>
       ) : (
-        /* VISTA LISTA DETALLADA */
-        <div className="space-y-2">
-          {paginatedProducts.map(product => {
-            const isLow = product.stock <= (product.min_stock || 1);
-            const mainPhoto = product.images?.[0];
+        /* VISTA MANIFIESTO EN LISTA */
+        <div className="border border-[#E5E7EB] bg-white rounded-2xl overflow-hidden shadow-sm">
+          <div className="hidden md:grid grid-cols-12 gap-2 p-3.5 bg-[#F8F9FA] border-b border-[#E5E7EB] font-mono font-bold text-[10px] uppercase tracking-[0.15em] text-[#1E3A5F]">
+            <div className="col-span-1">FOTO</div>
+            <div className="col-span-2">SKU // REF</div>
+            <div className="col-span-4">DESCRIPCIÓN TÉCNICA</div>
+            <div className="col-span-2">UBICACIÓN</div>
+            <div className="col-span-1 text-right">PRECIO</div>
+            <div className="col-span-1 text-right">STOCK</div>
+            <div className="col-span-1 text-center">ESTADO</div>
+          </div>
 
-            return (
-              <div
-                key={product.id}
-                onClick={() => onSelectProduct(product)}
-                className="p-3 bg-white dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all active:scale-[0.99] group shadow-sm"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                    {mainPhoto ? (
-                      <img src={mainPhoto} alt={product.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                    ) : (
-                      <Package className="w-5 h-5 text-slate-400 dark:text-slate-600" />
+          <div className="divide-y divide-[#E5E7EB]">
+            {paginatedProducts.map(product => {
+              const isLow = product.stock <= (product.min_stock || 1);
+              const isInactive = product.status !== 'ACTIVE';
+              const mainPhoto = product.images?.[0];
+
+              return (
+                <div
+                  key={product.id}
+                  onClick={() => onSelectProduct(product)}
+                  className="p-3.5 sm:p-4 hover:bg-[#F8F9FA] transition-colors cursor-pointer group flex flex-col md:grid md:grid-cols-12 md:items-center gap-3"
+                >
+                  <div className="col-span-1 flex items-center">
+                    <div className="w-12 h-12 border border-[#E5E7EB] bg-[#F8F9FA] rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center">
+                      {mainPhoto ? (
+                        <img
+                          src={mainPhoto}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <Package className="w-4 h-4 stroke-[1] text-[#616161] opacity-50" />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="col-span-2 font-mono text-xs uppercase tracking-wider text-[#1E3A5F] font-semibold">
+                    <span className="text-[#616161] md:hidden text-[10px] block font-normal">SKU:</span>
+                    {product.code}
+                    {product.is_variant && (
+                      <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full border border-[#1E3A5F] text-[#1E3A5F]">
+                        VAR
+                      </span>
                     )}
                   </div>
 
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        {product.name}
-                      </h4>
-                      <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 px-1.5 py-0.2 bg-slate-100 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
-                        {product.code}
+                  <div className="col-span-4 min-w-0">
+                    <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wide text-[#1E3A5F] group-hover:underline truncate">
+                      {product.name}
+                    </h4>
+                    <span className="font-mono text-[10px] text-[#616161] uppercase tracking-wider block truncate">
+                      {product.categories?.name || 'GENERAL'} {product.subcategories?.name ? `// ${product.subcategories.name}` : ''}
+                    </span>
+                  </div>
+
+                  <div className="col-span-2 font-mono text-xs uppercase tracking-wider text-[#616161] flex items-center gap-1 truncate">
+                    <MapPin className="w-3.5 h-3.5 stroke-[1.5] text-[#1E3A5F] flex-shrink-0" />
+                    <span className="truncate">{product.locations?.name || 'SIN ASIGNAR'}</span>
+                  </div>
+
+                  <div className="col-span-1 text-left md:text-right font-bold text-xs sm:text-sm tabular-nums text-[#1E3A5F]">
+                    <span className="text-[#616161] md:hidden text-[10px] font-mono uppercase block font-normal">PRECIO:</span>
+                    {formatCurrency(product.price, currentInventory?.currency)}
+                  </div>
+
+                  <div className="col-span-1 text-left md:text-right font-mono font-bold text-xs tabular-nums text-[#1E3A5F]">
+                    <span className="text-[#616161] md:hidden text-[10px] uppercase block font-normal">CANTIDAD:</span>
+                    {product.stock} <span className="text-[10px] text-[#616161] font-normal">UDS</span>
+                  </div>
+
+                  <div className="col-span-1 flex md:justify-center">
+                    {isInactive ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono tracking-wider bg-[#1E3A5F] text-white">
+                        BAJA
                       </span>
-                      {product.is_variant && (
-                        <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded">
-                          Variante
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-amber-500" /> {product.locations?.name || '-'}
+                    ) : isLow ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono tracking-wider bg-[#ffdd00] text-black border border-black/20">
+                        CRÍTICO
                       </span>
-                      <span>•</span>
-                      <span>{product.categories?.name || 'General'}</span>
-                    </div>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono tracking-wider border border-[#E5E7EB] text-[#1E3A5F]">
+                        ACTIVO
+                      </span>
+                    )}
                   </div>
                 </div>
-
-                <div className="text-right flex-shrink-0">
-                  <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white">
-                    {formatCurrency(product.price, currentInventory?.currency)}
-                  </p>
-                  <span className={`text-[11px] font-bold ${isLow ? 'text-amber-500' : 'text-slate-500 dark:text-slate-400'}`}>
-                    {product.stock} uds
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* RNF-01: Controles de Paginación */}
+      {/* =========================================================
+          4. PAGINACIÓN
+         ========================================================= */}
       {totalPages > 1 && (
-        <div className="pt-4 flex items-center justify-between border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500">
-          <span>
-            Página <strong className="text-slate-800 dark:text-slate-200">{currentPage}</strong> de {totalPages}
+        <div className="border border-[#E5E7EB] bg-white rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 font-mono text-xs shadow-sm">
+          <span className="text-[#616161] uppercase tracking-wider">
+            HOJA <strong className="text-[#1E3A5F] font-normal">{currentPage.toString().padStart(2, '0')}</strong> DE {totalPages.toString().padStart(2, '0')}
           </span>
-          <div className="flex items-center gap-1.5">
+
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              className="min-h-[40px] px-3.5 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-colors text-[#1E3A5F]"
               title="Página Anterior"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
+
             {Array.from({ length: Math.min(5, totalPages) }, (_, idx) => {
               let pageNum = idx + 1;
               if (totalPages > 5 && currentPage > 3) {
@@ -545,20 +658,21 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`w-7 h-7 rounded-xl text-xs font-bold transition-all ${
+                  className={`min-h-[40px] min-w-[40px] rounded-full text-xs font-mono uppercase transition-all flex items-center justify-center ${
                     currentPage === pageNum
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                      ? 'bg-[#1E3A5F] text-white shadow-sm'
+                      : 'border border-[#E5E7EB] hover:border-[#1E3A5F] text-[#1E3A5F] bg-white'
                   }`}
                 >
-                  {pageNum}
+                  {pageNum.toString().padStart(2, '0')}
                 </button>
               );
             })}
+
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              className="min-h-[40px] px-3.5 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-colors text-[#1E3A5F]"
               title="Página Siguiente"
             >
               <ChevronRight className="w-4 h-4" />
@@ -572,15 +686,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
         isOpen={searchScannerOpen}
         onClose={() => setSearchScannerOpen(false)}
         onScanSuccess={handleBarcodeSearch}
-        title="Buscar Producto por Escaneo"
-        instructions="Escanea el código de barras o QR de cualquier producto para ubicarlo instantáneamente."
-      />
-
-      {/* RF-09: Modal de Impresión de Etiquetas en Lote */}
-      <BatchLabelsModal
-        products={products}
-        isOpen={batchLabelsOpen}
-        onClose={() => setBatchLabelsOpen(false)}
+        title="ESCANEAR CÓDIGO // BÚSQUEDA RÁPIDA"
+        instructions="Ubica el código de barras o QR de la mercancía frente al lente para indexar la ficha técnica."
       />
     </div>
   );

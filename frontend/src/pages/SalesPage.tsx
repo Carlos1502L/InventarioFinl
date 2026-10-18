@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ShoppingCart,
   Search,
@@ -7,26 +7,21 @@ import {
   Minus,
   Trash2,
   CheckCircle,
-  CreditCard,
+  Receipt,
   QrCode,
-  Calendar,
-  Download,
-  FileSpreadsheet,
-  FileText,
+  DollarSign,
   AlertCircle,
   Copy,
   Check,
-  User,
-  X,
+  Tag,
+  Sparkles,
   Loader2,
-  History,
-  TrendingUp,
-  Receipt
+  X
 } from 'lucide-react';
-import { Product, Sale, SaleItem, PaymentMethod } from '../types/database';
-import { supabase, formatCurrency, logAuditAction } from '../lib/supabase';
+import { Product, PaymentMethod, Coupon } from '../types/database';
+import { supabase, formatCurrency, logAuditAction } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
-import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
+import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import jsPDF from 'jspdf';
 
 interface SalesPageProps {
@@ -42,9 +37,6 @@ interface CartItem {
 export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted }) => {
   const { currentInventory, user } = useAuth();
 
-  // Vista activa: 'terminal' (Registrar Venta) o 'history' (Historial y Exportación)
-  const [activeSubTab, setActiveSubTab] = useState<'terminal' | 'history'>('terminal');
-
   // Carrito de Venta
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,107 +45,30 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted 
   const [customerContact, setCustomerContact] = useState('');
   const [saleNotes, setSaleNotes] = useState('');
 
+  // Cupones de Descuento (RF-06 Cupones)
+  const [couponCodeInput, setCouponCodeInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponMessage, setCouponMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
   // Estados de Proceso
   const [isProcessingSale, setIsProcessingSale] = useState(false);
   const [saleSuccessData, setSaleSuccessData] = useState<{ saleId: string; total: number; receiptNumber: string } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Escáner Modal para Venta Rápida (RF-06.2)
+  // Escáner Modal para Venta Rápida por Cámara
   const [scannerOpen, setScannerOpen] = useState(false);
 
-  // Modal de Pasarela Rápida Yape / Plin (RF-06.3)
-  const [quickPaymentModalOpen, setQuickPaymentModalOpen] = useState(false);
+  // Modal de Pasarela Rápida Yape / Plin (Grande y legible para cliente)
+  const [qrModalType, setQrModalType] = useState<'YAPE' | 'PLIN' | null>(null);
   const [copiedText, setCopiedText] = useState(false);
-
-  // Historial de Ventas (RF-06.4)
-  const [salesHistory, setSalesHistory] = useState<Sale[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
-  const [selectedSaleDetail, setSelectedSaleDetail] = useState<Sale | null>(null);
-
-  // Filtro de Rango de Fechas Inteligente (RF-06.4)
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-
-  // 1. Cargar Historial de Ventas
-  const loadSalesHistory = useCallback(async () => {
-    if (!currentInventory) return;
-    try {
-      setLoadingHistory(true);
-      const { data, error } = await supabase
-        .from('sales')
-        .select(`
-          *,
-          items:sale_items(*)
-        `)
-        .eq('inventory_id', currentInventory.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setSalesHistory(data || []);
-    } catch (err: any) {
-      console.error('Error cargando historial de ventas:', err);
-    } finally {
-      setLoadingHistory(false);
-    }
-  }, [currentInventory]);
-
-  useEffect(() => {
-    if (activeSubTab === 'history') {
-      loadSalesHistory();
-    }
-  }, [activeSubTab, loadSalesHistory]);
-
-  // Determinar límites inteligentes de fechas (RF-06.4)
-  const todayStr = useMemo(() => {
-    return new Date().toISOString().split('T')[0];
-  }, []);
-
-  const earliestSaleDateStr = useMemo(() => {
-    if (salesHistory.length === 0) return todayStr;
-    const sorted = [...salesHistory].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    );
-    return sorted[0].created_at.split('T')[0];
-  }, [salesHistory, todayStr]);
-
-  // Inicializar fechas inteligentes si están vacías
-  useEffect(() => {
-    if (!startDate && earliestSaleDateStr) {
-      setStartDate(earliestSaleDateStr);
-    }
-    if (!endDate) {
-      setEndDate(todayStr);
-    }
-  }, [earliestSaleDateStr, todayStr, startDate, endDate]);
-
-  // Filtrado de ventas por rango de fechas inteligente
-  const filteredSales = useMemo(() => {
-    return salesHistory.filter((sale) => {
-      const saleDate = sale.created_at.split('T')[0];
-      if (startDate && saleDate < startDate) return false;
-      if (endDate && saleDate > endDate) return false;
-      return true;
-    });
-  }, [salesHistory, startDate, endDate]);
-
-  // Métricas del Historial Filtrado
-  const totalRevenue = useMemo(() => {
-    return filteredSales.reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
-  }, [filteredSales]);
-
-  const totalUnitsSold = useMemo(() => {
-    return filteredSales.reduce((sum, s) => {
-      const itemsCount = s.items?.reduce((iSum, item) => iSum + (item.quantity || 0), 0) || 0;
-      return sum + itemsCount;
-    }, 0);
-  }, [filteredSales]);
 
   // Búsqueda de Productos para el Carrito
   const searchResults = useMemo(() => {
     if (!searchTerm.trim()) return [];
     const term = searchTerm.toLowerCase().trim();
     return products
-      .filter(p => p.status === 'ACTIVE' && p.stock > 0)
+      .filter(p => (p.status === 'ACTIVE' || !p.status) && p.stock > 0)
       .filter(p => p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term))
       .slice(0, 6);
   }, [products, searchTerm]);
@@ -183,12 +98,37 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted 
     setSearchTerm('');
   };
 
-  // RF-06.2: Escáner de código QR/Barra en módulo de ventas
+  const updateCartQuantity = (productId: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    const item = cart.find(i => i.product.id === productId);
+    if (item && newQuantity > item.product.stock) {
+      setErrorMessage(`Solo hay ${item.product.stock} unidades disponibles de "${item.product.name}".`);
+      return;
+    }
+    setCart(prevCart =>
+      prevCart.map(item =>
+        item.product.id === productId ? { ...item, quantity: newQuantity } : item
+      )
+    );
+  };
+
+  const removeFromCart = (productId: string) => {
+    setCart(prevCart => prevCart.filter(item => item.product.id !== productId));
+  };
+
+  // Escaneo rápido de código
   const handleScanProductForSale = (scannedCode: string) => {
     const code = scannedCode.trim().toLowerCase();
     const found = products.find(p => p.code.toLowerCase() === code);
 
     if (found) {
+      if (found.status === 'INACTIVE' || found.status === 'WITHDRAWN') {
+        setErrorMessage(`El producto "${found.name}" se encuentra inactivo.`);
+        return;
+      }
       if (found.stock <= 0) {
         setErrorMessage(`El producto "${found.name}" está agotado (Stock: 0).`);
         return;
@@ -199,25 +139,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted 
     }
   };
 
-  // Modificar cantidad en carrito
-  const updateCartQuantity = (productId: string, newQty: number) => {
-    setCart(prev => {
-      return prev.map(item => {
-        if (item.product.id === productId) {
-          const clamped = Math.max(1, Math.min(newQty, item.product.stock));
-          return { ...item, quantity: clamped };
-        }
-        return item;
-      });
-    });
-  };
-
-  const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.product.id !== productId));
-  };
-
-  // Cálculos del Carrito
-  const cartTotal = useMemo(() => {
+  // Cálculos de Totales y Descuento por Cupón
+  const cartSubtotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
   }, [cart]);
 
@@ -225,43 +148,89 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted 
     return cart.reduce((sum, item) => sum + item.quantity, 0);
   }, [cart]);
 
-  // RF-06.1: Registrar Venta con Descuento Obligatorio y Automático de Stock
+  const discountAmount = useMemo(() => {
+    if (!appliedCoupon || cartSubtotal <= 0) return 0;
+    if (appliedCoupon.discount_type === 'PERCENTAGE') {
+      return (cartSubtotal * Number(appliedCoupon.discount_value)) / 100;
+    }
+    return Math.min(cartSubtotal, Number(appliedCoupon.discount_value));
+  }, [cartSubtotal, appliedCoupon]);
+
+  const finalTotal = useMemo(() => {
+    return Math.max(0, cartSubtotal - discountAmount);
+  }, [cartSubtotal, discountAmount]);
+
+  // Aplicar Cupón de Descuento
+  const handleApplyCoupon = async () => {
+    const cleanCode = couponCodeInput.trim().toUpperCase();
+    if (!cleanCode) return;
+    if (!currentInventory) return;
+
+    try {
+      setCouponLoading(true);
+      setCouponMessage(null);
+
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('inventory_id', currentInventory.id)
+        .eq('code', cleanCode)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        setCouponMessage({ text: `El cupón "${cleanCode}" no existe.`, type: 'error' });
+        return;
+      }
+
+      if (data.status !== 'ACTIVE') {
+        setCouponMessage({ text: `El cupón "${cleanCode}" se encuentra inactivo.`, type: 'error' });
+        return;
+      }
+
+      setAppliedCoupon(data);
+      const discountDesc = data.discount_type === 'PERCENTAGE' 
+        ? `${data.discount_value}%` 
+        : formatCurrency(data.discount_value, currentInventory?.currency);
+      setCouponMessage({ text: `¡Cupón "${cleanCode}" aplicado exitosamente (-${discountDesc})!`, type: 'success' });
+      setCouponCodeInput('');
+    } catch (err: any) {
+      console.error('Error aplicando cupón:', err);
+      setCouponMessage({ text: err.message || 'Error validando cupón.', type: 'error' });
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponMessage(null);
+    setCouponCodeInput('');
+  };
+
+  // Copiar número de teléfono
+  const copyPaymentPhone = (phone: string) => {
+    navigator.clipboard.writeText(phone);
+    setCopiedText(true);
+    setTimeout(() => setCopiedText(false), 2000);
+  };
+
+  // PROCESAR VENTA CON PROTECCIÓN DE CONCURRENCIA TRANSACCIONAL (FOR UPDATE)
   const handleProcessSale = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentInventory || !user || cart.length === 0) return;
+    if (!currentInventory || !user) return;
+
+    if (cart.length === 0) {
+      setErrorMessage('El carrito está vacío. Agrega al menos un producto.');
+      return;
+    }
 
     try {
       setIsProcessingSale(true);
       setErrorMessage(null);
 
-      // 1. Validar existencias actuales de cada ítem antes de procesar
-      for (const item of cart) {
-        if (item.quantity > item.product.stock) {
-          throw new Error(`El producto "${item.product.name}" solo tiene ${item.product.stock} unidades en stock.`);
-        }
-      }
-
-      // 2. Insertar registro maestro de venta
-      const { data: saleData, error: saleError } = await supabase
-        .from('sales')
-        .insert({
-          inventory_id: currentInventory.id,
-          seller_id: user.id,
-          seller_email: user.email || 'Vendedor',
-          total_amount: cartTotal,
-          payment_method: paymentMethod,
-          customer_name: customerName.trim() || null,
-          customer_contact: customerContact.trim() || null,
-          notes: saleNotes.trim() || null
-        })
-        .select()
-        .single();
-
-      if (saleError) throw saleError;
-
-      // 3. Insertar líneas de venta (sale_items)
       const saleItemsPayload = cart.map(item => ({
-        sale_id: saleData.id,
         product_id: item.product.id,
         product_name: item.product.name,
         product_code: item.product.code,
@@ -271,680 +240,689 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted 
         subtotal: item.product.price * item.quantity
       }));
 
-      const { error: itemsError } = await supabase
-        .from('sale_items')
-        .insert(saleItemsPayload);
+      // 1. INTENTAR PROCESAMIENTO ATÓMICO VÍA RPC CON "FOR UPDATE"
+      let saleIdCreated: string | null = null;
+      let usedRpc = false;
 
-      if (itemsError) throw itemsError;
-
-      // 4. RF-06.1: DESCUENTO OBLIGATORIO Y AUTOMÁTICO DEL STOCK REAL
-      for (const item of cart) {
-        const remainingStock = item.product.stock - item.quantity;
-
-        const { error: stockError } = await supabase
-          .from('products')
-          .update({
-            stock: remainingStock,
-            last_modified_by: user.id,
-            last_modified_by_email: user.email
-          })
-          .eq('id', item.product.id);
-
-        if (stockError) throw stockError;
-
-        // Registrar auditoría por cada producto descontado
-        await logAuditAction({
-          inventoryId: currentInventory.id,
-          productId: item.product.id,
-          productName: item.product.name,
-          actionType: 'SALE',
-          details: `Venta #${saleData.id.slice(0, 8)}: Se descontaron ${item.quantity} unidades de stock. Stock restante: ${remainingStock}`,
-          metadata: {
-            sale_id: saleData.id,
-            quantity_sold: item.quantity,
-            unit_price: item.product.price,
-            remaining_stock: remainingStock
-          }
+      try {
+        const { data: rpcRes, error: rpcError } = await supabase.rpc('process_pos_sale', {
+          p_inventory_id: currentInventory.id,
+          p_seller_id: user.id,
+          p_seller_email: user.email,
+          p_total_amount: finalTotal,
+          p_payment_method: paymentMethod,
+          p_customer_name: customerName.trim() || null,
+          p_customer_contact: customerContact.trim() || null,
+          p_notes: saleNotes.trim() || null,
+          p_items: saleItemsPayload,
+          p_coupon_code: appliedCoupon?.code || null,
+          p_discount_amount: discountAmount
         });
+
+        if (rpcError) {
+          // Si el RPC falla porque detectó sobreventa o stock insuficiente
+          if (rpcError.message && rpcError.message.toLowerCase().includes('stock insuficiente')) {
+            throw new Error(`⚠️ Concurrencia detectada: ${rpcError.message}. Otro usuario acaba de comprar este artículo o no hay suficientes existencias.`);
+          }
+          // Si la función RPC aún no está creada en Supabase (código 42883), usamos fallback seguro
+          if (rpcError.code === '42883' || rpcError.message.includes('does not exist')) {
+            usedRpc = false;
+          } else {
+            throw rpcError;
+          }
+        } else if (rpcRes && rpcRes.sale_id) {
+          saleIdCreated = rpcRes.sale_id;
+          usedRpc = true;
+        }
+      } catch (rpcCatchErr: any) {
+        if (rpcCatchErr.message.includes('Concurrencia detectada') || rpcCatchErr.message.includes('Stock insuficiente')) {
+          throw rpcCatchErr;
+        }
+        usedRpc = false;
       }
 
-      // 5. Limpiar carrito y notificar
+      // 2. FALLBACK SEGURO SI RPC NO ESTÁ INSTALADO (VALIDA STOCK REAL EN TIEMPO REAL ANTES DE REGISTRAR)
+      if (!usedRpc) {
+        // Verificar stock fresco directamente en la base de datos de cada ítem
+        for (const item of cart) {
+          const { data: freshProd, error: checkErr } = await supabase
+            .from('products')
+            .select('stock, name')
+            .eq('id', item.product.id)
+            .single();
+
+          if (checkErr || !freshProd) {
+            throw new Error(`El producto "${item.product.name}" ya no existe en el catálogo.`);
+          }
+
+          if (freshProd.stock < item.quantity) {
+            throw new Error(
+              `⚠️ Stock insuficiente: El producto "${item.product.name}" solo cuenta con ${freshProd.stock} uds en existencia (solicitaste ${item.quantity}). Otro usuario pudo haberlo comprado.`
+            );
+          }
+        }
+
+        // Si todos tienen stock suficiente, crear la venta
+        const saleNotesWithCoupon = appliedCoupon
+          ? `${saleNotes ? saleNotes + ' | ' : ''}[Cupón: ${appliedCoupon.code} (-${discountAmount.toFixed(2)})]`
+          : saleNotes.trim() || null;
+
+        const { data: saleData, error: saleError } = await supabase
+          .from('sales')
+          .insert({
+            inventory_id: currentInventory.id,
+            seller_id: user.id,
+            seller_email: user.email,
+            total_amount: finalTotal,
+            payment_method: paymentMethod,
+            customer_name: customerName.trim() || null,
+            customer_contact: customerContact.trim() || null,
+            notes: saleNotesWithCoupon
+          })
+          .select()
+          .single();
+
+        if (saleError) throw saleError;
+        saleIdCreated = saleData.id;
+
+        // Insertar líneas de venta
+        const linesToInsert = saleItemsPayload.map(item => ({
+          sale_id: saleData.id,
+          ...item
+        }));
+        await supabase.from('sale_items').insert(linesToInsert);
+
+        // Descontar existencias
+        for (const item of cart) {
+          const remaining = item.product.stock - item.quantity;
+          await supabase
+            .from('products')
+            .update({
+              stock: remaining,
+              last_modified_by: user.id,
+              last_modified_by_email: user.email,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', item.product.id);
+        }
+      }
+
+      // 3. Registrar auditoría
+      await logAuditAction({
+        inventoryId: currentInventory.id,
+        actionType: 'SALE',
+        details: `Venta registrada por total de ${formatCurrency(finalTotal, currentInventory.currency)} mediante ${paymentMethod}. ${appliedCoupon ? `Cupón: ${appliedCoupon.code}` : ''}`,
+        metadata: {
+          sale_id: saleIdCreated,
+          items_count: cart.length,
+          payment_method: paymentMethod,
+          coupon_applied: appliedCoupon?.code || null,
+          discount_amount: discountAmount
+        }
+      });
+
+      // 4. Limpiar estado y mostrar confirmación
       const receiptNum = `VTA-${Date.now().toString().slice(-6)}`;
       setSaleSuccessData({
-        saleId: saleData.id,
-        total: cartTotal,
+        saleId: saleIdCreated || Date.now().toString(),
+        total: finalTotal,
         receiptNumber: receiptNum
       });
+
       setCart([]);
       setCustomerName('');
       setCustomerContact('');
       setSaleNotes('');
+      setAppliedCoupon(null);
+      setCouponMessage(null);
 
-      // Recargar existencias en la app principal
+      // Recargar stock en toda la aplicación
       onSaleCompleted();
     } catch (err: any) {
-      console.error('Error completando venta:', err);
+      console.error('Error al procesar la venta:', err);
       setErrorMessage(err.message || 'Error al procesar la venta.');
+      // Refrescar catálogo para actualizar existencias si hubo conflicto
+      onSaleCompleted();
     } finally {
       setIsProcessingSale(false);
     }
   };
 
-  // RF-06.4: Exportar Histórico de Ventas a CSV
-  const handleExportSalesCSV = () => {
+  // Descargar Comprobante / Recibo Digital en PDF
+  const handleDownloadReceiptPDF = () => {
+    if (!saleSuccessData || !currentInventory) return;
     try {
-      const headers = ['ID_Venta', 'Fecha', 'Vendedor', 'Cliente', 'MetodoPago', 'Total', 'Notas'];
-      const rows = filteredSales.map(s => [
-        `"${s.id.slice(0, 8)}"`,
-        `"${new Date(s.created_at).toLocaleString()}"`,
-        `"${s.seller_email}"`,
-        `"${(s.customer_name || 'Consumidor Final').replace(/"/g, '""')}"`,
-        `"${s.payment_method}"`,
-        Number(s.total_amount).toFixed(2),
-        `"${(s.notes || '').replace(/"/g, '""')}"`
-      ]);
-
-      const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `ventas-${startDate}-al-${endDate}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      alert('Error exportando CSV: ' + err.message);
-    }
-  };
-
-  // RF-06.4: Exportar Histórico a PDF
-  const handleExportSalesPDF = () => {
-    try {
-      const doc = new jsPDF();
-      doc.setFontSize(16);
-      doc.text(`Reporte de Ventas: ${currentInventory?.name || 'Inventario'}`, 14, 20);
-
-      doc.setFontSize(10);
-      doc.text(`Periodo: ${startDate} hasta ${endDate}`, 14, 28);
-      doc.text(`Total de Ventas: ${filteredSales.length} transacciones`, 14, 34);
-      doc.text(`Recaudación Total: ${formatCurrency(totalRevenue, currentInventory?.currency)}`, 14, 40);
-
-      let y = 50;
-      doc.setFontSize(9);
-      doc.text('ID', 14, y);
-      doc.text('Fecha', 40, y);
-      doc.text('Cliente', 85, y);
-      doc.text('Método', 135, y);
-      doc.text('Total', 170, y);
-
-      doc.line(14, y + 2, 195, y + 2);
-      y += 8;
-
-      filteredSales.forEach((s) => {
-        if (y > 275) {
-          doc.addPage();
-          y = 20;
-        }
-        doc.text(s.id.slice(0, 8), 14, y);
-        doc.text(new Date(s.created_at).toLocaleDateString(), 40, y);
-        doc.text((s.customer_name || 'Consumidor Final').slice(0, 20), 85, y);
-        doc.text(s.payment_method, 135, y);
-        doc.text(formatCurrency(s.total_amount, currentInventory?.currency), 170, y);
-        y += 6;
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [80, 160] // Tamaño recibo de 80 mm
       });
 
-      doc.save(`ventas-${startDate}-al-${endDate}.pdf`);
-    } catch (err: any) {
-      alert('Error exportando PDF: ' + err.message);
-    }
-  };
+      const invName = currentInventory.name || 'MI NEGOCIO';
+      const currency = currentInventory.currency || 'USD';
 
-  const copyPaymentPhone = (phone: string) => {
-    navigator.clipboard.writeText(phone);
-    setCopiedText(true);
-    setTimeout(() => setCopiedText(false), 2000);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(invName.toUpperCase(), 40, 12, { align: 'center' });
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('COMPROBANTE DE VENTA', 40, 17, { align: 'center' });
+      doc.text(`Ticket: ${saleSuccessData.receiptNumber}`, 40, 22, { align: 'center' });
+      doc.text(`Fecha: ${new Date().toLocaleString()}`, 40, 27, { align: 'center' });
+      doc.text(`Pago: ${paymentMethod}`, 40, 32, { align: 'center' });
+
+      doc.setDrawColor(200);
+      doc.line(6, 35, 74, 35);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TOTAL COBRADO:', 10, 43);
+      doc.text(formatCurrency(saleSuccessData.total, currency), 70, 43, { align: 'right' });
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'italic');
+      doc.text('¡Gracias por su compra!', 40, 55, { align: 'center' });
+
+      doc.save(`recibo-${saleSuccessData.receiptNumber}.pdf`);
+    } catch (err: any) {
+      alert('Error generando recibo: ' + err.message);
+    }
   };
 
   return (
-    <div className="space-y-6 pb-20 sm:pb-8">
-      {/* 1. Selector de Subpestañas: Terminal POS vs Historial */}
-      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveSubTab('terminal')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
-              activeSubTab === 'terminal'
-                ? 'bg-blue-600 text-white shadow-blue-500/20'
-                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <ShoppingCart className="w-4 h-4" /> Registrar Venta (POS)
-          </button>
-          <button
-            onClick={() => setActiveSubTab('history')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
-              activeSubTab === 'history'
-                ? 'bg-blue-600 text-white shadow-blue-500/20'
-                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <History className="w-4 h-4" /> Historial y Exportación
-          </button>
+    <div className="space-y-6 pb-28 sm:pb-12 max-w-7xl mx-auto font-normal text-[#1E3A5F]">
+      {/* 1. Cabecera Editorial */}
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
+            TERMINAL OPERATIVA // CHECKOUT
+          </span>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F] uppercase">
+            Punto de Venta & Caja
+          </h1>
+          <p className="text-xs text-[#616161] font-light mt-0.5">
+            Registro ágil de transacciones, emisión de comprobantes y validación concurrente de stock.
+          </p>
         </div>
 
-        {/* Pasarela Rápida Yape / Plin Botón (RF-06.3) */}
-        {(currentInventory?.yape_phone || currentInventory?.plin_phone || currentInventory?.yape_qr_url || currentInventory?.plin_qr_url) && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setQuickPaymentModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold rounded-xl shadow-md shadow-purple-500/20 active:scale-95 transition-all"
+            type="button"
+            onClick={() => setScannerOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider transition-all shadow-xs active:scale-95"
           >
-            <QrCode className="w-3.5 h-3.5" /> Cobrar con Yape / Plin
+            <Camera className="w-4 h-4 text-[#E8B4A0]" />
+            <span>Escanear Código</span>
           </button>
-        )}
+        </div>
       </div>
 
       {errorMessage && (
-        <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl flex items-center gap-2.5 text-xs text-rose-600 dark:text-rose-400 animate-in fade-in">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{errorMessage}</span>
-          <button onClick={() => setErrorMessage(null)} className="ml-auto text-rose-400 hover:text-rose-700">✕</button>
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center justify-between gap-3 text-xs text-rose-700 animate-in fade-in shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
+            <span>{errorMessage}</span>
+          </div>
+          <button onClick={() => setErrorMessage(null)} className="text-rose-500 hover:text-rose-800 p-1">
+            ✕
+          </button>
         </div>
       )}
 
-      {/* --- MODO 1: REGISTRAR VENTA (TERMINAL POS) --- */}
-      {activeSubTab === 'terminal' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Columna Izquierda: Búsqueda y Selección de Productos */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm space-y-3">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Search className="w-4 h-4 text-blue-600" /> Búsqueda y Escaneo de Productos
-              </h3>
-
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    placeholder="Escribe el nombre o SKU del producto..."
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  {searchTerm && (
-                    <button
-                      onClick={() => setSearchTerm('')}
-                      className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-
-                {/* RF-06.2: Botón de Escáner QR/Barra para Ventas */}
-                <button
-                  type="button"
-                  onClick={() => setScannerOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-600/20 dark:hover:bg-blue-600/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 rounded-xl text-xs font-bold transition-all active:scale-95 whitespace-nowrap shadow-sm"
-                  title="Escanear código de barra o QR para añadir a la venta"
-                >
-                  <Camera className="w-4 h-4" /> Escanear QR
-                </button>
-              </div>
-
-              {/* Resultados de Búsqueda Desplegables */}
-              {searchResults.length > 0 && (
-                <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-800/40 animate-in fade-in">
-                  {searchResults.map(p => (
-                    <div
-                      key={p.id}
-                      className="p-3 flex items-center justify-between hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-colors"
-                    >
-                      <div>
-                        <p className="text-xs font-bold text-slate-900 dark:text-white">{p.name}</p>
-                        <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                          <span className="font-mono">{p.code}</span>
-                          <span>•</span>
-                          <span>Stock: <strong className="text-slate-700 dark:text-slate-300">{p.stock} uds</strong></span>
-                          <span>•</span>
-                          <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                            {formatCurrency(p.price, currentInventory?.currency)}
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => addToCart(p, 1)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-sm active:scale-95 transition-all"
-                      >
-                        <Plus className="w-3.5 h-3.5" /> Añadir
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+      {/* Terminal de Punto de Venta (POS) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Columna Izquierda: Búsqueda y Carrito de Productos */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* Tarjeta de Búsqueda */}
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#1E3A5F] font-bold block">
+                CATÁLOGO ACTIVO
+              </span>
+              <span className="text-xs text-[#616161]">
+                {products.length} ítems indexados
+              </span>
             </div>
 
-            {/* Tabla del Carrito de Ventas */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4 text-blue-600" /> Ítems en la Venta ({cart.length})
-                </h3>
-                {cart.length > 0 && (
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  placeholder="Escribe el nombre o SKU del producto..."
+                  className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl pl-10 pr-8 py-2.5 text-xs text-[#1E3A5F] placeholder:text-[#616161]/50 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] focus:border-[#1E3A5F] transition-all"
+                />
+                {searchTerm && (
                   <button
-                    onClick={() => setCart([])}
-                    className="text-xs text-rose-500 hover:underline"
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-3 text-xs text-[#616161] hover:text-[#1E3A5F]"
                   >
-                    Vaciar Carrito
+                    ✕
                   </button>
                 )}
               </div>
 
-              {cart.length === 0 ? (
-                <div className="py-12 text-center text-slate-400 dark:text-slate-500 space-y-2">
-                  <ShoppingCart className="w-10 h-10 mx-auto stroke-1" />
-                  <p className="text-xs">El carrito está vacío. Busca un producto o escanea su código QR para empezar.</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-100 dark:divide-slate-800 overflow-x-auto">
-                  {cart.map(item => (
-                    <div key={item.product.id} className="py-3 flex items-center justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{item.product.name}</p>
-                        <p className="text-[11px] text-slate-400 font-mono">
-                          {item.product.code} • {formatCurrency(item.product.price, currentInventory?.currency)} c/u
-                        </p>
-                      </div>
+              <button
+                type="button"
+                onClick={() => setScannerOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 whitespace-nowrap shadow-xs"
+              >
+                <Camera className="w-4 h-4 text-[#1E3A5F]" />
+                <span>Escanear</span>
+              </button>
+            </div>
 
-                      {/* Controles de Cantidad */}
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)}
-                          className="p-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
-                        >
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="w-8 text-center text-xs font-bold text-slate-900 dark:text-white">
-                          {item.quantity}
+            {/* Resultados de Búsqueda Desplegables */}
+            {searchResults.length > 0 && (
+              <div className="divide-y divide-[#E5E7EB] border border-[#E5E7EB] rounded-xl overflow-hidden bg-[#F8F9FA]/60 animate-in fade-in">
+                {searchResults.map(p => (
+                  <div
+                    key={p.id}
+                    className="p-3 flex items-center justify-between hover:bg-white transition-colors"
+                  >
+                    <div className="min-w-0 pr-3">
+                      <p className="text-sm font-bold text-[#1E3A5F] uppercase truncate">{p.name}</p>
+                      <div className="flex items-center gap-2 text-[11px] text-[#616161] font-mono mt-0.5">
+                        <span className="font-semibold">{p.code}</span>
+                        <span>•</span>
+                        <span>Stock: <strong className="text-[#1E3A5F] font-semibold">{p.stock} uds</strong></span>
+                        <span>•</span>
+                        <span className="text-[#1E3A5F] font-bold">
+                          {formatCurrency(p.price, currentInventory?.currency)}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)}
-                          disabled={item.quantity >= item.product.stock}
-                          className="p-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 disabled:opacity-40"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      {/* Subtotal y Eliminar */}
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold text-slate-900 dark:text-white w-20 text-right">
-                          {formatCurrency(item.product.price * item.quantity, currentInventory?.currency)}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeFromCart(item.product.id)}
-                          className="p-1 text-slate-400 hover:text-rose-600"
-                          title="Quitar"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 1)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-xl shadow-xs active:scale-95 transition-all flex-shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-[#E8B4A0]" /> Añadir
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Tabla / Lista de Ítems en el Carrito */}
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="w-4 h-4 text-[#E8B4A0]" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
+                  Ítems Seleccionados ({cart.length})
+                </h3>
+              </div>
+              {cart.length > 0 && (
+                <button
+                  onClick={() => setCart([])}
+                  className="text-xs text-[#616161] hover:text-rose-600 transition-colors uppercase tracking-wider font-mono text-[11px]"
+                >
+                  Vaciar Carrito
+                </button>
               )}
             </div>
-          </div>
 
-          {/* Columna Derecha: Resumen de Cobro y Checkout */}
-          <div className="space-y-4">
-            <form onSubmit={handleProcessSale} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-emerald-600" /> Resumen y Cobro
-              </h3>
-
-              {/* Total Destacado */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700/60 space-y-1">
-                <div className="flex items-center justify-between text-xs text-slate-500">
-                  <span>Unidades a descontar:</span>
-                  <span className="font-bold text-slate-700 dark:text-slate-300">{cartTotalUnits} uds</span>
-                </div>
-                <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">TOTAL A COBRAR:</span>
-                  <span className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                    {formatCurrency(cartTotal, currentInventory?.currency)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Método de Pago */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Método de Pago <span className="text-blue-500">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: 'CASH', label: 'Efectivo', icon: '💵' },
-                    { id: 'YAPE', label: 'Yape', icon: '🟣' },
-                    { id: 'PLIN', label: 'Plin', icon: '🔵' },
-                    { id: 'CARD', label: 'Tarjeta', icon: '💳' },
-                    { id: 'TRANSFER', label: 'Transf.', icon: '🏦' },
-                    { id: 'OTHER', label: 'Otro', icon: '📝' }
-                  ].map(m => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => {
-                        setPaymentMethod(m.id as PaymentMethod);
-                        if (m.id === 'YAPE' || m.id === 'PLIN') {
-                          setQuickPaymentModalOpen(true);
-                        }
-                      }}
-                      className={`p-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-all ${
-                        paymentMethod === m.id
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
-                          : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
-                      }`}
-                    >
-                      <span>{m.icon}</span> {m.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Datos opcionales del cliente */}
-              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                    Nombre del Cliente (Opcional)
-                  </label>
-                  <input
-                    type="text"
-                    value={customerName}
-                    onChange={e => setCustomerName(e.target.value)}
-                    placeholder="Ej: Juan Pérez"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                    Teléfono / Correo (Opcional)
-                  </label>
-                  <input
-                    type="text"
-                    value={customerContact}
-                    onChange={e => setCustomerContact(e.target.value)}
-                    placeholder="Ej: 999888777"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                    Notas de la Venta
-                  </label>
-                  <textarea
-                    value={saleNotes}
-                    onChange={e => setSaleNotes(e.target.value)}
-                    placeholder="Detalles de entrega, comprobante, etc..."
-                    rows={2}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs"
-                  />
-                </div>
-              </div>
-
-              {/* Botón de Confirmación y Descuento de Stock Obligatorio */}
-              <button
-                type="submit"
-                disabled={isProcessingSale || cart.length === 0}
-                className="w-full inline-flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-emerald-500/25 active:scale-95 disabled:opacity-50 transition-all"
-              >
-                {isProcessingSale ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Descontando stock y registrando...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4" /> Confirmar Venta y Descontar Stock
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODO 2: HISTORIAL Y EXPORTACIÓN DE VENTAS (RF-06.4) --- */}
-      {activeSubTab === 'history' && (
-        <div className="space-y-5">
-          {/* Barra de Filtros Inteligentes por Fecha */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-blue-600" /> Histórico de Transacciones y Exportación
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Fechas bloqueadas automáticamente: no permite fechas futuras ni anteriores a la primera venta registrada.
+            {cart.length === 0 ? (
+              <div className="py-12 text-center text-[#616161] space-y-2 font-mono">
+                <ShoppingCart className="w-10 h-10 mx-auto stroke-1 text-[#1E3A5F]/20" />
+                <p className="text-xs uppercase tracking-wider">El carrito de caja está vacío.</p>
+                <p className="text-[11px] text-[#616161]/70 font-sans">
+                  Busca por nombre/código o utiliza el escáner para sumar productos al ticket.
                 </p>
               </div>
-
-              {/* Botones de Exportación */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleExportSalesPDF}
-                  disabled={filteredSales.length === 0}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl shadow-md shadow-rose-500/20 disabled:opacity-50 transition-all active:scale-95"
-                >
-                  <Download className="w-3.5 h-3.5" /> PDF
-                </button>
-                <button
-                  onClick={handleExportSalesCSV}
-                  disabled={filteredSales.length === 0}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-500/20 disabled:opacity-50 transition-all active:scale-95"
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5" /> Excel / CSV
-                </button>
-              </div>
-            </div>
-
-            {/* Selectores de Fechas con Bloqueo Automático (RF-06.4) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                  Fecha Inicio (Mín: Primera venta)
-                </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  min={earliestSaleDateStr}
-                  max={endDate || todayStr}
-                  onChange={e => setStartDate(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                  Fecha Fin (Máx: Hoy)
-                </label>
-                <input
-                  type="date"
-                  value={endDate}
-                  min={startDate || earliestSaleDateStr}
-                  max={todayStr}
-                  onChange={e => setEndDate(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-white"
-                />
-              </div>
-
-              {/* Métricas del Periodo */}
-              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
-                <span className="text-[10px] text-slate-400 block font-bold">Ventas Realizadas</span>
-                <span className="text-base font-extrabold text-blue-600 dark:text-blue-400">
-                  {filteredSales.length} transacciones ({totalUnitsSold} uds)
-                </span>
-              </div>
-
-              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
-                <span className="text-[10px] text-slate-400 block font-bold">Recaudación Total</span>
-                <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(totalRevenue, currentInventory?.currency)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabla de Historial de Ventas */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
-            {loadingHistory ? (
-              <div className="p-12 text-center text-slate-400 flex items-center justify-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> Cargando ventas...
-              </div>
-            ) : filteredSales.length === 0 ? (
-              <div className="p-12 text-center text-slate-400 space-y-2">
-                <Receipt className="w-10 h-10 mx-auto stroke-1" />
-                <p className="text-xs">No se encontraron ventas registradas en el rango de fechas seleccionado.</p>
-              </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold text-slate-500 uppercase">
-                    <tr>
-                      <th className="p-3.5">ID / Fecha</th>
-                      <th className="p-3.5">Cliente</th>
-                      <th className="p-3.5">Vendedor</th>
-                      <th className="p-3.5">Método</th>
-                      <th className="p-3.5 text-right">Total</th>
-                      <th className="p-3.5 text-center">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {filteredSales.map(sale => (
-                      <tr key={sale.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
-                        <td className="p-3.5">
-                          <span className="font-mono font-bold text-slate-900 dark:text-white">#{sale.id.slice(0, 8)}</span>
-                          <span className="block text-[10px] text-slate-400">
-                            {new Date(sale.created_at).toLocaleString()}
-                          </span>
-                        </td>
-                        <td className="p-3.5">
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">
-                            {sale.customer_name || 'Consumidor Final'}
-                          </span>
-                          {sale.customer_contact && (
-                            <span className="block text-[10px] text-slate-400">{sale.customer_contact}</span>
-                          )}
-                        </td>
-                        <td className="p-3.5 text-slate-500">{sale.seller_email}</td>
-                        <td className="p-3.5">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                            {sale.payment_method}
-                          </span>
-                        </td>
-                        <td className="p-3.5 text-right font-bold text-emerald-600 dark:text-emerald-400">
-                          {formatCurrency(sale.total_amount, currentInventory?.currency)}
-                        </td>
-                        <td className="p-3.5 text-center">
-                          <button
-                            onClick={() => setSelectedSaleDetail(sale)}
-                            className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline"
-                          >
-                            Ver Recibo
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="divide-y divide-[#E5E7EB] overflow-x-auto">
+                {cart.map(item => (
+                  <div key={item.product.id} className="py-3 flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-[#1E3A5F] uppercase truncate">{item.product.name}</p>
+                      <p className="text-[11px] text-[#616161] font-mono">
+                        <span className="font-semibold">{item.product.code}</span> • <span className="font-semibold">{formatCurrency(item.product.price, currentInventory?.currency)}</span> c/u
+                      </p>
+                    </div>
+
+                    {/* Controles de Cantidad */}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)}
+                        className="w-7 h-7 rounded-lg border border-[#E5E7EB] flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] transition-colors"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="w-8 text-center text-xs font-mono font-medium text-[#1E3A5F]">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)}
+                        className="w-7 h-7 rounded-lg border border-[#E5E7EB] flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Subtotal del Producto */}
+                    <div className="text-right w-24">
+                      <p className="text-sm font-mono font-bold text-[#1E3A5F]">
+                        {formatCurrency(item.product.price * item.quantity, currentInventory?.currency)}
+                      </p>
+                    </div>
+
+                    {/* Eliminar Ítem */}
+                    <button
+                      type="button"
+                      onClick={() => removeFromCart(item.product.id)}
+                      className="p-1.5 text-[#616161] hover:text-rose-600 transition-colors"
+                      title="Quitar ítem"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
-      )}
 
-      {/* RF-06.3: Modal de Pasarela Rápida Yape / Plin */}
-      {quickPaymentModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 rounded-xl">
+        {/* Columna Derecha: Resumen de Cobro y Checkout */}
+        <div className="space-y-4">
+          <form onSubmit={handleProcessSale} className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-[#E5E7EB]">
+              <Receipt className="w-4 h-4 text-[#E8B4A0]" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
+                Liquidación de Ticket
+              </h3>
+            </div>
+
+            {/* Total Destacado y Desglose */}
+            <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] space-y-2 font-mono">
+              <div className="flex items-center justify-between text-xs text-[#616161]">
+                <span>Subtotal ({cartTotalUnits} uds):</span>
+                <span className="text-[#1E3A5F]">
+                  {formatCurrency(cartSubtotal, currentInventory?.currency)}
+                </span>
+              </div>
+
+              {appliedCoupon && (
+                <div className="flex items-center justify-between text-xs text-[#1E3A5F]">
+                  <span className="flex items-center gap-1">
+                    <Tag className="w-3.5 h-3.5 text-[#E8B4A0]" /> Descuento ({appliedCoupon.code}):
+                  </span>
+                  <span className="text-[#E8B4A0] font-medium">
+                    -{formatCurrency(discountAmount, currentInventory?.currency)}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-2 border-t border-[#E5E7EB]">
+                <span className="text-xs uppercase tracking-wider text-[#1E3A5F] font-bold">TOTAL COBRO:</span>
+                <span className="text-2xl font-bold text-[#1E3A5F]">
+                  {formatCurrency(finalTotal, currentInventory?.currency)}
+                </span>
+              </div>
+            </div>
+
+            {/* Cupón de Descuento (Opcional) */}
+            <div className="space-y-2 pt-1 border-t border-[#E5E7EB]">
+              <label className="block text-[11px] uppercase tracking-wider font-medium text-[#1E3A5F]">
+                Cupón Promocional
+              </label>
+
+              {appliedCoupon ? (
+                <div className="p-2.5 bg-[#F8F9FA] border border-[#E8B4A0] rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-mono">
+                    <Sparkles className="w-4 h-4 text-[#E8B4A0]" />
+                    <div>
+                      <span className="text-xs text-[#1E3A5F] font-semibold">
+                        {appliedCoupon.code}
+                      </span>
+                      <span className="text-[11px] text-[#616161] ml-1.5">
+                        ({appliedCoupon.discount_type === 'PERCENTAGE' ? `-${appliedCoupon.discount_value}%` : `-${formatCurrency(appliedCoupon.discount_value, currentInventory?.currency)}`})
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    className="p-1 text-[#616161] hover:text-rose-600 rounded-lg transition-colors"
+                    title="Quitar cupón"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponCodeInput}
+                    onChange={e => setCouponCodeInput(e.target.value.toUpperCase())}
+                    placeholder="Código (Ej: DESC10)"
+                    className="flex-1 bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs font-mono uppercase text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    disabled={couponLoading || !couponCodeInput.trim()}
+                    className="px-3.5 py-2 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-xl transition-all disabled:opacity-50 active:scale-95 whitespace-nowrap shadow-xs"
+                  >
+                    {couponLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Aplicar'}
+                  </button>
+                </div>
+              )}
+
+              {couponMessage && (
+                <p className={`text-[11px] font-mono ${couponMessage.type === 'success' ? 'text-[#1E3A5F]' : 'text-rose-600'}`}>
+                  {couponMessage.text}
+                </p>
+              )}
+            </div>
+
+            {/* Método de Pago */}
+            <div className="pt-2 border-t border-[#E5E7EB]">
+              <label className="block text-[11px] uppercase tracking-wider font-medium text-[#1E3A5F] mb-2">
+                Método de Pago <span className="text-[#E8B4A0]">*</span>
+              </label>
+
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'CASH', label: 'Efectivo', icon: '💵' },
+                  { id: 'YAPE', label: 'Yape', icon: '🟣' },
+                  { id: 'PLIN', label: 'Plin', icon: '🔵' }
+                ].map(m => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      setPaymentMethod(m.id as PaymentMethod);
+                      if (m.id === 'YAPE') setQrModalType('YAPE');
+                      if (m.id === 'PLIN') setQrModalType('PLIN');
+                    }}
+                    className={`p-2.5 rounded-xl text-xs uppercase tracking-wider border flex flex-col items-center justify-center gap-1 transition-all ${
+                      paymentMethod === m.id
+                        ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-sm ring-2 ring-[#E8B4A0]'
+                        : 'bg-[#F8F9FA] border-[#E5E7EB] text-[#1E3A5F] hover:bg-white'
+                    }`}
+                  >
+                    <span className="text-base">{m.icon}</span>
+                    <span className="font-mono text-[11px]">{m.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {(paymentMethod === 'YAPE' || paymentMethod === 'PLIN') && (
+                <button
+                  type="button"
+                  onClick={() => setQrModalType(paymentMethod)}
+                  className="w-full mt-2 py-2 px-3 bg-[#E8B4A0]/20 hover:bg-[#E8B4A0]/30 text-[#1E3A5F] border border-[#E8B4A0]/50 rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <QrCode className="w-4 h-4 text-[#1E3A5F]" /> Ver QR para Cliente ({paymentMethod})
+                </button>
+              )}
+            </div>
+
+            {/* Datos opcionales del cliente */}
+            <div className="space-y-2 pt-2 border-t border-[#E5E7EB]">
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-[#616161] mb-1">
+                  Cliente (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={e => setCustomerName(e.target.value)}
+                  placeholder="Ej: Juan Pérez"
+                  className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-[#616161] mb-1">
+                  Contacto (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={customerContact}
+                  onChange={e => setCustomerContact(e.target.value)}
+                  placeholder="Ej: 999888777"
+                  className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-[#616161] mb-1">
+                  Notas del Manifiesto
+                </label>
+                <textarea
+                  value={saleNotes}
+                  onChange={e => setSaleNotes(e.target.value)}
+                  placeholder="Detalles de entrega, despacho, etc..."
+                  rows={2}
+                  className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                />
+              </div>
+            </div>
+
+            {/* Botón de Confirmación */}
+            <button
+              type="submit"
+              disabled={isProcessingSale || cart.length === 0}
+              className="w-full inline-flex items-center justify-center gap-2 py-3 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm active:scale-95 disabled:opacity-50 transition-all"
+            >
+              {isProcessingSale ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
+                  <span>Validando Stock y Registrando...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 text-[#E8B4A0]" />
+                  <span>Confirmar Venta y Cobro</span>
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* MODAL DE PAGO YAPE / PLIN */}
+      {qrModalType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl w-full max-w-sm sm:max-w-md p-6 shadow-xl space-y-4 text-center">
+            {/* Cabecera */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-[#1E3A5F] text-[#E8B4A0]">
                   <QrCode className="w-5 h-5" />
                 </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 dark:text-white text-sm">Pasarela de Pago Móvil</h4>
-                  <p className="text-[11px] text-slate-400">Yape / Plin configurado</p>
+                <div className="text-left">
+                  <h4 className="font-light text-[#1E3A5F] text-base uppercase tracking-tight">
+                    {qrModalType === 'YAPE' ? 'Pagar con Yape' : 'Pagar con Plin'}
+                  </h4>
+                  <p className="text-[11px] text-[#616161] font-mono">Presenta el código al cliente</p>
                 </div>
               </div>
-              <button onClick={() => setQuickPaymentModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
+              <button
+                type="button"
+                onClick={() => setQrModalType(null)}
+                className="w-8 h-8 rounded-full border border-[#E5E7EB] text-[#616161] hover:text-[#1E3A5F] flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Código QR subido */}
-            <div className="text-center space-y-2">
-              {currentInventory?.yape_qr_url || currentInventory?.plin_qr_url ? (
-                <div className="mx-auto w-48 h-48 rounded-2xl overflow-hidden border-2 border-dashed border-purple-300 dark:border-purple-700 p-1 bg-white">
+            {/* Monto exacto */}
+            <div className="p-3 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB]">
+              <span className="text-[10px] uppercase font-mono tracking-widest text-[#616161] block">
+                MONTO EXACTO A TRANSFERIR
+              </span>
+              <span className="text-2xl sm:text-3xl font-light text-[#1E3A5F]">
+                {formatCurrency(finalTotal, currentInventory?.currency)}
+              </span>
+            </div>
+
+            {/* QR Grande */}
+            <div className="flex flex-col items-center justify-center">
+              {((qrModalType === 'YAPE' && currentInventory?.yape_qr_url) ||
+                (qrModalType === 'PLIN' && currentInventory?.plin_qr_url)) ? (
+                <div className="w-64 h-64 sm:w-72 sm:h-72 p-3 bg-white rounded-2xl shadow-sm border border-[#E5E7EB] flex items-center justify-center overflow-hidden">
                   <img
-                    src={currentInventory.yape_qr_url || currentInventory.plin_qr_url || ''}
-                    alt="Código QR de Cobro"
+                    src={qrModalType === 'YAPE' ? currentInventory?.yape_qr_url! : currentInventory?.plin_qr_url!}
+                    alt={`Código QR ${qrModalType}`}
                     className="w-full h-full object-contain"
                   />
                 </div>
               ) : (
-                <div className="p-6 bg-slate-50 dark:bg-slate-800 rounded-2xl text-xs text-slate-400">
-                  <QrCode className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                  <p>No se ha cargado una foto de código QR en Ajustes.</p>
+                <div className="w-64 h-64 p-6 bg-[#F8F9FA] rounded-2xl border-2 border-dashed border-[#E5E7EB] flex flex-col items-center justify-center text-[#616161] text-xs space-y-2">
+                  <QrCode className="w-12 h-12 text-[#1E3A5F]/20" />
+                  <p className="font-mono uppercase text-[11px] text-[#1E3A5F]">
+                    Sin QR cargado para {qrModalType}
+                  </p>
+                  <p className="text-[11px] text-[#616161]">
+                    Carga la imagen del QR en <strong>Ajustes &gt; Pasarela de Pagos</strong>.
+                  </p>
                 </div>
               )}
-
-              {/* Teléfonos configurados con botón copiar */}
-              <div className="space-y-1.5 pt-2">
-                {currentInventory?.yape_phone && (
-                  <div className="p-2.5 bg-purple-50 dark:bg-purple-950/40 rounded-xl border border-purple-200 dark:border-purple-800/40 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 block">Número Yape</span>
-                      <span className="text-sm font-bold font-mono text-slate-900 dark:text-white">{currentInventory.yape_phone}</span>
-                    </div>
-                    <button
-                      onClick={() => copyPaymentPhone(currentInventory.yape_phone!)}
-                      className="p-1.5 text-purple-600 hover:bg-purple-100 rounded-lg"
-                      title="Copiar número"
-                    >
-                      {copiedText ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-                )}
-
-                {currentInventory?.plin_phone && (
-                  <div className="p-2.5 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-800/40 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 block">Número Plin</span>
-                      <span className="text-sm font-bold font-mono text-slate-900 dark:text-white">{currentInventory.plin_phone}</span>
-                    </div>
-                    <button
-                      onClick={() => copyPaymentPhone(currentInventory.plin_phone!)}
-                      className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg"
-                      title="Copiar número"
-                    >
-                      {copiedText ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
 
+            {/* Número telefónico */}
+            {((qrModalType === 'YAPE' && currentInventory?.yape_phone) ||
+              (qrModalType === 'PLIN' && currentInventory?.plin_phone)) && (
+              <div className="p-3 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] flex items-center justify-between font-mono">
+                <div className="text-left">
+                  <span className="text-[10px] text-[#616161] block uppercase">Número asociado</span>
+                  <span className="text-base font-light text-[#1E3A5F]">
+                    {qrModalType === 'YAPE' ? currentInventory?.yape_phone : currentInventory?.plin_phone}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyPaymentPhone((qrModalType === 'YAPE' ? currentInventory?.yape_phone : currentInventory?.plin_phone)!)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#E5E7EB] rounded-xl text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-[#F8F9FA] transition-colors"
+                >
+                  {copiedText ? <Check className="w-4 h-4 text-[#E8B4A0]" /> : <Copy className="w-4 h-4" />}
+                  <span>{copiedText ? 'Copiado' : 'Copiar'}</span>
+                </button>
+              </div>
+            )}
+
+            {currentInventory?.payment_instructions && (
+              <p className="text-[11px] text-[#616161] italic font-light">
+                "{currentInventory.payment_instructions}"
+              </p>
+            )}
+
             <button
-              onClick={() => setQuickPaymentModalOpen(false)}
-              className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl"
+              type="button"
+              onClick={() => setQrModalType(null)}
+              className="w-full py-2.5 bg-[#1E3A5F] hover:bg-[#152a45] text-white uppercase tracking-wider text-xs rounded-xl transition-colors font-mono"
             >
-              Listo / Cerrar
+              Listo // Volver al Cobro
             </button>
           </div>
         </div>
@@ -952,98 +930,52 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted 
 
       {/* Modal de Venta Exitosa */}
       {saleSuccessData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-6 shadow-2xl text-center space-y-4">
-            <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle className="w-8 h-8" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl w-full max-w-sm p-6 shadow-xl text-center space-y-4">
+            <div className="w-12 h-12 bg-[#1E3A5F] text-[#E8B4A0] rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+              <CheckCircle className="w-6 h-6 stroke-[1.5]" />
             </div>
 
             <div>
-              <h4 className="font-extrabold text-slate-900 dark:text-white text-base">¡Venta Registrada con Éxito!</h4>
-              <p className="text-xs text-slate-500 mt-0.5">Las unidades se han descontado del stock real en la base de datos.</p>
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#E8B4A0] block">
+                OPERACIÓN CONCRETADA
+              </span>
+              <h3 className="text-lg font-light text-[#1E3A5F] uppercase mt-0.5">¡Venta Registrada!</h3>
+              <p className="text-xs text-[#616161] mt-1 font-mono">
+                {saleSuccessData.receiptNumber}
+              </p>
+              <p className="text-2xl font-light text-[#1E3A5F] mt-2 font-mono">
+                {formatCurrency(saleSuccessData.total, currentInventory?.currency)}
+              </p>
             </div>
 
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-1">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Comprobante:</span>
-                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{saleSuccessData.receiptNumber}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Monto Cobrado:</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(saleSuccessData.total, currentInventory?.currency)}
-                </span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setSaleSuccessData(null)}
-              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
-            >
-              Nueva Venta
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Detalle de Venta Pasada */}
-      {selectedSaleDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <h4 className="font-bold text-slate-900 dark:text-white text-sm">
-                  Recibo de Venta #{selectedSaleDetail.id.slice(0, 8)}
-                </h4>
-                <p className="text-[11px] text-slate-400">
-                  {new Date(selectedSaleDetail.created_at).toLocaleString()}
-                </p>
-              </div>
-              <button onClick={() => setSelectedSaleDetail(null)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={handleDownloadReceiptPDF}
+                className="w-full py-2.5 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-xl shadow-xs active:scale-95 transition-all flex items-center justify-center gap-2 font-medium"
+              >
+                <Receipt className="w-4 h-4 text-[#E8B4A0]" /> Descargar Recibo Digital (PDF)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSaleSuccessData(null)}
+                className="w-full py-2 text-xs uppercase tracking-wider text-[#616161] hover:text-[#1E3A5F] transition-colors"
+              >
+                Cerrar y Nueva Venta
               </button>
             </div>
-
-            {/* Lista de productos de la venta */}
-            <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto">
-              {selectedSaleDetail.items?.map(it => (
-                <div key={it.id} className="py-2 flex items-center justify-between text-xs">
-                  <div>
-                    <p className="font-bold text-slate-800 dark:text-slate-200">{it.product_name}</p>
-                    <p className="text-[10px] text-slate-400 font-mono">
-                      {it.quantity} uds × {formatCurrency(it.unit_price, currentInventory?.currency)}
-                    </p>
-                  </div>
-                  <span className="font-bold text-slate-900 dark:text-white">
-                    {formatCurrency(it.subtotal, currentInventory?.currency)}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex justify-between items-center text-xs">
-              <span className="font-bold text-slate-800 dark:text-slate-200">TOTAL:</span>
-              <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
-                {formatCurrency(selectedSaleDetail.total_amount, currentInventory?.currency)}
-              </span>
-            </div>
-
-            <button
-              onClick={() => setSelectedSaleDetail(null)}
-              className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl"
-            >
-              Cerrar Recibo
-            </button>
           </div>
         </div>
       )}
 
-      {/* Escáner de Cámara para Ventas */}
+      {/* Escáner de Barra / QR para añadir al carrito */}
       <BarcodeScannerModal
         isOpen={scannerOpen}
         onClose={() => setScannerOpen(false)}
         onScanSuccess={handleScanProductForSale}
-        title="Escanear Código de Barras o QR para la Venta"
+        title="Escanear Producto para Venta"
+        instructions="Apunta la cámara al código de barra o QR para añadirlo directamente al carrito."
       />
     </div>
   );
