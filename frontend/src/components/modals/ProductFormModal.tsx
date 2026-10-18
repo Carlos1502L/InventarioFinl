@@ -395,7 +395,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const selectedSubcategoryObj = subcategories.find(s => s.id === subcategoryId);
   const numStock = Number(stock || 0);
   const numMinStock = Number(minStock || 0);
-  const isStockLow = numStock <= numMinStock;
+  const isStockLow = numStock < numMinStock;
 
   return (
     <>
@@ -900,8 +900,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     {/* Badge de Stock en Vivo sobre la imagen */}
                     <div className="absolute top-2.5 right-2.5">
                       {isStockLow ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#ffdd00] text-black text-[10px] font-mono font-medium shadow-sm">
-                          <span className="w-1.5 h-1.5 rounded-full bg-black animate-ping"></span>
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E8B4A0] text-[#1E3A5F] border border-[#1E3A5F]/15 text-[10px] font-mono font-bold shadow-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#1E3A5F] animate-ping"></span>
                           <span>STOCK BAJO ({numStock} UDS)</span>
                         </div>
                       ) : (
@@ -1007,7 +1007,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
           <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#ffdd00]/20 text-black flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-[#E8B4A0]/25 text-[#1E3A5F] border border-[#E8B4A0] flex items-center justify-center flex-shrink-0">
                 <Barcode className="w-5 h-5" />
               </div>
               <div>

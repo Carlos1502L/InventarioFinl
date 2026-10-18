@@ -30,7 +30,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
     const withdrawnProducts = products.filter(p => p.status === 'WITHDRAWN');
     const totalUnits = activeProducts.reduce((sum, p) => sum + (p.stock || 0), 0);
     const totalValuation = activeProducts.reduce((sum, p) => sum + ((p.stock || 0) * (p.price || 0)), 0);
-    const lowStockItems = activeProducts.filter(p => p.stock <= (p.min_stock || 5) && p.stock > 0);
+    const lowStockItems = activeProducts.filter(p => p.stock < (p.min_stock !== undefined && p.min_stock !== null ? p.min_stock : 1) && p.stock > 0);
     const outOfStockItems = activeProducts.filter(p => p.stock === 0);
 
     // Distribución por Ubicación (Ocupación y Unidades)
@@ -132,13 +132,13 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
           <span className="text-[10px] font-mono text-[#616161] block">En {stats.activeCount} SKUs únicos</span>
         </div>
 
-        {/* Alerta de Stock Bajo con Dot Amarillo #ffdd00 */}
+        {/* Alerta de Stock Bajo con Dot Nude #E8B4A0 */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161]">
               Stock Bajo / Alerta
             </span>
-            <span className="w-2.5 h-2.5 rounded-full bg-[#ffdd00] shadow-sm animate-pulse" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#E8B4A0] shadow-sm animate-pulse" />
           </div>
           <p className="text-xl sm:text-2xl font-bold text-[#1E3A5F] font-mono mt-1">
             {stats.lowStockCount} <span className="text-xs font-normal text-[#616161]">ítems</span>

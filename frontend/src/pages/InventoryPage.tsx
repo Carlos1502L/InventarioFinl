@@ -444,7 +444,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
         /* VISTA RETÍCULA EN TARJETAS ROUNDED-2XL */
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {paginatedProducts.map(product => {
-            const isLow = product.stock <= (product.min_stock || 1);
+            const isLow = product.stock < (product.min_stock !== undefined && product.min_stock !== null ? product.min_stock : 1);
             const isInactive = product.status !== 'ACTIVE';
             const mainPhoto = product.images?.[0];
 
@@ -472,8 +472,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                         RETIRADO
                       </span>
                     ) : isLow ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-wider bg-[#ffdd00] text-black border border-black/20">
-                        <span className="w-1.5 h-1.5 rounded-full bg-black mr-1 inline-block animate-pulse" />
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] uppercase font-mono font-bold tracking-wider bg-[#E8B4A0] text-[#1E3A5F] border border-[#1E3A5F]/15">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#1E3A5F] mr-1 inline-block animate-pulse" />
                         {product.stock} UDS
                       </span>
                     ) : (
@@ -548,7 +548,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
           <div className="divide-y divide-[#E5E7EB]">
             {paginatedProducts.map(product => {
-              const isLow = product.stock <= (product.min_stock || 1);
+              const isLow = product.stock < (product.min_stock !== undefined && product.min_stock !== null ? product.min_stock : 1);
               const isInactive = product.status !== 'ACTIVE';
               const mainPhoto = product.images?.[0];
 
@@ -613,8 +613,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                         BAJA
                       </span>
                     ) : isLow ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono tracking-wider bg-[#ffdd00] text-black border border-black/20">
-                        CRÍTICO
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono font-bold tracking-wider bg-[#E8B4A0] text-[#1E3A5F] border border-[#1E3A5F]/15">
+                        BAJO STOCK
                       </span>
                     ) : (
                       <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono tracking-wider border border-[#E5E7EB] text-[#1E3A5F]">

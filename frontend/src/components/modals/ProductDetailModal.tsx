@@ -135,7 +135,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const photos = product.images && product.images.length > 0 ? product.images : [];
   const currentLocation = locations.find(l => l.id === product.location_id);
   const isInactive = product.status === 'INACTIVE' || product.status === 'WITHDRAWN';
-  const isLowStock = !isInactive && product.stock <= (product.min_stock || 1);
+  const isLowStock = !isInactive && product.stock < (product.min_stock !== undefined && product.min_stock !== null ? product.min_stock : 1);
   const totalItemValuation = (product.price || 0) * (product.stock || 0);
 
   return (
@@ -155,8 +155,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 ESTADO // RETIRADO
               </span>
             ) : isLowStock ? (
-              <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#ffdd00] text-black font-medium flex items-center gap-1.5 shadow-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-black animate-ping" />
+              <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#E8B4A0] text-[#1E3A5F] border border-[#1E3A5F]/15 font-bold flex items-center gap-1.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#1E3A5F] animate-ping" />
                 ESTADO // STOCK CRÍTICO
               </span>
             ) : (
@@ -435,7 +435,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         <span className="text-xs font-light tabular-nums text-[#1E3A5F] block">
                           {formatCurrency(v.price, currentInventory?.currency)}
                         </span>
-                        <span className={`text-[10px] ${vInactive ? 'text-[#616161]' : v.stock <= (v.min_stock || 1) ? 'text-black bg-[#ffdd00] px-2 py-0.5 rounded-full font-medium' : 'text-[#1E3A5F]'}`}>
+                        <span className={`text-[10px] ${vInactive ? 'text-[#616161]' : v.stock < (v.min_stock !== undefined && v.min_stock !== null ? v.min_stock : 1) ? 'text-[#1E3A5F] bg-[#E8B4A0] px-2 py-0.5 rounded-full font-bold border border-[#1E3A5F]/15' : 'text-[#1E3A5F]'}`}>
                           {vInactive ? 'BAJA' : `${v.stock} UDS`}
                         </span>
                       </div>

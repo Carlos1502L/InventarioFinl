@@ -62,7 +62,7 @@ export const HomePage: React.FC<HomePageProps> = ({
     const totalSkus = products.length;
     const totalUnits = products.reduce((acc, p) => acc + (p.stock || 0), 0);
     const lowStockCount = products.filter(
-      p => p.status === 'ACTIVE' && p.stock <= (p.min_stock || 1)
+      p => p.status === 'ACTIVE' && p.stock < (p.min_stock !== undefined && p.min_stock !== null ? p.min_stock : 1)
     ).length;
     const totalValue = products.reduce(
       (acc, p) => acc + ((p.price || 0) * (p.stock || 0)),
@@ -152,19 +152,21 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
           </div>
 
-          {/* KPI 3: STOCK BAJO / ALERTA (Con badge píldora en fondo #ffdd00) */}
+          {/* KPI 3: STOCK BAJO / ALERTA (Con badge píldora en fondo Nude #E8B4A0) */}
           <div className="p-4 sm:p-5 flex flex-col justify-between">
             <span className="text-[10px] text-[#616161] uppercase tracking-[0.15em] block">
               STOCK BAJO / ALERTA
             </span>
             <div className="mt-3">
               <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-mono tracking-wider ${
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-bold tracking-wider ${
                   metrics.lowStockCount > 0
-                    ? 'bg-[#ffdd00] text-black border border-black/20'
+                    ? 'bg-[#E8B4A0] text-[#1E3A5F] border border-[#1E3A5F]/15'
                     : 'border border-[#E5E7EB] text-[#1E3A5F]'
                 }`}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-black mr-2 inline-block animate-pulse" />
+                  <span className={`w-1.5 h-1.5 rounded-full mr-2 inline-block ${
+                    metrics.lowStockCount > 0 ? 'bg-[#1E3A5F] animate-pulse' : 'bg-[#E5E7EB]'
+                  }`} />
                   {metrics.lowStockCount} {metrics.lowStockCount === 1 ? 'ÍTEM' : 'ÍTEMS'}
                 </span>
               </div>

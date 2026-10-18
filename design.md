@@ -11,7 +11,7 @@
 | Paper | `#ffffff` | `--color-paper` | Superficies de tarjetas, paneles, inputs y modales |
 | Canvas | `#F8F9FA` | `--color-canvas` | Fondo general de la página |
 | Fog | `#E5E7EB` | `--color-fog` | Bordes estructurales de 1px y divisores |
-| Alert Yellow | `#ffdd00` | `--color-alert-yellow` | Acento exclusivo para dot/badge de stock bajo |
+| Alert Nude | `#E8B4A0` | `--color-alert` | Acento en Nude de marca para dot/badge de stock bajo |
 
 ## Tokens — Typography
 - **Fuente:** Inter Tight (o Inter / sans-serif como fallback).
