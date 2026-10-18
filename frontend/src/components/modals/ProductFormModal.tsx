@@ -400,9 +400,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] overflow-y-auto animate-in fade-in">
-        <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl md:max-w-5xl my-auto overflow-hidden shadow-xl flex flex-col max-h-[92vh]">
+        <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl lg:max-w-5xl my-auto overflow-hidden shadow-xl flex flex-col max-h-[85vh]">
           {/* Cabecera Editorial Awwwards */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] sticky top-0 z-20">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] shrink-0 z-20">
             <div>
               <span className="text-[10px] tracking-widest uppercase font-mono text-[#E8B4A0] block">
                 {productToEdit ? 'EDICIÓN DE MANIFIESTO' : 'NUEVO REGISTRO EN CATÁLOGO'}
@@ -420,13 +420,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           </div>
 
           {/* Formulario Asimétrico 2 Columnas (60% Formulario / 40% Previsualización en Vivo en Tablets y Desktop) */}
-          <form onSubmit={handleSubmit} className="overflow-y-auto p-4 sm:p-6">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-hidden flex-1 min-h-0 flex flex-col">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1 min-h-0">
               
               {/* =========================================================
-                  PANEL IZQUIERDO (~60%): ENTRADA Y FORMULARIO
+                  PANEL IZQUIERDO (~60%): ENTRADA Y FORMULARIO (ÚNICO CON SCROLL)
                  ========================================================= */}
-              <div className="w-full md:col-span-7 space-y-4">
+              <div className="w-full lg:col-span-7 max-h-[calc(85vh-120px)] overflow-y-auto pr-3 space-y-4 custom-scrollbar">
                 {errorMsg && (
                   <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
@@ -831,19 +831,19 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   )}
                 </div>
 
-                {/* Botones de Acción para Dispositivos Móviles (< md: sin panel de previsualización) */}
-                <div className="pt-4 border-t border-[#E5E7EB] flex flex-col sm:flex-row gap-2 md:hidden">
+                {/* Botones de Acción para Dispositivos Móviles (< lg: sin panel de previsualización) */}
+                <div className="pt-4 border-t border-[#E5E7EB] flex items-center gap-2 lg:hidden">
                   <button
                     type="button"
                     onClick={onClose}
-                    className="min-h-[44px] px-4 text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] transition-colors"
+                    className="min-h-[44px] px-5 text-xs uppercase tracking-wider font-medium text-[#616161] hover:text-[#1E3A5F] hover:bg-black/5 rounded-full border border-transparent transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting || isUploadingImage}
-                    className="min-h-[44px] flex-1 inline-flex items-center justify-center gap-2 px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50 transition-all active:scale-95"
+                    className="min-h-[44px] flex-1 inline-flex items-center justify-center gap-2 px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-semibold rounded-full shadow-sm disabled:opacity-50 transition-all active:scale-95"
                   >
                     {isSubmitting ? (
                       <>
@@ -861,10 +861,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               </div>
 
               {/* =========================================================
-                  PANEL DERECHO (~40%): PREVISUALIZACIÓN REACTIVA EN VIVO
-                  (Exclusivo para Tablets y Desktop: >= md)
+                  PANEL DERECHO (~40%): PREVISUALIZACIÓN EN VIVO & ACCIONES
+                  (Completamente estática y fija: lg:col-span-5 sticky top-0 self-start)
                  ========================================================= */}
-              <div className="hidden md:block md:col-span-5 sticky top-0 space-y-4">
+              <div className="hidden lg:block lg:col-span-5 sticky top-0 self-start">
                 <div className="bg-[#F8F9FA] border border-[#E5E7EB] rounded-2xl p-5 flex flex-col justify-between shadow-sm">
                   
                   {/* Encabezado de la Ficha en Vivo */}
@@ -881,7 +881,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </div>
 
                   {/* Imagen Principal Reactiva */}
-                  <div className="my-4 aspect-[4/3] rounded-xl overflow-hidden bg-white border border-[#E5E7EB] flex items-center justify-center relative">
+                  <div className="my-3.5 aspect-[16/10] max-h-44 rounded-xl overflow-hidden bg-white border border-[#E5E7EB] flex items-center justify-center relative">
                     {images.length > 0 ? (
                       <img
                         src={images[0]}
@@ -889,9 +889,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="text-center p-4">
-                        <Barcode className="w-10 h-10 text-[#1E3A5F]/20 mx-auto mb-2" />
-                        <p className="text-xs text-[#616161] font-mono uppercase">
+                      <div className="text-center p-3">
+                        <Barcode className="w-8 h-8 text-[#1E3A5F]/20 mx-auto mb-1" />
+                        <p className="text-[11px] text-[#616161] font-mono uppercase">
                           Sin imagen de portada
                         </p>
                       </div>
@@ -913,12 +913,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </div>
 
                   {/* Datos del Ítem Reactivo */}
-                  <div className="space-y-3 font-mono">
+                  <div className="space-y-2.5 font-mono">
                     <div>
-                      <h4 className="font-bold text-base text-[#1E3A5F] uppercase tracking-tight line-clamp-2">
+                      <h4 className="font-bold text-sm text-[#1E3A5F] uppercase tracking-tight line-clamp-1">
                         {name || 'NOMBRE DEL PRODUCTO'}
                       </h4>
-                      <p className="text-[11px] text-[#616161] mt-0.5 line-clamp-2">
+                      <p className="text-[11px] text-[#616161] mt-0.5 line-clamp-1">
                         {description || 'Sin notas descriptivas adicionales.'}
                       </p>
                     </div>
@@ -944,12 +944,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     </div>
 
                     {/* Bloque Financiero Reactivo */}
-                    <div className="p-3 bg-white border border-[#E5E7EB] rounded-xl flex items-center justify-between">
+                    <div className="p-2.5 bg-white border border-[#E5E7EB] rounded-xl flex items-center justify-between">
                       <div>
                         <span className="text-[10px] text-[#616161] uppercase block">
                           {isBusiness ? 'PRECIO DE VENTA' : 'VALUACIÓN ESTIMADA'}
                         </span>
-                        <span className="text-lg font-bold text-[#1E3A5F]">
+                        <span className="text-base font-bold text-[#1E3A5F]">
                           {formatCurrency(Number(price || 0), currentInventory?.currency)}
                         </span>
                       </div>
@@ -966,19 +966,19 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Botones de Acción (Confirmación / Cancelación) */}
-                  <div className="mt-5 pt-4 border-t border-[#E5E7EB] flex flex-col sm:flex-row gap-2">
+                  {/* Botones de Acción (Confirmación / Cancelación) Siempre a la vista sin scroll */}
+                  <div className="mt-4 pt-4 border-t border-[#E5E7EB] flex items-center gap-2">
                     <button
                       type="button"
                       onClick={onClose}
-                      className="min-h-[44px] px-4 text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-white rounded-xl border border-[#E5E7EB] transition-colors"
+                      className="min-h-[44px] px-5 text-xs uppercase tracking-wider font-medium text-[#616161] hover:text-[#1E3A5F] hover:bg-black/5 rounded-full border border-transparent transition-colors"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
                       disabled={isSubmitting || isUploadingImage}
-                      className="min-h-[44px] flex-1 inline-flex items-center justify-center gap-2 px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50 transition-all active:scale-95"
+                      className="min-h-[44px] flex-1 inline-flex items-center justify-center gap-2 px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-semibold rounded-full shadow-sm disabled:opacity-50 transition-all active:scale-95"
                     >
                       {isSubmitting ? (
                         <>

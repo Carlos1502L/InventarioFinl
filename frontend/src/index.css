@@ -64,3 +64,23 @@
   scrollbar-width: none;
 }
 
+/* Scrollbar fino y discreto para formularios internos */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #E5E7EB;
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #CACACA;
+}
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #E5E7EB transparent;
+}
+
+
