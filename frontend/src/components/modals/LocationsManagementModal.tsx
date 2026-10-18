@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { X, MapPin, Plus, Printer, Trash2, QrCode, Loader2, Sparkles } from 'lucide-react';
-import { Location } from '../types/database';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
+import { Location } from '../../types/database';
+import { supabase } from '../../services/supabase';
+import { useAuth } from '../../context/AuthContext';
 import { LocationLabelModal } from './LocationLabelModal';
 
 interface LocationsManagementModalProps {

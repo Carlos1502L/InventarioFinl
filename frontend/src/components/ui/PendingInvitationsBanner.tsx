@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Check, X, Loader2 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const PendingInvitationsBanner: React.FC = () => {
   const { pendingInvitations, acceptInvitation, rejectInvitation } = useAuth();

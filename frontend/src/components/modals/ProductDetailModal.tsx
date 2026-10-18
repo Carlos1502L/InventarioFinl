@@ -19,9 +19,9 @@ import {
   Loader2,
   Check
 } from 'lucide-react';
-import { Product, AuditLog, Location } from '../types/database';
-import { supabase, formatCurrency, formatDate, logAuditAction } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
+import { Product, AuditLog, Location } from '../../types/database';
+import { supabase, formatCurrency, formatDate, logAuditAction } from '../../services/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 interface ProductDetailModalProps {
   product: Product | null;

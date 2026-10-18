@@ -13,9 +13,9 @@ import {
   CheckCircle2,
   Layers
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import { Location } from '../types/database';
-import { useAuth } from '../context/AuthContext';
+import { supabase } from '../../services/supabase';
+import { Location } from '../../types/database';
+import { useAuth } from '../../context/AuthContext';
 
 interface BatchLocationsPrintModalProps {
   isOpen: boolean;

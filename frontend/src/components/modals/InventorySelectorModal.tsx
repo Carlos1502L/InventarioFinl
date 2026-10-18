@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Layers, Plus, CheckCircle, Shield, Users, ArrowRight, Loader2 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../services/supabase';
 
 interface InventorySelectorModalProps {
   isOpen: boolean;

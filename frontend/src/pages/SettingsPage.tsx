@@ -17,10 +17,10 @@ import {
   Ticket
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { formatDate } from '../lib/supabase';
-import { EditInventoryModal } from '../components/EditInventoryModal';
-import { BatchLocationsPrintModal } from '../components/BatchLocationsPrintModal';
-import { CouponsManagementModal } from '../components/CouponsManagementModal';
+import { formatDate } from '../services/supabase';
+import { EditInventoryModal } from '../components/modals/EditInventoryModal';
+import { BatchLocationsPrintModal } from '../components/modals/BatchLocationsPrintModal';
+import { CouponsManagementModal } from '../components/modals/CouponsManagementModal';
 
 interface SettingsPageProps {
   onOpenCategories: () => void;

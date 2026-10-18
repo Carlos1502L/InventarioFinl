@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Camera, Barcode, Upload, Trash2, Loader2, MapPin, Tag, Layers, Check, Plus, AlertCircle, Sparkles, GitBranch } from 'lucide-react';
-import { Product, Category, Subcategory, Location } from '../types/database';
-import { supabase, uploadProductImage, logAuditAction, formatCurrency } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
+import { Product, Category, Subcategory, Location } from '../../types/database';
+import { supabase, uploadProductImage, logAuditAction, formatCurrency } from '../../services/supabase';
+import { useAuth } from '../../context/AuthContext';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 
 interface ProductFormModalProps {

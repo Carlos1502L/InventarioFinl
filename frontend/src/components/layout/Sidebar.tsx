@@ -17,7 +17,7 @@ import {
   Users
 } from 'lucide-react';
 import { TabType } from './BottomNav';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface SidebarProps {
   activeTab: TabType;

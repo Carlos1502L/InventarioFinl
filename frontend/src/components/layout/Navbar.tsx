@@ -1,6 +1,6 @@
 import React from 'react';
 import { Layers, ChevronDown, Users, LogOut, MapPin, Tag, Search, Camera, User } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { TabType } from './BottomNav';
 
 interface NavbarProps {

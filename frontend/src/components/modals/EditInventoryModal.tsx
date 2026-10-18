@@ -16,9 +16,9 @@ import {
   Briefcase,
   User
 } from 'lucide-react';
-import { Inventory, InventoryType } from '../types/database';
-import { supabase, uploadProductImage } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
+import { Inventory, InventoryType } from '../../types/database';
+import { supabase, uploadProductImage } from '../../services/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 interface EditInventoryModalProps {
   isOpen: boolean;

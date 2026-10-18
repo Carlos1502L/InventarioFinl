@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { X, Tag, Plus, Trash2, Layers, FolderPlus, Loader2 } from 'lucide-react';
-import { Category, Subcategory } from '../types/database';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
+import { Category, Subcategory } from '../../types/database';
+import { supabase } from '../../services/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 interface CategoriesManagementModalProps {
   isOpen: boolean;

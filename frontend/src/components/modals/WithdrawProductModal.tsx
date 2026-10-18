@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { X, Archive, AlertTriangle, Loader2, Check } from 'lucide-react';
-import { Product } from '../types/database';
-import { supabase, logAuditAction } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
+import { Product } from '../../types/database';
+import { supabase, logAuditAction } from '../../services/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 interface WithdrawProductModalProps {
   product: Product | null;

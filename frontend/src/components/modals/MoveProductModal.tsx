@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { X, ArrowRightLeft, MapPin, Loader2, Check, Camera } from 'lucide-react';
-import { Product, Location } from '../types/database';
-import { supabase, logAuditAction } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
+import { Product, Location } from '../../types/database';
+import { supabase, logAuditAction } from '../../services/supabase';
+import { useAuth } from '../../context/AuthContext';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 
 interface MoveProductModalProps {

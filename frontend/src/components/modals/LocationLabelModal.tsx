@@ -2,8 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import QRCode from 'qrcode';
 import jsPDF from 'jspdf';
 import { X, Printer, Download, QrCode as QrIcon, CheckCircle2 } from 'lucide-react';
-import { Location } from '../types/database';
-import { useAuth } from '../context/AuthContext';
+import { Location } from '../../types/database';
+import { useAuth } from '../../context/AuthContext';
 
 interface LocationLabelModalProps {
   location: Location | null;

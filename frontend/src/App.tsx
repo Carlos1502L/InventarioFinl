@@ -3,11 +3,11 @@ import { useAuth } from './context/AuthContext';
 import { supabase } from './lib/supabase';
 import { Product, Category, Subcategory, Location } from './types/database';
 
-// Componentes y Vistas
-import { Sidebar } from './components/Sidebar';
-import { Navbar } from './components/Navbar';
-import { BottomNav, TabType } from './components/BottomNav';
-import { PendingInvitationsBanner } from './components/PendingInvitationsBanner';
+// Componentes de Layout y UI
+import { Sidebar } from './components/layout/Sidebar';
+import { Navbar } from './components/layout/Navbar';
+import { BottomNav, TabType } from './components/layout/BottomNav';
+import { PendingInvitationsBanner } from './components/ui/PendingInvitationsBanner';
 import { AuthPage } from './pages/AuthPage';
 import { HomePage } from './pages/HomePage';
 import { InventoryPage } from './pages/InventoryPage';
@@ -17,16 +17,16 @@ import { ReportsPage } from './pages/ReportsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
-// Modales
-import { ProductFormModal } from './components/ProductFormModal';
-import { ProductDetailModal } from './components/ProductDetailModal';
-import { MoveProductModal } from './components/MoveProductModal';
-import { WithdrawProductModal } from './components/WithdrawProductModal';
-import { CategoriesManagementModal } from './components/CategoriesManagementModal';
-import { LocationsManagementModal } from './components/LocationsManagementModal';
-import { CollaboratorsModal } from './components/CollaboratorsModal';
-import { InventorySelectorModal } from './components/InventorySelectorModal';
-import { BarcodeScannerModal } from './components/BarcodeScannerModal';
+// Modales Especializados
+import { ProductFormModal } from './components/modals/ProductFormModal';
+import { ProductDetailModal } from './components/modals/ProductDetailModal';
+import { MoveProductModal } from './components/modals/MoveProductModal';
+import { WithdrawProductModal } from './components/modals/WithdrawProductModal';
+import { CategoriesManagementModal } from './components/modals/CategoriesManagementModal';
+import { LocationsManagementModal } from './components/modals/LocationsManagementModal';
+import { CollaboratorsModal } from './components/modals/CollaboratorsModal';
+import { InventorySelectorModal } from './components/modals/InventorySelectorModal';
+import { BarcodeScannerModal } from './components/modals/BarcodeScannerModal';
 
 import { Loader2, Layers, Plus, Sparkles } from 'lucide-react';
 

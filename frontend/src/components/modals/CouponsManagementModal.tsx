@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Tag, Plus, Trash2, CheckCircle2, XCircle, Percent, DollarSign, Loader2, Sparkles } from 'lucide-react';
-import { Coupon, DiscountType } from '../types/database';
-import { supabase, formatCurrency } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
+import { Coupon, DiscountType } from '../../types/database';
+import { supabase, formatCurrency } from '../../services/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 interface CouponsManagementModalProps {
   isOpen: boolean;

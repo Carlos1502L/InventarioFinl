@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { X, Printer, CheckSquare, Square, Search, Tag, Loader2 } from 'lucide-react';
-import { Product } from '../types/database';
-import { formatCurrency } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
+import { Product } from '../../types/database';
+import { formatCurrency } from '../../services/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 interface BatchLabelsModalProps {
   products: Product[];

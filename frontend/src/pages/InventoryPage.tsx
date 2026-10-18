@@ -15,9 +15,9 @@ import {
   GitBranch
 } from 'lucide-react';
 import { Product, Category, Subcategory, Location } from '../types/database';
-import { formatCurrency } from '../lib/supabase';
+import { formatCurrency } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
-import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
+import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 
 interface InventoryPageProps {
   products: Product[];

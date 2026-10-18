@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Users, UserPlus, Mail, Shield, Trash2, CheckCircle2, Clock, Loader2 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { supabase, API_BASE_URL, formatDate } from '../lib/supabase';
-import { InventoryInvitation } from '../types/database';
+import { useAuth } from '../../context/AuthContext';
+import { supabase, API_BASE_URL, formatDate } from '../../services/supabase';
+import { InventoryInvitation } from '../../types/database';
 
 interface CollaboratorsModalProps {
   isOpen: boolean;

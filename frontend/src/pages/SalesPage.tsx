@@ -19,9 +19,9 @@ import {
   X
 } from 'lucide-react';
 import { Product, PaymentMethod, Coupon } from '../types/database';
-import { supabase, formatCurrency, logAuditAction } from '../lib/supabase';
+import { supabase, formatCurrency, logAuditAction } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
-import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
+import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import jsPDF from 'jspdf';
 
 interface SalesPageProps {
