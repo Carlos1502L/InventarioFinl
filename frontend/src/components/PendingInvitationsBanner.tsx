@@ -9,22 +9,22 @@ export const PendingInvitationsBanner: React.FC = () => {
   if (!pendingInvitations || pendingInvitations.length === 0) return null;
 
   return (
-    <div className="mb-4 space-y-2">
+    <div className="mb-6 space-y-2 font-mono">
       {pendingInvitations.map((inv) => (
         <div
           key={inv.id}
-          className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200 dark:border-blue-800/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm animate-in fade-in"
+          className="p-4 bg-white border border-[#cacaca] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs uppercase"
         >
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-md shadow-blue-500/20">
-              <Mail className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center flex-shrink-0">
+              <Mail className="w-5 h-5 stroke-[1.5]" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-900 dark:text-white">
-                Invitación para colaborar en: <span className="text-blue-600 dark:text-blue-400 font-extrabold">{inv.inventories?.name || 'Inventario'}</span>
+              <p className="text-xs font-normal tracking-wide text-black">
+                INVITACIÓN PARA COLABORAR EN: <span className="underline">{inv.inventories?.name || 'INVENTARIO'}</span>
               </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Has sido invitado con rol de <span className="font-semibold">{inv.role === 'owner' ? 'Dueño' : 'Colaborador'}</span>. ¿Deseas unirte a este inventario?
+              <p className="text-[10px] text-[#616161] tracking-wider mt-0.5">
+                ROL ASIGNADO: {inv.role === 'owner' ? 'PROPIETARIO' : 'COLABORADOR'} // ¿CONFIRMAS TU INGRESO AL DEPÓSITO?
               </p>
             </div>
           </div>
@@ -37,9 +37,9 @@ export const PendingInvitationsBanner: React.FC = () => {
                 setProcessingId(null);
               }}
               disabled={processingId === inv.id}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors disabled:opacity-50"
+              className="flex-1 sm:flex-none min-h-[36px] px-4 rounded-full border border-[#cacaca] hover:border-black text-[#616161] hover:text-black text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
             >
-              <X className="w-3.5 h-3.5" /> Rechazar
+              <X className="w-3.5 h-3.5 inline mr-1" /> RECHAZAR
             </button>
             <button
               onClick={async () => {
@@ -48,15 +48,15 @@ export const PendingInvitationsBanner: React.FC = () => {
                 setProcessingId(null);
               }}
               disabled={processingId === inv.id}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow-md shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50"
+              className="flex-1 sm:flex-none min-h-[36px] px-5 rounded-full bg-black hover:bg-[#1a1b1e] text-white text-xs uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
               {processingId === inv.id ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Procesando...
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> PROCESANDO...
                 </>
               ) : (
                 <>
-                  <Check className="w-3.5 h-3.5" /> Aceptar Invitación
+                  <Check className="w-3.5 h-3.5" /> ACEPTAR INVITACIÓN
                 </>
               )}
             </button>

@@ -18,6 +18,19 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-tap-highlight-color: transparent;
     font-weight: 400;
+    background-color: #ffffff;
+    color: #000000;
+  }
+
+  /* Directriz Global: Peso 400 regular transversalmente en toda la aplicación */
+  *, *::before, *::after {
+    font-weight: 400 !important;
+  }
+
+  /* Selección de texto en alto contraste monocromático */
+  ::selection {
+    background-color: #000000;
+    color: #ffffff;
   }
 }
 
