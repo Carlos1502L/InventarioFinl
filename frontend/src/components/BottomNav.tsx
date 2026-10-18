@@ -331,6 +331,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
+
+        {/* Faldón seguro transparente/vidrio para la barra de inicio de iOS (iPhone 16 Pro) */}
+        <div className="w-[320px] sm:w-[350px] bg-white/95 backdrop-blur-xl border-x border-[#E5E7EB] h-[env(safe-area-inset-bottom,0px)] pointer-events-auto" />
       </div>
     </div>
   );

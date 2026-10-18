@@ -57,14 +57,15 @@ export const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-4 sm:p-6 selection:bg-[#1E3A5F] selection:text-white">
+    <div className="min-h-[100dvh] bg-[#F8F9FA] flex items-center justify-center p-4 sm:p-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] selection:bg-[#1E3A5F] selection:text-white">
       {/* Split-Card Container con Altura Fija y Consistente en Ambos Modos */}
-      <div className="w-full max-w-4xl bg-white border border-[#E5E7EB] rounded-2xl shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-2 md:h-[620px]">
+      <div className="w-full max-w-md md:max-w-4xl bg-white border border-[#E5E7EB] rounded-2xl shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-2 md:h-[620px]">
         
         {/* =========================================================
             PANEL IZQUIERDO: MARCA & EDITORIAL (AZUL MARINO #1E3A5F)
+            Visible en Desktop/Tablet (md:flex), optimizado en móvil
            ========================================================= */}
-        <div className="bg-[#1E3A5F] text-white p-6 sm:p-10 md:p-12 flex flex-col justify-between relative overflow-hidden h-full">
+        <div className="hidden md:flex bg-[#1E3A5F] text-white p-6 sm:p-10 md:p-12 flex-col justify-between relative overflow-hidden h-full">
           {/* Acento geométrico Nude sutil de fondo */}
           <div className="absolute -right-16 -bottom-16 w-64 h-64 rounded-full bg-[#E8B4A0]/10 blur-2xl pointer-events-none" />
           <div className="absolute top-8 right-8 w-2 h-2 rounded-full bg-[#E8B4A0]" />
@@ -111,10 +112,20 @@ export const AuthPage: React.FC = () => {
             PANEL DERECHO: FORMULARIO SPLIT-CARD (BLANCO PAPER)
             Altura exacta uniforme para Iniciar Sesión y Registro
            ========================================================= */}
-        <div className="bg-white p-6 sm:p-10 md:p-12 flex flex-col h-[560px] md:h-full justify-between relative overflow-hidden">
+        <div className="bg-white p-6 sm:p-8 md:p-12 flex flex-col h-[540px] md:h-full justify-between relative overflow-hidden">
           
+          {/* Identificador de marca visible en móvil (para no saturar pantalla en iPhone) */}
+          <div className="flex md:hidden items-center justify-center gap-2 mb-2 flex-shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-white border border-[#E5E7EB] overflow-hidden flex items-center justify-center shadow-xs">
+              <img src="/logo.png" alt="Stockly" className="w-full h-full object-cover" />
+            </div>
+            <span className="font-mono text-xs uppercase tracking-[0.2em] text-[#1E3A5F] font-bold">
+              STOCKLY
+            </span>
+          </div>
+
           {/* Superior: Selector con Píldora Deslizante Fluida */}
-          <div className="relative p-1 bg-[#F8F9FA] border border-[#E5E7EB] rounded-full mb-4 select-none overflow-hidden flex-shrink-0">
+          <div className="relative p-1 bg-[#F8F9FA] border border-[#E5E7EB] rounded-full mb-3 select-none overflow-hidden flex-shrink-0">
             <div
               className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-[#1E3A5F] shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                 isRegister ? 'translate-x-full left-1' : 'translate-x-0 left-1'

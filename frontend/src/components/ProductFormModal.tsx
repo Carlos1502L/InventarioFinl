@@ -399,7 +399,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto animate-in fade-in">
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] overflow-y-auto animate-in fade-in">
         <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl md:max-w-5xl my-auto overflow-hidden shadow-xl flex flex-col max-h-[92vh]">
           {/* Cabecera Editorial Awwwards */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] sticky top-0 z-20">

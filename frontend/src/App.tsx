@@ -202,8 +202,8 @@ export const AppContent: React.FC = () => {
         onQuickScan={() => setQuickScanOpen(true)}
       />
 
-      {/* Contenedor Principal Responsive con offset para el Sidebar en Desktop */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 pt-5 lg:pl-[266px] pb-32 lg:pb-12">
+      {/* Contenedor Principal Responsive con offset para el Sidebar en Desktop y safe area en móvil */}
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 pt-5 lg:pl-[266px] pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-12">
         {/* Banner de Invitaciones Pendientes */}
         <PendingInvitationsBanner />
 

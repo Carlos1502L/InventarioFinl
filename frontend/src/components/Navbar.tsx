@@ -36,8 +36,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const currentInfo = tabTitles[activeTab] || tabTitles.home;
 
   return (
-    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-[#E5E7EB] transition-colors lg:pl-[250px]">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E5E7EB] transition-colors lg:pl-[250px] pt-[env(safe-area-inset-top,0px)]">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-4">
         
         {/* Lado Izquierdo: Título Desktop / Logo Móvil */}
         <div className="flex items-center gap-3">
