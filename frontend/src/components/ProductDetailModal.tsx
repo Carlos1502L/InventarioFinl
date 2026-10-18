@@ -16,8 +16,8 @@ import {
   ChevronRight,
   GitBranch,
   RotateCcw,
-  CheckCircle2,
-  Loader2
+  Loader2,
+  Check
 } from 'lucide-react';
 import { Product, AuditLog, Location } from '../types/database';
 import { supabase, formatCurrency, formatDate, logAuditAction } from '../lib/supabase';
@@ -54,7 +54,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
 
-  // Cargar historial de auditoría de este producto
   useEffect(() => {
     if (product && isOpen) {
       setActivePhotoIdx(0);
@@ -74,32 +73,21 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     }
   }, [product, isOpen]);
 
-  // Vínculo entre variantes: localizar todas las variantes asociadas (RF Stock)
   const relatedVariants = useMemo(() => {
     if (!product || !allProducts || allProducts.length === 0) return [];
-    
-    // Si este producto es una variante o es padre de variantes
-    const familyParentId = product.parent_id || product.id;
-
     return allProducts.filter((p) => {
       if (p.id === product.id) return false;
-      
-      // Caso 1: Hermano variante (mismo parent_id)
       if (product.parent_id && p.parent_id === product.parent_id) return true;
-      // Caso 2: Es el producto principal / padre
       if (product.parent_id && p.id === product.parent_id) return true;
-      // Caso 3: Es variante hija de este producto
       if (!product.parent_id && p.parent_id === product.id) return true;
-
       return false;
     });
   }, [product, allProducts]);
 
-  // Reactivar Producto (Cambiar estado de Inactivo a Activo)
   const handleReactivateProduct = async () => {
     if (!product || !currentInventory) return;
     const confirmReactivation = window.confirm(
-      `¿Confirmas reactivar el producto "${product.name}"? Volverá a estar activo y visible en el inventario general.`
+      `¿Confirmas reactivar la mercancía [REF: ${product.code}] "${product.name}" en el catálogo activo?`
     );
     if (!confirmReactivation) return;
 
@@ -124,7 +112,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         productId: product.id,
         productName: product.name,
         actionType: 'UPDATE',
-        details: 'Producto reactivado: estado cambiado exitosamente de Inactivo a Activo.',
+        details: 'Producto reactivado en catálogo activo.',
         metadata: {
           previous_status: product.status,
           new_status: 'ACTIVE',
@@ -136,7 +124,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       onClose();
     } catch (err: any) {
       console.error('Error reactivando producto:', err);
-      alert('Error al reactivar el producto: ' + (err.message || 'Error desconocido'));
+      alert('Error reactivando el producto: ' + (err.message || 'Error desconocido'));
     } finally {
       setIsReactivating(false);
     }
@@ -147,209 +135,285 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const photos = product.images && product.images.length > 0 ? product.images : [];
   const currentLocation = locations.find(l => l.id === product.location_id);
   const isInactive = product.status === 'INACTIVE' || product.status === 'WITHDRAWN';
-  const isLowStock = !isInactive && product.stock <= (product.min_stock || 5);
+  const isLowStock = !isInactive && product.stock <= (product.min_stock || 1);
+  const totalItemValuation = (product.price || 0) * (product.stock || 0);
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl my-auto overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
-        {/* Cabecera */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 sticky top-0 z-10">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs px-2.5 py-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-blue-600 dark:text-blue-400 font-semibold">
-              {product.code}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200 font-normal selection:bg-black selection:text-white">
+      <div className="bg-white border border-[#cacaca] w-full max-w-4xl my-auto overflow-hidden flex flex-col max-h-[94vh] shadow-none">
+        
+        {/* =========================================================
+            HEADER // TECHNICAL SPECIFICATION STAMP
+           ========================================================= */}
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[#cacaca] bg-white sticky top-0 z-20">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="font-mono text-xs uppercase tracking-wider text-black px-3 py-1 rounded-full border border-black bg-white">
+              REF // {product.code}
             </span>
-            <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
-              !isInactive
-                ? isLowStock ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20' : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
-                : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20'
-            }`}>
-              {!isInactive ? (isLowStock ? 'Bajo Stock' : 'Activo') : 'Inactivo'}
-            </span>
+            {isInactive ? (
+              <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-black text-white">
+                ESTADO // RETIRADO
+              </span>
+            ) : isLowStock ? (
+              <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#ffdd00] text-black border border-black flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
+                ESTADO // STOCK CRÍTICO
+              </span>
+            ) : (
+              <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full border border-[#cacaca] text-black">
+                ESTADO // ACTIVO
+              </span>
+            )}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => onEdit(product)}
-              className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-              title="Editar Producto"
+              className="min-h-[38px] px-4 rounded-full border border-[#cacaca] hover:border-black text-black text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+              title="Modificar especificación técnica"
             >
-              <Edit className="w-4 h-4" />
+              <Edit className="w-3.5 h-3.5 stroke-[1.5]" />
+              <span className="hidden sm:inline">EDITAR</span>
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="min-h-[38px] min-w-[38px] rounded-full border border-[#cacaca] hover:border-black text-black flex items-center justify-center transition-colors"
+              title="Cerrar ficha"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 stroke-[1.5]" />
             </button>
           </div>
         </div>
 
-        {/* Contenido Principal con Scroll */}
+        {/* =========================================================
+            BODY // 50/50 MODULAR SPLIT (MOBILE FIRST STACK)
+           ========================================================= */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-6">
-          {/* Alerta si está inactivo */}
+          
+          {/* Alerta de Retiro / Inactividad */}
           {isInactive && (
-            <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 rounded-2xl flex items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+            <div className="p-4 bg-[#f1f1f1] border border-black flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono uppercase tracking-wider">
+              <div className="flex items-start sm:items-center gap-2 text-black">
+                <AlertCircle className="w-4 h-4 shrink-0 text-black mt-0.5 sm:mt-0" />
                 <span>
-                  Este producto está <strong>Inactivo</strong> {product.withdrawal_reason ? `(Motivo: "${product.withdrawal_reason}")` : ''}.
+                  MERCANCÍA DADA DE BAJA {product.withdrawal_reason ? `// MOTIVO: "${product.withdrawal_reason}"` : ''}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={handleReactivateProduct}
                 disabled={isReactivating}
-                className="shrink-0 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-sm transition-all active:scale-95 flex items-center gap-1.5 text-[11px]"
+                className="shrink-0 min-h-[38px] px-5 bg-black hover:bg-[#1a1b1e] text-white rounded-full flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
               >
                 {isReactivating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
-                Reactivar
+                <span>REACTIVAR ÍTEM</span>
               </button>
             </div>
           )}
 
-          {/* 1. Galería de Fotos (Hasta 3 fotos) */}
-          {photos.length > 0 ? (
-            <div className="space-y-2">
-              <div className="relative aspect-video sm:aspect-[2/1] rounded-2xl overflow-hidden bg-slate-100 dark:bg-black/60 border border-slate-200 dark:border-slate-800">
-                <img
-                  src={photos[activePhotoIdx]}
-                  alt={product.name}
-                  className="w-full h-full object-contain"
-                />
+          {/* Grilla Principal 50/50 Desktop */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            
+            {/* COLUMNA IZQUIERDA: GALERÍA DE LONA / PRODUCTO */}
+            <div className="space-y-3">
+              <div className="relative aspect-square sm:aspect-[4/3] bg-white border border-[#cacaca] flex items-center justify-center overflow-hidden">
+                {photos.length > 0 ? (
+                  <img
+                    src={photos[activePhotoIdx]}
+                    alt={product.name}
+                    className="w-full h-full object-contain p-2"
+                  />
+                ) : (
+                  <div className="text-center p-6 font-mono text-[#616161]">
+                    <Package className="w-12 h-12 stroke-[1] text-[#cacaca] mx-auto mb-2" />
+                    <p className="text-[10px] uppercase tracking-widest">
+                      SIN MUESTRA FOTOGRÁFICA REGISTRADA
+                    </p>
+                  </div>
+                )}
+
+                {/* Controles de navegación en galería */}
                 {photos.length > 1 && (
-                  <>
+                  <div className="absolute inset-x-2 bottom-2 flex items-center justify-between pointer-events-none">
                     <button
-                      onClick={() => setActivePhotoIdx((prev) => (prev > 0 ? prev - 1 : photos.length - 1))}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-white/80 dark:bg-black/60 hover:bg-white dark:hover:bg-black/90 text-slate-800 dark:text-white rounded-full shadow transition-all"
+                      onClick={() => setActivePhotoIdx(prev => (prev > 0 ? prev - 1 : photos.length - 1))}
+                      className="pointer-events-auto min-h-[36px] min-w-[36px] rounded-full bg-white border border-black hover:bg-black hover:text-white text-black flex items-center justify-center transition-all shadow-none"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
+                    <span className="font-mono text-[10px] px-2.5 py-1 rounded-full bg-black text-white">
+                      {activePhotoIdx + 1} / {photos.length}
+                    </span>
                     <button
-                      onClick={() => setActivePhotoIdx((prev) => (prev < photos.length - 1 ? prev + 1 : 0))}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white/80 dark:bg-black/60 hover:bg-white dark:hover:bg-black/90 text-slate-800 dark:text-white rounded-full shadow transition-all"
+                      onClick={() => setActivePhotoIdx(prev => (prev < photos.length - 1 ? prev + 1 : 0))}
+                      className="pointer-events-auto min-h-[36px] min-w-[36px] rounded-full bg-white border border-black hover:bg-black hover:text-white text-black flex items-center justify-center transition-all shadow-none"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
-                  </>
+                  </div>
                 )}
               </div>
 
+              {/* Thumbnails en Píldora / Hairline */}
               {photos.length > 1 && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
                   {photos.map((url, i) => (
                     <button
                       key={i}
                       onClick={() => setActivePhotoIdx(i)}
-                      className={`w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${
-                        activePhotoIdx === i ? 'border-blue-500 scale-105' : 'border-slate-200 dark:border-slate-800 opacity-60'
+                      className={`w-16 h-16 border flex-shrink-0 transition-all p-0.5 bg-white ${
+                        activePhotoIdx === i
+                          ? 'border-black'
+                          : 'border-[#cacaca] opacity-60 hover:opacity-100'
                       }`}
                     >
-                      <img src={url} alt={`Thumb ${i + 1}`} className="w-full h-full object-cover" />
+                      <img src={url} alt={`Muestra ${i + 1}`} className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
               )}
-            </div>
-          ) : (
-            <div className="h-28 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-700/60 flex flex-col items-center justify-center text-slate-400">
-              <Package className="w-8 h-8 mb-1 opacity-50" />
-              <span className="text-xs">Sin fotografías registradas</span>
-            </div>
-          )}
 
-          {/* 2. Título, Descripción y Precios */}
-          <div>
-            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">{product.name}</h2>
-            {product.description && (
-              <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                {product.description}
-              </p>
-            )}
-          </div>
-
-          {/* 3. Métricas Destacadas (Precio, Stock, Ubicación) */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-2xl">
-              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
-                <DollarSign className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" /> Precio
-              </div>
-              <p className="text-base font-extrabold text-slate-900 dark:text-white">
-                {formatCurrency(product.price, currentInventory?.currency)}
-              </p>
-            </div>
-
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-2xl">
-              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
-                <Package className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" /> Stock Actual
-              </div>
-              <p className={`text-base font-extrabold ${isLowStock ? 'text-amber-500 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
-                {product.stock} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">uds (mín: {product.min_stock})</span>
-              </p>
-            </div>
-
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-2xl col-span-2 sm:col-span-1">
-              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
-                <MapPin className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" /> Ubicación
-              </div>
-              <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                {currentLocation?.name || 'No asignada'}
-              </p>
-              <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400">{currentLocation?.code}</p>
-            </div>
-          </div>
-
-          {/* Categoría y Subcategoría */}
-          <div className="flex flex-wrap gap-2 text-xs">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-700 font-medium">
-              <Tag className="w-3 h-3 text-blue-500 dark:text-blue-400" />
-              Categoría: <strong>{product.categories?.name || 'General'}</strong>
-            </span>
-            {product.subcategories?.name && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-700 font-medium">
-                Subcategoría: <strong>{product.subcategories.name}</strong>
-              </span>
-            )}
-          </div>
-
-          {/* 4. Botones de Acción Operativa */}
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap gap-2.5">
-            <button
-              onClick={() => onMove(product)}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-amber-50 dark:bg-amber-600/20 hover:bg-amber-100 dark:hover:bg-amber-600/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 rounded-xl text-xs font-semibold transition-all active:scale-95"
-            >
-              <ArrowRightLeft className="w-4 h-4" /> Mover de Ubicación
-            </button>
-
-            {isInactive ? (
-              <button
-                onClick={handleReactivateProduct}
-                disabled={isReactivating}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all active:scale-95 shadow-md shadow-emerald-500/20"
-              >
-                {isReactivating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-                Reactivar Producto
-              </button>
-            ) : (
-              <button
-                onClick={() => onWithdraw(product)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-50 dark:bg-rose-600/20 hover:bg-rose-100 dark:hover:bg-rose-600/30 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 rounded-xl text-xs font-semibold transition-all active:scale-95"
-              >
-                <Archive className="w-4 h-4" /> Dar de Baja (Inactivar)
-              </button>
-            )}
-          </div>
-
-          {/* 5. Variantes Asociadas (RF Stock: Vínculo entre variantes con redirección) */}
-          {relatedVariants.length > 0 && (
-            <div className="space-y-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                  <GitBranch className="w-4 h-4 text-indigo-500" /> Variantes del Producto ({relatedVariants.length})
+              {/* QR / Código de Identificación Impreso */}
+              <div className="border border-[#cacaca] p-3 font-mono text-xs flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-[#616161] uppercase tracking-wider block">
+                    CÓDIGO DE IDENTIFICACIÓN
+                  </span>
+                  <span className="text-black font-normal uppercase tracking-wider">{product.code}</span>
+                </div>
+                <span className="text-[9px] uppercase px-2 py-0.5 rounded-full border border-[#cacaca] text-[#404040]">
+                  ESTÁNDAR FREITAG
                 </span>
-                <span className="text-[11px] text-slate-400">Toca para ir a la variante</span>
+              </div>
+            </div>
+
+            {/* COLUMNA DERECHA: ESPECIFICACIONES TÉCNICAS */}
+            <div className="space-y-5">
+              <div>
+                <p className="font-mono text-[10px] text-[#616161] uppercase tracking-[0.2em] mb-1">
+                  FICHA TÉCNICA // {product.categories?.name || 'MERCANCÍA GENERAL'}
+                </p>
+                <h2 className="text-xl sm:text-2xl font-normal uppercase tracking-tight text-black">
+                  {product.name}
+                </h2>
+                {product.description && (
+                  <p className="text-xs text-[#404040] mt-2 font-normal leading-relaxed uppercase border-l-2 border-black pl-3 py-0.5">
+                    {product.description}
+                  </p>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* Matriz de Parámetros Técnicos (Swiss Print Spec) */}
+              <div className="border border-[#cacaca] divide-y divide-[#cacaca] font-mono text-xs">
+                
+                {/* Precio Unitario */}
+                <div className="p-3 flex items-center justify-between bg-white">
+                  <span className="text-[10px] text-[#616161] uppercase tracking-wider">
+                    PRECIO UNITARIO DE SALIDA
+                  </span>
+                  <span className="text-base sm:text-lg font-normal tabular-nums text-black">
+                    {formatCurrency(product.price, currentInventory?.currency)}
+                  </span>
+                </div>
+
+                {/* Stock Actual y Alerta */}
+                <div className="p-3 flex items-center justify-between bg-white">
+                  <span className="text-[10px] text-[#616161] uppercase tracking-wider">
+                    VOLUMEN EN ALMACÉN
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-normal tabular-nums text-black">
+                      {product.stock} <span className="text-xs text-[#616161]">UDS</span>
+                    </span>
+                    <span className="text-[10px] text-[#616161] uppercase">
+                      (MÍN: {product.min_stock || 1})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Valuación Total del Ítem */}
+                <div className="p-3 flex items-center justify-between bg-white">
+                  <span className="text-[10px] text-[#616161] uppercase tracking-wider">
+                    VALOR TOTAL DE EXISTENCIAS
+                  </span>
+                  <span className="text-sm font-normal tabular-nums text-black">
+                    {formatCurrency(totalItemValuation, currentInventory?.currency)}
+                  </span>
+                </div>
+
+                {/* Ubicación Física */}
+                <div className="p-3 flex items-center justify-between bg-white">
+                  <span className="text-[10px] text-[#616161] uppercase tracking-wider">
+                    UBICACIÓN FÍSICA // RACK
+                  </span>
+                  <span className="text-black uppercase flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-black" />
+                    {currentLocation?.name || 'SIN UBICACIÓN ASIGNADA'}
+                    {currentLocation?.code && ` [${currentLocation.code}]`}
+                  </span>
+                </div>
+
+                {/* Categoría y Subcategoría */}
+                <div className="p-3 flex items-center justify-between bg-white">
+                  <span className="text-[10px] text-[#616161] uppercase tracking-wider">
+                    CLASIFICACIÓN TÉCNICA
+                  </span>
+                  <span className="text-black uppercase">
+                    {product.categories?.name || 'GENERAL'}
+                    {product.subcategories?.name && ` // ${product.subcategories.name}`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Botones de Acción Operativa (Píldoras strictly) */}
+              <div className="space-y-2 pt-2">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={() => onMove(product)}
+                    className="flex-1 min-h-[44px] px-5 rounded-full border border-black hover:bg-black hover:text-white text-black text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                  >
+                    <ArrowRightLeft className="w-3.5 h-3.5" />
+                    <span>TRASLADAR UBICACIÓN</span>
+                  </button>
+
+                  {!isInactive ? (
+                    <button
+                      onClick={() => onWithdraw(product)}
+                      className="flex-1 min-h-[44px] px-5 rounded-full border border-[#cacaca] hover:border-black text-[#404040] hover:text-black text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                    >
+                      <Archive className="w-3.5 h-3.5" />
+                      <span>DAR DE BAJA (INACTIVAR)</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleReactivateProduct}
+                      disabled={isReactivating}
+                      className="flex-1 min-h-[44px] px-5 rounded-full bg-black hover:bg-[#1a1b1e] text-white text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                    >
+                      {isReactivating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                      <span>REACTIVAR MERCANCÍA</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* =========================================================
+              VARIACIONES ASOCIADAS (SI APLICA)
+             ========================================================= */}
+          {relatedVariants.length > 0 && (
+            <div className="border border-[#cacaca] p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between font-mono">
+                <span className="text-xs uppercase tracking-wider text-black flex items-center gap-1.5">
+                  <GitBranch className="w-4 h-4 text-black" />
+                  VARIANTES REGISTRADAS DE LA FAMILIA ({relatedVariants.length})
+                </span>
+                <span className="text-[10px] text-[#616161] uppercase">TOCA PARA CAMBIAR DE FICHA</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono">
                 {relatedVariants.map((v) => {
                   const vInactive = v.status === 'INACTIVE' || v.status === 'WITHDRAWN';
                   return (
@@ -357,41 +421,22 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       key={v.id}
                       type="button"
                       onClick={() => onSelectProduct?.(v)}
-                      className="p-3 bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/30 border border-slate-200 dark:border-slate-700/80 hover:border-indigo-300 dark:hover:border-indigo-600 rounded-2xl text-left transition-all active:scale-[0.98] group flex items-center justify-between shadow-sm"
+                      className="p-3 border border-[#cacaca] hover:border-black bg-white hover:bg-[#fafafa] text-left transition-all active:scale-[0.98] flex items-center justify-between group"
                     >
                       <div className="min-w-0 pr-2">
-                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                        <p className="text-xs uppercase tracking-wide text-black group-hover:underline truncate">
                           {v.name}
                         </p>
-                        <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                          <span className="font-mono bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800">
-                            {v.code}
-                          </span>
-                          {v.variant_attributes &&
-                            Object.entries(v.variant_attributes).map(([k, val]) => (
-                              <span
-                                key={k}
-                                className="px-1.5 py-0.5 bg-slate-200/80 dark:bg-slate-700 rounded font-medium text-slate-700 dark:text-slate-300"
-                              >
-                                {k}: {val}
-                              </span>
-                            ))}
-                        </div>
+                        <span className="text-[10px] text-[#616161] uppercase tracking-wider block mt-0.5">
+                          REF: {v.code}
+                        </span>
                       </div>
                       <div className="text-right shrink-0">
-                        <span className="text-xs font-extrabold text-slate-900 dark:text-white block">
+                        <span className="text-xs font-normal tabular-nums text-black block">
                           {formatCurrency(v.price, currentInventory?.currency)}
                         </span>
-                        <span
-                          className={`text-[10px] font-semibold ${
-                            vInactive
-                              ? 'text-rose-500'
-                              : v.stock <= (v.min_stock || 1)
-                              ? 'text-amber-500'
-                              : 'text-slate-500'
-                          }`}
-                        >
-                          {vInactive ? 'Inactivo' : `${v.stock} uds`}
+                        <span className={`text-[10px] ${vInactive ? 'text-[#616161]' : v.stock <= (v.min_stock || 1) ? 'text-black bg-[#ffdd00] px-1.5 rounded-full' : 'text-black'}`}>
+                          {vInactive ? 'BAJA' : `${v.stock} UDS`}
                         </span>
                       </div>
                     </button>
@@ -401,51 +446,62 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             </div>
           )}
 
-          {/* 5. Trazabilidad e Historial de Auditoría */}
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between">
+          {/* =========================================================
+              TRAZABILIDAD // AUDIT LOG SHEET
+             ========================================================= */}
+          <div className="border border-[#cacaca] p-4 sm:p-5 space-y-3">
+            <div className="flex items-center justify-between font-mono">
               <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white">Trazabilidad e Historial</h4>
+                <History className="w-4 h-4 text-black" />
+                <h4 className="text-xs uppercase tracking-wider text-black">
+                  MANIFIESTO DE TRAZABILIDAD & AUDITORÍA
+                </h4>
               </div>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">{auditLogs.length} eventos</span>
+              <span className="text-[10px] text-[#616161] uppercase">
+                {auditLogs.length} REGISTROS
+              </span>
             </div>
 
-            {/* Etiqueta de Última Modificación */}
-            <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-2xl flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                <span className="text-slate-700 dark:text-slate-300">
-                  Modificado por: <strong className="text-blue-600 dark:text-blue-300">{product.last_modified_by_email || 'Sistema'}</strong>
-                </span>
+            {/* Metadato de Última Modificación */}
+            <div className="p-3 border border-[#cacaca] bg-[#f1f1f1] flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs font-mono">
+              <div className="flex items-center gap-2 text-black">
+                <User className="w-3.5 h-3.5 text-black" />
+                <span>ÚLTIMA MODIFICACIÓN: {product.last_modified_by_email || 'SISTEMA'}</span>
               </div>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <span className="text-[10px] text-[#616161] flex items-center gap-1 uppercase">
                 <Clock className="w-3 h-3" /> {formatDate(product.updated_at)}
               </span>
             </div>
 
-            {/* Lista cronológica de cambios */}
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+            {/* Historial en Lista Monocromática */}
+            <div className="space-y-2 max-h-48 overflow-y-auto divide-y divide-[#cacaca] border border-[#cacaca] bg-white font-mono text-xs">
               {loadingAudit ? (
-                <div className="text-center py-4 text-xs text-slate-400">Cargando trazabilidad...</div>
+                <div className="text-center py-6 text-xs text-[#616161] uppercase">
+                  CARGANDO HISTORIAL TÉCNICO...
+                </div>
               ) : auditLogs.length === 0 ? (
-                <div className="text-center py-4 text-xs text-slate-400">No hay registros de auditoría anteriores</div>
+                <div className="text-center py-6 text-xs text-[#616161] uppercase">
+                  SIN EVENTOS REGISTRADOS EN AUDITORÍA
+                </div>
               ) : (
                 auditLogs.map((log) => (
-                  <div key={log.id} className="p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+                  <div key={log.id} className="p-3 hover:bg-[#fafafa] transition-colors space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">{log.action_type}</span>
-                      <span className="text-[10px] text-slate-400">{formatDate(log.created_at)}</span>
+                      <span className="font-normal text-black uppercase tracking-wider text-[11px]">
+                        [{log.action_type}]
+                      </span>
+                      <span className="text-[10px] text-[#616161]">{formatDate(log.created_at)}</span>
                     </div>
-                    <p className="text-slate-600 dark:text-slate-300 text-[11px]">{log.details}</p>
-                    <div className="text-[10px] text-slate-400 dark:text-slate-500">
-                      Por: <span className="text-slate-600 dark:text-slate-400">{log.user_email}</span>
+                    <p className="text-black text-[11px] uppercase">{log.details}</p>
+                    <div className="text-[10px] text-[#616161] uppercase">
+                      USUARIO: {log.user_email}
                     </div>
                   </div>
                 ))
               )}
             </div>
           </div>
+
         </div>
       </div>
     </div>
