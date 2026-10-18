@@ -14,12 +14,16 @@ import {
   QrCode,
   Briefcase,
   User,
-  Sliders
+  Sliders,
+  Printer,
+  Ticket
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatDate } from '../lib/supabase';
 import { EditInventoryModal } from '../components/EditInventoryModal';
+import { BatchLocationsPrintModal } from '../components/BatchLocationsPrintModal';
+import { CouponsManagementModal } from '../components/CouponsManagementModal';
 
 interface SettingsPageProps {
   onOpenCategories: () => void;
@@ -37,6 +41,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const { currentInventory, user, signOut, refreshInventories } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [editInventoryOpen, setEditInventoryOpen] = useState(false);
+  const [batchLocationsOpen, setBatchLocationsOpen] = useState(false);
+  const [couponsOpen, setCouponsOpen] = useState(false);
+
+  const isBusiness = currentInventory?.inventory_type !== 'PERSONAL';
 
   return (
     <div className="space-y-6 pb-24 sm:pb-8 max-w-3xl mx-auto">
@@ -136,22 +144,43 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
       {/* 3. Menú de Configuración Libre */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-slate-800">
-        {/* Ajustes del Inventario y Pagos Yape/Plin (RF-02.1 & RF-06.3) */}
-        <button
-          onClick={() => setEditInventoryOpen(true)}
-          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors text-left group"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 rounded-xl group-hover:scale-105 transition-transform">
-              <QrCode className="w-5 h-5" />
+        {/* Ajustes del Inventario y Pagos Yape/Plin (Solo disponible para tipo NEGOCIO) */}
+        {isBusiness && (
+          <button
+            onClick={() => setEditInventoryOpen(true)}
+            className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors text-left group"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="p-2.5 bg-emerald-50 dark:bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 rounded-xl group-hover:scale-105 transition-transform">
+                <QrCode className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 dark:text-white text-sm">Pasarela de Pagos (Yape / Plin)</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Configura tus códigos QR y números para cobrar a clientes</p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-sm">Pasarela de Pagos (Yape / Plin)</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Configura tus códigos QR y números para cobrar a clientes</p>
+            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
+          </button>
+        )}
+
+        {/* Cupones de Descuento (Solo disponible para tipo NEGOCIO) */}
+        {isBusiness && (
+          <button
+            onClick={() => setCouponsOpen(true)}
+            className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors text-left group"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="p-2.5 bg-rose-50 dark:bg-rose-600/10 text-rose-600 dark:text-rose-400 rounded-xl group-hover:scale-105 transition-transform">
+                <Ticket className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 dark:text-white text-sm">Cupones de Descuento</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Crea códigos promocionales por monto o porcentaje</p>
+              </div>
             </div>
-          </div>
-          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
-        </button>
+            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
+          </button>
+        )}
 
         {/* Categorías */}
         <button
@@ -181,7 +210,24 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             </div>
             <div>
               <h4 className="font-bold text-slate-900 dark:text-white text-sm">Gestión de Ubicaciones Físicas</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Almacenes, pasillos y generador de etiquetas (85.6 × 53.9 mm)</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Almacenes, pasillos y organización espacial</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
+        </button>
+
+        {/* Imprimir Ubicaciones (Nueva funcionalidad solicitada) */}
+        <button
+          onClick={() => setBatchLocationsOpen(true)}
+          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors text-left group"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="p-2.5 bg-orange-50 dark:bg-orange-600/10 text-orange-600 dark:text-orange-400 rounded-xl group-hover:scale-105 transition-transform">
+              <Printer className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 dark:text-white text-sm">Imprimir Ubicaciones</h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Selección múltiple para imprimir tarjetas y códigos QR (85.6 × 53.9 mm)</p>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
@@ -248,6 +294,20 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         inventory={currentInventory}
         onUpdated={refreshInventories}
       />
+
+      {/* Modal de Impresión de Ubicaciones */}
+      <BatchLocationsPrintModal
+        isOpen={batchLocationsOpen}
+        onClose={() => setBatchLocationsOpen(false)}
+      />
+
+      {/* Modal de Gestión de Cupones de Descuento */}
+      {isBusiness && (
+        <CouponsManagementModal
+          isOpen={couponsOpen}
+          onClose={() => setCouponsOpen(false)}
+        />
+      )}
     </div>
   );
 };

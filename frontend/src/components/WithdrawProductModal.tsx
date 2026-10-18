@@ -73,16 +73,35 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
           }
         });
       } else {
-        // Retiro / Baja Total del Inventario
-        const { error: archiveError } = await supabase
+        // Retiro / Baja Total del Inventario -> Estado INACTIVO
+        let archiveError: any = null;
+        
+        const { error: errInactive } = await supabase
           .from('products')
           .update({
-            status: 'WITHDRAWN',
+            status: 'INACTIVE',
             withdrawal_reason: finalReason,
             last_modified_by: user.id,
-            last_modified_by_email: user.email
+            last_modified_by_email: user.email,
+            updated_at: new Date().toISOString()
           })
           .eq('id', product.id);
+
+        if (errInactive) {
+          // Si la base de datos aún no tiene la migración para 'INACTIVE', intentar 'WITHDRAWN'
+          const { error: errWithdrawn } = await supabase
+            .from('products')
+            .update({
+              status: 'WITHDRAWN',
+              withdrawal_reason: finalReason,
+              last_modified_by: user.id,
+              last_modified_by_email: user.email,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', product.id);
+
+          archiveError = errWithdrawn;
+        }
 
         if (archiveError) throw archiveError;
 
@@ -91,10 +110,11 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
           productId: product.id,
           productName: product.name,
           actionType: 'WITHDRAW',
-          details: `Producto dado de baja completamente del inventario activo. Motivo: "${finalReason}".`,
+          details: `Producto dado de baja: estado cambiado a Inactivo. Motivo: "${finalReason}". Puede reactivarse en cualquier momento desde su ficha.`,
           metadata: {
             reason: finalReason,
             previous_stock: maxStock,
+            status: 'INACTIVE',
             decommissioned: true
           }
         });

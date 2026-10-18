@@ -10,6 +10,7 @@ import { PendingInvitationsBanner } from './components/PendingInvitationsBanner'
 import { AuthPage } from './pages/AuthPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { SalesPage } from './pages/SalesPage';
+import { SalesHistoryPage } from './pages/SalesHistoryPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -30,8 +31,18 @@ import { Loader2, Layers, Plus, Sparkles } from 'lucide-react';
 export const AppContent: React.FC = () => {
   const { user, loading: authLoading, currentInventory, refreshInventories } = useAuth();
 
+  // Regla lógica: Funcionalidades comerciales solo activas si es NEGOCIO
+  const isBusiness = currentInventory?.inventory_type !== 'PERSONAL';
+
   // Estado de Navegación
   const [activeTab, setActiveTab] = useState<TabType>('inventory');
+
+  // Redirigir a inventario si el tipo de inventario no permite ventas ni historial comercial
+  useEffect(() => {
+    if (!isBusiness && (activeTab === 'sales' || activeTab === 'sales-history')) {
+      setActiveTab('inventory');
+    }
+  }, [isBusiness, activeTab]);
 
   // Datos del Inventario Actual
   const [products, setProducts] = useState<Product[]>([]);
@@ -203,7 +214,7 @@ export const AppContent: React.FC = () => {
         )}
 
         {/* Pestañas de Navegación Desktop */}
-        <div className="hidden sm:flex items-center gap-2 mb-6 border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="hidden sm:flex items-center gap-2 mb-6 border-b border-slate-200 dark:border-slate-800 pb-3 flex-wrap">
           <button
             onClick={() => setActiveTab('inventory')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
@@ -214,16 +225,30 @@ export const AppContent: React.FC = () => {
           >
             📦 Módulo Inventario
           </button>
-          <button
-            onClick={() => setActiveTab('sales')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
-              activeTab === 'sales'
-                ? 'bg-blue-600 text-white shadow-blue-500/20'
-                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
-            }`}
-          >
-            💳 Ventas y Cobros
-          </button>
+          {isBusiness && (
+            <button
+              onClick={() => setActiveTab('sales')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                activeTab === 'sales'
+                  ? 'bg-blue-600 text-white shadow-blue-500/20'
+                  : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              💳 Punto de Venta
+            </button>
+          )}
+          {isBusiness && (
+            <button
+              onClick={() => setActiveTab('sales-history')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                activeTab === 'sales-history'
+                  ? 'bg-blue-600 text-white shadow-blue-500/20'
+                  : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              🧾 Historial de Ventas
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('reports')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
@@ -276,12 +301,17 @@ export const AppContent: React.FC = () => {
           />
         )}
 
-        {/* RF-06: Módulo de Ventas y Cobros */}
-        {activeTab === 'sales' && (
+        {/* RF-06: Módulo de Ventas y Cobros (Solo NEGOCIO) */}
+        {activeTab === 'sales' && isBusiness && (
           <SalesPage
             products={products}
             onSaleCompleted={fetchInventoryData}
           />
+        )}
+
+        {/* Historial y Exportación de Ventas Independiente (Solo NEGOCIO) */}
+        {activeTab === 'sales-history' && isBusiness && (
+          <SalesHistoryPage />
         )}
 
         {activeTab === 'reports' && (
@@ -354,6 +384,9 @@ export const AppContent: React.FC = () => {
           setWithdrawModalOpen(true);
         }}
         locations={locations}
+        allProducts={products}
+        onSelectProduct={(p) => setSelectedProduct(p)}
+        onUpdated={fetchInventoryData}
       />
 
       {/* 3. Modal de Traslado de Ubicación */}

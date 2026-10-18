@@ -18,15 +18,24 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
   const [isInviting, setIsInviting] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  const isOwner = currentInventory?.owner_id === user?.id;
+  const isOwner = Boolean(
+    currentInventory && user && (
+      currentInventory.owner_id === user.id ||
+      currentInventory.is_owner ||
+      currentInventory.role === 'owner'
+    )
+  );
 
   const loadCollaborators = async () => {
     if (!currentInventory) return;
     try {
       setLoading(true);
 
-      // Cargar miembros
-      const { data: memberData } = await supabase
+      // Cargar miembros con fallback robusto para evitar que aparezca vacío
+      let memberList: any[] = [];
+      
+      // Intento 1: Join directo a profiles
+      const { data: memberData, error: errJoin } = await supabase
         .from('inventory_users')
         .select(`
           id,
@@ -42,6 +51,56 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
         `)
         .eq('inventory_id', currentInventory.id);
 
+      if (!errJoin && memberData && memberData.length > 0 && memberData.some(m => m.profiles)) {
+        memberList = memberData;
+      } else {
+        // Intento 2: Consulta separada a inventory_users y luego a profiles
+        const { data: rawUsers } = await supabase
+          .from('inventory_users')
+          .select('id, role, created_at, user_id')
+          .eq('inventory_id', currentInventory.id);
+
+        if (rawUsers && rawUsers.length > 0) {
+          const userIds = rawUsers.map(u => u.user_id);
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, email, full_name, avatar_url')
+            .in('id', userIds);
+
+          const profMap = new Map((profilesData || []).map(p => [p.id, p]));
+          memberList = rawUsers.map(u => ({
+            ...u,
+            profiles: profMap.get(u.user_id) || {
+              id: u.user_id,
+              email: (user && u.user_id === user.id) ? (user.email || 'Colaborador') : 'Colaborador',
+              full_name: null
+            }
+          }));
+        }
+      }
+
+      // Si el dueño no figura explícitamente en inventory_users, agregarlo para asegurar visibilidad
+      const hasOwnerInList = memberList.some(m => m.user_id === currentInventory.owner_id || m.role === 'owner');
+      if (!hasOwnerInList && currentInventory.owner_id) {
+        const { data: ownerProfile } = await supabase
+          .from('profiles')
+          .select('id, email, full_name, avatar_url')
+          .eq('id', currentInventory.owner_id)
+          .maybeSingle();
+
+        memberList.unshift({
+          id: `owner-${currentInventory.owner_id}`,
+          role: 'owner',
+          created_at: currentInventory.created_at,
+          user_id: currentInventory.owner_id,
+          profiles: ownerProfile || {
+            id: currentInventory.owner_id,
+            email: (user && currentInventory.owner_id === user.id) ? (user.email || 'Dueño') : 'Dueño',
+            full_name: 'Dueño del Inventario'
+          }
+        });
+      }
+
       // Cargar invitaciones pendientes
       const { data: invData } = await supabase
         .from('inventory_invitations')
@@ -49,7 +108,7 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
         .eq('inventory_id', currentInventory.id)
         .eq('status', 'pending');
 
-      setMembers(memberData || []);
+      setMembers(memberList);
       setInvitations(invData || []);
     } catch (err) {
       console.error('Error cargando colaboradores:', err);
@@ -239,6 +298,10 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
 
             {loading ? (
               <p className="text-xs text-slate-400 text-center py-4">Cargando equipo...</p>
+            ) : members.length === 0 ? (
+              <div className="p-4 text-center rounded-2xl bg-slate-50 dark:bg-slate-800/30 border border-dashed border-slate-200 dark:border-slate-800">
+                <p className="text-xs text-slate-500 dark:text-slate-400">No hay otros colaboradores en este inventario.</p>
+              </div>
             ) : (
               members.map(m => {
                 const profile = m.profiles || {};
@@ -247,19 +310,19 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
                 return (
                   <div
                     key={m.id}
-                    className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between"
+                    className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0">
                         {(profile.full_name || profile.email || 'U')[0].toUpperCase()}
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
                             {profile.full_name || profile.email}
                           </h4>
                           <span
-                            className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase flex items-center gap-1 ${
+                            className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase flex items-center gap-1 shrink-0 ${
                               isMemberOwner
                                 ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30'
                                 : 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30'
@@ -269,17 +332,18 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
                             {isMemberOwner ? 'Dueño' : 'Colaborador'}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{profile.email}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{profile.email}</p>
                       </div>
                     </div>
 
                     {isOwner && !isMemberOwner && (
                       <button
                         onClick={() => handleRemoveMember(m.id, m.user_id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition-colors"
-                        title="Remover colaborador"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 dark:bg-rose-500/10 dark:hover:bg-rose-600 rounded-xl transition-all border border-rose-200 dark:border-rose-500/30 active:scale-95 shrink-0"
+                        title="Retirar colaborador del inventario"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Retirar</span>
                       </button>
                     )}
                   </div>

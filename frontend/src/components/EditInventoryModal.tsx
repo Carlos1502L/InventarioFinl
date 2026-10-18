@@ -353,17 +353,19 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
             <Layers className="w-4 h-4" /> Detalles
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('payments')}
-            className={`flex-1 py-3 px-3 min-w-[100px] flex items-center justify-center gap-1.5 border-b-2 transition-all ${
-              activeTab === 'payments'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-500/5'
-                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <QrCode className="w-4 h-4" /> Yape / Plin
-          </button>
+          {inventoryType !== 'PERSONAL' && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('payments')}
+              className={`flex-1 py-3 px-3 min-w-[100px] flex items-center justify-center gap-1.5 border-b-2 transition-all ${
+                activeTab === 'payments'
+                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-500/5'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <QrCode className="w-4 h-4" /> Yape / Plin
+            </button>
+          )}
 
           {isOwner && (
             <button
@@ -527,7 +529,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
           )}
 
           {/* TAB 2: PASARELA DE PAGOS YAPE / PLIN (RF-06.3) */}
-          {activeTab === 'payments' && (
+          {activeTab === 'payments' && inventoryType !== 'PERSONAL' && (
             <form onSubmit={handleSavePayments} className="space-y-4">
               <div className="p-3 bg-emerald-50 dark:bg-emerald-600/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
                 <div className="flex items-center gap-2 font-bold">

@@ -22,10 +22,18 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
 }) => {
   const { currentInventory, user } = useAuth();
   const [selectedLocationId, setSelectedLocationId] = useState('');
+  const [quantityToMove, setQuantityToMove] = useState<number>(1);
   const [reason, setReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+
+  // Inicializar cantidad al abrir
+  React.useEffect(() => {
+    if (product) {
+      setQuantityToMove(product.stock > 0 ? 1 : 0);
+    }
+  }, [product, isOpen]);
 
   if (!isOpen || !product) return null;
 
@@ -63,39 +71,163 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
       return;
     }
 
+    if (quantityToMove <= 0 || quantityToMove > product.stock) {
+      setErrorMsg(`La cantidad a trasladar debe estar entre 1 y ${product.stock} unidades.`);
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setErrorMsg(null);
 
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({
-          location_id: selectedLocationId,
-          last_modified_by: user.id,
-          last_modified_by_email: user.email
-        })
-        .eq('id', product.id);
-
-      if (updateError) throw updateError;
-
-      // Registrar en el historial de auditoría
       const fromName = currentLocation ? `${currentLocation.name} (${currentLocation.code})` : 'Ubicación previa';
       const toName = `${targetLocation.name} (${targetLocation.code})`;
 
-      await logAuditAction({
-        inventoryId: currentInventory.id,
-        productId: product.id,
-        productName: product.name,
-        actionType: 'MOVE',
-        details: `Traslado de almacén: movido desde "${fromName}" hacia "${toName}". ${reason ? `Motivo: ${reason}` : ''}`,
-        metadata: {
-          from_location_id: product.location_id,
-          to_location_id: targetLocation.id,
-          from_location_name: fromName,
-          to_location_name: toName,
-          reason: reason || null
+      // CASO A: Traslado TOTAL (todas las unidades)
+      if (quantityToMove >= product.stock) {
+        // Verificar si ya existe este mismo código en la ubicación destino
+        const { data: existingAtTarget } = await supabase
+          .from('products')
+          .select('id, stock')
+          .eq('inventory_id', currentInventory.id)
+          .eq('code', product.code)
+          .eq('location_id', selectedLocationId)
+          .maybeSingle();
+
+        if (existingAtTarget && existingAtTarget.id !== product.id) {
+          // Fusionar stock en destino y eliminar fila origen
+          await supabase
+            .from('products')
+            .update({
+              stock: (existingAtTarget.stock || 0) + product.stock,
+              last_modified_by: user.id,
+              last_modified_by_email: user.email,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingAtTarget.id);
+
+          await supabase.from('products').delete().eq('id', product.id);
+        } else {
+          // Actualización directa de ubicación
+          const { error: updateError } = await supabase
+            .from('products')
+            .update({
+              location_id: selectedLocationId,
+              last_modified_by: user.id,
+              last_modified_by_email: user.email,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', product.id);
+
+          if (updateError) throw updateError;
         }
-      });
+
+        await logAuditAction({
+          inventoryId: currentInventory.id,
+          productId: product.id,
+          productName: product.name,
+          actionType: 'MOVE',
+          details: `Traslado total (${product.stock} uds) desde "${fromName}" hacia "${toName}". ${reason ? `Motivo: ${reason}` : ''}`,
+          metadata: {
+            from_location_id: product.location_id,
+            to_location_id: targetLocation.id,
+            quantity_moved: product.stock,
+            is_partial: false,
+            reason: reason || null
+          }
+        });
+      } else {
+        // CASO B: Traslado PARCIAL (se trasladan algunas unidades y el resto permanece en origen)
+        // 1. Verificar si ya existe el producto en el destino
+        const { data: existingAtTarget } = await supabase
+          .from('products')
+          .select('id, stock')
+          .eq('inventory_id', currentInventory.id)
+          .eq('code', product.code)
+          .eq('location_id', selectedLocationId)
+          .maybeSingle();
+
+        if (existingAtTarget) {
+          await supabase
+            .from('products')
+            .update({
+              stock: (existingAtTarget.stock || 0) + quantityToMove,
+              last_modified_by: user.id,
+              last_modified_by_email: user.email,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingAtTarget.id);
+        } else {
+          // Crear copia del producto en el nuevo almacén con la cantidad trasladada
+          const newProductPayload = {
+            inventory_id: currentInventory.id,
+            name: product.name,
+            code: product.code,
+            description: product.description,
+            price: product.price,
+            cost_price: product.cost_price || 0,
+            markup_percentage: product.markup_percentage || 0,
+            stock: quantityToMove,
+            min_stock: product.min_stock || 1,
+            category_id: product.category_id,
+            subcategory_id: product.subcategory_id,
+            location_id: selectedLocationId,
+            images: product.images || [],
+            status: 'ACTIVE',
+            parent_id: product.parent_id,
+            is_variant: product.is_variant,
+            variant_attributes: product.variant_attributes,
+            last_modified_by: user.id,
+            last_modified_by_email: user.email
+          };
+
+          const { error: insertErr } = await supabase
+            .from('products')
+            .insert(newProductPayload);
+
+          if (insertErr) {
+            // Si la base de datos restringe unicidad estricta de (inventory_id, code), usar subcódigo con ubicación
+            if (insertErr.code === '23505') {
+              const suffixedCode = `${product.code}-${targetLocation.code}`;
+              await supabase
+                .from('products')
+                .insert({ ...newProductPayload, code: suffixedCode });
+            } else {
+              throw insertErr;
+            }
+          }
+        }
+
+        // 2. Descontar las unidades trasladadas del producto en origen
+        const remainingStock = product.stock - quantityToMove;
+        const { error: deductErr } = await supabase
+          .from('products')
+          .update({
+            stock: remainingStock,
+            last_modified_by: user.id,
+            last_modified_by_email: user.email,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', product.id);
+
+        if (deductErr) throw deductErr;
+
+        await logAuditAction({
+          inventoryId: currentInventory.id,
+          productId: product.id,
+          productName: product.name,
+          actionType: 'MOVE',
+          details: `Traslado parcial de almacén: movidas ${quantityToMove} de ${product.stock} unidades desde "${fromName}" hacia "${toName}". Stock restante en origen: ${remainingStock} uds. ${reason ? `Motivo: ${reason}` : ''}`,
+          metadata: {
+            from_location_id: product.location_id,
+            to_location_id: targetLocation.id,
+            quantity_moved: quantityToMove,
+            remaining_stock: remainingStock,
+            is_partial: true,
+            reason: reason || null
+          }
+        });
+      }
 
       onMoved();
       onClose();
@@ -147,6 +279,62 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                 <span>Ubicación actual: <strong>{currentLocation?.name || 'Desconocida'}</strong> ({currentLocation?.code})</span>
               </div>
             </div>
+            {/* Cantidad a Mover (Transferencia Parcial si stock > 1) */}
+            {product.stock > 1 ? (
+              <div className="p-3.5 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    Cantidad a Trasladar <span className="text-amber-500">*</span>
+                  </label>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Total disponible: <strong className="text-amber-600 dark:text-amber-400">{product.stock} uds</strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setQuantityToMove(q => Math.max(1, q - 1))}
+                    className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 transition-colors"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min={1}
+                    max={product.stock}
+                    value={quantityToMove}
+                    onChange={e => {
+                      const val = parseInt(e.target.value) || 1;
+                      setQuantityToMove(Math.max(1, Math.min(product.stock, val)));
+                    }}
+                    className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-center text-sm font-extrabold text-slate-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setQuantityToMove(q => Math.min(product.stock, q + 1))}
+                    className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 transition-colors"
+                  >
+                    +
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuantityToMove(product.stock)}
+                    className="px-3 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/60 rounded-xl transition-colors whitespace-nowrap"
+                  >
+                    Todas ({product.stock})
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  {quantityToMove < product.stock 
+                    ? `Se moverán ${quantityToMove} uds y permanecerán ${product.stock - quantityToMove} uds en la ubicación actual.`
+                    : `Se trasladará la totalidad del inventario de este producto.`}
+                </p>
+              </div>
+            ) : (
+              <div className="px-3 py-2 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/40 text-[11px] text-slate-500">
+                Traslado de unidad única (1 ud).
+              </div>
+            )}
 
             {/* Selección de nueva ubicación con Escáner QR (RF-08.1) */}
             <div>

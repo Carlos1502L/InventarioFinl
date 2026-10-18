@@ -12,7 +12,6 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
-  Printer,
   Tag,
   GitBranch
 } from 'lucide-react';
@@ -20,7 +19,6 @@ import { Product, Category, Subcategory, Location } from '../types/database';
 import { formatCurrency } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
-import { BatchLabelsModal } from '../components/BatchLabelsModal';
 
 interface InventoryPageProps {
   products: Product[];
@@ -60,9 +58,6 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
   // Escáner de Búsqueda Rápida
   const [searchScannerOpen, setSearchScannerOpen] = useState(false);
-
-  // RF-09: Modal de Impresión de Etiquetas en Lote
-  const [batchLabelsOpen, setBatchLabelsOpen] = useState(false);
 
   // Subcategorías según la categoría seleccionada
   const activeSubcategories = useMemo(() => {
@@ -114,9 +109,12 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
       const matchLocation =
         selectedLocation === 'ALL' || prod.location_id === selectedLocation;
 
-      // 5. Filtro de Estado
+      // 5. Filtro de Estado (Activo / Inactivo)
+      const isProductInactive = prod.status === 'INACTIVE' || prod.status === 'WITHDRAWN';
       const matchStatus =
-        selectedStatus === 'ALL' || prod.status === selectedStatus;
+        selectedStatus === 'ALL' ||
+        (selectedStatus === 'ACTIVE' && prod.status === 'ACTIVE') ||
+        (selectedStatus === 'INACTIVE' && isProductInactive);
 
       return matchSearch && matchCategory && matchSubcategory && matchLocation && matchStatus;
     });
@@ -146,7 +144,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
   };
 
   return (
-    <div className="space-y-4 pb-20 sm:pb-8">
+    <div className="space-y-4 pb-36 sm:pb-12">
       {/* 1. Barra de Búsqueda y Botones Rápidos (Mobile First) */}
       <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
         <div className="flex-1 flex gap-2">
@@ -199,19 +197,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
           </button>
         </div>
 
-        {/* Acciones de la Derecha: Impresión en Lote, Vistas y Nuevo */}
+        {/* Acciones de la Derecha: Vistas y Nuevo */}
         <div className="flex items-center gap-2 justify-between sm:justify-end">
-          {/* RF-09.1: Botón de Impresión de Etiquetas en Lote */}
-          <button
-            onClick={() => setBatchLabelsOpen(true)}
-            disabled={products.length === 0}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 whitespace-nowrap"
-            title="Imprimir etiquetas de productos en lote"
-          >
-            <Printer className="w-4 h-4 text-blue-600" />
-            <span className="hidden sm:inline">Etiquetas en Lote</span>
-          </button>
-
           <div className="flex items-center bg-white dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
             <button
               onClick={() => setViewMode('grid')}
@@ -313,8 +300,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
               className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="ALL">Todos los Estados</option>
-              <option value="ACTIVE">Activos en Stock</option>
-              <option value="WITHDRAWN">Retirados / Baja</option>
+              <option value="ACTIVE">Activos</option>
+              <option value="INACTIVE">Inactivos</option>
             </select>
           </div>
         </div>
@@ -522,11 +509,11 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
       {/* RNF-01: Controles de Paginación */}
       {totalPages > 1 && (
-        <div className="pt-4 flex items-center justify-between border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500">
-          <span>
+        <div className="pt-4 pb-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500">
+          <span className="font-medium">
             Página <strong className="text-slate-800 dark:text-slate-200">{currentPage}</strong> de {totalPages}
           </span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
@@ -574,13 +561,6 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
         onScanSuccess={handleBarcodeSearch}
         title="Buscar Producto por Escaneo"
         instructions="Escanea el código de barras o QR de cualquier producto para ubicarlo instantáneamente."
-      />
-
-      {/* RF-09: Modal de Impresión de Etiquetas en Lote */}
-      <BatchLabelsModal
-        products={products}
-        isOpen={batchLabelsOpen}
-        onClose={() => setBatchLabelsOpen(false)}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Package, ShoppingCart, Camera, FileText, BarChart3, Settings } from 'lucide-react';
+import { Package, ShoppingCart, Camera, FileText, Settings, Receipt } from 'lucide-react';
 
-export type TabType = 'inventory' | 'sales' | 'reports' | 'analytics' | 'settings';
+export type TabType = 'inventory' | 'sales' | 'sales-history' | 'reports' | 'analytics' | 'settings';
 
 interface BottomNavProps {
   activeTab: TabType;
@@ -32,18 +32,35 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <span className="text-[9px]">Stock</span>
         </button>
 
-        {/* Pestaña 2: Ventas (POS) */}
-        <button
-          onClick={() => onChangeTab('sales')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            activeTab === 'sales'
-              ? 'text-blue-600 dark:text-blue-400 font-bold scale-105'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
-        >
-          <ShoppingCart className="w-5 h-5 mb-0.5" />
-          <span className="text-[9px]">Ventas</span>
-        </button>
+        {/* Pestaña 2: Ventas (POS) - Solo NEGOCIO */}
+        {isBusiness && (
+          <button
+            onClick={() => onChangeTab('sales')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+              activeTab === 'sales'
+                ? 'text-blue-600 dark:text-blue-400 font-bold scale-105'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <ShoppingCart className="w-5 h-5 mb-0.5" />
+            <span className="text-[9px]">Ventas</span>
+          </button>
+        )}
+
+        {/* Pestaña 3: Historial de Ventas - Solo NEGOCIO */}
+        {isBusiness && (
+          <button
+            onClick={() => onChangeTab('sales-history')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+              activeTab === 'sales-history'
+                ? 'text-blue-600 dark:text-blue-400 font-bold scale-105'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <Receipt className="w-5 h-5 mb-0.5" />
+            <span className="text-[9px]">Historial</span>
+          </button>
+        )}
 
         {/* Botón Central Destacado: Escáner de Cámara */}
         <button
@@ -57,7 +74,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 mt-1">Escanear</span>
         </button>
 
-        {/* Pestaña 3: Reportes */}
+        {/* Pestaña: Reportes */}
         <button
           onClick={() => onChangeTab('reports')}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
@@ -70,7 +87,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <span className="text-[9px]">Reportes</span>
         </button>
 
-        {/* Pestaña 4: Ajustes */}
+        {/* Pestaña: Ajustes */}
         <button
           onClick={() => onChangeTab('settings')}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${

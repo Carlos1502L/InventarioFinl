@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   MapPin,
@@ -13,10 +13,14 @@ import {
   History,
   AlertCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  GitBranch,
+  RotateCcw,
+  CheckCircle2,
+  Loader2
 } from 'lucide-react';
 import { Product, AuditLog, Location } from '../types/database';
-import { supabase, formatCurrency, formatDate } from '../lib/supabase';
+import { supabase, formatCurrency, formatDate, logAuditAction } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
 interface ProductDetailModalProps {
@@ -27,6 +31,9 @@ interface ProductDetailModalProps {
   onMove: (product: Product) => void;
   onWithdraw: (product: Product) => void;
   locations: Location[];
+  allProducts?: Product[];
+  onSelectProduct?: (product: Product) => void;
+  onUpdated?: () => void;
 }
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
@@ -36,12 +43,16 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onEdit,
   onMove,
   onWithdraw,
-  locations
+  locations,
+  allProducts = [],
+  onSelectProduct,
+  onUpdated
 }) => {
-  const { currentInventory } = useAuth();
+  const { currentInventory, user } = useAuth();
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
+  const [isReactivating, setIsReactivating] = useState(false);
 
   // Cargar historial de auditoría de este producto
   useEffect(() => {
@@ -63,11 +74,80 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     }
   }, [product, isOpen]);
 
+  // Vínculo entre variantes: localizar todas las variantes asociadas (RF Stock)
+  const relatedVariants = useMemo(() => {
+    if (!product || !allProducts || allProducts.length === 0) return [];
+    
+    // Si este producto es una variante o es padre de variantes
+    const familyParentId = product.parent_id || product.id;
+
+    return allProducts.filter((p) => {
+      if (p.id === product.id) return false;
+      
+      // Caso 1: Hermano variante (mismo parent_id)
+      if (product.parent_id && p.parent_id === product.parent_id) return true;
+      // Caso 2: Es el producto principal / padre
+      if (product.parent_id && p.id === product.parent_id) return true;
+      // Caso 3: Es variante hija de este producto
+      if (!product.parent_id && p.parent_id === product.id) return true;
+
+      return false;
+    });
+  }, [product, allProducts]);
+
+  // Reactivar Producto (Cambiar estado de Inactivo a Activo)
+  const handleReactivateProduct = async () => {
+    if (!product || !currentInventory) return;
+    const confirmReactivation = window.confirm(
+      `¿Confirmas reactivar el producto "${product.name}"? Volverá a estar activo y visible en el inventario general.`
+    );
+    if (!confirmReactivation) return;
+
+    try {
+      setIsReactivating(true);
+
+      const { error } = await supabase
+        .from('products')
+        .update({
+          status: 'ACTIVE',
+          withdrawal_reason: null,
+          last_modified_by: user?.id,
+          last_modified_by_email: user?.email,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', product.id);
+
+      if (error) throw error;
+
+      await logAuditAction({
+        inventoryId: currentInventory.id,
+        productId: product.id,
+        productName: product.name,
+        actionType: 'UPDATE',
+        details: 'Producto reactivado: estado cambiado exitosamente de Inactivo a Activo.',
+        metadata: {
+          previous_status: product.status,
+          new_status: 'ACTIVE',
+          reactivated_by: user?.email
+        }
+      });
+
+      if (onUpdated) onUpdated();
+      onClose();
+    } catch (err: any) {
+      console.error('Error reactivando producto:', err);
+      alert('Error al reactivar el producto: ' + (err.message || 'Error desconocido'));
+    } finally {
+      setIsReactivating(false);
+    }
+  };
+
   if (!isOpen || !product) return null;
 
   const photos = product.images && product.images.length > 0 ? product.images : [];
   const currentLocation = locations.find(l => l.id === product.location_id);
-  const isLowStock = product.stock <= (product.min_stock || 5);
+  const isInactive = product.status === 'INACTIVE' || product.status === 'WITHDRAWN';
+  const isLowStock = !isInactive && product.stock <= (product.min_stock || 5);
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in">
@@ -79,11 +159,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {product.code}
             </span>
             <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
-              product.status === 'ACTIVE'
+              !isInactive
                 ? isLowStock ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20' : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
                 : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20'
             }`}>
-              {product.status === 'ACTIVE' ? (isLowStock ? 'Bajo Stock' : 'Activo') : 'Retirado'}
+              {!isInactive ? (isLowStock ? 'Bajo Stock' : 'Activo') : 'Inactivo'}
             </span>
           </div>
 
@@ -106,6 +186,27 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
         {/* Contenido Principal con Scroll */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-6">
+          {/* Alerta si está inactivo */}
+          {isInactive && (
+            <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 rounded-2xl flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>
+                  Este producto está <strong>Inactivo</strong> {product.withdrawal_reason ? `(Motivo: "${product.withdrawal_reason}")` : ''}.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleReactivateProduct}
+                disabled={isReactivating}
+                className="shrink-0 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-sm transition-all active:scale-95 flex items-center gap-1.5 text-[11px]"
+              >
+                {isReactivating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                Reactivar
+              </button>
+            </div>
+          )}
+
           {/* 1. Galería de Fotos (Hasta 3 fotos) */}
           {photos.length > 0 ? (
             <div className="space-y-2">
@@ -218,13 +319,87 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             >
               <ArrowRightLeft className="w-4 h-4" /> Mover de Ubicación
             </button>
-            <button
-              onClick={() => onWithdraw(product)}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-50 dark:bg-rose-600/20 hover:bg-rose-100 dark:hover:bg-rose-600/30 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 rounded-xl text-xs font-semibold transition-all active:scale-95"
-            >
-              <Archive className="w-4 h-4" /> Retirar / Dar de baja
-            </button>
+
+            {isInactive ? (
+              <button
+                onClick={handleReactivateProduct}
+                disabled={isReactivating}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all active:scale-95 shadow-md shadow-emerald-500/20"
+              >
+                {isReactivating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                Reactivar Producto
+              </button>
+            ) : (
+              <button
+                onClick={() => onWithdraw(product)}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-50 dark:bg-rose-600/20 hover:bg-rose-100 dark:hover:bg-rose-600/30 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 rounded-xl text-xs font-semibold transition-all active:scale-95"
+              >
+                <Archive className="w-4 h-4" /> Dar de Baja (Inactivar)
+              </button>
+            )}
           </div>
+
+          {/* 5. Variantes Asociadas (RF Stock: Vínculo entre variantes con redirección) */}
+          {relatedVariants.length > 0 && (
+            <div className="space-y-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <GitBranch className="w-4 h-4 text-indigo-500" /> Variantes del Producto ({relatedVariants.length})
+                </span>
+                <span className="text-[11px] text-slate-400">Toca para ir a la variante</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {relatedVariants.map((v) => {
+                  const vInactive = v.status === 'INACTIVE' || v.status === 'WITHDRAWN';
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => onSelectProduct?.(v)}
+                      className="p-3 bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/30 border border-slate-200 dark:border-slate-700/80 hover:border-indigo-300 dark:hover:border-indigo-600 rounded-2xl text-left transition-all active:scale-[0.98] group flex items-center justify-between shadow-sm"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                          {v.name}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                          <span className="font-mono bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                            {v.code}
+                          </span>
+                          {v.variant_attributes &&
+                            Object.entries(v.variant_attributes).map(([k, val]) => (
+                              <span
+                                key={k}
+                                className="px-1.5 py-0.5 bg-slate-200/80 dark:bg-slate-700 rounded font-medium text-slate-700 dark:text-slate-300"
+                              >
+                                {k}: {val}
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-extrabold text-slate-900 dark:text-white block">
+                          {formatCurrency(v.price, currentInventory?.currency)}
+                        </span>
+                        <span
+                          className={`text-[10px] font-semibold ${
+                            vInactive
+                              ? 'text-rose-500'
+                              : v.stock <= (v.min_stock || 1)
+                              ? 'text-amber-500'
+                              : 'text-slate-500'
+                          }`}
+                        >
+                          {vInactive ? 'Inactivo' : `${v.stock} uds`}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* 5. Trazabilidad e Historial de Auditoría */}
           <div className="space-y-3 pt-2">
