@@ -150,7 +150,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
               CATÁLOGO GENERAL DE STOCK
             </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-[#1E3A5F] uppercase">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1E3A5F] uppercase">
             EXISTENCIAS & RECURSOS
           </h1>
         </div>
@@ -309,7 +309,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
         {showFilters && (
           <div className="p-5 bg-white border border-[#E5E7EB] rounded-2xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shadow-sm animate-in fade-in duration-200">
             <div>
-              <label className="block text-[10px] font-mono text-[#616161] uppercase tracking-[0.15em] mb-1.5">
+              <label className="block text-[10px] font-mono font-semibold text-[#1E3A5F] uppercase tracking-[0.15em] mb-1.5">
                 [01] CATEGORÍA PRINCIPAL
               </label>
               <select
@@ -329,7 +329,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-mono text-[#616161] uppercase tracking-[0.15em] mb-1.5">
+              <label className="block text-[10px] font-mono font-semibold text-[#1E3A5F] uppercase tracking-[0.15em] mb-1.5">
                 [02] SUBCATEGORÍA / TIPO
               </label>
               <select
@@ -349,7 +349,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-mono text-[#616161] uppercase tracking-[0.15em] mb-1.5">
+              <label className="block text-[10px] font-mono font-semibold text-[#1E3A5F] uppercase tracking-[0.15em] mb-1.5">
                 [03] UBICACIÓN FÍSICA / RACK
               </label>
               <select
@@ -368,7 +368,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-mono text-[#616161] uppercase tracking-[0.15em] mb-1.5">
+              <label className="block text-[10px] font-mono font-semibold text-[#1E3A5F] uppercase tracking-[0.15em] mb-1.5">
                 [04] ESTADO DE INVENTARIO
               </label>
               <select
@@ -460,7 +460,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                     <span className="font-mono text-[10px] tracking-wider text-[#616161] uppercase block truncate">
                       REF // {product.code}
                     </span>
-                    <h3 className="text-sm font-normal uppercase tracking-wide text-[#1E3A5F] truncate group-hover:text-[#1E3A5F] group-hover:underline mt-0.5">
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-[#1E3A5F] truncate group-hover:text-[#1E3A5F] group-hover:underline mt-0.5">
                       {product.name}
                     </h3>
                   </div>
@@ -524,7 +524,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                   </div>
 
                   <div className="text-right flex-shrink-0">
-                    <span className="text-base font-normal tabular-nums text-[#1E3A5F] block tracking-tight">
+                    <span className="text-base font-bold tabular-nums text-[#1E3A5F] block tracking-tight">
                       {formatCurrency(product.price, currentInventory?.currency)}
                     </span>
                   </div>
@@ -536,7 +536,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
       ) : (
         /* VISTA MANIFIESTO EN LISTA */
         <div className="border border-[#E5E7EB] bg-white rounded-2xl overflow-hidden shadow-sm">
-          <div className="hidden md:grid grid-cols-12 gap-2 p-3.5 bg-[#F8F9FA] border-b border-[#E5E7EB] font-mono text-[10px] uppercase tracking-[0.15em] text-[#616161]">
+          <div className="hidden md:grid grid-cols-12 gap-2 p-3.5 bg-[#F8F9FA] border-b border-[#E5E7EB] font-mono font-bold text-[10px] uppercase tracking-[0.15em] text-[#1E3A5F]">
             <div className="col-span-1">FOTO</div>
             <div className="col-span-2">SKU // REF</div>
             <div className="col-span-4">DESCRIPCIÓN TÉCNICA</div>
@@ -573,8 +573,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                     </div>
                   </div>
 
-                  <div className="col-span-2 font-mono text-xs uppercase tracking-wider text-[#1E3A5F]">
-                    <span className="text-[#616161] md:hidden text-[10px] block">SKU:</span>
+                  <div className="col-span-2 font-mono text-xs uppercase tracking-wider text-[#1E3A5F] font-semibold">
+                    <span className="text-[#616161] md:hidden text-[10px] block font-normal">SKU:</span>
                     {product.code}
                     {product.is_variant && (
                       <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full border border-[#1E3A5F] text-[#1E3A5F]">
@@ -584,7 +584,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                   </div>
 
                   <div className="col-span-4 min-w-0">
-                    <h4 className="text-xs sm:text-sm font-normal uppercase tracking-wide text-[#1E3A5F] group-hover:underline truncate">
+                    <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wide text-[#1E3A5F] group-hover:underline truncate">
                       {product.name}
                     </h4>
                     <span className="font-mono text-[10px] text-[#616161] uppercase tracking-wider block truncate">
@@ -597,14 +597,14 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                     <span className="truncate">{product.locations?.name || 'SIN ASIGNAR'}</span>
                   </div>
 
-                  <div className="col-span-1 text-left md:text-right font-normal text-xs sm:text-sm tabular-nums text-[#1E3A5F]">
-                    <span className="text-[#616161] md:hidden text-[10px] font-mono uppercase block">PRECIO:</span>
+                  <div className="col-span-1 text-left md:text-right font-bold text-xs sm:text-sm tabular-nums text-[#1E3A5F]">
+                    <span className="text-[#616161] md:hidden text-[10px] font-mono uppercase block font-normal">PRECIO:</span>
                     {formatCurrency(product.price, currentInventory?.currency)}
                   </div>
 
-                  <div className="col-span-1 text-left md:text-right font-mono text-xs tabular-nums text-[#1E3A5F]">
-                    <span className="text-[#616161] md:hidden text-[10px] uppercase block">CANTIDAD:</span>
-                    {product.stock} <span className="text-[10px] text-[#616161]">UDS</span>
+                  <div className="col-span-1 text-left md:text-right font-mono font-bold text-xs tabular-nums text-[#1E3A5F]">
+                    <span className="text-[#616161] md:hidden text-[10px] uppercase block font-normal">CANTIDAD:</span>
+                    {product.stock} <span className="text-[10px] text-[#616161] font-normal">UDS</span>
                   </div>
 
                   <div className="col-span-1 flex md:justify-center">

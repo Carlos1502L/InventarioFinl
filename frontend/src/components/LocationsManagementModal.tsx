@@ -108,7 +108,7 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                 <MapPin className="w-5 h-5 text-[#1E3A5F]" />
               </div>
               <div>
-                <h3 className="font-light text-[#1E3A5F] text-base uppercase tracking-tight">Ubicaciones Físicas</h3>
+                <h3 className="font-bold text-[#1E3A5F] text-base uppercase tracking-tight">Ubicaciones Físicas</h3>
                 <p className="text-[11px] text-[#616161]">Depósitos, estantes y etiquetas QR imprimibles</p>
               </div>
             </div>

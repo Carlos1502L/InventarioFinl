@@ -407,7 +407,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               <span className="text-[10px] tracking-widest uppercase font-mono text-[#E8B4A0] block">
                 {productToEdit ? 'EDICIÓN DE MANIFIESTO' : 'NUEVO REGISTRO EN CATÁLOGO'}
               </span>
-              <h3 className="font-light text-[#1E3A5F] text-lg uppercase tracking-tight">
+              <h3 className="font-bold text-[#1E3A5F] text-lg uppercase tracking-tight">
                 {productToEdit ? 'Modificar Ficha Técnica' : 'Registrar Nuevo Ítem'}
               </h3>
             </div>
@@ -436,7 +436,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
                 {/* 1. Nombre */}
                 <div>
-                  <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
                     Nombre del Producto <span className="text-[#E8B4A0]">*</span>
                   </label>
                   <input
@@ -451,7 +451,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
                 {/* 2. Código / SKU con Escáner de Cámara */}
                 <div>
-                  <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
                     Código / SKU / Código de Barras <span className="text-[#E8B4A0]">*</span>
                   </label>
                   <div className="flex gap-2">
@@ -557,7 +557,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
                 {/* 3. Ubicación Asignada con Escáner de QR */}
                 <div>
-                  <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
                     Ubicación Física Asignada <span className="text-[#E8B4A0]">*</span>
                   </label>
                   <div className="flex gap-2">
@@ -593,7 +593,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 {/* 4. Categoría y Subcategoría */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">Categoría</label>
+                    <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">Categoría</label>
                     <div className="relative">
                       <select
                         value={categoryId}
@@ -615,7 +615,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">Subcategoría</label>
+                    <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">Subcategoría</label>
                     <div className="relative">
                       <select
                         value={subcategoryId}
@@ -707,7 +707,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 {/* Stock Actual y Stock Mínimo */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
                       Stock Actual <span className="text-[#E8B4A0]">*</span>
                     </label>
                     <input
@@ -721,7 +721,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
                       Stock Mínimo (Alerta)
                     </label>
                     <input
@@ -915,7 +915,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   {/* Datos del Ítem Reactivo */}
                   <div className="space-y-3 font-mono">
                     <div>
-                      <h4 className="font-light text-base text-[#1E3A5F] uppercase tracking-tight line-clamp-2">
+                      <h4 className="font-bold text-base text-[#1E3A5F] uppercase tracking-tight line-clamp-2">
                         {name || 'NOMBRE DEL PRODUCTO'}
                       </h4>
                       <p className="text-[11px] text-[#616161] mt-0.5 line-clamp-2">
@@ -949,7 +949,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         <span className="text-[10px] text-[#616161] uppercase block">
                           {isBusiness ? 'PRECIO DE VENTA' : 'VALUACIÓN ESTIMADA'}
                         </span>
-                        <span className="text-lg font-light text-[#1E3A5F]">
+                        <span className="text-lg font-bold text-[#1E3A5F]">
                           {formatCurrency(Number(price || 0), currentInventory?.currency)}
                         </span>
                       </div>

@@ -50,7 +50,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
             PREFERENCES // CONTROL PANEL
           </span>
-          <h1 className="text-xl sm:text-2xl font-light tracking-tight text-[#1E3A5F] uppercase">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F] uppercase">
             Configuración del Sistema
           </h1>
           <p className="text-xs text-[#616161] font-light mt-0.5">
@@ -91,7 +91,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   )}
                 </span>
               </div>
-              <h2 className="font-light text-xl text-[#1E3A5F] uppercase tracking-tight">
+              <h2 className="font-bold text-xl text-[#1E3A5F] uppercase tracking-tight">
                 {currentInventory?.name || 'SIN SELECCIONAR'}
               </h2>
               <p className="text-xs text-[#616161] font-light">
@@ -141,7 +141,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         <div className="space-y-3">
           <div className="flex items-center gap-2 px-1">
             <span className="w-1.5 h-1.5 rounded-full bg-[#E8B4A0]" />
-            <h3 className="text-xs font-mono uppercase tracking-widest text-[#616161]">
+            <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#1E3A5F]">
               01 // OPERACIONES & PAGOS
             </h3>
           </div>
@@ -157,7 +157,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   <QrCode className="w-5 h-5 text-[#1E3A5F]" />
                 </div>
                 <div>
-                  <h4 className="font-normal text-sm text-[#1E3A5F] uppercase">Pasarela de Pagos (Yape / Plin)</h4>
+                  <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Pasarela de Pagos (Yape / Plin)</h4>
                   <p className="text-xs text-[#616161] font-light">Configura tus códigos QR y números asociados para el cobro ágil a clientes</p>
                 </div>
               </div>
@@ -174,7 +174,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   <Ticket className="w-5 h-5 text-[#1E3A5F]" />
                 </div>
                 <div>
-                  <h4 className="font-normal text-sm text-[#1E3A5F] uppercase">Cupones de Descuento Promocionales</h4>
+                  <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Cupones de Descuento Promocionales</h4>
                   <p className="text-xs text-[#616161] font-light">Crea y audita códigos de descuento por porcentaje o monto fijo</p>
                 </div>
               </div>
@@ -190,7 +190,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       <div className="space-y-3">
         <div className="flex items-center gap-2 px-1">
           <span className="w-1.5 h-1.5 rounded-full bg-[#E8B4A0]" />
-          <h3 className="text-xs font-mono uppercase tracking-widest text-[#616161]">
+          <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#1E3A5F]">
             02 // ESTRUCTURA & LOGÍSTICA
           </h3>
         </div>
@@ -206,7 +206,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <Tag className="w-5 h-5 text-[#1E3A5F]" />
               </div>
               <div>
-                <h4 className="font-normal text-sm text-[#1E3A5F] uppercase">Categorías & Subcategorías Dinámicas</h4>
+                <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Categorías & Subcategorías Dinámicas</h4>
                 <p className="text-xs text-[#616161] font-light">Organización taxonómica, familias de artículos y paleta de distinción</p>
               </div>
             </div>
@@ -223,7 +223,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <MapPin className="w-5 h-5 text-[#1E3A5F]" />
               </div>
               <div>
-                <h4 className="font-normal text-sm text-[#1E3A5F] uppercase">Ubicaciones Físicas & Almacenes</h4>
+                <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Ubicaciones Físicas & Almacenes</h4>
                 <p className="text-xs text-[#616161] font-light">Estructura espacial de pasillos, estanterías, depósitos y secciones</p>
               </div>
             </div>
@@ -240,7 +240,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <Printer className="w-5 h-5 text-[#1E3A5F]" />
               </div>
               <div>
-                <h4 className="font-normal text-sm text-[#1E3A5F] uppercase">Impresión de Rótulos & Códigos QR</h4>
+                <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Impresión de Rótulos & Códigos QR</h4>
                 <p className="text-xs text-[#616161] font-light">Generación de credenciales físicas para estanterías (formato estándar 85.6 × 53.9 mm)</p>
               </div>
             </div>
@@ -255,7 +255,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       <div className="space-y-3">
         <div className="flex items-center gap-2 px-1">
           <span className="w-1.5 h-1.5 rounded-full bg-[#E8B4A0]" />
-          <h3 className="text-xs font-mono uppercase tracking-widest text-[#616161]">
+          <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#1E3A5F]">
             03 // GOBERNANZA & APLICACIÓN
           </h3>
         </div>
@@ -271,7 +271,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <Users className="w-5 h-5 text-[#1E3A5F]" />
               </div>
               <div>
-                <h4 className="font-normal text-sm text-[#1E3A5F] uppercase">Equipo & Colaboradores</h4>
+                <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Equipo & Colaboradores</h4>
                 <p className="text-xs text-[#616161] font-light">Invitaciones por correo, asignación de roles y control de privilegios</p>
               </div>
             </div>
@@ -283,7 +283,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs space-y-3">
           <div className="flex items-center gap-2.5">
             <Smartphone className="w-5 h-5 text-[#1E3A5F]" />
-            <h4 className="font-normal text-sm text-[#1E3A5F] uppercase">Aplicación Web Progresiva (PWA Móvil)</h4>
+            <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Aplicación Web Progresiva (PWA Móvil)</h4>
           </div>
           <p className="text-xs text-[#616161] leading-relaxed font-light">
             Esta plataforma está optimizada para smartphones Android e iOS. Puedes instalarla en la pantalla de inicio de tu dispositivo para obtener experiencia a pantalla completa y acceso rápido a la cámara escáner.

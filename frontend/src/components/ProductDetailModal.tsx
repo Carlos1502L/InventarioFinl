@@ -293,7 +293,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <p className="font-mono text-[10px] text-[#E8B4A0] uppercase tracking-[0.2em] mb-1 font-medium">
                   FICHA TÉCNICA // {product.categories?.name || 'MERCANCÍA GENERAL'}
                 </p>
-                <h2 className="text-xl sm:text-2xl font-light uppercase tracking-tight text-[#1E3A5F]">
+                <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-[#1E3A5F]">
                   {product.name}
                 </h2>
                 {product.description && (
@@ -311,7 +311,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <span className="text-[10px] text-[#616161] uppercase tracking-wider">
                     PRECIO UNITARIO DE SALIDA
                   </span>
-                  <span className="text-base sm:text-lg font-light tabular-nums text-[#1E3A5F]">
+                  <span className="text-base sm:text-lg font-bold tabular-nums text-[#1E3A5F]">
                     {formatCurrency(product.price, currentInventory?.currency)}
                   </span>
                 </div>
@@ -322,8 +322,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     VOLUMEN EN ALMACÉN
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="text-base font-light tabular-nums text-[#1E3A5F]">
-                      {product.stock} <span className="text-xs text-[#616161]">UDS</span>
+                    <span className="text-base font-bold tabular-nums text-[#1E3A5F]">
+                      {product.stock} <span className="text-xs text-[#616161] font-normal">UDS</span>
                     </span>
                     <span className="text-[10px] text-[#616161] uppercase">
                       (MÍN: {product.min_stock || 1})
@@ -336,7 +336,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <span className="text-[10px] text-[#616161] uppercase tracking-wider">
                     VALOR TOTAL DE EXISTENCIAS
                   </span>
-                  <span className="text-sm font-light tabular-nums text-[#1E3A5F]">
+                  <span className="text-sm font-bold tabular-nums text-[#1E3A5F]">
                     {formatCurrency(totalItemValuation, currentInventory?.currency)}
                   </span>
                 </div>
@@ -346,7 +346,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <span className="text-[10px] text-[#616161] uppercase tracking-wider">
                     UBICACIÓN FÍSICA // RACK
                   </span>
-                  <span className="text-[#1E3A5F] uppercase flex items-center gap-1 font-medium">
+                  <span className="text-[#1E3A5F] uppercase flex items-center gap-1 font-bold">
                     <MapPin className="w-3.5 h-3.5 text-[#1E3A5F]" />
                     {currentLocation?.name || 'SIN UBICACIÓN ASIGNADA'}
                     {currentLocation?.code && ` [${currentLocation.code}]`}
@@ -358,7 +358,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <span className="text-[10px] text-[#616161] uppercase tracking-wider">
                     CLASIFICACIÓN TÉCNICA
                   </span>
-                  <span className="text-[#1E3A5F] uppercase">
+                  <span className="text-[#1E3A5F] uppercase font-bold">
                     {product.categories?.name || 'GENERAL'}
                     {product.subcategories?.name && ` // ${product.subcategories.name}`}
                   </span>
@@ -424,7 +424,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       className="p-3 border border-[#E5E7EB] hover:border-[#1E3A5F] rounded-xl bg-white hover:bg-[#F8F9FA] text-left transition-all active:scale-[0.98] flex items-center justify-between group shadow-sm"
                     >
                       <div className="min-w-0 pr-2">
-                        <p className="text-xs uppercase tracking-wide text-[#1E3A5F] group-hover:underline truncate font-medium">
+                        <p className="text-xs uppercase tracking-wide text-[#1E3A5F] group-hover:underline truncate font-bold">
                           {v.name}
                         </p>
                         <span className="text-[10px] text-[#616161] uppercase tracking-wider block mt-0.5">

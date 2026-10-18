@@ -196,7 +196,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
             <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
               DATA EXPORT // INVENTORY CENSUS & AUDIT
             </span>
-            <h1 className="text-xl sm:text-2xl font-light tracking-tight text-[#1E3A5F] uppercase">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F] uppercase">
               Reportes & Manifiestos de Stock
             </h1>
             <p className="text-xs text-[#616161] font-light mt-0.5">
@@ -241,7 +241,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
             <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161] block">
               Ítems Filtrados
             </span>
-            <span className="text-xl font-light text-[#1E3A5F] font-mono mt-0.5 block">
+            <span className="text-xl font-bold text-[#1E3A5F] font-mono mt-0.5 block">
               {reportProducts.length} ítems
             </span>
           </div>
@@ -250,7 +250,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
             <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161] block">
               Total de Unidades
             </span>
-            <span className="text-xl font-light text-[#1E3A5F] font-mono mt-0.5 block">
+            <span className="text-xl font-bold text-[#1E3A5F] font-mono mt-0.5 block">
               {totalUnits} uds
             </span>
           </div>
@@ -259,7 +259,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
             <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161] block">
               Valorización Total
             </span>
-            <span className="text-xl font-light text-[#1E3A5F] font-mono mt-0.5 block">
+            <span className="text-xl font-bold text-[#1E3A5F] font-mono mt-0.5 block">
               {formatCurrency(totalValuation, currentInventory?.currency)}
             </span>
           </div>
@@ -269,7 +269,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
       {/* 2. Filtros de Generación */}
       <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 space-y-3 shadow-xs">
         <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EB]">
-          <span className="text-xs font-mono uppercase tracking-wider text-[#1E3A5F]">
+          <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F]">
             Parámetros de Segmentación
           </span>
           {hasActiveFilters && (
@@ -357,7 +357,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
       {/* 3. Tabla Interactiva de Datos con RNF-01 Paginación */}
       <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
         <div className="p-4 border-b border-[#E5E7EB] flex items-center justify-between">
-          <span className="text-xs font-mono uppercase tracking-wider text-[#1E3A5F]">
+          <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F]">
             Previsualización del Manifiesto ({reportProducts.length} registros)
           </span>
           {hasActiveFilters && (
@@ -370,15 +370,15 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-[#F8F9FA] text-[#616161] font-mono text-[10px] uppercase tracking-wider border-b border-[#E5E7EB]">
-                <th className="p-3.5 font-medium">CÓDIGO</th>
-                <th className="p-3.5 font-medium">PRODUCTO</th>
-                <th className="p-3.5 font-medium">CATEGORÍA</th>
-                <th className="p-3.5 font-medium">UBICACIÓN</th>
-                <th className="p-3.5 font-medium text-right">PRECIO</th>
-                <th className="p-3.5 font-medium text-right">STOCK</th>
-                <th className="p-3.5 font-medium text-right">VALOR TOTAL</th>
-                <th className="p-3.5 font-medium text-center">ESTADO</th>
+              <tr className="bg-[#F8F9FA] text-[#1E3A5F] font-mono text-[10px] font-bold uppercase tracking-wider border-b border-[#E5E7EB]">
+                <th className="p-3.5">CÓDIGO</th>
+                <th className="p-3.5">PRODUCTO</th>
+                <th className="p-3.5">CATEGORÍA</th>
+                <th className="p-3.5">UBICACIÓN</th>
+                <th className="p-3.5 text-right">PRECIO</th>
+                <th className="p-3.5 text-right">STOCK</th>
+                <th className="p-3.5 text-right">VALOR TOTAL</th>
+                <th className="p-3.5 text-center">ESTADO</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E5E7EB]">
@@ -391,15 +391,15 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
               ) : (
                 paginatedReportProducts.map(p => (
                   <tr key={p.id} className="hover:bg-[#F8F9FA]/60 transition-colors">
-                    <td className="p-3.5 font-mono font-medium text-[#1E3A5F]">{p.code}</td>
-                    <td className="p-3.5 font-normal text-[#1E3A5F] max-w-[220px] truncate uppercase">{p.name}</td>
+                    <td className="p-3.5 font-mono font-bold text-[#1E3A5F]">{p.code}</td>
+                    <td className="p-3.5 font-bold text-[#1E3A5F] max-w-[220px] truncate uppercase">{p.name}</td>
                     <td className="p-3.5 text-[#616161]">{p.categories?.name || 'General'}</td>
                     <td className="p-3.5 text-[#616161]">{p.locations?.name || '-'}</td>
-                    <td className="p-3.5 text-right text-[#1E3A5F] font-mono">
+                    <td className="p-3.5 text-right text-[#1E3A5F] font-mono font-bold">
                       {formatCurrency(p.price, currentInventory?.currency)}
                     </td>
-                    <td className="p-3.5 text-right font-mono font-medium text-[#1E3A5F]">{p.stock}</td>
-                    <td className="p-3.5 text-right font-mono font-medium text-[#1E3A5F]">
+                    <td className="p-3.5 text-right font-mono font-bold text-[#1E3A5F]">{p.stock}</td>
+                    <td className="p-3.5 text-right font-mono font-bold text-[#1E3A5F]">
                       {formatCurrency((p.price || 0) * (p.stock || 0), currentInventory?.currency)}
                     </td>
                     <td className="p-3.5 text-center">

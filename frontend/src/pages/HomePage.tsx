@@ -95,7 +95,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 INVENTORY MANIFEST // SPECIFICATION SHEET
               </p>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-[#1E3A5F] uppercase">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1E3A5F] uppercase">
               RESUMEN GENERAL & OPERACIONES
             </h1>
           </div>
@@ -128,7 +128,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               TOTAL SKUS REGISTRADOS
             </span>
             <div className="mt-3">
-              <span className="text-3xl sm:text-4xl font-light tabular-nums text-[#1E3A5F] block tracking-tight">
+              <span className="text-3xl sm:text-4xl font-bold tabular-nums text-[#1E3A5F] block tracking-tight">
                 {metrics.totalSkus.toString().padStart(4, '0')}
               </span>
               <span className="text-[10px] text-[#616161] uppercase tracking-wider block mt-1 font-sans">
@@ -143,7 +143,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               UNIDADES DISPONIBLES
             </span>
             <div className="mt-3">
-              <span className="text-3xl sm:text-4xl font-light tabular-nums text-[#1E3A5F] block tracking-tight">
+              <span className="text-3xl sm:text-4xl font-bold tabular-nums text-[#1E3A5F] block tracking-tight">
                 {metrics.totalUnits.toLocaleString('es-PE')} <span className="text-base text-[#616161] font-normal">UDS</span>
               </span>
               <span className="text-[10px] text-[#616161] uppercase tracking-wider block mt-1 font-sans">
@@ -180,7 +180,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               VALUACIÓN DE STOCK
             </span>
             <div className="mt-3">
-              <span className="text-3xl sm:text-4xl font-light tabular-nums text-[#1E3A5F] block tracking-tight">
+              <span className="text-3xl sm:text-4xl font-bold tabular-nums text-[#1E3A5F] block tracking-tight">
                 {formatCurrency(metrics.totalValue, currentInventory?.currency)}
               </span>
               <span className="text-[10px] text-[#616161] uppercase tracking-wider block mt-1 font-sans">
@@ -204,7 +204,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             <span className="text-[10px] text-[#E8B4A0] uppercase tracking-[0.15em] block font-semibold">
               MÓDULO DE STOCK
             </span>
-            <span className="text-sm font-normal uppercase tracking-wide text-[#1E3A5F] block mt-0.5 group-hover:underline">
+            <span className="text-sm font-bold uppercase tracking-wide text-[#1E3A5F] block mt-0.5 group-hover:underline">
               VER CATÁLOGO COMPLETO // STOCK
             </span>
           </div>
@@ -222,7 +222,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               <span className="text-[10px] text-[#E8B4A0] uppercase tracking-[0.15em] block font-semibold">
                 TERMINAL DE COBRO
               </span>
-              <span className="text-sm font-normal uppercase tracking-wide text-[#1E3A5F] block mt-0.5 group-hover:underline">
+              <span className="text-sm font-bold uppercase tracking-wide text-[#1E3A5F] block mt-0.5 group-hover:underline">
                 NUEVA VENTA // REGISTRO RÁPIDO
               </span>
             </div>
@@ -244,7 +244,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             <div className="flex items-center justify-between pb-3.5 border-b border-[#E5E7EB] font-mono">
               <div className="flex items-center gap-2">
                 <Receipt className="w-4 h-4 text-[#1E3A5F]" />
-                <h3 className="text-xs uppercase tracking-wider text-[#1E3A5F]">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
                   ÚLTIMAS VENTAS / SALIDAS
                 </h3>
               </div>
@@ -283,14 +283,14 @@ export const HomePage: React.FC<HomePageProps> = ({
                     >
                       <div className="min-w-0 pr-2">
                         <span className="text-[11px] text-[#1E3A5F] uppercase tracking-wider block truncate group-hover:underline">
-                          {receiptCode} // {summaryText.toUpperCase()}
+                          <span className="font-mono text-[#616161]">{receiptCode} //</span> <span className="font-bold text-[#1E3A5F]">{summaryText.toUpperCase()}</span>
                         </span>
                         <span className="text-[10px] text-[#616161] uppercase tracking-widest block mt-0.5">
                           {formatDate(sale.created_at)} // MÉTODO: {sale.payment_method?.toUpperCase()}
                         </span>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <span className="text-xs sm:text-sm font-normal tabular-nums text-[#1E3A5F] block tracking-tight">
+                        <span className="text-xs sm:text-sm font-bold tabular-nums text-[#1E3A5F] block tracking-tight">
                           {formatCurrency(sale.total_amount, currentInventory?.currency)}
                         </span>
                       </div>
@@ -318,7 +318,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             <div className="flex items-center justify-between pb-3.5 border-b border-[#E5E7EB] font-mono">
               <div className="flex items-center gap-2">
                 <Package className="w-4 h-4 text-[#1E3A5F]" />
-                <h3 className="text-xs uppercase tracking-wider text-[#1E3A5F]">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
                   ÚLTIMOS ÍTEMS AÑADIDOS
                 </h3>
               </div>
@@ -346,17 +346,17 @@ export const HomePage: React.FC<HomePageProps> = ({
                     >
                       <div className="min-w-0 pr-2">
                         <span className="text-[11px] text-[#1E3A5F] uppercase tracking-wider block truncate group-hover:underline">
-                          REF-{prod.code} // {prod.name.toUpperCase()}
+                          <span className="font-mono text-[#616161]">REF-{prod.code} //</span> <span className="font-bold text-[#1E3A5F]">{prod.name.toUpperCase()}</span>
                         </span>
                         <span className="text-[10px] text-[#616161] uppercase tracking-widest block mt-0.5">
                           {formatDate(prod.created_at)} // CAT: {prod.categories?.name?.toUpperCase() || 'GENERAL'}
                         </span>
                       </div>
                       <div className="text-right flex-shrink-0 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2">
-                        <span className="text-xs font-normal tabular-nums text-[#1E3A5F]">
+                        <span className="text-xs font-bold tabular-nums text-[#1E3A5F]">
                           +{prod.stock} UDS
                         </span>
-                        <span className="text-[10px] text-[#616161] tabular-nums">
+                        <span className="text-[10px] text-[#616161] tabular-nums font-semibold">
                           {formatCurrency(prod.price, currentInventory?.currency)}
                         </span>
                       </div>

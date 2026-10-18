@@ -438,7 +438,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted 
           <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
             TERMINAL OPERATIVA // CHECKOUT
           </span>
-          <h1 className="text-xl sm:text-2xl font-light tracking-tight text-[#1E3A5F] uppercase">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F] uppercase">
             Punto de Venta & Caja
           </h1>
           <p className="text-xs text-[#616161] font-light mt-0.5">
@@ -477,7 +477,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted 
           {/* Tarjeta de Búsqueda */}
           <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-[#E8B4A0] block">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#1E3A5F] font-bold block">
                 CATÁLOGO ACTIVO
               </span>
               <span className="text-xs text-[#616161]">
@@ -524,13 +524,13 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted 
                     className="p-3 flex items-center justify-between hover:bg-white transition-colors"
                   >
                     <div className="min-w-0 pr-3">
-                      <p className="text-xs font-medium text-[#1E3A5F] uppercase truncate">{p.name}</p>
+                      <p className="text-sm font-bold text-[#1E3A5F] uppercase truncate">{p.name}</p>
                       <div className="flex items-center gap-2 text-[11px] text-[#616161] font-mono mt-0.5">
-                        <span>{p.code}</span>
+                        <span className="font-semibold">{p.code}</span>
                         <span>•</span>
-                        <span>Stock: <strong className="text-[#1E3A5F] font-normal">{p.stock} uds</strong></span>
+                        <span>Stock: <strong className="text-[#1E3A5F] font-semibold">{p.stock} uds</strong></span>
                         <span>•</span>
-                        <span className="text-[#1E3A5F] font-medium">
+                        <span className="text-[#1E3A5F] font-bold">
                           {formatCurrency(p.price, currentInventory?.currency)}
                         </span>
                       </div>
@@ -553,7 +553,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted 
             <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="w-4 h-4 text-[#E8B4A0]" />
-                <h3 className="text-xs font-medium uppercase tracking-wider text-[#1E3A5F]">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
                   Ítems Seleccionados ({cart.length})
                 </h3>
               </div>
@@ -580,9 +580,9 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted 
                 {cart.map(item => (
                   <div key={item.product.id} className="py-3 flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-[#1E3A5F] uppercase truncate">{item.product.name}</p>
+                      <p className="text-sm font-bold text-[#1E3A5F] uppercase truncate">{item.product.name}</p>
                       <p className="text-[11px] text-[#616161] font-mono">
-                        {item.product.code} • {formatCurrency(item.product.price, currentInventory?.currency)} c/u
+                        <span className="font-semibold">{item.product.code}</span> • <span className="font-semibold">{formatCurrency(item.product.price, currentInventory?.currency)}</span> c/u
                       </p>
                     </div>
 
@@ -609,7 +609,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted 
 
                     {/* Subtotal del Producto */}
                     <div className="text-right w-24">
-                      <p className="text-xs font-mono font-medium text-[#1E3A5F]">
+                      <p className="text-sm font-mono font-bold text-[#1E3A5F]">
                         {formatCurrency(item.product.price * item.quantity, currentInventory?.currency)}
                       </p>
                     </div>
@@ -635,7 +635,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted 
           <form onSubmit={handleProcessSale} className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-4">
             <div className="flex items-center gap-2 pb-3 border-b border-[#E5E7EB]">
               <Receipt className="w-4 h-4 text-[#E8B4A0]" />
-              <h3 className="text-xs font-medium uppercase tracking-wider text-[#1E3A5F]">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
                 Liquidación de Ticket
               </h3>
             </div>
@@ -661,8 +661,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted 
               )}
 
               <div className="flex items-center justify-between pt-2 border-t border-[#E5E7EB]">
-                <span className="text-xs uppercase tracking-wider text-[#1E3A5F]">TOTAL COBRO:</span>
-                <span className="text-2xl font-light text-[#1E3A5F]">
+                <span className="text-xs uppercase tracking-wider text-[#1E3A5F] font-bold">TOTAL COBRO:</span>
+                <span className="text-2xl font-bold text-[#1E3A5F]">
                   {formatCurrency(finalTotal, currentInventory?.currency)}
                 </span>
               </div>

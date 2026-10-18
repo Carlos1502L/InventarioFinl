@@ -87,7 +87,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
           <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
             STOCK TELEMETRY // SPATIAL & METRIC AUDIT
           </span>
-          <h1 className="text-xl sm:text-2xl font-light tracking-tight text-[#1E3A5F] uppercase">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F] uppercase">
             Telemetría de Stock & Métricas
           </h1>
           <p className="text-xs text-[#616161] font-light mt-0.5">
@@ -112,7 +112,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
             </span>
             <DollarSign className="w-4 h-4 text-[#E8B4A0]" />
           </div>
-          <p className="text-xl sm:text-2xl font-light text-[#1E3A5F] font-mono mt-1">
+          <p className="text-xl sm:text-2xl font-bold text-[#1E3A5F] font-mono mt-1">
             {formatCurrency(stats.totalValuation, currentInventory?.currency)}
           </p>
           <span className="text-[10px] font-mono text-[#616161] block">En existencias activas</span>
@@ -126,7 +126,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
             </span>
             <Package className="w-4 h-4 text-[#E8B4A0]" />
           </div>
-          <p className="text-xl sm:text-2xl font-light text-[#1E3A5F] font-mono mt-1">
+          <p className="text-xl sm:text-2xl font-bold text-[#1E3A5F] font-mono mt-1">
             {stats.totalUnits.toLocaleString()} <span className="text-xs font-normal text-[#616161]">uds</span>
           </p>
           <span className="text-[10px] font-mono text-[#616161] block">En {stats.activeCount} SKUs únicos</span>
@@ -140,7 +140,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
             </span>
             <span className="w-2.5 h-2.5 rounded-full bg-[#ffdd00] shadow-sm animate-pulse" />
           </div>
-          <p className="text-xl sm:text-2xl font-light text-[#1E3A5F] font-mono mt-1">
+          <p className="text-xl sm:text-2xl font-bold text-[#1E3A5F] font-mono mt-1">
             {stats.lowStockCount} <span className="text-xs font-normal text-[#616161]">ítems</span>
           </p>
           <span className="text-[10px] font-mono text-rose-600 block">
@@ -156,7 +156,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
             </span>
             <MapPin className="w-4 h-4 text-[#E8B4A0]" />
           </div>
-          <p className="text-xl sm:text-2xl font-light text-[#1E3A5F] font-mono mt-1">
+          <p className="text-xl sm:text-2xl font-bold text-[#1E3A5F] font-mono mt-1">
             {locations.length} <span className="text-xs font-normal text-[#616161]">espacios</span>
           </p>
           <span className="text-[10px] font-mono text-[#616161] block">Con rótulos y códigos QR</span>
@@ -172,7 +172,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
               <span className="text-[10px] font-mono uppercase tracking-widest text-[#E8B4A0] block">
                 OCUPACIÓN FÍSICA
               </span>
-              <h3 className="font-light text-base text-[#1E3A5F] uppercase tracking-tight">
+              <h3 className="font-bold text-base text-[#1E3A5F] uppercase tracking-tight">
                 Distribución por Ubicación
               </h3>
             </div>
@@ -191,8 +191,8 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
                 <div key={loc.id} className="space-y-1.5 font-mono">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-[#1E3A5F] uppercase">{loc.name}</span>
-                      <span className="text-[10px] text-[#616161] px-1.5 py-0.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-full">
+                      <span className="font-bold text-[#1E3A5F] uppercase">{loc.name}</span>
+                      <span className="text-[10px] text-[#616161] font-semibold px-1.5 py-0.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-full">
                         {loc.code}
                       </span>
                     </div>
@@ -226,7 +226,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
               <span className="text-[10px] font-mono uppercase tracking-widest text-[#E8B4A0] block">
                 PARTICIPACIÓN FINANCIERA
               </span>
-              <h3 className="font-light text-base text-[#1E3A5F] uppercase tracking-tight">
+              <h3 className="font-bold text-base text-[#1E3A5F] uppercase tracking-tight">
                 Valorización por Categoría
               </h3>
             </div>
@@ -249,7 +249,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
                         className="w-2 h-2 rounded-full"
                         style={{ backgroundColor: cat.color || '#E8B4A0' }}
                       />
-                      <span className="font-medium text-[#1E3A5F] uppercase">{cat.name}</span>
+                      <span className="font-bold text-[#1E3A5F] uppercase">{cat.name}</span>
                     </div>
                     <span className="text-[#1E3A5F]">
                       {formatCurrency(cat.valuation, currentInventory?.currency)} ({cat.percent}%)

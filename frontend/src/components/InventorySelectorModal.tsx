@@ -101,7 +101,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
               <Layers className="w-5 h-5 text-[#1E3A5F]" />
             </div>
             <div>
-              <h2 className="text-base font-light text-[#1E3A5F] uppercase tracking-tight">
+              <h2 className="text-base font-bold text-[#1E3A5F] uppercase tracking-tight">
                 Espacios de Inventario
               </h2>
               <p className="text-[11px] text-[#616161]">
@@ -148,7 +148,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="font-medium text-[#1E3A5F] text-sm group-hover:text-[#1E3A5F] transition-colors uppercase">
+                        <h4 className="font-bold text-[#1E3A5F] text-sm group-hover:text-[#1E3A5F] transition-colors uppercase">
                           {inv.name}
                         </h4>
                         <span

@@ -189,7 +189,7 @@ export const SalesHistoryPage: React.FC = () => {
           <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
             TRANSACTIONS AUDIT // HISTORY & EXPORT
           </span>
-          <h1 className="text-xl sm:text-2xl font-light tracking-tight text-[#1E3A5F] uppercase">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F] uppercase">
             Historial de Ventas & Manifiestos
           </h1>
           <p className="text-xs text-[#616161] font-light mt-0.5">
@@ -223,7 +223,7 @@ export const SalesHistoryPage: React.FC = () => {
           <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">
             <DollarSign className="w-3.5 h-3.5 text-[#E8B4A0]" /> Recaudación Total
           </div>
-          <p className="text-2xl font-light text-[#1E3A5F] font-mono">
+          <p className="text-2xl font-bold text-[#1E3A5F] font-mono">
             {formatCurrency(totalRevenue, currentInventory?.currency)}
           </p>
         </div>
@@ -232,8 +232,8 @@ export const SalesHistoryPage: React.FC = () => {
           <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">
             <Receipt className="w-3.5 h-3.5 text-[#E8B4A0]" /> Ventas Concretadas
           </div>
-          <p className="text-2xl font-light text-[#1E3A5F] font-mono">
-            {filteredSales.length} <span className="text-xs text-[#616161] font-sans">tickets</span>
+          <p className="text-2xl font-bold text-[#1E3A5F] font-mono">
+            {filteredSales.length} <span className="text-xs text-[#616161] font-sans font-normal">tickets</span>
           </p>
         </div>
 
@@ -241,8 +241,8 @@ export const SalesHistoryPage: React.FC = () => {
           <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">
             <TrendingUp className="w-3.5 h-3.5 text-[#E8B4A0]" /> Unidades Despachadas
           </div>
-          <p className="text-2xl font-light text-[#1E3A5F] font-mono">
-            {totalUnitsSold} <span className="text-xs text-[#616161] font-sans">uds</span>
+          <p className="text-2xl font-bold text-[#1E3A5F] font-mono">
+            {totalUnitsSold} <span className="text-xs text-[#616161] font-sans font-normal">uds</span>
           </p>
         </div>
       </div>
@@ -312,7 +312,7 @@ export const SalesHistoryPage: React.FC = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#F8F9FA] text-[#616161] uppercase tracking-wider text-[10px] font-mono border-b border-[#E5E7EB]">
+              <thead className="bg-[#F8F9FA] text-[#1E3A5F] font-bold uppercase tracking-wider text-[10px] font-mono border-b border-[#E5E7EB]">
                 <tr>
                   <th className="p-3.5">Ticket</th>
                   <th className="p-3.5">Fecha</th>
@@ -330,24 +330,24 @@ export const SalesHistoryPage: React.FC = () => {
                     onClick={() => setSelectedSale(s)}
                     className="hover:bg-[#F8F9FA]/60 cursor-pointer transition-colors"
                   >
-                    <td className="p-3.5 font-mono font-medium text-[#1E3A5F]">
+                    <td className="p-3.5 font-mono font-bold text-[#1E3A5F]">
                       #{s.id.slice(0, 8).toUpperCase()}
                     </td>
-                    <td className="p-3.5 text-[#616161] font-mono text-[11px]">
+                    <td className="p-3.5 text-[#616161] font-mono text-[11px] font-medium">
                       {formatDate(s.created_at)}
                     </td>
-                    <td className="p-3.5 font-normal text-[#1E3A5F] uppercase">
+                    <td className="p-3.5 font-semibold text-[#1E3A5F] uppercase">
                       {s.customer_name || 'Consumidor Final'}
                     </td>
                     <td className="p-3.5">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E8B4A0]/50">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-medium uppercase bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E8B4A0]/50">
                         {s.payment_method}
                       </span>
                     </td>
                     <td className="p-3.5 text-[#616161] truncate max-w-[160px] font-mono text-[11px]">
                       {s.seller_email}
                     </td>
-                    <td className="p-3.5 text-right font-mono font-medium text-[#1E3A5F]">
+                    <td className="p-3.5 text-right font-mono font-bold text-[#1E3A5F]">
                       {formatCurrency(s.total_amount, currentInventory?.currency)}
                     </td>
                     <td className="p-3.5 text-center">
@@ -370,7 +370,7 @@ export const SalesHistoryPage: React.FC = () => {
             <div className="flex items-center justify-between p-4 border-b border-[#E5E7EB] bg-white">
               <div className="flex items-center gap-2">
                 <Receipt className="w-4 h-4 text-[#E8B4A0]" />
-                <h3 className="font-light text-[#1E3A5F] uppercase tracking-tight text-sm">
+                <h3 className="font-bold text-[#1E3A5F] uppercase tracking-tight text-sm">
                   Ticket #{selectedSale.id.slice(0, 8).toUpperCase()}
                 </h3>
               </div>
@@ -421,12 +421,12 @@ export const SalesHistoryPage: React.FC = () => {
                   {selectedSale.items?.map((it) => (
                     <div key={it.id} className="p-3 flex items-center justify-between text-xs">
                       <div>
-                        <p className="font-medium text-[#1E3A5F] uppercase">{it.product_name}</p>
+                        <p className="font-bold text-[#1E3A5F] uppercase">{it.product_name}</p>
                         <p className="text-[10px] text-[#616161] font-mono mt-0.5">
-                          {it.product_code} • {it.quantity} uds × {formatCurrency(it.unit_price, currentInventory?.currency)}
+                          <span className="font-semibold">{it.product_code}</span> • {it.quantity} uds × {formatCurrency(it.unit_price, currentInventory?.currency)}
                         </p>
                       </div>
-                      <span className="font-mono font-medium text-[#1E3A5F]">
+                      <span className="font-mono font-bold text-[#1E3A5F]">
                         {formatCurrency(it.subtotal, currentInventory?.currency)}
                       </span>
                     </div>
@@ -436,8 +436,8 @@ export const SalesHistoryPage: React.FC = () => {
 
               {/* Total final */}
               <div className="flex items-center justify-between p-4 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-mono">
-                <span className="text-xs uppercase tracking-wider text-[#616161]">TOTAL LIQUIDADO:</span>
-                <span className="text-lg font-light text-[#1E3A5F]">
+                <span className="text-xs uppercase tracking-wider text-[#616161] font-bold">TOTAL LIQUIDADO:</span>
+                <span className="text-lg font-bold text-[#1E3A5F]">
                   {formatCurrency(selectedSale.total_amount, currentInventory?.currency)}
                 </span>
               </div>

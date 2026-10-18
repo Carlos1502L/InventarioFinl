@@ -83,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="text-[9px] font-mono uppercase tracking-widest text-[#E8B4A0] block">
               DEPÓSITO ACTIVO
             </span>
-            <span className="text-xs font-normal text-white uppercase truncate block group-hover:underline">
+            <span className="text-xs font-bold text-white uppercase truncate block group-hover:underline">
               {currentInventory?.name || 'SELECCIONAR...'}
             </span>
           </div>
