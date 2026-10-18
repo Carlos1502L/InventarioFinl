@@ -182,15 +182,18 @@ export const SalesHistoryPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-28 sm:pb-12 max-w-7xl mx-auto">
-      {/* 1. Cabecera */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-6 pb-28 sm:pb-12 max-w-7xl mx-auto font-normal text-[#1E3A5F]">
+      {/* 1. Cabecera Editorial */}
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2.5">
-            <History className="w-6 h-6 text-blue-600" /> Historial y Exportación de Ventas
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Consulta, auditoría de transacciones y descarga de comprobantes y reportes
+          <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
+            TRANSACTIONS AUDIT // HISTORY & EXPORT
+          </span>
+          <h1 className="text-xl sm:text-2xl font-light tracking-tight text-[#1E3A5F] uppercase">
+            Historial de Ventas & Manifiestos
+          </h1>
+          <p className="text-xs text-[#616161] font-light mt-0.5">
+            Consulta, auditoría de transacciones y exportación oficial de comprobantes.
           </p>
         </div>
 
@@ -198,81 +201,83 @@ export const SalesHistoryPage: React.FC = () => {
           <button
             onClick={handleExportCSV}
             disabled={filteredSales.length === 0}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-600/20 dark:hover:bg-emerald-600/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 text-xs font-bold rounded-xl transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs uppercase tracking-wider rounded-full transition-all disabled:opacity-50 shadow-xs"
           >
-            <FileSpreadsheet className="w-4 h-4" /> CSV
+            <FileSpreadsheet className="w-3.5 h-3.5 text-[#1E3A5F]" />
+            <span>CSV</span>
           </button>
           <button
             onClick={handleExportPDF}
             disabled={filteredSales.length === 0}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-600/20 dark:hover:bg-rose-600/30 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 text-xs font-bold rounded-xl transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-full transition-all disabled:opacity-50 shadow-xs"
           >
-            <FileText className="w-4 h-4" /> PDF
+            <FileText className="w-3.5 h-3.5 text-[#E8B4A0]" />
+            <span>PDF</span>
           </button>
         </div>
       </div>
 
-      {/* 2. KPIs y Métricas */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-            <DollarSign className="w-4 h-4 text-emerald-500" /> Recaudación Total
+      {/* 2. KPIs y Métricas Resumen */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="p-5 bg-white border border-[#E5E7EB] rounded-2xl shadow-xs">
+          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">
+            <DollarSign className="w-3.5 h-3.5 text-[#E8B4A0]" /> Recaudación Total
           </div>
-          <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
+          <p className="text-2xl font-light text-[#1E3A5F] font-mono">
             {formatCurrency(totalRevenue, currentInventory?.currency)}
           </p>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-            <Receipt className="w-4 h-4 text-blue-500" /> Ventas Concretadas
+        <div className="p-5 bg-white border border-[#E5E7EB] rounded-2xl shadow-xs">
+          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">
+            <Receipt className="w-3.5 h-3.5 text-[#E8B4A0]" /> Ventas Concretadas
           </div>
-          <p className="text-2xl font-extrabold text-slate-900 dark:text-white">
-            {filteredSales.length} <span className="text-xs font-normal text-slate-500">tickets</span>
+          <p className="text-2xl font-light text-[#1E3A5F] font-mono">
+            {filteredSales.length} <span className="text-xs text-[#616161] font-sans">tickets</span>
           </p>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-            <TrendingUp className="w-4 h-4 text-purple-500" /> Unidades Vendidas
+        <div className="p-5 bg-white border border-[#E5E7EB] rounded-2xl shadow-xs">
+          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">
+            <TrendingUp className="w-3.5 h-3.5 text-[#E8B4A0]" /> Unidades Despachadas
           </div>
-          <p className="text-2xl font-extrabold text-purple-600 dark:text-purple-400">
-            {totalUnitsSold} <span className="text-xs font-normal text-slate-500">uds</span>
+          <p className="text-2xl font-light text-[#1E3A5F] font-mono">
+            {totalUnitsSold} <span className="text-xs text-[#616161] font-sans">uds</span>
           </p>
         </div>
       </div>
 
       {/* 3. Filtros de Fecha y Búsqueda */}
-      <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-3">
+      <div className="p-4 bg-white border border-[#E5E7EB] rounded-2xl shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
           {/* Búsqueda por Ticket / Cliente / Vendedor */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <Search className="w-4 h-4 text-[#616161] absolute left-3 top-3" />
             <input
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Buscar por ticket, cliente, correo o método..."
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 dark:text-white"
+              className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl pl-9 pr-3.5 py-2 text-xs text-[#1E3A5F] placeholder:text-[#616161]/50 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
             />
           </div>
 
           {/* Rango de Fechas */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            <div className="flex items-center gap-1.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-3 py-1.5 text-xs text-[#1E3A5F]">
+              <Calendar className="w-3.5 h-3.5 text-[#616161]" />
               <input
                 type="date"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
-                className="bg-transparent text-slate-800 dark:text-slate-200 text-xs focus:outline-none"
+                className="bg-transparent text-[#1E3A5F] text-xs focus:outline-none"
               />
-              <span className="text-slate-400">a</span>
+              <span className="text-[#616161]">a</span>
               <input
                 type="date"
                 value={endDate}
                 onChange={e => setEndDate(e.target.value)}
-                className="bg-transparent text-slate-800 dark:text-slate-200 text-xs focus:outline-none"
+                className="bg-transparent text-[#1E3A5F] text-xs focus:outline-none"
               />
             </div>
             {(startDate || endDate !== todayStr || searchTerm) && (
@@ -282,7 +287,7 @@ export const SalesHistoryPage: React.FC = () => {
                   setEndDate(todayStr);
                   setSearchTerm('');
                 }}
-                className="text-xs text-blue-600 hover:underline px-2"
+                className="text-xs text-[#616161] hover:text-[#1E3A5F] uppercase font-mono px-2 transition-colors"
               >
                 Limpiar
               </button>
@@ -292,22 +297,22 @@ export const SalesHistoryPage: React.FC = () => {
       </div>
 
       {/* 4. Tabla de Ventas */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
         {loading ? (
-          <div className="py-16 text-center text-xs text-slate-400">
-            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
+          <div className="py-16 text-center text-xs text-[#616161] font-mono">
+            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-[#1E3A5F]" />
             Cargando historial de transacciones...
           </div>
         ) : filteredSales.length === 0 ? (
-          <div className="py-16 text-center text-xs text-slate-400 space-y-1">
-            <Receipt className="w-10 h-10 mx-auto stroke-1 text-slate-300 dark:text-slate-700 mb-2" />
-            <p className="font-semibold text-slate-600 dark:text-slate-300">No se encontraron ventas registradas</p>
-            <p>Las ventas confirmadas en el Punto de Venta aparecerán aquí.</p>
+          <div className="py-16 text-center text-xs text-[#616161] space-y-1 font-mono">
+            <Receipt className="w-10 h-10 mx-auto stroke-1 text-[#1E3A5F]/20 mb-2" />
+            <p className="uppercase text-[#1E3A5F]">No se encontraron ventas registradas</p>
+            <p className="text-[11px] text-[#616161]/70 font-sans">Las operaciones liquidadas en el Punto de Venta aparecerán aquí.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase tracking-wider text-[10px] border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-[#F8F9FA] text-[#616161] uppercase tracking-wider text-[10px] font-mono border-b border-[#E5E7EB]">
                 <tr>
                   <th className="p-3.5">Ticket</th>
                   <th className="p-3.5">Fecha</th>
@@ -318,41 +323,35 @@ export const SalesHistoryPage: React.FC = () => {
                   <th className="p-3.5 text-center">Acción</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody className="divide-y divide-[#E5E7EB]">
                 {filteredSales.map((s) => (
                   <tr
                     key={s.id}
                     onClick={() => setSelectedSale(s)}
-                    className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 cursor-pointer transition-colors"
+                    className="hover:bg-[#F8F9FA]/60 cursor-pointer transition-colors"
                   >
-                    <td className="p-3.5 font-mono font-bold text-blue-600 dark:text-blue-400">
-                      #{s.id.slice(0, 8)}
+                    <td className="p-3.5 font-mono font-medium text-[#1E3A5F]">
+                      #{s.id.slice(0, 8).toUpperCase()}
                     </td>
-                    <td className="p-3.5 text-slate-600 dark:text-slate-300">
+                    <td className="p-3.5 text-[#616161] font-mono text-[11px]">
                       {formatDate(s.created_at)}
                     </td>
-                    <td className="p-3.5 font-medium text-slate-900 dark:text-white">
+                    <td className="p-3.5 font-normal text-[#1E3A5F] uppercase">
                       {s.customer_name || 'Consumidor Final'}
                     </td>
                     <td className="p-3.5">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        s.payment_method === 'YAPE'
-                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300'
-                          : s.payment_method === 'PLIN'
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
-                          : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
-                      }`}>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E8B4A0]/50">
                         {s.payment_method}
                       </span>
                     </td>
-                    <td className="p-3.5 text-slate-500 truncate max-w-[160px]">
+                    <td className="p-3.5 text-[#616161] truncate max-w-[160px] font-mono text-[11px]">
                       {s.seller_email}
                     </td>
-                    <td className="p-3.5 text-right font-extrabold text-slate-900 dark:text-white">
+                    <td className="p-3.5 text-right font-mono font-medium text-[#1E3A5F]">
                       {formatCurrency(s.total_amount, currentInventory?.currency)}
                     </td>
                     <td className="p-3.5 text-center">
-                      <button className="p-1 text-slate-400 hover:text-blue-600 transition-colors">
+                      <button className="p-1 text-[#616161] hover:text-[#1E3A5F] transition-colors">
                         <ChevronRight className="w-4 h-4" />
                       </button>
                     </td>
@@ -366,68 +365,68 @@ export const SalesHistoryPage: React.FC = () => {
 
       {/* Modal de Detalle de Venta */}
       {selectedSale && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl w-full max-w-lg overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-4 border-b border-[#E5E7EB] bg-white">
               <div className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-blue-600" />
-                <h3 className="font-bold text-slate-900 dark:text-white text-sm">
-                  Ticket #{selectedSale.id.slice(0, 8)}
+                <Receipt className="w-4 h-4 text-[#E8B4A0]" />
+                <h3 className="font-light text-[#1E3A5F] uppercase tracking-tight text-sm">
+                  Ticket #{selectedSale.id.slice(0, 8).toUpperCase()}
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedSale(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl"
+                className="w-8 h-8 rounded-full border border-[#E5E7EB] text-[#616161] hover:text-[#1E3A5F] flex items-center justify-center transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="p-5 overflow-y-auto space-y-4">
-              <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl text-xs">
+              <div className="grid grid-cols-2 gap-2 p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] text-xs font-mono">
                 <div>
-                  <span className="text-[10px] text-slate-400 block font-bold">Fecha:</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200">{new Date(selectedSale.created_at).toLocaleString()}</span>
+                  <span className="text-[10px] text-[#616161] block uppercase">Fecha:</span>
+                  <span className="text-[#1E3A5F]">{new Date(selectedSale.created_at).toLocaleString()}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 block font-bold">Método:</span>
-                  <span className="font-bold text-blue-600 dark:text-blue-400">{selectedSale.payment_method}</span>
+                  <span className="text-[10px] text-[#616161] block uppercase">Método:</span>
+                  <span className="text-[#1E3A5F] font-medium">{selectedSale.payment_method}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 block font-bold">Cliente:</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200">{selectedSale.customer_name || 'Consumidor Final'}</span>
+                  <span className="text-[10px] text-[#616161] block uppercase">Cliente:</span>
+                  <span className="text-[#1E3A5F]">{selectedSale.customer_name || 'Consumidor Final'}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 block font-bold">Contacto:</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200">{selectedSale.customer_contact || 'Sin registrar'}</span>
+                  <span className="text-[10px] text-[#616161] block uppercase">Contacto:</span>
+                  <span className="text-[#1E3A5F]">{selectedSale.customer_contact || 'Sin registrar'}</span>
                 </div>
-                <div className="col-span-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-                  <span className="text-[10px] text-slate-400 block font-bold">Vendedor:</span>
-                  <span className="text-slate-600 dark:text-slate-400">{selectedSale.seller_email}</span>
+                <div className="col-span-2 pt-2 border-t border-[#E5E7EB]">
+                  <span className="text-[10px] text-[#616161] block uppercase">Vendedor:</span>
+                  <span className="text-[#1E3A5F]">{selectedSale.seller_email}</span>
                 </div>
                 {selectedSale.notes && (
-                  <div className="col-span-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-                    <span className="text-[10px] text-slate-400 block font-bold">Notas / Cupón:</span>
-                    <span className="text-slate-700 dark:text-slate-300 font-medium">{selectedSale.notes}</span>
+                  <div className="col-span-2 pt-2 border-t border-[#E5E7EB]">
+                    <span className="text-[10px] text-[#616161] block uppercase">Notas / Cupón:</span>
+                    <span className="text-[#1E3A5F]">{selectedSale.notes}</span>
                   </div>
                 )}
               </div>
 
               {/* Ítems vendidos */}
               <div className="space-y-2">
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                <span className="text-[11px] uppercase font-mono tracking-wider text-[#616161] block">
                   Ítems Vendidos ({selectedSale.items?.length || 0})
                 </span>
-                <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+                <div className="divide-y divide-[#E5E7EB] border border-[#E5E7EB] rounded-xl overflow-hidden">
                   {selectedSale.items?.map((it) => (
                     <div key={it.id} className="p-3 flex items-center justify-between text-xs">
                       <div>
-                        <p className="font-bold text-slate-900 dark:text-white">{it.product_name}</p>
-                        <p className="text-[10px] text-slate-400 font-mono">
+                        <p className="font-medium text-[#1E3A5F] uppercase">{it.product_name}</p>
+                        <p className="text-[10px] text-[#616161] font-mono mt-0.5">
                           {it.product_code} • {it.quantity} uds × {formatCurrency(it.unit_price, currentInventory?.currency)}
                         </p>
                       </div>
-                      <span className="font-extrabold text-slate-900 dark:text-white">
+                      <span className="font-mono font-medium text-[#1E3A5F]">
                         {formatCurrency(it.subtotal, currentInventory?.currency)}
                       </span>
                     </div>
@@ -436,9 +435,9 @@ export const SalesHistoryPage: React.FC = () => {
               </div>
 
               {/* Total final */}
-              <div className="flex items-center justify-between p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl">
-                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">TOTAL COBRADO:</span>
-                <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+              <div className="flex items-center justify-between p-4 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-mono">
+                <span className="text-xs uppercase tracking-wider text-[#616161]">TOTAL LIQUIDADO:</span>
+                <span className="text-lg font-light text-[#1E3A5F]">
                   {formatCurrency(selectedSale.total_amount, currentInventory?.currency)}
                 </span>
               </div>

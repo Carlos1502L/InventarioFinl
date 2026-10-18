@@ -7,7 +7,9 @@ import {
   FileText,
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 
 export type TabType = 'home' | 'inventory' | 'sales' | 'sales-history' | 'reports' | 'analytics' | 'settings';
@@ -34,8 +36,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   isBusiness = true
 }) => {
   // Configuración condicional según tipo de inventario
-  // Negocio: 6 módulos completos
-  // Personal: 4 módulos (se ocultan Ventas y Reportes)
+  // Negocio: 6 módulos completos | Personal: 4 módulos
   const items: DialItem[] = useMemo(() => {
     if (isBusiness) {
       return [
@@ -56,7 +57,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     }
   }, [isBusiness]);
 
-  // Mapear tab activa a índice de items (soporta alias secundarios como sales-history y analytics)
+  // Mapear tab activa a índice de items (soporta alias secundarios)
   const activeIndex = useMemo(() => {
     let key = activeTab;
     if (key === 'sales-history') key = 'sales';
@@ -65,13 +66,18 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     return idx >= 0 ? idx : 0;
   }, [items, activeTab]);
 
+  // Estado para ocultar/mostrar la barra inferior al deslizar hacia abajo/arriba
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+
   // Estado de arrastre fluido táctil y por puntero
   const [dragDeltaX, setDragDeltaX] = useState<number>(0);
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
   const startXRef = useRef<number>(0);
+  const startYRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
   const hasMovedRef = useRef<boolean>(false);
+  const isVerticalSwipeRef = useRef<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Seleccionar ítem
@@ -83,41 +89,52 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     }
   }, [onQuickScan, onChangeTab]);
 
-  // Paso angular entre ítems y distancia píxel por salto
+  // Parámetros del semicírculo refinado y más fino
   const total = items.length;
-  const angleStep = total === 4 ? 40 : 30; // grados entre items
-  const pixelsPerItem = 48; // distancia de arrastre en px que equivale a 1 item
-  const radius = 120; // radio de arco del dial
+  const angleStep = total === 4 ? 38 : 28; // distribución simétrica
+  const pixelsPerItem = 46;
+  const radius = 115; // radio ajustado para perfil estilizado
 
   // Iniciar arrastre fluido
   const handlePointerDown = (e: React.PointerEvent) => {
     startXRef.current = e.clientX;
+    startYRef.current = e.clientY;
     startTimeRef.current = Date.now();
     hasMovedRef.current = false;
+    isVerticalSwipeRef.current = false;
     setIsDragging(true);
     setDragDeltaX(0);
 
-    // Capturar puntero para seguimiento continuo incluso fuera del contenedor
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
-      // Fallback si no es soportado
+      // Ignorar fallback
     }
   };
 
-  // Movimiento continuo sin límites artificiales (1:1 con el dedo)
+  // Movimiento continuo con detección bidireccional (horizontal = giro, vertical = colapso)
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging) return;
     const currentX = e.clientX;
-    const diff = currentX - startXRef.current;
+    const currentY = e.clientY;
+    const diffX = currentX - startXRef.current;
+    const diffY = currentY - startYRef.current;
 
-    if (Math.abs(diff) > 5) {
+    // Detectar si el usuario está haciendo un gesto vertical para ocultar
+    if (!hasMovedRef.current && Math.abs(diffY) > 12 && Math.abs(diffY) > Math.abs(diffX) * 1.5) {
+      isVerticalSwipeRef.current = true;
+    }
+
+    if (Math.abs(diffX) > 4 || Math.abs(diffY) > 4) {
       hasMovedRef.current = true;
     }
-    setDragDeltaX(diff);
+
+    if (!isVerticalSwipeRef.current) {
+      setDragDeltaX(diffX);
+    }
   };
 
-  // Finalizar arrastre con cálculo de inercia y salto múltiple fluido
+  // Finalizar arrastre
   const handlePointerUp = (e: React.PointerEvent) => {
     if (!isDragging) return;
     setIsDragging(false);
@@ -125,15 +142,25 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
-      // Fallback
+      // Ignorar fallback
     }
 
-    if (hasMovedRef.current && Math.abs(dragDeltaX) > 10) {
+    const currentY = e.clientY;
+    const diffY = currentY - startYRef.current;
+
+    // Si fue un swipe hacia abajo intencional, ocultar nav
+    if (diffY > 30) {
+      setIsCollapsed(true);
+      setDragDeltaX(0);
+      return;
+    }
+
+    // Si fue un arrastre horizontal fluido con inercia
+    if (hasMovedRef.current && !isVerticalSwipeRef.current && Math.abs(dragDeltaX) > 10) {
       const elapsed = Math.max(1, Date.now() - startTimeRef.current);
       const velocity = dragDeltaX / elapsed; // px por ms
 
-      // Inercia proyectada según la velocidad del swipe
-      const momentumDeltaX = dragDeltaX + (velocity * 140);
+      const momentumDeltaX = dragDeltaX + (velocity * 135);
       const steps = Math.round(momentumDeltaX / pixelsPerItem);
 
       if (steps !== 0) {
@@ -159,118 +186,151 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   };
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 flex flex-col items-center pointer-events-none lg:hidden pb-safe">
-      {/* Indicador Editorial Superior de la Selección */}
-      <div className="pointer-events-auto mb-1.5 bg-white/95 backdrop-blur-md px-4 py-1 rounded-full border border-[#E5E7EB] shadow-sm flex items-center gap-2 font-mono text-[10px] text-[#1E3A5F] transition-all">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#E8B4A0] animate-pulse" />
-        <span className="text-[#616161]">0{activeIndex + 1} //</span>
-        <span className="tracking-wider uppercase font-semibold text-[#1E3A5F]">
-          {items[activeIndex]?.label || 'NAVEGACIÓN'}
-        </span>
-      </div>
+    <div className="fixed bottom-0 inset-x-0 z-50 flex flex-col items-center pointer-events-none lg:hidden pb-safe select-none">
+      
+      {/* Botón Flotante para reabrir cuando el carrusel está oculto (swipe up / tap) */}
+      {isCollapsed && (
+        <div className="pointer-events-auto mb-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(false)}
+            aria-label="Mostrar navegación"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-[#E5E7EB] text-[#1E3A5F] shadow-md font-mono text-[10px] tracking-wider uppercase active:scale-95 transition-transform"
+          >
+            <ChevronUp className="w-3.5 h-3.5 text-[#E8B4A0]" />
+            <span className="font-medium">MENÚ</span>
+          </button>
+        </div>
+      )}
 
-      {/* Chasis de Semicírculo Radial con Soporte Táctil Continuo */}
-      <div className="relative pointer-events-auto flex items-center justify-center">
-        {/* Nudge flecha izquierda */}
-        <button
-          type="button"
-          onClick={() => handleStep(-1)}
-          aria-label="Anterior"
-          className="absolute -left-1 sm:left-1 z-30 w-7 h-7 rounded-full bg-white/80 backdrop-blur-sm border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center shadow-sm hover:bg-white active:scale-90 transition-transform"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-
-        {/* Arco Semicircular Interactivo */}
-        <div
-          ref={containerRef}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerCancel}
-          className={`relative w-[330px] sm:w-[370px] h-[86px] bg-white/95 backdrop-blur-xl border-t border-x border-[#E5E7EB] rounded-t-[170px] shadow-[0_-8px_25px_rgba(30,58,95,0.08)] flex items-center justify-center overflow-hidden touch-none select-none ${
-            isDragging ? 'cursor-grabbing' : 'cursor-grab'
-          }`}
-        >
-          {/* Guía decorativa en semicírculo de Nude */}
-          <div className="absolute inset-x-7 top-3 bottom-0 border-t-2 border-dashed border-[#E8B4A0]/40 rounded-t-[150px] pointer-events-none" />
-
-          {/* Marcador del Ápex (Centro Superior) */}
-          <div className="absolute top-1.5 w-6 h-1 rounded-full bg-[#1E3A5F]/20 pointer-events-none" />
-
-          {/* Elementos distribuidos fluidamente sobre el arco */}
-          <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-            {items.map((item, index) => {
-              // Calcular posición angular relativa al índice activo con envoltura circular simétrica
-              let relativeDiff = index - activeIndex;
-              let diff = relativeDiff % total;
-              if (diff > total / 2) diff -= total;
-              if (diff < -total / 2) diff += total;
-
-              // Desplazamiento angular dinámico según el arrastre del dedo
-              const dragAngle = (dragDeltaX / pixelsPerItem) * angleStep;
-              const angleDeg = diff * angleStep + dragAngle;
-              const angleRad = (angleDeg * Math.PI) / 180;
-
-              // Coordenadas cartesianas a lo largo de la curva del arco
-              const x = Math.sin(angleRad) * radius;
-              const y = (1 - Math.cos(angleRad)) * 36 + 6;
-
-              // Medida de cercanía al ápice (centro superior = 0°)
-              const distFromCenter = Math.abs(angleDeg);
-              const isAtApex = distFromCenter < angleStep / 2;
-              const opacity = Math.max(0.35, 1 - distFromCenter / 100);
-              const scale = isAtApex ? 1.18 : Math.max(0.82, 1 - distFromCenter / 180);
-              const zIndex = isAtApex ? 30 : Math.round(20 - distFromCenter / 10);
-
-              const Icon = item.icon;
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!hasMovedRef.current) {
-                      selectItem(item);
-                    }
-                  }}
-                  style={{
-                    transform: `translate3d(${x}px, ${y}px, 0) scale(${scale})`,
-                    opacity,
-                    zIndex,
-                    transition: isDragging
-                      ? 'none'
-                      : 'transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, background-color 0.25s ease',
-                  }}
-                  className={`pointer-events-auto absolute top-1 p-2.5 rounded-full flex flex-col items-center justify-center active:scale-95 transition-shadow ${
-                    isAtApex
-                      ? 'bg-[#1E3A5F] text-white shadow-lg ring-2 ring-[#E8B4A0]'
-                      : item.isAction
-                      ? 'bg-[#E8B4A0] text-[#1E3A5F] shadow-sm hover:bg-[#d89e88]'
-                      : 'bg-white text-[#616161] hover:text-[#1E3A5F] border border-[#E5E7EB] shadow-sm'
-                  }`}
-                  title={item.label}
-                >
-                  <Icon className={`w-4 h-4 ${isAtApex ? 'stroke-[2.2]' : 'stroke-[1.6]'}`} />
-                </button>
-              );
-            })}
+      {/* Contenedor del Carrusel Radial Móvil */}
+      <div
+        className={`pointer-events-none flex flex-col items-center transition-all duration-300 ease-out ${
+          isCollapsed ? 'translate-y-[110%] opacity-0' : 'translate-y-0 opacity-100'
+        }`}
+      >
+        {/* Indicador de título activo y pestaña de ocultar */}
+        <div className="pointer-events-auto mb-1 flex items-center gap-1.5">
+          <div className="bg-white/95 backdrop-blur-md px-3.5 py-0.5 rounded-full border border-[#E5E7EB] shadow-sm flex items-center gap-2 font-mono text-[10px] text-[#1E3A5F]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#E8B4A0] animate-pulse" />
+            <span className="text-[#616161]">0{activeIndex + 1} //</span>
+            <span className="tracking-wider uppercase font-semibold text-[#1E3A5F]">
+              {items[activeIndex]?.label || 'NAVEGACIÓN'}
+            </span>
           </div>
 
-          {/* Indicador inferior estético */}
-          <div className="absolute bottom-1 w-10 h-1 rounded-full bg-[#1E3A5F]/15 pointer-events-none" />
+          {/* Botón sutil para deslizar/ocultar el dial */}
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(true)}
+            title="Ocultar menú"
+            className="w-5 h-5 rounded-full bg-white/90 backdrop-blur-md border border-[#E5E7EB] text-[#616161] hover:text-[#1E3A5F] flex items-center justify-center shadow-xs active:scale-90 transition-transform"
+          >
+            <ChevronDown className="w-3 h-3" />
+          </button>
         </div>
 
-        {/* Nudge flecha derecha */}
-        <button
-          type="button"
-          onClick={() => handleStep(1)}
-          aria-label="Siguiente"
-          className="absolute -right-1 sm:right-1 z-30 w-7 h-7 rounded-full bg-white/80 backdrop-blur-sm border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center shadow-sm hover:bg-white active:scale-90 transition-transform"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
+        {/* Chasis de Semicírculo Fino y Estilizado */}
+        <div className="relative pointer-events-auto flex items-center justify-center">
+          {/* Nudge flecha izquierda */}
+          <button
+            type="button"
+            onClick={() => handleStep(-1)}
+            aria-label="Anterior"
+            className="absolute -left-1 sm:left-1 z-30 w-6 h-6 rounded-full bg-white/85 backdrop-blur-sm border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center shadow-xs hover:bg-white active:scale-90 transition-transform"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Arco Semicircular Interactivo Fino (Altura reducida a 58px) */}
+          <div
+            ref={containerRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            className={`relative w-[320px] sm:w-[350px] h-[58px] bg-white/90 backdrop-blur-xl border-t border-x border-[#E5E7EB] rounded-t-[160px] shadow-[0_-4px_18px_rgba(30,58,95,0.06)] flex items-center justify-center overflow-hidden touch-none select-none ${
+              isDragging ? 'cursor-grabbing' : 'cursor-grab'
+            }`}
+          >
+            {/* Guía decorativa en semicírculo fino de Nude */}
+            <div className="absolute inset-x-7 top-2 bottom-0 border-t border-dashed border-[#E8B4A0]/35 rounded-t-[140px] pointer-events-none" />
+
+            {/* Marcador del Ápex (Centro Superior) */}
+            <div className="absolute top-1 w-5 h-0.5 rounded-full bg-[#1E3A5F]/25 pointer-events-none" />
+
+            {/* Elementos distribuidos fluidamente sobre el arco */}
+            <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
+              {items.map((item, index) => {
+                let relativeDiff = index - activeIndex;
+                let diff = relativeDiff % total;
+                if (diff > total / 2) diff -= total;
+                if (diff < -total / 2) diff += total;
+
+                // Ángulo interactivo con arrastre 1:1
+                const dragAngle = (dragDeltaX / pixelsPerItem) * angleStep;
+                const angleDeg = diff * angleStep + dragAngle;
+                const angleRad = (angleDeg * Math.PI) / 180;
+
+                // Coordenadas calculadas para el semicírculo fino
+                const x = Math.sin(angleRad) * radius;
+                const y = (1 - Math.cos(angleRad)) * 26 + 3;
+
+                const distFromCenter = Math.abs(angleDeg);
+                const isAtApex = distFromCenter < angleStep / 2;
+                const opacity = Math.max(0.35, 1 - distFromCenter / 95);
+                const scale = isAtApex ? 1.12 : Math.max(0.82, 1 - distFromCenter / 170);
+                const zIndex = isAtApex ? 30 : Math.round(20 - distFromCenter / 10);
+
+                const Icon = item.icon;
+
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!hasMovedRef.current) {
+                        selectItem(item);
+                      }
+                    }}
+                    style={{
+                      transform: `translate3d(${x}px, ${y}px, 0) scale(${scale})`,
+                      opacity,
+                      zIndex,
+                      transition: isDragging
+                        ? 'none'
+                        : 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease',
+                    }}
+                    className={`pointer-events-auto absolute top-0.5 p-2 rounded-full flex flex-col items-center justify-center active:scale-95 transition-shadow ${
+                      isAtApex
+                        ? 'bg-[#1E3A5F] text-white shadow-md ring-1.5 ring-[#E8B4A0]'
+                        : item.isAction
+                        ? 'bg-[#E8B4A0] text-[#1E3A5F] shadow-xs hover:bg-[#d89e88]'
+                        : 'bg-white text-[#616161] hover:text-[#1E3A5F] border border-[#E5E7EB] shadow-xs'
+                    }`}
+                    title={item.label}
+                  >
+                    <Icon className={`w-3.5 h-3.5 ${isAtApex ? 'stroke-[2.2]' : 'stroke-[1.6]'}`} />
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Manija táctil inferior sutil */}
+            <div className="absolute bottom-0.5 w-8 h-0.5 rounded-full bg-[#1E3A5F]/15 pointer-events-none" />
+          </div>
+
+          {/* Nudge flecha derecha */}
+          <button
+            type="button"
+            onClick={() => handleStep(1)}
+            aria-label="Siguiente"
+            className="absolute -right-1 sm:right-1 z-30 w-6 h-6 rounded-full bg-white/85 backdrop-blur-sm border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center shadow-xs hover:bg-white active:scale-90 transition-transform"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );

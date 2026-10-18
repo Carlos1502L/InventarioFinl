@@ -9,8 +9,6 @@ import {
   Info,
   ChevronRight,
   LogOut,
-  Moon,
-  Sun,
   QrCode,
   Briefcase,
   User,
@@ -19,7 +17,6 @@ import {
   Ticket
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { formatDate } from '../lib/supabase';
 import { EditInventoryModal } from '../components/EditInventoryModal';
 import { BatchLocationsPrintModal } from '../components/BatchLocationsPrintModal';
@@ -39,7 +36,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   onOpenInventorySelector
 }) => {
   const { currentInventory, user, signOut, refreshInventories } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const [editInventoryOpen, setEditInventoryOpen] = useState(false);
   const [batchLocationsOpen, setBatchLocationsOpen] = useState(false);
   const [couponsOpen, setCouponsOpen] = useState(false);
@@ -47,247 +43,279 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const isBusiness = currentInventory?.inventory_type !== 'PERSONAL';
 
   return (
-    <div className="space-y-6 pb-24 sm:pb-8 max-w-3xl mx-auto">
-      {/* 1. Título */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 pb-28 sm:pb-12 max-w-4xl mx-auto font-normal text-[#1E3A5F]">
+      {/* 1. Cabecera Editorial */}
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2.5">
-            <Settings className="w-6 h-6 text-slate-500 dark:text-slate-400" /> Configuración del Sistema
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Estructura de catálogo, ubicaciones físicas, equipo y preferencias PWA
+          <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
+            PREFERENCES // CONTROL PANEL
+          </span>
+          <h1 className="text-xl sm:text-2xl font-light tracking-tight text-[#1E3A5F] uppercase">
+            Configuración del Sistema
+          </h1>
+          <p className="text-xs text-[#616161] font-light mt-0.5">
+            Estructura de catálogo, delimitación física, pasarelas de cobro y gobernanza del equipo.
           </p>
         </div>
 
-        {/* Botón de cambio de tema rápido */}
-        <button
-          onClick={toggleTheme}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95"
-        >
-          {theme === 'light' ? (
-            <>
-              <Moon className="w-4 h-4 text-indigo-500" /> Modo Oscuro
-            </>
-          ) : (
-            <>
-              <Sun className="w-4 h-4 text-amber-400" /> Modo Claro
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="px-3.5 py-1.5 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] font-mono text-xs uppercase">
+            v2.4 // AWWWARDS SPEC
+          </span>
+        </div>
       </div>
 
-      {/* 2. Tarjeta del Inventario Activo (RF-02) */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-2xl">
-              <Layers className="w-6 h-6" />
+      {/* =========================================================
+          BLOQUE 1: IDENTIDAD DEL DEPÓSITO ACTIVO
+         ========================================================= */}
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center flex-shrink-0 shadow-sm">
+              <Layers className="w-6 h-6 stroke-[1.5]" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-wider">
-                  Inventario Activo
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-[#E8B4A0]">
+                  DEPÓSITO ACTIVO
                 </span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                  currentInventory?.inventory_type === 'PERSONAL'
-                    ? 'bg-purple-50 dark:bg-purple-600/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30'
-                    : 'bg-blue-50 dark:bg-blue-600/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30'
-                }`}>
+                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] flex items-center gap-1">
                   {currentInventory?.inventory_type === 'PERSONAL' ? (
                     <>
-                      <User className="w-2.5 h-2.5" /> Personal
+                      <User className="w-3 h-3 text-[#E8B4A0]" /> Personal
                     </>
                   ) : (
                     <>
-                      <Briefcase className="w-2.5 h-2.5" /> Negocio
+                      <Briefcase className="w-3 h-3 text-[#E8B4A0]" /> Negocio
                     </>
                   )}
                 </span>
               </div>
-              <h3 className="font-extrabold text-slate-900 dark:text-white text-lg">{currentInventory?.name}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{currentInventory?.description || 'Sin descripción'}</p>
+              <h2 className="font-light text-xl text-[#1E3A5F] uppercase tracking-tight">
+                {currentInventory?.name || 'SIN SELECCIONAR'}
+              </h2>
+              <p className="text-xs text-[#616161] font-light">
+                {currentInventory?.description || 'Sin notas descriptivas del depósito.'}
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setEditInventoryOpen(true)}
-              className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 transition-all active:scale-95 flex items-center gap-1.5"
+              className="px-4 py-2 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs uppercase tracking-wider rounded-full transition-all active:scale-95 flex items-center gap-1.5 font-mono shadow-xs"
             >
-              <Sliders className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              Gestionar
+              <Sliders className="w-3.5 h-3.5 text-[#1E3A5F]" />
+              <span>Gestionar</span>
             </button>
             <button
               onClick={onOpenInventorySelector}
-              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow transition-all active:scale-95"
+              className="px-4 py-2 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-full shadow-xs transition-all active:scale-95 font-medium"
             >
               Cambiar
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300">
+        {/* Metadatos en Fila */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-[#E5E7EB] text-xs font-mono text-[#616161]">
           <div>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Moneda:</span>
-            <span className="font-bold text-slate-900 dark:text-white">{currentInventory?.currency || 'USD'}</span>
+            <span className="text-[10px] uppercase block">Moneda de Manifiesto:</span>
+            <span className="text-[#1E3A5F] font-medium">{currentInventory?.currency || 'USD'}</span>
           </div>
           <div>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Tu Rol:</span>
-            <span className="font-bold text-blue-600 dark:text-blue-400 capitalize">{currentInventory?.role || 'owner'}</span>
+            <span className="text-[10px] uppercase block">Nivel de Acceso:</span>
+            <span className="text-[#1E3A5F] font-medium uppercase">{currentInventory?.role || 'owner'}</span>
           </div>
           <div className="col-span-2 sm:col-span-1">
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Fecha Creación:</span>
-            <span className="font-medium text-slate-500 dark:text-slate-400">{formatDate(currentInventory?.created_at)}</span>
+            <span className="text-[10px] uppercase block">Fecha de Alta:</span>
+            <span className="text-[#1E3A5F]">{formatDate(currentInventory?.created_at)}</span>
           </div>
         </div>
       </div>
 
-      {/* 3. Menú de Configuración Libre */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-slate-800">
-        {/* Ajustes del Inventario y Pagos Yape/Plin (Solo disponible para tipo NEGOCIO) */}
-        {isBusiness && (
+      {/* =========================================================
+          BLOQUE 2: OPERACIONES COMERCIALES (SÓLO SI ES NEGOCIO)
+         ========================================================= */}
+      {isBusiness && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#E8B4A0]" />
+            <h3 className="text-xs font-mono uppercase tracking-widest text-[#616161]">
+              01 // OPERACIONES & PAGOS
+            </h3>
+          </div>
+
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs divide-y divide-[#E5E7EB]">
+            {/* Pasarela Yape / Plin */}
+            <button
+              onClick={() => setEditInventoryOpen(true)}
+              className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#F8F9FA]/60 transition-colors text-left group"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
+                  <QrCode className="w-5 h-5 text-[#1E3A5F]" />
+                </div>
+                <div>
+                  <h4 className="font-normal text-sm text-[#1E3A5F] uppercase">Pasarela de Pagos (Yape / Plin)</h4>
+                  <p className="text-xs text-[#616161] font-light">Configura tus códigos QR y números asociados para el cobro ágil a clientes</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#616161] group-hover:text-[#1E3A5F] transition-colors" />
+            </button>
+
+            {/* Cupones de Descuento */}
+            <button
+              onClick={() => setCouponsOpen(true)}
+              className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#F8F9FA]/60 transition-colors text-left group"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
+                  <Ticket className="w-5 h-5 text-[#1E3A5F]" />
+                </div>
+                <div>
+                  <h4 className="font-normal text-sm text-[#1E3A5F] uppercase">Cupones de Descuento Promocionales</h4>
+                  <p className="text-xs text-[#616161] font-light">Crea y audita códigos de descuento por porcentaje o monto fijo</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#616161] group-hover:text-[#1E3A5F] transition-colors" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          BLOQUE 3: ESTRUCTURA DEL CATÁLOGO & LOGÍSTICA
+         ========================================================= */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#E8B4A0]" />
+          <h3 className="text-xs font-mono uppercase tracking-widest text-[#616161]">
+            02 // ESTRUCTURA & LOGÍSTICA
+          </h3>
+        </div>
+
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs divide-y divide-[#E5E7EB]">
+          {/* Categorías y Subcategorías */}
           <button
-            onClick={() => setEditInventoryOpen(true)}
-            className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors text-left group"
+            onClick={onOpenCategories}
+            className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#F8F9FA]/60 transition-colors text-left group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="p-2.5 bg-emerald-50 dark:bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 rounded-xl group-hover:scale-105 transition-transform">
-                <QrCode className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
+                <Tag className="w-5 h-5 text-[#1E3A5F]" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 dark:text-white text-sm">Pasarela de Pagos (Yape / Plin)</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Configura tus códigos QR y números para cobrar a clientes</p>
+                <h4 className="font-normal text-sm text-[#1E3A5F] uppercase">Categorías & Subcategorías Dinámicas</h4>
+                <p className="text-xs text-[#616161] font-light">Organización taxonómica, familias de artículos y paleta de distinción</p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
+            <ChevronRight className="w-4 h-4 text-[#616161] group-hover:text-[#1E3A5F] transition-colors" />
           </button>
-        )}
 
-        {/* Cupones de Descuento (Solo disponible para tipo NEGOCIO) */}
-        {isBusiness && (
+          {/* Gestión de Ubicaciones Físicas */}
           <button
-            onClick={() => setCouponsOpen(true)}
-            className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors text-left group"
+            onClick={onOpenLocations}
+            className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#F8F9FA]/60 transition-colors text-left group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="p-2.5 bg-rose-50 dark:bg-rose-600/10 text-rose-600 dark:text-rose-400 rounded-xl group-hover:scale-105 transition-transform">
-                <Ticket className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
+                <MapPin className="w-5 h-5 text-[#1E3A5F]" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 dark:text-white text-sm">Cupones de Descuento</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Crea códigos promocionales por monto o porcentaje</p>
+                <h4 className="font-normal text-sm text-[#1E3A5F] uppercase">Ubicaciones Físicas & Almacenes</h4>
+                <p className="text-xs text-[#616161] font-light">Estructura espacial de pasillos, estanterías, depósitos y secciones</p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
+            <ChevronRight className="w-4 h-4 text-[#616161] group-hover:text-[#1E3A5F] transition-colors" />
           </button>
-        )}
 
-        {/* Categorías */}
-        <button
-          onClick={onOpenCategories}
-          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors text-left group"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="p-2.5 bg-blue-50 dark:bg-blue-600/10 text-blue-600 dark:text-blue-400 rounded-xl group-hover:scale-105 transition-transform">
-              <Tag className="w-5 h-5" />
+          {/* Imprimir Ubicaciones */}
+          <button
+            onClick={() => setBatchLocationsOpen(true)}
+            className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#F8F9FA]/60 transition-colors text-left group"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
+                <Printer className="w-5 h-5 text-[#1E3A5F]" />
+              </div>
+              <div>
+                <h4 className="font-normal text-sm text-[#1E3A5F] uppercase">Impresión de Rótulos & Códigos QR</h4>
+                <p className="text-xs text-[#616161] font-light">Generación de credenciales físicas para estanterías (formato estándar 85.6 × 53.9 mm)</p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-sm">Categorías y Subcategorías Dinámicas</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Creación libre de etiquetas, colores y familias</p>
-            </div>
-          </div>
-          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
-        </button>
-
-        {/* Ubicaciones Físicas y Etiquetas */}
-        <button
-          onClick={onOpenLocations}
-          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors text-left group"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="p-2.5 bg-amber-50 dark:bg-amber-600/10 text-amber-600 dark:text-amber-400 rounded-xl group-hover:scale-105 transition-transform">
-              <MapPin className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-sm">Gestión de Ubicaciones Físicas</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Almacenes, pasillos y organización espacial</p>
-            </div>
-          </div>
-          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
-        </button>
-
-        {/* Imprimir Ubicaciones (Nueva funcionalidad solicitada) */}
-        <button
-          onClick={() => setBatchLocationsOpen(true)}
-          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors text-left group"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="p-2.5 bg-orange-50 dark:bg-orange-600/10 text-orange-600 dark:text-orange-400 rounded-xl group-hover:scale-105 transition-transform">
-              <Printer className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-sm">Imprimir Ubicaciones</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Selección múltiple para imprimir tarjetas y códigos QR (85.6 × 53.9 mm)</p>
-            </div>
-          </div>
-          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
-        </button>
-
-        {/* Equipo y Colaboradores */}
-        <button
-          onClick={onOpenCollaborators}
-          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors text-left group"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="p-2.5 bg-indigo-50 dark:bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 rounded-xl group-hover:scale-105 transition-transform">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-sm">Equipo y Colaboradores</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Invitar por correo electrónico y gestionar permisos</p>
-            </div>
-          </div>
-          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
-        </button>
+            <ChevronRight className="w-4 h-4 text-[#616161] group-hover:text-[#1E3A5F] transition-colors" />
+          </button>
+        </div>
       </div>
 
-      {/* 4. Información de PWA y Dispositivo */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 space-y-3 shadow-sm">
-        <div className="flex items-center gap-2.5">
-          <Smartphone className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          <h4 className="font-bold text-slate-900 dark:text-white text-sm">Aplicación Web Progresiva (PWA)</h4>
+      {/* =========================================================
+          BLOQUE 4: GOBERNANZA, PWA & ACCESO
+         ========================================================= */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#E8B4A0]" />
+          <h3 className="text-xs font-mono uppercase tracking-widest text-[#616161]">
+            03 // GOBERNANZA & APLICACIÓN
+          </h3>
         </div>
-        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-          Esta plataforma está optimizada para smartphones Android e iOS. Puedes añadirla a tu pantalla de inicio directamente desde las opciones del navegador para usarla como una aplicación nativa a pantalla completa y con acceso instantáneo a la cámara.
-        </p>
-        <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 text-[11px] text-slate-600 dark:text-slate-300 space-y-1">
-          <div className="flex items-center gap-1.5 font-semibold text-blue-600 dark:text-blue-300">
-            <Info className="w-3.5 h-3.5" /> ¿Cómo instalarla en tu teléfono?
+
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs divide-y divide-[#E5E7EB]">
+          {/* Equipo y Colaboradores */}
+          <button
+            onClick={onOpenCollaborators}
+            className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#F8F9FA]/60 transition-colors text-left group"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
+                <Users className="w-5 h-5 text-[#1E3A5F]" />
+              </div>
+              <div>
+                <h4 className="font-normal text-sm text-[#1E3A5F] uppercase">Equipo & Colaboradores</h4>
+                <p className="text-xs text-[#616161] font-light">Invitaciones por correo, asignación de roles y control de privilegios</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-[#616161] group-hover:text-[#1E3A5F] transition-colors" />
+          </button>
+        </div>
+
+        {/* Tarjeta de Aplicación PWA */}
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs space-y-3">
+          <div className="flex items-center gap-2.5">
+            <Smartphone className="w-5 h-5 text-[#1E3A5F]" />
+            <h4 className="font-normal text-sm text-[#1E3A5F] uppercase">Aplicación Web Progresiva (PWA Móvil)</h4>
           </div>
-          <p>
-            <strong>En Safari (iOS):</strong> Pulsa el botón "Compartir" y selecciona "Añadir a la pantalla de inicio".
+          <p className="text-xs text-[#616161] leading-relaxed font-light">
+            Esta plataforma está optimizada para smartphones Android e iOS. Puedes instalarla en la pantalla de inicio de tu dispositivo para obtener experiencia a pantalla completa y acceso rápido a la cámara escáner.
           </p>
-          <p>
-            <strong>En Chrome (Android):</strong> Pulsa los 3 puntos del menú y selecciona "Instalar aplicación".
-          </p>
+          <div className="p-3.5 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] text-[11px] text-[#616161] space-y-1 font-mono">
+            <div className="flex items-center gap-1.5 text-[#1E3A5F] font-medium">
+              <Info className="w-3.5 h-3.5 text-[#E8B4A0]" /> GUÍA DE INSTALACIÓN RÁPIDA:
+            </div>
+            <p><strong>iOS (Safari):</strong> Toca "Compartir" y selecciona "Añadir a la pantalla de inicio".</p>
+            <p><strong>Android (Chrome):</strong> Toca el menú de 3 puntos y selecciona "Instalar aplicación".</p>
+          </div>
+        </div>
+
+        {/* Sesión de Usuario & Cierre */}
+        <div className="p-4 sm:p-5 bg-white border border-[#E5E7EB] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div>
+            <span className="text-[10px] font-mono uppercase tracking-widest text-[#E8B4A0] block">
+              SESIÓN AUTENTICADA
+            </span>
+            <p className="text-xs font-mono text-[#1E3A5F] mt-0.5">{user?.email}</p>
+          </div>
+          <button
+            onClick={() => signOut()}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#F8F9FA] hover:bg-rose-50 text-rose-700 hover:text-rose-800 border border-[#E5E7EB] hover:border-rose-300 rounded-full text-xs uppercase tracking-wider font-mono transition-all active:scale-95 shadow-xs"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Cerrar Sesión</span>
+          </button>
         </div>
       </div>
 
-      {/* 5. Sesión de Usuario */}
-      <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl flex items-center justify-between shadow-sm">
-        <div>
-          <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold">Sesión Activa</span>
-          <p className="text-xs font-bold text-slate-900 dark:text-white">{user?.email}</p>
-        </div>
-        <button
-          onClick={() => signOut()}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-50 dark:bg-rose-600/20 hover:bg-rose-100 dark:hover:bg-rose-600/30 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 rounded-xl text-xs font-semibold transition-all active:scale-95"
-        >
-          <LogOut className="w-3.5 h-3.5" /> Cerrar Sesión
-        </button>
-      </div>
-
-      {/* Modal de Edición de Inventario */}
+      {/* Modales vinculados */}
       <EditInventoryModal
         isOpen={editInventoryOpen}
         onClose={() => setEditInventoryOpen(false)}
@@ -295,13 +323,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         onUpdated={refreshInventories}
       />
 
-      {/* Modal de Impresión de Ubicaciones */}
       <BatchLocationsPrintModal
         isOpen={batchLocationsOpen}
         onClose={() => setBatchLocationsOpen(false)}
       />
 
-      {/* Modal de Gestión de Cupones de Descuento */}
       {isBusiness && (
         <CouponsManagementModal
           isOpen={couponsOpen}

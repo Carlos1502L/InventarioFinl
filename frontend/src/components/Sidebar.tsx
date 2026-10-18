@@ -129,31 +129,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span>ESCANEAR CÓDIGO</span>
           </button>
         </div>
-
-        {/* Accesos rápidos de gestión */}
-        <div className="pt-4 border-t border-white/10 space-y-1">
-          <span className="px-3 text-[9px] uppercase tracking-[0.2em] text-white/40 font-semibold block mb-1">
-            GESTIÓN RÁPIDA
-          </span>
-          <button
-            onClick={onOpenCategories}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/5 text-[11px] transition-colors"
-          >
-            <Tag className="w-3.5 h-3.5" /> Categorías
-          </button>
-          <button
-            onClick={onOpenLocations}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/5 text-[11px] transition-colors"
-          >
-            <MapPin className="w-3.5 h-3.5" /> Ubicaciones
-          </button>
-          <button
-            onClick={onOpenCollaborators}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/5 text-[11px] transition-colors"
-          >
-            <Users className="w-3.5 h-3.5" /> Equipo
-          </button>
-        </div>
       </div>
 
       {/* 3. SECCIÓN INFERIOR: PERFIL DE USUARIO & SALIR */}
