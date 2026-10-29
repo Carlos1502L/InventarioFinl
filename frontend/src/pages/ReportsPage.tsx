@@ -12,6 +12,7 @@ import {
 import { Product, Category, Subcategory, Location } from '../types/database';
 import { formatCurrency } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { MinimalDropdown } from '../components/ui/MinimalDropdown';
 import jsPDF from 'jspdf';
 
 interface ReportsPageProps {
@@ -188,16 +189,19 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-20 sm:pb-8">
-      {/* 1. Cabecera y Resumen Ejecutivo */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 shadow-sm transition-colors">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-6 pb-28 sm:pb-12 max-w-7xl mx-auto font-normal text-[#1E3A5F]">
+      {/* 1. Cabecera y Resumen de Exportación */}
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2.5">
-              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" /> Generador de Reportes de Inventario
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Los reportes se generan estrictamente sobre los productos filtrados en la vista actual.
+            <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
+              DATA EXPORT // INVENTORY CENSUS & AUDIT
+            </span>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F] uppercase">
+              Reportes & Manifiestos de Stock
+            </h1>
+            <p className="text-xs text-[#616161] font-light mt-0.5">
+              Generación y exportación de auditorías basadas estrictamente en la vista y filtros actuales.
             </p>
           </div>
 
@@ -206,47 +210,57 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
             <button
               onClick={handleExportPDF}
               disabled={isExportingPDF || reportProducts.length === 0}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-xl shadow-md shadow-rose-500/20 disabled:opacity-50 transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-full shadow-xs disabled:opacity-50 transition-all active:scale-95 font-medium"
             >
-              {isExportingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              PDF
+              {isExportingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8B4A0]" /> : <Download className="w-3.5 h-3.5 text-[#E8B4A0]" />}
+              <span>PDF</span>
             </button>
 
             <button
               onClick={handleExportExcel}
               disabled={isExportingExcel || reportProducts.length === 0}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-500/20 disabled:opacity-50 transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs uppercase tracking-wider rounded-full shadow-xs disabled:opacity-50 transition-all active:scale-95 font-mono"
             >
               {isExportingExcel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
-              Excel (.xlsx / .csv)
+              <span>Excel (.xlsx)</span>
             </button>
 
             <button
               onClick={() => handleExportCSV('reporte-inventario')}
               disabled={isExportingCSV || reportProducts.length === 0}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-50 transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs uppercase tracking-wider rounded-full shadow-xs disabled:opacity-50 transition-all active:scale-95 font-mono"
             >
               {isExportingCSV ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileCode className="w-3.5 h-3.5" />}
-              CSV
+              <span>CSV</span>
             </button>
           </div>
         </div>
 
         {/* Tarjetas de Métricas del Reporte */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-750">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Productos Seleccionados</span>
-            <span className="text-lg font-extrabold text-slate-900 dark:text-white">{reportProducts.length} ítems</span>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-[#E5E7EB]">
+          <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB]">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161] block">
+              Ítems Filtrados
+            </span>
+            <span className="text-xl font-bold text-[#1E3A5F] font-mono mt-0.5 block">
+              {reportProducts.length} ítems
+            </span>
           </div>
 
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-750">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Total de Unidades</span>
-            <span className="text-lg font-extrabold text-blue-600 dark:text-blue-400">{totalUnits} uds</span>
+          <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB]">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161] block">
+              Total de Unidades
+            </span>
+            <span className="text-xl font-bold text-[#1E3A5F] font-mono mt-0.5 block">
+              {totalUnits} uds
+            </span>
           </div>
 
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-750 col-span-2 sm:col-span-1">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Valorización Total</span>
-            <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">
+          <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] col-span-2 sm:col-span-1">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161] block">
+              Valorización Total
+            </span>
+            <span className="text-xl font-bold text-[#1E3A5F] font-mono mt-0.5 block">
               {formatCurrency(totalValuation, currentInventory?.currency)}
             </span>
           </div>
@@ -254,23 +268,83 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
       </div>
 
       {/* 2. Filtros de Generación */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm transition-colors">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Filtros de Reporte</span>
-          {/* RF-07.2: Botón Limpiar Filtros */}
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 space-y-3 shadow-xs">
+        <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EB]">
+          <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F]">
+            Parámetros de Segmentación
+          </span>
           {hasActiveFilters && (
             <button
               onClick={handleClearFilters}
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-lg transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs font-mono uppercase rounded-full transition-colors"
             >
-              <RotateCcw className="w-3 h-3" /> Limpiar Filtros
+              <RotateCcw className="w-3 h-3 text-[#E8B4A0]" /> Restablecer
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
           <div>
-            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Filtrar por Categoría</label>
+            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Categoría</label>
+            <MinimalDropdown
+              value={filterCategory}
+              onChange={(val) => {
+                setFilterCategory(val);
+                setFilterSubcategory('ALL');
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: 'ALL', label: 'Todas las Categorías' },
+                ...categories.map((c) => ({ value: c.id, label: c.name }))
+              ]}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Subcategoría</label>
+            <MinimalDropdown
+              value={filterSubcategory}
+              onChange={(val) => {
+                setFilterSubcategory(val);
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: 'ALL', label: 'Todas las Subcategorías' },
+                ...activeSubcategories.map((s) => ({ value: s.id, label: s.name }))
+              ]}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Ubicación Física</label>
+            <MinimalDropdown
+              value={filterLocation}
+              onChange={(val) => {
+                setFilterLocation(val);
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: 'ALL', label: 'Todas las Ubicaciones' },
+                ...locations.map((l) => ({ value: l.id, label: l.name, badge: l.code }))
+              ]}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Estado de Existencia</label>
+            <MinimalDropdown
+              value={filterStatus}
+              onChange={(val) => {
+                setFilterStatus(val);
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: 'ALL', label: 'Todos los Estados' },
+                { value: 'ACTIVE', label: 'Activos en Manifiesto' },
+                { value: 'WITHDRAWN', label: 'Retirados / Baja' }
+              ]}
+            />
+            {false && (/*
             <select
               value={filterCategory}
               onChange={e => {
@@ -278,17 +352,17 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
                 setFilterSubcategory('ALL');
                 setCurrentPage(1);
               }}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
             >
               <option value="ALL">Todas las Categorías</option>
               {categories.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
-            </select>
+
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Filtrar por Subcategoría</label>
+            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Subcategoría</label>
             <select
               value={filterSubcategory}
               onChange={e => {
@@ -296,58 +370,59 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
                 setCurrentPage(1);
               }}
               disabled={filterCategory === 'ALL' || activeSubcategories.length === 0}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+              className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] disabled:opacity-50"
             >
               <option value="ALL">Todas las Subcategorías</option>
               {activeSubcategories.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
-            </select>
+
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Filtrar por Ubicación Física</label>
+            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Ubicación Física</label>
             <select
               value={filterLocation}
               onChange={e => {
                 setFilterLocation(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
             >
               <option value="ALL">Todas las Ubicaciones</option>
               {locations.map(l => (
                 <option key={l.id} value={l.id}>{l.name} ({l.code})</option>
               ))}
-            </select>
+
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Filtrar por Estado</label>
+            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Estado de Existencia</label>
             <select
               value={filterStatus}
               onChange={e => {
                 setFilterStatus(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
             >
               <option value="ALL">Todos los Estados</option>
-              <option value="ACTIVE">Activos en Stock</option>
+              <option value="ACTIVE">Activos en Manifiesto</option>
               <option value="WITHDRAWN">Retirados / Baja</option>
-            </select>
+            */ null)}
+
           </div>
         </div>
       </div>
 
       {/* 3. Tabla Interactiva de Datos con RNF-01 Paginación */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm transition-colors">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-            Vista Previa del Reporte ({reportProducts.length} productos filtrados)
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
+        <div className="p-4 border-b border-[#E5E7EB] flex items-center justify-between">
+          <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F]">
+            Previsualización del Manifiesto ({reportProducts.length} registros)
           </span>
           {hasActiveFilters && (
-            <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold">
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E8B4A0]/40">
               Filtros activos
             </span>
           )}
@@ -356,43 +431,43 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
-                <th className="p-3 font-semibold">CÓDIGO</th>
-                <th className="p-3 font-semibold">PRODUCTO</th>
-                <th className="p-3 font-semibold">CATEGORÍA</th>
-                <th className="p-3 font-semibold">UBICACIÓN</th>
-                <th className="p-3 font-semibold text-right">PRECIO</th>
-                <th className="p-3 font-semibold text-right">STOCK</th>
-                <th className="p-3 font-semibold text-right">VALOR TOTAL</th>
-                <th className="p-3 font-semibold text-center">ESTADO</th>
+              <tr className="bg-[#F8F9FA] text-[#1E3A5F] font-mono text-[10px] font-bold uppercase tracking-wider border-b border-[#E5E7EB]">
+                <th className="p-3.5">CÓDIGO</th>
+                <th className="p-3.5">PRODUCTO</th>
+                <th className="p-3.5">CATEGORÍA</th>
+                <th className="p-3.5">UBICACIÓN</th>
+                <th className="p-3.5 text-right">PRECIO</th>
+                <th className="p-3.5 text-right">STOCK</th>
+                <th className="p-3.5 text-right">VALOR TOTAL</th>
+                <th className="p-3.5 text-center">ESTADO</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-[#E5E7EB]">
               {reportProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-400">
+                  <td colSpan={8} className="p-12 text-center text-[#616161] font-mono text-xs uppercase">
                     No hay productos que coincidan con los filtros seleccionados.
                   </td>
                 </tr>
               ) : (
                 paginatedReportProducts.map(p => (
-                  <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="p-3 font-mono font-medium text-blue-600 dark:text-blue-400">{p.code}</td>
-                    <td className="p-3 font-bold text-slate-900 dark:text-white max-w-[200px] truncate">{p.name}</td>
-                    <td className="p-3 text-slate-600 dark:text-slate-300">{p.categories?.name || 'General'}</td>
-                    <td className="p-3 text-slate-600 dark:text-slate-300">{p.locations?.name || '-'}</td>
-                    <td className="p-3 text-right text-slate-700 dark:text-slate-200">
+                  <tr key={p.id} className="hover:bg-[#F8F9FA]/60 transition-colors">
+                    <td className="p-3.5 font-mono font-bold text-[#1E3A5F]">{p.code}</td>
+                    <td className="p-3.5 font-bold text-[#1E3A5F] max-w-[220px] truncate uppercase">{p.name}</td>
+                    <td className="p-3.5 text-[#616161]">{p.categories?.name || 'General'}</td>
+                    <td className="p-3.5 text-[#616161]">{p.locations?.name || '-'}</td>
+                    <td className="p-3.5 text-right text-[#1E3A5F] font-mono font-bold">
                       {formatCurrency(p.price, currentInventory?.currency)}
                     </td>
-                    <td className="p-3 text-right font-bold text-slate-900 dark:text-white">{p.stock}</td>
-                    <td className="p-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                    <td className="p-3.5 text-right font-mono font-bold text-[#1E3A5F]">{p.stock}</td>
+                    <td className="p-3.5 text-right font-mono font-bold text-[#1E3A5F]">
                       {formatCurrency((p.price || 0) * (p.stock || 0), currentInventory?.currency)}
                     </td>
-                    <td className="p-3 text-center">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    <td className="p-3.5 text-center">
+                      <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-full ${
                         p.status === 'ACTIVE'
-                          ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
-                          : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20'
+                          ? 'bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E8B4A0]/40'
+                          : 'bg-rose-50 text-rose-700 border border-rose-200'
                       }`}>
                         {p.status === 'ACTIVE' ? 'Activo' : 'Baja'}
                       </span>
@@ -406,7 +481,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
 
         {/* RNF-01: Controles de Paginación en Reportes */}
         {totalPages > 1 && (
-          <div className="p-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
+          <div className="p-3.5 border-t border-[#E5E7EB] flex items-center justify-between text-xs font-mono text-[#616161]">
             <span>
               Página {currentPage} de {totalPages} ({reportProducts.length} productos)
             </span>
@@ -414,14 +489,14 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 disabled:opacity-40"
+                className="p-1.5 rounded-xl border border-[#E5E7EB] bg-white text-[#1E3A5F] hover:bg-[#F8F9FA] disabled:opacity-40 transition-colors"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 disabled:opacity-40"
+                className="p-1.5 rounded-xl border border-[#E5E7EB] bg-white text-[#1E3A5F] hover:bg-[#F8F9FA] disabled:opacity-40 transition-colors"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>

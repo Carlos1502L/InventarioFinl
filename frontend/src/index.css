@@ -1,17 +1,153 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-brand-navy: #1E3A5F;
+    --color-brand-nude: #E8B4A0;
+    --color-paper: #ffffff;
+    --color-canvas: #F8F9FA;
+    --color-fog: #E5E7EB;
+    --color-alert: #E8B4A0;
+  }
+
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: 'Inter Tight', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-tap-highlight-color: transparent;
+    background-color: #EAEFF5;
+    color: #1E3A5F;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Selección de texto en Navy & Nude */
+  ::selection {
+    background-color: #1E3A5F;
+    color: #ffffff;
   }
 }
 
-/* Soporte para iPhone notch y barras del sistema */
+/* ============================================================================
+   DESCANSO VISUAL, ELEVACIÓN DE TARJETAS Y RESALTE TÁCTIL DE BOTONES
+   ============================================================================ */
+
+/* 1. Sombras reales y profundas para todos los recuadros/módulos (shadow-xs no existe por defecto en Tailwind v3) */
+.shadow-xs,
+.shadow-sm {
+  box-shadow:
+    0 6px 20px -4px rgba(30, 58, 95, 0.09),
+    0 2px 6px -1px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* 2. Recuadros principales de módulos (bg-white + rounded-2xl / rounded-xl) con borde definido y sombra suave */
+main .bg-white.rounded-2xl:not(.shadow-xl),
+main .bg-white.rounded-xl:not(.shadow-xl) {
+  border-color: #CBD5E1 !important;
+  box-shadow:
+    0 10px 26px -6px rgba(30, 58, 95, 0.09),
+    0 3px 8px -2px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+/* 3. Sub-recuadros internos (div con bg-[#F8F9FA]) con tono suave de descanso visual para diferenciarlos del blanco */
+.bg-white div.bg-\[\#F8F9FA\] {
+  background-color: #F1F5F9 !important;
+  border-color: #CBD5E1 !important;
+}
+
+/* 4. Botones secundarios y de control: relieve táctil tipo botón físico para que destaquen claramente */
+button.bg-white,
+button.bg-\[\#F8F9FA\] {
+  border-color: #BAC7D8 !important;
+  box-shadow:
+    0 2px 5px -1px rgba(15, 23, 42, 0.09),
+    0 1px 2px 0 rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 0 rgba(15, 23, 42, 0.06) !important;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button.bg-\[\#F8F9FA\] {
+  background-color: #F1F5F9 !important;
+}
+
+button.bg-white:hover:not(:disabled),
+button.bg-\[\#F8F9FA\]:hover:not(:disabled) {
+  background-color: #FFFFFF !important;
+  border-color: #1E3A5F !important;
+  transform: translateY(-1px);
+  box-shadow:
+    0 6px 14px -3px rgba(30, 58, 95, 0.15),
+    0 2px 5px -1px rgba(15, 23, 42, 0.07) !important;
+}
+
+/* 5. Botones principales (Navy #1E3A5F) con sombra de profundidad y brillo superior sutil */
+button.bg-\[\#1E3A5F\] {
+  box-shadow:
+    0 4px 12px -2px rgba(30, 58, 95, 0.3),
+    0 2px 4px -1px rgba(30, 58, 95, 0.16),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.18) !important;
+}
+
+button.bg-\[\#1E3A5F\]:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 18px -3px rgba(30, 58, 95, 0.36),
+    0 3px 6px -2px rgba(30, 58, 95, 0.2),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+/* 6. Inputs y Selectores con contraste claro y descanso visual */
+input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent),
+select,
+textarea {
+  border-color: #CBD5E1;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+input.bg-transparent,
+input.bg-transparent:focus,
+input.bg-transparent:-webkit-autofill {
+  background-color: transparent !important;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+div:has(> label:empty + span.hidden) {
+  display: none !important;
+}
+
+/* Soporte para iPhone notch, Dynamic Island y barras del sistema (iOS Safe Area) */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 1rem);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+.top-safe {
+  top: env(safe-area-inset-top, 0px);
+}
+.bottom-safe {
+  bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Ocultar barra de scroll en contenedores horizontales */
@@ -22,3 +158,575 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Scrollbar fino y discreto para formularios internos */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #E5E7EB;
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #CACACA;
+}
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #E5E7EB transparent;
+}
+
+/* ============================================================================
+   ARQUITECTURA VISUAL: VENTANAS FLOTANTES MINIMALISTAS (EXCLUSIVO MÓVIL < 768px)
+   Hereda el diseño limpio de los módulos móviles (Stock, Ubicaciones, Historial, Ajustes):
+   - Card blanca flotante sin bordes negros ni cabeceras negras pesadas
+   - Barras de búsqueda e inputs en una sola casilla suave (#f5f5f5) sin doble bloque
+   - Pestañas (Categorías / Subcategorías, etc.) como píldoras limpias sin desborde
+   - Scroll vertical contenido y cero desbordamiento horizontal
+   ============================================================================ */
+@media (max-width: 767px) {
+  /* 0. Bloqueo estricto de viewport móvil: cero scroll global y cero rebote elástico */
+  html,
+  body {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  /* 1. Ocultar temporalmente la barra de navegación inferior cuando cualquier modal está abierto */
+  body:has(.mobile-dark-modal) nav[aria-label="Navegación principal móvil"] {
+    display: none !important;
+  }
+
+  /* Backdrop centrado con z-index: 60 superior a toda la interfaz */
+  div.fixed.inset-0:has(> .mobile-dark-modal) {
+    z-index: 60 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0.875rem !important;
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    backdrop-filter: blur(4px) !important;
+  }
+
+  /* 2. Contenedor de Ventana Flotante (Blanco limpio igual que los módulos, sin borde negro) */
+  .mobile-dark-modal {
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    top: auto !important;
+    z-index: 65 !important;
+    width: calc(100vw - 1.75rem) !important;
+    max-width: 26rem !important;
+    max-height: 86vh !important;
+    margin: auto !important;
+    border-radius: 1.75rem !important;
+    border: none !important;
+    background-color: #ffffff !important;
+    color: #171717 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.3) !important;
+    padding: 0 !important;
+    font-family: 'Inter Tight', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  }
+
+  .mobile-dark-modal * {
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+
+  .mobile-dark-modal .font-mono {
+    font-family: 'Inter Tight', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  }
+
+  /* 3. Cabecera Limpia Integrada (Fondo blanco sin bloque negro) */
+  .mobile-dark-modal > div:first-child {
+    background-color: #ffffff !important;
+    color: #171717 !important;
+    padding: 1.125rem 1.25rem 0.875rem 1.25rem !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-bottom: 1px solid #f5f5f5 !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
+  }
+
+  /* Ocultar íconos decorativos cuadrados dentro del header para dejar solo Título + Subtítulo limpios */
+  .mobile-dark-modal > div:first-child > div:first-child > div.p-2,
+  .mobile-dark-modal > div:first-child > div:first-child > div.p-2\.5,
+  .mobile-dark-modal > div:first-child > div:first-child > div.w-10,
+  .mobile-dark-modal > div:first-child > div:first-child > svg:first-child {
+    display: none !important;
+  }
+
+  /* Título y subtítulo en Cabecera Limpia */
+  .mobile-dark-modal > div:first-child h2,
+  .mobile-dark-modal > div:first-child h3,
+  .mobile-dark-modal > div:first-child h4 {
+    color: #171717 !important;
+    font-size: 1.0625rem !important;
+    line-height: 1.375rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+    text-transform: none !important;
+  }
+
+  .mobile-dark-modal > div:first-child p,
+  .mobile-dark-modal > div:first-child span:not(.mobile-header-pill) {
+    color: #737373 !important;
+    font-size: 0.75rem !important;
+    font-weight: 400 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+  }
+
+  /* Botón de cierre (X) en Cabecera: Círculo gris claro discreto */
+  .mobile-dark-modal > div:first-child button:not(.mobile-header-tab) {
+    width: 2rem !important;
+    height: 2rem !important;
+    min-width: 2rem !important;
+    min-height: 2rem !important;
+    border-radius: 9999px !important;
+    background-color: #f5f5f5 !important;
+    color: #525252 !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
+    transform: none !important;
+  }
+
+  .mobile-dark-modal > div:first-child button:not(.mobile-header-tab):hover {
+    color: #171717 !important;
+    background-color: #e5e5e5 !important;
+  }
+
+  /* 4. Cuerpo Operativo Blanco Puro con Scroll Interno Exclusivo */
+  .mobile-dark-modal > form,
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) {
+    background-color: #ffffff !important;
+    color: #171717 !important;
+    border-color: #f5f5f5 !important;
+  }
+
+  .mobile-dark-modal > form,
+  .mobile-dark-modal > div.overflow-y-auto {
+    padding: 1rem 1.25rem 1.25rem 1.25rem !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+    overscroll-behavior: contain !important;
+  }
+
+  /* Cero cajas anidadas: aplanar contenedores y recuadros grises/oscuros dentro del cuerpo blanco */
+  .mobile-dark-modal > form div.bg-\[\#F8F9FA\]:not(.mobile-segmented):not(.qr-light-surface):not(.mobile-scroll-box),
+  .mobile-dark-modal > form div.bg-white:not(.mobile-segmented):not(.qr-light-surface):not(.mobile-dropdown-menu):not(.mobile-scroll-box),
+  .mobile-dark-modal > form div.bg-slate-50:not(.mobile-segmented):not(.mobile-scroll-box),
+  .mobile-dark-modal > form div.bg-slate-100:not(.mobile-segmented):not(.mobile-scroll-box),
+  .mobile-dark-modal > form div.bg-neutral-900:not(.mobile-segmented),
+  .mobile-dark-modal > form div.bg-neutral-950:not(.mobile-segmented),
+  .mobile-dark-modal > div:not(:first-child) div.bg-\[\#F8F9FA\]:not(.mobile-segmented):not(.qr-light-surface):not(.mobile-scroll-box),
+  .mobile-dark-modal > div:not(:first-child) div.bg-white:not(.mobile-segmented):not(.qr-light-surface):not(.mobile-dropdown-menu):not(.mobile-scroll-box),
+  .mobile-dark-modal > div:not(:first-child) div.bg-slate-50:not(.mobile-segmented):not(.mobile-scroll-box),
+  .mobile-dark-modal > div:not(:first-child) div.bg-slate-50\/70:not(.mobile-segmented):not(.mobile-scroll-box),
+  .mobile-dark-modal > div:not(:first-child) div.bg-slate-50\/50:not(.mobile-segmented):not(.mobile-scroll-box),
+  .mobile-dark-modal > div:not(:first-child) div.bg-slate-100:not(.mobile-segmented):not(.mobile-scroll-box),
+  .mobile-dark-modal > div:not(:first-child) form.bg-slate-50:not(.mobile-segmented),
+  .mobile-dark-modal > div:not(:first-child) div.bg-blue-50\/50:not(.mobile-segmented),
+  .mobile-dark-modal > div:not(:first-child) div.bg-indigo-50\/70:not(.mobile-segmented),
+  .mobile-dark-modal > div:not(:first-child) div.bg-amber-50\/50:not(.mobile-segmented),
+  .mobile-dark-modal > div:not(:first-child) div.bg-amber-50\/70:not(.mobile-segmented),
+  .mobile-dark-modal > div:not(:first-child) div.bg-\[\#1E3A5F\]\/5:not(.mobile-segmented),
+  .mobile-dark-modal > div:not(:first-child) div.bg-\[\#E8B4A0\]\/10:not(.mobile-segmented),
+  .mobile-dark-modal > div:not(:first-child) div.bg-\[\#E8B4A0\]\/20:not(.mobile-segmented) {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* Eliminar cajas contenedoras con borde/padding pesado en formularios internos */
+  .mobile-dark-modal .mobile-flat-section {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Etiquetas (Labels) limpias en cuerpo blanco */
+  .mobile-dark-modal > form label,
+  .mobile-dark-modal > div:not(:first-child) label {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    color: #525252 !important;
+    margin-bottom: 0.375rem !important;
+    display: block !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+  }
+
+  /* Tipografía general en el cuerpo blanco */
+  .mobile-dark-modal > form h3,
+  .mobile-dark-modal > form h4,
+  .mobile-dark-modal > div:not(:first-child) h3,
+  .mobile-dark-modal > div:not(:first-child) h4,
+  .mobile-dark-modal > div:not(:first-child) .text-\[\#1E3A5F\],
+  .mobile-dark-modal > div:not(:first-child) .text-slate-900,
+  .mobile-dark-modal > div:not(:first-child) .text-slate-800 {
+    color: #171717 !important;
+  }
+
+  .mobile-dark-modal > form p,
+  .mobile-dark-modal > div:not(:first-child) p:not(.text-white),
+  .mobile-dark-modal > div:not(:first-child) .text-\[\#616161\],
+  .mobile-dark-modal > div:not(:first-child) .text-slate-500,
+  .mobile-dark-modal > div:not(:first-child) .text-slate-400 {
+    color: #737373 !important;
+  }
+
+  /* 5. Inputs, Selects, Textareas y Barras de Búsqueda: UNA SOLA CASILLA (#f5f5f5), CERO DOBLE BLOQUE */
+  .mobile-dark-modal div.relative:has(> svg):has(> select),
+  .mobile-dark-modal div.relative:has(> svg):has(> input) {
+    display: block !important;
+    position: relative !important;
+    width: 100% !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-dark-modal input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent),
+  .mobile-dark-modal select,
+  .mobile-dark-modal textarea {
+    width: 100% !important;
+    background-color: #f5f5f5 !important;
+    border: 1px solid transparent !important;
+    border-radius: 1rem !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    padding-left: 0.875rem !important;
+    padding-right: 0.875rem !important;
+    font-size: 0.875rem !important;
+    line-height: 1.25rem !important;
+    color: #171717 !important;
+    box-shadow: none !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease !important;
+  }
+
+  /* Ícono dentro de input/select: posicionado limpiamente dentro de la única casilla */
+  .mobile-dark-modal div.relative:has(> svg):has(> select) > svg,
+  .mobile-dark-modal div.relative:has(> svg):has(> input) > svg {
+    position: absolute !important;
+    left: 0.875rem !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 1rem !important;
+    height: 1rem !important;
+    color: #a3a3a3 !important;
+    pointer-events: none !important;
+    z-index: 2 !important;
+  }
+
+  .mobile-dark-modal div.relative:has(> svg) > input:not([type="checkbox"]):not([type="radio"]),
+  .mobile-dark-modal div.relative:has(> svg) > select {
+    padding-left: 2.5rem !important;
+  }
+
+  .mobile-dark-modal input:not([type="checkbox"]):not([type="radio"])::placeholder,
+  .mobile-dark-modal textarea::placeholder {
+    color: #a3a3a3 !important;
+  }
+
+  .mobile-dark-modal input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):focus,
+  .mobile-dark-modal select:focus,
+  .mobile-dark-modal textarea:focus {
+    background-color: #efefef !important;
+    border-color: #d4d4d4 !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* 6. Visor de cámara contenido dentro del modal flotante sin desborde */
+  .mobile-dark-modal .mobile-camera-visor {
+    background-color: #0a0a0a !important;
+    height: 210px !important;
+    min-height: 210px !important;
+    max-height: 210px !important;
+    width: 100% !important;
+    border-radius: 1.25rem !important;
+    overflow: hidden !important;
+  }
+
+  .mobile-dark-modal .mobile-camera-visor video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  .mobile-dark-modal .mobile-camera-visor p {
+    color: #ffffff !important;
+  }
+
+  /* Evitar desborde horizontal en previsualizaciones de etiquetas QR */
+  .mobile-dark-modal .qr-light-surface {
+    max-width: 100% !important;
+  }
+
+  /* 7. Segmented Controls y Selectores (ej. Unidad / Caja, Venta / Retiro) */
+  .mobile-dark-modal .mobile-segmented {
+    background-color: #f5f5f5 !important;
+    padding: 0.25rem !important;
+    border-radius: 1rem !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: flex !important;
+    gap: 0.25rem !important;
+  }
+
+  .mobile-dark-modal .mobile-segmented > button {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    border-radius: 0.75rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 0.625rem !important;
+    border: none !important;
+    background-color: transparent !important;
+    color: #737373 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+  }
+
+  .mobile-dark-modal .mobile-segmented > button.mobile-pill-active,
+  .mobile-dark-modal button.mobile-pill-active {
+    background-color: #0a0a0a !important;
+    color: #ffffff !important;
+    border-radius: 0.75rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 0.75rem !important;
+    border: none !important;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .mobile-dark-modal .mobile-segmented > button.mobile-pill-active *,
+  .mobile-dark-modal button.mobile-pill-active * {
+    color: #ffffff !important;
+  }
+
+  /* 8. Pestañas (Tabs: Categorías / Subcategorías, Gestión de Inventario) como píldoras de módulo */
+  .mobile-dark-modal div.mobile-tabs-bar {
+    background-color: #ffffff !important;
+    padding: 0.625rem 1.25rem !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-bottom: 1px solid #f5f5f5 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    overflow-x: auto !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
+    z-index: 5 !important;
+  }
+
+  .mobile-dark-modal div.mobile-tabs-bar > button:not(.mobile-tab-active) {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    border-radius: 9999px !important;
+    background-color: #f5f5f5 !important;
+    color: #525252 !important;
+    border: none !important;
+    padding: 0.5rem 0.875rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    white-space: nowrap !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-dark-modal div.mobile-tabs-bar > button.mobile-tab-active {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    border-radius: 9999px !important;
+    background-color: #0a0a0a !important;
+    color: #ffffff !important;
+    border: none !important;
+    padding: 0.5rem 0.875rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    white-space: nowrap !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  .mobile-dark-modal div.mobile-tabs-bar > button.mobile-tab-active * {
+    color: #ffffff !important;
+  }
+
+  /* 9. Listados dentro de modales: renglones planos tipo lista de módulos */
+  .mobile-dark-modal .mobile-flat-row {
+    background-color: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid #f5f5f5 !important;
+    border-radius: 0 !important;
+    padding: 0.75rem 0 !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-dark-modal button.mobile-flat-row {
+    padding: 0.875rem 0.75rem !important;
+    border-radius: 1rem !important;
+    border: 1px solid #f0f0f0 !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  .mobile-dark-modal .mobile-flat-row.mobile-card-active {
+    background-color: #f5f5f5 !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    border-radius: 1rem !important;
+    border: 1px solid #d4d4d4 !important;
+  }
+
+  /* 10. Botones de Acción Principal (Guardar / Crear / Confirmar) */
+  .mobile-dark-modal button[type="submit"],
+  .mobile-dark-modal button.mobile-primary-btn,
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-\[\#1E3A5F\]:not(.mobile-inline-btn):not(.w-5):not(.w-6),
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-blue-600:not(.mobile-inline-btn):not(.w-5):not(.w-6),
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-indigo-600:not(.mobile-inline-btn):not(.w-5):not(.w-6),
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-purple-600:not(.mobile-inline-btn):not(.w-5):not(.w-6),
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-amber-600:not(.mobile-inline-btn):not(.w-5):not(.w-6),
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-emerald-600:not(.mobile-inline-btn):not(.w-5):not(.w-6) {
+    width: 100% !important;
+    padding-top: 0.875rem !important;
+    padding-bottom: 0.875rem !important;
+    background-color: #0a0a0a !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border-radius: 1rem !important;
+    font-size: 0.875rem !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    justify-content: center !important;
+  }
+
+  .mobile-dark-modal button[type="submit"] *,
+  .mobile-dark-modal button.mobile-primary-btn *,
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-\[\#1E3A5F\]:not(.mobile-inline-btn):not(.w-5):not(.w-6) * {
+    color: #ffffff !important;
+  }
+
+  /* Botón secundario o cancelar */
+  .mobile-dark-modal button.mobile-cancel-btn {
+    width: 100% !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #737373 !important;
+    font-weight: 500 !important;
+    font-size: 0.75rem !important;
+    padding-top: 0.625rem !important;
+    padding-bottom: 0.625rem !important;
+    text-align: center !important;
+    justify-content: center !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    transform: none !important;
+  }
+
+  .mobile-dark-modal button.mobile-cancel-btn:hover {
+    color: #171717 !important;
+    background-color: transparent !important;
+  }
+
+  /* Botones secundarios pequeños en línea (ej. generar código, cámara, copiar) */
+  .mobile-dark-modal > form button.bg-white:not(.mobile-cancel-btn):not(.mobile-pill-active):not(.mobile-tab-active):not(.mobile-flat-row):not([style*="background-color"]),
+  .mobile-dark-modal > form button.bg-\[\#F8F9FA\]:not(.mobile-cancel-btn):not(.mobile-pill-active):not(.mobile-tab-active):not(.mobile-flat-row):not([style*="background-color"]),
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-white:not(.mobile-cancel-btn):not(.mobile-pill-active):not(.mobile-tab-active):not(.mobile-flat-row):not([style*="background-color"]),
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-\[\#F8F9FA\]:not(.mobile-cancel-btn):not(.mobile-pill-active):not(.mobile-tab-active):not(.mobile-flat-row):not([style*="background-color"]) {
+    background-color: #f5f5f5 !important;
+    border: none !important;
+    color: #171717 !important;
+    box-shadow: none !important;
+    border-radius: 1rem !important;
+    transform: none !important;
+  }
+
+  /* 11. Custom Dropdown Minimalista (igual que en el módulo Ubicaciones) */
+  .mobile-dark-modal button.mobile-dropdown-trigger {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    background-color: #fafafa !important;
+    border: 1px solid rgba(229, 229, 229, 0.7) !important;
+    border-radius: 1rem !important;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.875rem !important;
+    line-height: 1.25rem !important;
+    color: #262626 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+  }
+
+  .mobile-dark-modal div.mobile-dropdown-menu {
+    background-color: #ffffff !important;
+    border: 1px solid rgba(229, 229, 229, 0.85) !important;
+    border-radius: 1rem !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.14), 0 8px 10px -6px rgba(0, 0, 0, 0.08) !important;
+    padding: 0.375rem !important;
+    z-index: 50 !important;
+  }
+
+  .mobile-dark-modal button.mobile-dropdown-option {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    text-align: left !important;
+    border-radius: 0.75rem !important;
+    padding: 0.625rem 0.75rem !important;
+    font-size: 0.875rem !important;
+    border: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+  }
+
+  /* 12. Recuadro con scroll interno (igual al de productos por ubicar en Asignar Ubicación) */
+  .mobile-dark-modal div.mobile-scroll-box {
+    background-color: #fafafa !important;
+    border: 1px solid #e5e5e5 !important;
+    border-radius: 1rem !important;
+    padding: 0.25rem 0.875rem !important;
+    max-height: 11rem !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    box-shadow: none !important;
+  }
+}
+
+

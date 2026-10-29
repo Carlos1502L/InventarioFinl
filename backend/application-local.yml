@@ -1,0 +1,15 @@
+# Configuración de Base de Datos Local (PostgreSQL en Docker / pgAdmin 4)
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/pruebaLocalWeb}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:admin}
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
