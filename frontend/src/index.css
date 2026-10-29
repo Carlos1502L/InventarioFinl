@@ -460,18 +460,21 @@ div:has(> label:empty + span.hidden) {
 
   /* 6. Visor de cámara contenido dentro del modal flotante sin desborde */
   .mobile-dark-modal .mobile-camera-visor {
-    background-color: #0a0a0a !important;
+    background-color: #000000 !important;
+    height: 280px !important;
     min-height: 280px !important;
-    max-height: 360px !important;
+    max-height: 340px !important;
     width: 100% !important;
     border-radius: 1.25rem !important;
     overflow: hidden !important;
+    position: relative !important;
   }
 
   .mobile-dark-modal .mobile-camera-visor video {
     width: 100% !important;
     height: 100% !important;
-    object-fit: contain !important;
+    object-fit: cover !important;
+    display: block !important;
   }
 
   .mobile-dark-modal .mobile-camera-visor p {
