@@ -950,6 +950,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                             src={imgUrl}
                             alt={`Foto ${idx + 1}`}
                             loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover"
                           />
                           <button
@@ -1030,6 +1031,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         src={images[0]}
                         alt="Previsualización"
                         className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : (
                       <div className="text-center p-3">

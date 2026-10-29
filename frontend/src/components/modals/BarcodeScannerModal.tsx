@@ -78,16 +78,34 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       });
       scannerRef.current = html5QrCode;
 
-      const cameraConfig = cameraId
-        ? { deviceId: { exact: cameraId } }
-        : { facingMode: 'environment' };
+      // RF-02: Resolución mínima 720p/1080p y solicitud de enfoque continuo
+      const cameraConfig: any = cameraId
+        ? {
+            deviceId: { exact: cameraId },
+            width: { min: 1280, ideal: 1920 },
+            height: { min: 720, ideal: 1080 },
+            advanced: [{ focusMode: 'continuous' }]
+          }
+        : {
+            facingMode: 'environment',
+            width: { min: 1280, ideal: 1920 },
+            height: { min: 720, ideal: 1080 },
+            advanced: [{ focusMode: 'continuous' }]
+          };
 
       await html5QrCode.start(
         cameraConfig,
         {
-          fps: 15,
-          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => { const s = Math.max(140, Math.min(200, Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.75))); return { width: s, height: s }; },
-          aspectRatio: 1.0
+          fps: 20,
+          // RF-02: Encuadre rectangular horizontal para códigos 1D a media distancia
+          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+            const width = Math.min(Math.floor(viewfinderWidth * 0.88), 340);
+            const height = Math.min(Math.floor(width * 0.45), Math.floor(viewfinderHeight * 0.45), 160);
+            return {
+              width: Math.max(250, width),
+              height: Math.max(110, height)
+            };
+          }
         },
         (decodedText, result) => {
           playBeep();
@@ -100,6 +118,25 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
           // Ignorar frames sin código detectado
         }
       );
+
+      // RF-02: Activar enfoque continuo nativo sobre la pista de video si el hardware lo soporta
+      try {
+        const videoElem = document.querySelector(`#${elementId} video`) as HTMLVideoElement | null;
+        if (videoElem && videoElem.srcObject) {
+          const stream = videoElem.srcObject as MediaStream;
+          const track = stream.getVideoTracks()[0];
+          if (track && track.applyConstraints) {
+            const capabilities: any = track.getCapabilities ? track.getCapabilities() : {};
+            if (capabilities.focusMode && Array.isArray(capabilities.focusMode) && capabilities.focusMode.includes('continuous')) {
+              await track.applyConstraints({
+                advanced: [{ focusMode: 'continuous' }] as any
+              });
+            }
+          }
+        }
+      } catch (trackErr) {
+        console.warn('Enfoque continuo de hardware no aplicable directamente:', trackErr);
+      }
 
       setIsScanning(true);
     } catch (err: any) {
@@ -178,17 +215,20 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
         <div className="overflow-y-auto max-md:space-y-4"><div className="mobile-camera-visor relative bg-black flex items-center justify-center min-h-[320px]">
           <div id={elementId} className="w-full h-full overflow-hidden" />
 
-          {/* Guía visual de enfoque superpuesta */}
+          {/* RF-02: Guía visual de enfoque rectangular horizontal superpuesta */}
           {isScanning && !errorMsg && (
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <div className="w-44 h-44 sm:w-64 sm:h-64 border-2 border-dashed border-[#E8B4A0] max-md:border-white/40 rounded-2xl relative">
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
+              <div className="w-[88%] max-w-[340px] h-32 sm:h-36 border-2 border-dashed border-[#E8B4A0] max-md:border-white/50 rounded-2xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]">
                 {/* Esquinas resaltadas */}
                 <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-[#1E3A5F] max-md:border-white rounded-tl" />
                 <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-[#1E3A5F] max-md:border-white rounded-tr" />
                 <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-[#1E3A5F] max-md:border-white rounded-bl" />
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-[#1E3A5F] max-md:border-white rounded-br" />
-                {/* Línea de escaneo láser */}
-                <div className="absolute inset-x-0 top-1/2 h-0.5 bg-gradient-to-r from-transparent via-[#E8B4A0] max-md:via-white to-transparent animate-pulse shadow-[0_0_8px_#E8B4A0] max-md:shadow-[0_0_8px_#ffffff]" />
+                {/* Línea de escaneo láser horizontal animada */}
+                <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 h-0.5 bg-gradient-to-r from-transparent via-[#E8B4A0] max-md:via-emerald-400 to-transparent animate-pulse shadow-[0_0_8px_#E8B4A0] max-md:shadow-[0_0_8px_#10b981]" />
+                <div className="absolute -bottom-7 inset-x-0 text-center text-[10px] text-white/90 font-mono tracking-wider font-semibold">
+                  ENCUADRAR CÓDIGO 1D / QR AQUÍ
+                </div>
               </div>
             </div>
           )}

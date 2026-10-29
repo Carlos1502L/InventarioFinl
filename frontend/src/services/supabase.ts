@@ -50,16 +50,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  */
 export async function uploadProductImage(file: File, inventoryId: string): Promise<string> {
   // RNF-04: Compresión automática antes de subir
-  const optimizedFile = await compressImage(file, 1200, 1200, 0.75);
+  // RF-03: Compresión automática a WebP (<300KB, max 1200px)
+  const optimizedFile = await compressImage(file, 1200, 1200, 0.8);
 
-  const fileExt = optimizedFile.name.split('.').pop() || 'jpg';
+  // RF-03: Extensión webp por defecto
+  const fileExt = optimizedFile.name.split('.').pop() || 'webp';
   const cleanFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
   const filePath = `${inventoryId}/${cleanFileName}`;
 
   const { error: uploadError } = await supabase.storage
     .from('product-images')
     .upload(filePath, optimizedFile, {
-      cacheControl: '3600',
+      cacheControl: '31536000',
+      contentType: optimizedFile.type || 'image/webp',
       upsert: false
     });
 

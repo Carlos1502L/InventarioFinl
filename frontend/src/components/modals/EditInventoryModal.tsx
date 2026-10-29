@@ -610,7 +610,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                         {yapeQrUrl ? 'Cambiar QR' : 'Subir QR'}
                       </button>
                       {yapeQrUrl && (
-                        <img src={yapeQrUrl} alt="QR Yape" className="w-9 h-9 object-cover rounded-lg border border-slate-200 dark:border-slate-700" />
+                        <img src={yapeQrUrl} alt="QR Yape" className="w-9 h-9 object-cover rounded-lg border border-slate-200 dark:border-slate-700" loading="lazy" decoding="async" />
                       )}
                     </div>
                   </div>
@@ -662,7 +662,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                         {plinQrUrl ? 'Cambiar QR' : 'Subir QR'}
                       </button>
                       {plinQrUrl && (
-                        <img src={plinQrUrl} alt="QR Plin" className="w-9 h-9 object-cover rounded-lg border border-slate-200 dark:border-slate-700" />
+                        <img src={plinQrUrl} alt="QR Plin" className="w-9 h-9 object-cover rounded-lg border border-slate-200 dark:border-slate-700" loading="lazy" decoding="async" />
                       )}
                     </div>
                   </div>

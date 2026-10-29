@@ -1785,6 +1785,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                       src={qrModalType === 'YAPE' ? currentInventory?.yape_qr_url! : currentInventory?.plin_qr_url!}
                       alt={`Código QR ${qrModalType}`}
                       className="w-full h-full object-contain"
+                      loading="lazy"
+                      decoding="async"
                     />
                   </div>
                 ) : (

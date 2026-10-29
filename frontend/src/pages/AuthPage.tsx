@@ -57,9 +57,9 @@ export const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] max-md:fixed max-md:inset-0 max-md:h-[100dvh] max-md:overflow-hidden max-md:overscroll-none bg-[#F8F9FA] flex items-center justify-center p-4 sm:p-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] selection:bg-[#1E3A5F] selection:text-white">
+    <div className="min-h-[100dvh] w-full bg-[#F8F9FA] flex flex-col items-center justify-center p-4 sm:p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] overflow-y-auto overscroll-y-contain selection:bg-[#1E3A5F] selection:text-white">
       {/* Split-Card Container con Altura Fija y Consistente en Ambos Modos */}
-      <div className="w-full max-w-md md:max-w-4xl bg-white border border-[#E5E7EB] rounded-2xl shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-2 md:h-[620px]">
+      <div className="w-full max-w-md md:max-w-4xl bg-white border border-[#E5E7EB] rounded-2xl shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-[620px] my-auto">
         
         {/* =========================================================
             PANEL IZQUIERDO: MARCA & EDITORIAL (AZUL MARINO #1E3A5F)
@@ -74,7 +74,7 @@ export const AuthPage: React.FC = () => {
           <div className="space-y-4 relative z-10">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white border border-white/20 flex items-center justify-center overflow-hidden shadow-xs">
-                <img src="/logo.png" alt="Stockly" className="w-full h-full object-cover" />
+                <img src="/logo.png" alt="Stockly" className="w-full h-full object-cover" loading="lazy" decoding="async" />
               </div>
               <span className="font-mono text-sm uppercase tracking-[0.2em] text-[#E8B4A0] font-bold">
                 STOCKLY
@@ -112,12 +112,12 @@ export const AuthPage: React.FC = () => {
             PANEL DERECHO: FORMULARIO SPLIT-CARD (BLANCO PAPER)
             Altura exacta uniforme para Iniciar Sesión y Registro
            ========================================================= */}
-        <div className="bg-white p-6 sm:p-8 md:p-12 flex flex-col h-[470px] md:h-full justify-between relative overflow-hidden">
+        <div className="bg-white p-5 sm:p-8 md:p-12 flex flex-col min-h-[500px] h-full justify-between relative">
           
           {/* Identificador de marca visible en móvil (para no saturar pantalla en iPhone) */}
           <div className="flex md:hidden items-center justify-center gap-2 mb-2 flex-shrink-0">
             <div className="w-7 h-7 rounded-lg bg-white border border-[#E5E7EB] overflow-hidden flex items-center justify-center shadow-xs">
-              <img src="/logo.png" alt="Stockly" className="w-full h-full object-cover" />
+              <img src="/logo.png" alt="Stockly" className="w-full h-full object-cover" loading="lazy" decoding="async" />
             </div>
             <span className="font-mono text-xs uppercase tracking-[0.2em] text-[#1E3A5F] font-bold">
               STOCKLY

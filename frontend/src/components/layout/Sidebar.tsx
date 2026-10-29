@@ -56,7 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-5 border-b border-white/10">
         <div className="flex items-center gap-2.5 mb-4">
           <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center flex-shrink-0 overflow-hidden border border-white/20 shadow-xs">
-            <img src="/logo.png" alt="Stockly" className="w-full h-full object-cover" />
+            <img src="/logo.png" alt="Stockly" className="w-full h-full object-cover" loading="lazy" decoding="async" />
           </div>
           <div>
             <span className="font-mono text-sm uppercase tracking-[0.2em] text-[#E8B4A0] font-bold block leading-tight">

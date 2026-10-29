@@ -43,7 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Logo en Móvil (Visible solo en < lg) */}
           <div className="flex lg:hidden items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] overflow-hidden flex items-center justify-center flex-shrink-0 shadow-xs">
-              <img src="/logo.png" alt="Stockly" className="w-full h-full object-cover" />
+              <img src="/logo.png" alt="Stockly" className="w-full h-full object-cover" loading="lazy" decoding="async" />
             </div>
             <button
               onClick={onOpenInventorySelector}

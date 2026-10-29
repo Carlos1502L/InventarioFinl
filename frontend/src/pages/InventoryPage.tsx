@@ -813,6 +813,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                           alt={product.name}
                           className="w-full h-full object-cover"
                           loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <Package className="w-4 h-4 stroke-[1] text-[#616161] opacity-50" />

@@ -257,6 +257,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       src={photos[activePhotoIdx]}
                       alt={product.name}
                       className="w-full h-full object-contain p-2"
+                      loading="lazy"
+                      decoding="async"
                     />
                   ) : (
                     <div className="text-center p-6 font-mono text-[#616161]">
@@ -302,7 +304,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                             : 'border-[#E5E7EB] opacity-60 hover:opacity-100'
                         }`}
                       >
-                        <img src={url} alt={`Muestra ${i + 1}`} className="w-full h-full object-cover rounded-lg" />
+                        <img src={url} alt={`Muestra ${i + 1}`} className="w-full h-full object-cover rounded-lg" loading="lazy" decoding="async" />
                       </button>
                     ))}
                   </div>
