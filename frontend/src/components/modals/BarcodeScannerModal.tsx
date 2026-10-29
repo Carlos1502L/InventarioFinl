@@ -48,12 +48,15 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   };
 
   const stopScanner = async () => {
-    if (scannerRef.current) {
+    const scanner = scannerRef.current;
+    if (scanner) {
       try {
-        if (scannerRef.current.isScanning) {
-          await scannerRef.current.stop();
+        const state = scanner.getState ? scanner.getState() : 0;
+        // Html5QrcodeScannerState.SCANNING === 2
+        if (state === 2 || (scanner as any).isScanning) {
+          await scanner.stop();
         }
-        await scannerRef.current.clear();
+        await scanner.clear();
       } catch (err) {
         console.warn('Error al detener escáner:', err);
       } finally {
@@ -74,15 +77,19 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
       // Asegurar que el elemento contenedor exista en el DOM
       let retries = 0;
-      while (!document.getElementById(elementId) && retries < 10) {
-        await new Promise(res => setTimeout(res, 50));
+      while (!document.getElementById(elementId) && retries < 15) {
+        await new Promise(res => setTimeout(res, 40));
         retries++;
       }
 
-      if (!document.getElementById(elementId)) {
-        throw new Error('El visor de la cámara no está listo en pantalla.');
+      const container = document.getElementById(elementId);
+      if (!container) {
+        throw new Error('El visor de la cámara no está listo.');
       }
 
+      container.innerHTML = '';
+
+      // Soporte para todos los formatos 1D y 2D con BarcodeDetector nativo si existe
       const html5QrCode = new Html5Qrcode(elementId, {
         formatsToSupport: [
           Html5QrcodeSupportedFormats.QR_CODE,
@@ -91,67 +98,55 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
           Html5QrcodeSupportedFormats.CODE_128,
           Html5QrcodeSupportedFormats.CODE_39,
           Html5QrcodeSupportedFormats.UPC_A,
-          Html5QrcodeSupportedFormats.UPC_E
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.CODABAR,
+          Html5QrcodeSupportedFormats.ITF
         ],
-        verbose: false
+        verbose: false,
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true
+        }
       });
       scannerRef.current = html5QrCode;
 
-      // Configuración de escaneo (Encuadre rectangular horizontal para códigos 1D / RF-02)
-      const scanConfig = {
-        fps: 20,
-        qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-          const width = Math.min(Math.floor(viewfinderWidth * 0.88), 340);
-          const height = Math.min(Math.floor(width * 0.45), Math.floor(viewfinderHeight * 0.45), 160);
-          return {
-            width: Math.max(250, width),
-            height: Math.max(110, height)
-          };
-        }
+      // Escaneo en todo el fotograma sin recortes (máxima velocidad y detección de 1D)
+      const scanConfig: any = {
+        fps: 15,
+        disableFlip: false
       };
 
+      let isHandled = false;
       const handleSuccess = (decodedText: string, result: any) => {
+        if (isHandled) return;
+        isHandled = true;
         playBeep();
-        stopScanner().then(() => {
-          onScanSuccess(decodedText, result?.result?.format?.formatName);
+        try {
+          onScanSuccess(decodedText.trim(), result?.result?.format?.formatName);
+        } catch (e) {
+          console.error('Error al notificar código escaneado:', e);
+        }
+        stopScanner().finally(() => {
           onClose();
         });
       };
 
       const handleError = () => {
-        // Ignorar frames sin código detectado
+        // Frames sin código
       };
 
-      // Configuración de cámara con fallback progresivo:
-      // Usamos solo 'ideal' (NUNCA 'min', que provoca OverconstrainedError en cámaras de móvil/webcams)
-      const idealConstraints: any = cameraId
-        ? {
-            deviceId: { exact: cameraId },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
-        : {
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          };
+      // Configuración de cámara estándar y 100% compatible
+      const cameraConfig = cameraId
+        ? { deviceId: { exact: cameraId } }
+        : { facingMode: 'environment' };
 
-      try {
-        await html5QrCode.start(idealConstraints, scanConfig, handleSuccess, handleError);
-      } catch (constraintErr: any) {
-        console.warn('Constraints ideales rechazadas por el sensor, iniciando con configuración básica:', constraintErr);
-        // Fallback garantizado sin restricciones de tamaño:
-        const fallbackConfig = cameraId ? cameraId : { facingMode: 'environment' };
-        await html5QrCode.start(fallbackConfig, scanConfig, handleSuccess, handleError);
-      }
-
+      await html5QrCode.start(cameraConfig, scanConfig, handleSuccess, handleError);
       setIsScanning(true);
 
-      // RF-02: Solicitar enfoque continuo directamente sobre la pista activa de hardware
+      // Solicitar enfoque continuo sobre la pista activa de hardware si está disponible
       try {
-        const videoElem = document.querySelector(`#${elementId} video`) as HTMLVideoElement | null;
-        if (videoElem && videoElem.srcObject) {
-          const stream = videoElem.srcObject as MediaStream;
+        const stream = (html5QrCode as any).localMediaStream as MediaStream ||
+          (document.querySelector(`#${elementId} video`) as HTMLVideoElement)?.srcObject as MediaStream;
+        if (stream) {
           const track = stream.getVideoTracks()[0];
           if (track && track.applyConstraints && track.getCapabilities) {
             const capabilities: any = track.getCapabilities();
@@ -163,10 +158,10 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
           }
         }
       } catch (trackErr) {
-        // Si el hardware no soporta control de autofocus vía JS, continúa normalmente
+        // Enfoque continuo es una mejora opcional
       }
 
-      // Enumerar cámaras disponibles tras conceder permisos para llenar el selector
+      // Enumerar cámaras tras el primer inicio exitoso para el selector
       Html5Qrcode.getCameras()
         .then(devices => {
           if (devices && devices.length > 0) {
@@ -178,11 +173,11 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
     } catch (err: any) {
       console.error('Error iniciando escáner de cámara:', err);
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setErrorMsg('Permiso de cámara denegado. Concede acceso a la cámara en los permisos de tu navegador.');
+        setErrorMsg('Permiso de cámara denegado. Permite el acceso a la cámara en los permisos de tu navegador.');
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        setErrorMsg('No se encontró ninguna cámara disponible en tu dispositivo.');
+        setErrorMsg('No se detectó ninguna cámara disponible en tu dispositivo.');
       } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-        setErrorMsg('La cámara está siendo utilizada por otra aplicación. Ciérrala y reintenta.');
+        setErrorMsg('La cámara está siendo usada por otra aplicación. Ciérrala y reintenta.');
       } else {
         setErrorMsg(err.message || 'No se pudo acceder a la cámara. Por favor reintenta la conexión.');
       }
@@ -202,7 +197,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       if (isMounted) {
         startScanner(selectedCameraId || undefined);
       }
-    }, 150);
+    }, 120);
 
     return () => {
       isMounted = false;
@@ -240,13 +235,13 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
         {/* Visor de Cámara */}
         <div className="overflow-y-auto max-md:space-y-4">
-          <div className="mobile-camera-visor relative bg-black flex items-center justify-center min-h-[320px]">
+          <div className="mobile-camera-visor relative bg-black flex items-center justify-center min-h-[300px]">
             <div id={elementId} className="w-full h-full overflow-hidden" />
 
-            {/* RF-02: Guía visual de enfoque rectangular horizontal superpuesta */}
+            {/* Guía visual de enfoque rectangular centrada */}
             {isScanning && !errorMsg && (
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
-                <div className="w-[88%] max-w-[340px] h-32 sm:h-36 border-2 border-dashed border-[#E8B4A0] max-md:border-white/50 rounded-2xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]">
+                <div className="w-[88%] max-w-[320px] h-32 sm:h-36 border-2 border-dashed border-[#E8B4A0] max-md:border-white/70 rounded-2xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]">
                   {/* Esquinas resaltadas */}
                   <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-[#1E3A5F] max-md:border-white rounded-tl" />
                   <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-[#1E3A5F] max-md:border-white rounded-tr" />
@@ -255,7 +250,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                   {/* Línea de escaneo láser horizontal animada */}
                   <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 h-0.5 bg-gradient-to-r from-transparent via-[#E8B4A0] max-md:via-emerald-400 to-transparent animate-pulse shadow-[0_0_8px_#E8B4A0] max-md:shadow-[0_0_8px_#10b981]" />
                   <div className="absolute -bottom-7 inset-x-0 text-center text-[10px] text-white/90 font-mono tracking-wider font-semibold">
-                    ENCUADRAR CÓDIGO 1D / QR AQUÍ
+                    APUNTA AL CÓDIGO DE BARRAS O QR
                   </div>
                 </div>
               </div>
