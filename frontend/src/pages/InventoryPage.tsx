@@ -642,7 +642,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
       </div>
 
       {/* =========================================================
-          3. PRODUCT MATRIX // LIST (AWWWARDS EDITORIAL GALLERY)
+          3. PRODUCT MATRIX // LIST (EDITORIAL GALLERY)
          ========================================================= */}
       {filteredProducts.length === 0 ? (
         <div className="border border-[#E5E7EB] bg-white rounded-2xl p-12 text-center space-y-4 shadow-sm">

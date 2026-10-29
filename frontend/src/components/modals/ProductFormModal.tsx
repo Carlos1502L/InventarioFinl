@@ -445,7 +445,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     <>
       <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 max-md:bg-black/75 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] overflow-y-auto animate-in fade-in">
         <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl lg:max-w-5xl my-auto overflow-hidden shadow-xl flex flex-col max-h-[85vh]">
-          {/* Cabecera Editorial Awwwards / En móvil: Bloque 1 Cabecera Oscura Curva con Handle */}
+          {/* Cabecera Principal / En móvil: Bloque 1 Cabecera Oscura Curva con Handle */}
           <div className="px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] shrink-0 z-20">
             <div className="flex items-center justify-between gap-3">
               <div className="flex flex-col max-md:flex-col-reverse">

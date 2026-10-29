@@ -158,7 +158,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
         <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-4xl my-auto overflow-hidden flex flex-col max-h-[94vh] shadow-xl">
           {/* =========================================================
-              HEADER // AWWWARDS EDITORIAL STAMP
+              HEADER // MODAL HEADER
              ========================================================= */}
           <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[#E5E7EB] bg-white sticky top-0 z-20">
             <div className="min-w-0">
@@ -318,9 +318,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     </span>
                     <span className="text-[#1E3A5F] font-semibold uppercase tracking-wider">{product.code}</span>
                   </div>
-                  <span className="text-[9px] uppercase px-2.5 py-0.5 rounded-full border border-[#E8B4A0] bg-[#E8B4A0]/20 text-[#1E3A5F]">
-                    AWWWARDS STANDARD
-                  </span>
+
                 </div>
               </div>
 

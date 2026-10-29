@@ -201,7 +201,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
                     </span>
                   </div>
 
-                  {/* Barra de Progreso Minimalista Awwwards */}
+                  {/* Barra de Progreso Minimalista */}
                   <div className="w-full h-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-full overflow-hidden">
                     <div
                       className="h-full bg-[#1E3A5F] rounded-full transition-all duration-500"
