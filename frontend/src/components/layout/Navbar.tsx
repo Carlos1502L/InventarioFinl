@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, ChevronDown, Users, LogOut, MapPin, Tag, Search, Camera, User } from 'lucide-react';
+import { ChevronDown, Users, LogOut, MapPin, Tag, Camera } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { TabType } from './BottomNav';
 
@@ -13,33 +13,32 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  activeTab = 'home',
+  activeTab,
   onOpenInventorySelector,
   onOpenCollaborators,
-  onOpenLocations,
-  onOpenCategories,
   onQuickScan
 }) => {
-  const { currentInventory, user, signOut } = useAuth();
+  const { currentInventory, user, profile, signOut } = useAuth();
 
-  // Mapeo de títulos según pestaña activa
-  const tabTitles: Record<TabType, { title: string; subtitle: string }> = {
-    'home': { title: 'PANEL DE CONTROL', subtitle: 'Resumen operacional y métricas clave de stock' },
-    'inventory': { title: 'CATÁLOGO DE EXISTENCIAS', subtitle: 'Listado técnico, filtros y control de unidades' },
-    'sales': { title: 'TERMINAL DE VENTAS', subtitle: 'Registro rápido de transacciones comerciales y cobros' },
-    'sales-history': { title: 'HISTORIAL DE VENTAS', subtitle: 'Trazabilidad y registro fiscal de salidas' },
-    'reports': { title: 'REPORTES & EXPORTACIÓN', subtitle: 'Auditoría, kardex e informes en PDF / Excel' },
-    'analytics': { title: 'TELEMETRÍA & OCUPACIÓN', subtitle: 'Estadísticas de rotación y capacidad física' },
-    'settings': { title: 'CONFIGURACIÓN DE DEPÓSITO', subtitle: 'Gestión de categorías, ubicaciones y equipo' },
+  // Saludo dinámico según la hora local (05:00-11:59 Buenos días | 12:00-18:59 Buenas tardes | 19:00-04:59 Buenas noches)
+  const getTimeBasedGreeting = (): string => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'Buenos días';
+    if (hour >= 12 && hour < 19) return 'Buenas tardes';
+    return 'Buenas noches';
   };
 
-  const currentInfo = tabTitles[activeTab] || tabTitles.home;
+  const displayName =
+    profile?.full_name?.trim() ||
+    (typeof user?.user_metadata?.full_name === 'string' && user.user_metadata.full_name.trim()) ||
+    user?.email?.split('@')[0] ||
+    'Usuario';
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E5E7EB] transition-colors lg:pl-[250px] pt-[env(safe-area-inset-top,0px)]">
+    <header className="hidden md:block sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E5E7EB] transition-colors lg:pl-[250px] pt-[env(safe-area-inset-top,0px)]">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-4">
         
-        {/* Lado Izquierdo: Título Desktop / Logo Móvil */}
+        {/* Lado Izquierdo: Saludo Usuario Desktop / Logo Móvil */}
         <div className="flex items-center gap-3">
           {/* Logo en Móvil (Visible solo en < lg) */}
           <div className="flex lg:hidden items-center gap-2">
@@ -57,48 +56,25 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* Título de Sección y Subtítulo (Desktop >= lg) */}
+          {/* Saludo Dinámico según la hora al Usuario Logueado (Desktop >= lg) */}
           <div className="hidden lg:block">
-            <h2 className="text-base font-light text-[#1E3A5F] uppercase tracking-wide leading-none">
-              {currentInfo.title}
+            <h2 className="text-base sm:text-lg font-bold text-[#1E3A5F] tracking-tight leading-none">
+              {getTimeBasedGreeting()}: <span className="font-semibold text-[#1E3A5F]">{displayName}</span>
             </h2>
-            <p className="text-[11px] text-[#616161] mt-0.5 font-light">
-              {currentInfo.subtitle}
-            </p>
           </div>
         </div>
 
         {/* Lado Derecho: Acciones Contextuales y Perfil */}
         <div className="flex items-center gap-2.5 font-mono text-xs">
           
-          {/* Botón de Categorías (Visible en desktop) */}
-          <button
-            onClick={onOpenCategories}
-            className="hidden md:inline-flex items-center gap-1.5 px-3.5 min-h-[36px] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] text-xs uppercase tracking-wider rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] transition-colors shadow-sm"
-            title="Categorías y Subcategorías"
-          >
-            <Tag className="w-3.5 h-3.5 stroke-[1.5]" />
-            <span>CATEGORÍAS</span>
-          </button>
-
-          {/* Botón de Ubicaciones (Visible en desktop) */}
-          <button
-            onClick={onOpenLocations}
-            className="hidden md:inline-flex items-center gap-1.5 px-3.5 min-h-[36px] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] text-xs uppercase tracking-wider rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] transition-colors shadow-sm"
-            title="Ubicaciones Físicas"
-          >
-            <MapPin className="w-3.5 h-3.5 stroke-[1.5]" />
-            <span>UBICACIONES</span>
-          </button>
-
           {/* Botón de Colaboradores */}
           <button
             onClick={onOpenCollaborators}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 min-h-[36px] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] text-xs uppercase tracking-wider rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] transition-colors shadow-sm"
+            className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 min-h-[36px] min-w-[36px] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] text-xs uppercase tracking-wider rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] transition-colors shadow-sm"
             title="Equipo y Colaboradores"
           >
             <Users className="w-3.5 h-3.5 stroke-[1.5]" />
-            <span>EQUIPO</span>
+            <span className="hidden sm:inline">EQUIPO</span>
           </button>
 
           {/* Escáner Móvil Rápido */}

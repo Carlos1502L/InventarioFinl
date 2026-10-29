@@ -19,19 +19,22 @@ import {
 import { Inventory, InventoryType } from '../../types/database';
 import { supabase, uploadProductImage } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { MinimalDropdown } from '../ui/MinimalDropdown';
 
 interface EditInventoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   inventory: Inventory | null;
   onUpdated: () => void;
+  mode?: 'info' | 'payments';
 }
 
 export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
   isOpen,
   onClose,
   inventory,
-  onUpdated
+  onUpdated,
+  mode = 'info'
 }) => {
   const { user, selectInventory, refreshInventories, inventories } = useAuth();
 
@@ -82,7 +85,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
       setPlinPhone(inventory.plin_phone || '');
       setPlinQrUrl(inventory.plin_qr_url || '');
       setPaymentInstructions(inventory.payment_instructions || '');
-      setActiveTab('general');
+      setActiveTab(mode === 'payments' ? 'payments' : 'general');
       setDeleteConfirmationInput('');
       setSelectedNewOwnerId('');
       setFeedbackMsg(null);
@@ -115,7 +118,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
           });
       }
     }
-  }, [inventory, isOpen, user]);
+  }, [inventory, isOpen, user, mode]);
 
   if (!isOpen || !inventory) return null;
 
@@ -315,16 +318,16 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/85 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+      <div className="mobile-dark-modal bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
         {/* Cabecera */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-2xl">
-              <Settings className="w-5 h-5" />
+              {mode === 'payments' ? <QrCode className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
             </div>
             <div>
               <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                Gestión del Inventario
+                {mode === 'payments' ? 'Pasarela de Pagos' : 'Gestión del Inventario'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {inventory.name}
@@ -340,26 +343,27 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
         </div>
 
         {/* Pestañas de Navegación */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 text-xs font-semibold overflow-x-auto">
+        {mode !== 'payments' && (
+        <div className="mobile-tabs-bar flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 text-xs font-semibold overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveTab('general')}
             className={`flex-1 py-3 px-3 min-w-[90px] flex items-center justify-center gap-1.5 border-b-2 transition-all ${
               activeTab === 'general'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-500/5'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-500/5 mobile-tab-active'
                 : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Layers className="w-4 h-4" /> Detalles
           </button>
 
-          {inventoryType !== 'PERSONAL' && (
+          {false && inventoryType !== 'PERSONAL' && (
             <button
               type="button"
               onClick={() => setActiveTab('payments')}
               className={`flex-1 py-3 px-3 min-w-[100px] flex items-center justify-center gap-1.5 border-b-2 transition-all ${
                 activeTab === 'payments'
-                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-500/5'
+                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-500/5 mobile-tab-active'
                   : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -373,7 +377,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
               onClick={() => setActiveTab('transfer')}
               className={`flex-1 py-3 px-3 min-w-[110px] flex items-center justify-center gap-1.5 border-b-2 transition-all ${
                 activeTab === 'transfer'
-                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-500/5'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-500/5 mobile-tab-active'
                 : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -387,7 +391,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
               onClick={() => setActiveTab('danger')}
               className={`flex-1 py-3 px-3 min-w-[90px] flex items-center justify-center gap-1.5 border-b-2 transition-all ${
                 activeTab === 'danger'
-                  ? 'border-rose-500 text-rose-600 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-500/5'
+                  ? 'border-rose-500 text-rose-600 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-500/5 mobile-tab-active'
                 : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -395,6 +399,8 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
             </button>
           )}
         </div>
+
+        )}
 
         {/* Contenido */}
         <div className="p-5 overflow-y-auto space-y-4">
@@ -411,7 +417,8 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
           )}
 
           {/* TAB 1: DETALLES GENERALES (RF-01 Y RF-02.1) */}
-          {activeTab === 'general' && (
+          {/* TAB 1: DETALLES GENERALES (RF-01 Y RF-02.1) */}
+          {mode !== 'payments' && activeTab === 'general' && (
             <form onSubmit={handleSaveGeneral} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -438,7 +445,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                     onClick={() => setInventoryType('BUSINESS')}
                     className={`p-3 rounded-2xl border text-left transition-all ${
                       inventoryType === 'BUSINESS'
-                        ? 'bg-blue-50/80 dark:bg-blue-600/10 border-blue-500 ring-2 ring-blue-500/20'
+                        ? 'bg-blue-50/80 dark:bg-blue-600/10 border-blue-500 ring-2 ring-blue-500/20 mobile-card-active'
                         : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
                     }`}
                   >
@@ -456,7 +463,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                     onClick={() => setInventoryType('PERSONAL')}
                     className={`p-3 rounded-2xl border text-left transition-all ${
                       inventoryType === 'PERSONAL'
-                        ? 'bg-blue-50/80 dark:bg-blue-600/10 border-blue-500 ring-2 ring-blue-500/20'
+                        ? 'bg-blue-50/80 dark:bg-blue-600/10 border-blue-500 ring-2 ring-blue-500/20 mobile-card-active'
                         : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
                     }`}
                   >
@@ -488,6 +495,23 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Moneda Predeterminada
                 </label>
+                <MinimalDropdown
+                  value={currency}
+                  onChange={(val) => setCurrency(val)}
+                  options={[
+                    { value: 'USD', label: 'Dólar Estadounidense ($ USD)' },
+                    { value: 'PEN', label: 'Soles Peruanos (S/ PEN)' },
+                    { value: 'EUR', label: 'Euros (€ EUR)' },
+                    { value: 'MXN', label: 'Pesos Mexicanos ($ MXN)' },
+                    { value: 'COP', label: 'Pesos Colombianos ($ COP)' },
+                    { value: 'CLP', label: 'Pesos Chilenos ($ CLP)' },
+                    { value: 'ARS', label: 'Pesos Argentinos ($ ARS)' },
+                    { value: 'BOB', label: 'Bolivianos (Bs. BOB)' },
+                    { value: 'BRL', label: 'Reales Brasileños (R$ BRL)' }
+                  ]}
+                />
+                <div className="hidden">{/*
+                </label>
                 <div className="relative">
                   <select
                     value={currency}
@@ -505,14 +529,15 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                     <option value="BRL">Reales Brasileños (R$ BRL)</option>
                   </select>
                   <DollarSign className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                */}
                 </div>
               </div>
 
-              <div className="pt-2 flex justify-end gap-2.5">
+              <div className="pt-2 flex max-md:flex-col-reverse justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                  className="mobile-cancel-btn px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
                 >
                   Cancelar
                 </button>
@@ -529,7 +554,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
           )}
 
           {/* TAB 2: PASARELA DE PAGOS YAPE / PLIN (RF-06.3) */}
-          {activeTab === 'payments' && inventoryType !== 'PERSONAL' && (
+          {(mode === 'payments' || activeTab === 'payments') && (
             <form onSubmit={handleSavePayments} className="space-y-4">
               <div className="p-3 bg-emerald-50 dark:bg-emerald-600/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
                 <div className="flex items-center gap-2 font-bold">
@@ -541,7 +566,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
               </div>
 
               {/* Yape */}
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="mobile-flat-section p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
                 <span className="font-bold text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
                   <QrCode className="w-4 h-4" /> Configuración de Yape
                 </span>
@@ -593,7 +618,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
               </div>
 
               {/* Plin */}
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="mobile-flat-section p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
                 <span className="font-bold text-xs text-sky-600 dark:text-sky-400 flex items-center gap-1.5">
                   <QrCode className="w-4 h-4" /> Configuración de Plin
                 </span>
@@ -644,25 +669,25 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                 </div>
               </div>
 
-              {/* Instrucciones adicionales */}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Instrucciones o Cuentas Bancarias Adicionales
+                </label>{/*
                 </label>
                 <textarea
                   value={paymentInstructions}
                   onChange={e => setPaymentInstructions(e.target.value)}
                   placeholder="Ej: BCP Soles: 191-..., titular Carlos L. Enviar captura al WhatsApp..."
                   rows={2}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  */}<span className="hidden"
                 />
               </div>
 
-              <div className="pt-2 flex justify-end gap-2.5">
+              <div className="pt-2 flex max-md:flex-col-reverse justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 rounded-xl"
+                  className="mobile-cancel-btn px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 rounded-xl"
                 >
                   Cancelar
                 </button>
@@ -707,6 +732,18 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Seleccionar Nuevo Dueño:
                   </label>
+                  <MinimalDropdown
+                    value={selectedNewOwnerId}
+                    onChange={(val) => setSelectedNewOwnerId(val)}
+                    placeholder="Seleccionar colaborador..."
+                    options={collaborators.map((c) => ({
+                      value: c.user_id,
+                      label: c.profiles?.full_name || c.profiles?.email || 'Colaborador',
+                      badge: c.profiles?.full_name ? c.profiles.email : undefined
+                    }))}
+                  />
+                  <select className="hidden"><option>{/*
+                  </label>
                   <select
                     value={selectedNewOwnerId}
                     onChange={e => setSelectedNewOwnerId(e.target.value)}
@@ -715,16 +752,16 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                   >
                     {collaborators.map(c => (
                       <option key={c.id} value={c.user_id}>
-                        {c.profiles?.full_name ? `${c.profiles.full_name} (${c.profiles.email})` : c.profiles?.email}
+                        {c.profiles?.full_name ? `${c.profiles.full_name} (${c.profiles.email})` : c.profiles?.email}*/}
                       </option>
-                    ))}
+                    {/* ))} */}
                   </select>
 
-                  <div className="pt-4 flex justify-end gap-2.5">
+                  <div className="pt-4 flex max-md:flex-col-reverse justify-end gap-2.5">
                     <button
                       type="button"
                       onClick={onClose}
-                      className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 rounded-xl"
+                      className="mobile-cancel-btn px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 rounded-xl"
                     >
                       Cancelar
                     </button>
@@ -769,11 +806,11 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                 />
               </div>
 
-              <div className="pt-2 flex justify-end gap-2.5">
+              <div className="pt-2 flex max-md:flex-col-reverse justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 rounded-xl"
+                  className="mobile-cancel-btn px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 rounded-xl"
                 >
                   Cancelar
                 </button>

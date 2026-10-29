@@ -35,15 +35,231 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   onOpenCollaborators,
   onOpenInventorySelector
 }) => {
-  const { currentInventory, user, signOut, refreshInventories } = useAuth();
-  const [editInventoryOpen, setEditInventoryOpen] = useState(false);
+  const { currentInventory, user, profile, signOut, refreshInventories } = useAuth();
+  const [editInventoryMode, setEditInventoryMode] = useState<'info' | 'payments' | null>(null);
   const [batchLocationsOpen, setBatchLocationsOpen] = useState(false);
   const [couponsOpen, setCouponsOpen] = useState(false);
 
   const isBusiness = currentInventory?.inventory_type !== 'PERSONAL';
 
+  const displayName =
+    profile?.full_name?.trim() ||
+    (typeof user?.user_metadata?.full_name === 'string' && user.user_metadata.full_name.trim()) ||
+    user?.email?.split('@')[0] ||
+    'Usuario';
+
+  const userInitial = displayName.charAt(0).toUpperCase();
+
   return (
-    <div className="space-y-6 pb-28 sm:pb-12 max-w-4xl mx-auto font-normal text-[#1E3A5F]">
+    <>
+      {/* =========================================================
+          VISTA MÓVIL ULTRA MINIMALISTA (< 768px / md:hidden)
+         ========================================================= */}
+      <div className="md:hidden fixed inset-0 h-[100dvh] w-full flex flex-col overflow-hidden bg-white text-neutral-900">
+        
+        {/* 1. HEADER OSCURO FIJO: Avatar/inicial, nombre, correo y etiqueta de rol */}
+        <header className="shrink-0 bg-neutral-950 text-white rounded-b-[2.5rem] z-10 select-none px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-neutral-800 text-white flex items-center justify-center text-xl font-semibold flex-shrink-0">
+              {userInitial}
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg font-semibold tracking-tight text-white truncate">
+                {displayName}
+              </h1>
+              <p className="text-xs text-neutral-400 truncate mt-0.5">
+                {user?.email}
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-neutral-800/80 text-neutral-300 text-[11px] font-medium uppercase tracking-wide">
+                  {currentInventory?.role || 'owner'}
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-neutral-800/80 text-neutral-300 text-[11px] font-medium truncate max-w-[160px]">
+                  {currentInventory?.name || 'Depósito'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* 2. CUERPO BLANCO CON SCROLL AISLADO: Menú de opciones en lista plana estilo ajustes */}
+        <section className="flex-1 min-h-0 w-full bg-white overflow-y-auto overscroll-none px-5 pt-3 pb-24">
+          <div className="divide-y divide-neutral-100">
+            <button
+              type="button"
+              onClick={onOpenInventorySelector}
+              className="w-full py-4 flex items-center justify-between gap-3 text-left active:opacity-70 transition-opacity"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <Layers className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-neutral-900 truncate">
+                    Cambiar o Crear Depósito
+                  </p>
+                  <p className="text-xs text-neutral-400 truncate">
+                    Activo: {currentInventory?.name || 'Sin seleccionar'}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setEditInventoryMode('info')}
+              className="w-full py-4 flex items-center justify-between gap-3 text-left active:opacity-70 transition-opacity"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <Sliders className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-neutral-900 truncate">
+                    Editar Información
+                  </p>
+                  <p className="text-xs text-neutral-400 truncate">
+                    Nombre, moneda ({currentInventory?.currency || 'PEN'}) y tipo
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+            </button>
+
+            {isBusiness && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditInventoryMode('payments')}
+                  className="w-full py-4 flex items-center justify-between gap-3 text-left active:opacity-70 transition-opacity"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <QrCode className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-neutral-900 truncate">
+                        Método de Pago
+                      </p>
+                      <p className="text-xs text-neutral-400 truncate">
+                        Códigos QR y números de cobro
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCouponsOpen(true)}
+                  className="w-full py-4 flex items-center justify-between gap-3 text-left active:opacity-70 transition-opacity"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <Ticket className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-neutral-900 truncate">
+                        Cupones de Descuento
+                      </p>
+                      <p className="text-xs text-neutral-400 truncate">
+                        Códigos promocionales para ventas
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                </button>
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={onOpenCategories}
+              className="w-full py-4 flex items-center justify-between gap-3 text-left active:opacity-70 transition-opacity"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <Tag className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-neutral-900 truncate">
+                    Categorías y Subcategorías
+                  </p>
+                  <p className="text-xs text-neutral-400 truncate">
+                    Clasificación del catálogo
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenLocations}
+              className="w-full py-4 flex items-center justify-between gap-3 text-left active:opacity-70 transition-opacity"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <MapPin className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-neutral-900 truncate">
+                    Ubicaciones Físicas y Estantes
+                  </p>
+                  <p className="text-xs text-neutral-400 truncate">
+                    Administrar zonas y almacenes
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setBatchLocationsOpen(true)}
+              className="w-full py-4 flex items-center justify-between gap-3 text-left active:opacity-70 transition-opacity"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <Printer className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-neutral-900 truncate">
+                    Impresión de Rótulos y QR
+                  </p>
+                  <p className="text-xs text-neutral-400 truncate">
+                    Credenciales físicas para estanterías
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenCollaborators}
+              className="w-full py-4 flex items-center justify-between gap-3 text-left active:opacity-70 transition-opacity"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <Users className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-neutral-900 truncate">
+                    Equipo y Colaboradores
+                  </p>
+                  <p className="text-xs text-neutral-400 truncate">
+                    Accesos y roles del depósito
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+            </button>
+          </div>
+
+          {/* Botón de cerrar sesión en tono sobrio al final de la lista */}
+          <div className="pt-6">
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="w-full py-4 rounded-2xl bg-neutral-100 hover:bg-neutral-200 text-neutral-900 font-semibold text-sm flex items-center justify-center gap-2 transition-colors active:scale-[0.99]"
+            >
+              <LogOut className="w-4 h-4 text-neutral-600" />
+              <span>Cerrar Sesión</span>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      {/* =========================================================
+          VISTA DE ESCRITORIO (>= 768px / hidden md:block)
+         ========================================================= */}
+      <div className="hidden md:block space-y-6 pb-28 sm:pb-12 max-w-4xl mx-auto font-normal text-[#1E3A5F]">
       {/* 1. Cabecera Editorial */}
       <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -60,7 +276,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
         <div className="flex items-center gap-2">
           <span className="px-3.5 py-1.5 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] font-mono text-xs uppercase">
-            v2.4 // AWWWARDS SPEC
+            v2.4
           </span>
         </div>
       </div>
@@ -102,11 +318,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setEditInventoryOpen(true)}
+              onClick={() => setEditInventoryMode('info')}
               className="px-4 py-2 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs uppercase tracking-wider rounded-full transition-all active:scale-95 flex items-center gap-1.5 font-mono shadow-xs"
             >
               <Sliders className="w-3.5 h-3.5 text-[#1E3A5F]" />
-              <span>Gestionar</span>
+              <span>Editar Información</span>
             </button>
             <button
               onClick={onOpenInventorySelector}
@@ -149,7 +365,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs divide-y divide-[#E5E7EB]">
             {/* Pasarela Yape / Plin */}
             <button
-              onClick={() => setEditInventoryOpen(true)}
+              onClick={() => setEditInventoryMode('payments')}
               className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#F8F9FA]/60 transition-colors text-left group"
             >
               <div className="flex items-center gap-3.5">
@@ -157,7 +373,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   <QrCode className="w-5 h-5 text-[#1E3A5F]" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Pasarela de Pagos (Yape / Plin)</h4>
+                  <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Método de Pago</h4>
                   <p className="text-xs text-[#616161] font-light">Configura tus códigos QR y números asociados para el cobro ágil a clientes</p>
                 </div>
               </div>
@@ -314,13 +530,15 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           </button>
         </div>
       </div>
+      </div>
 
       {/* Modales vinculados */}
       <EditInventoryModal
-        isOpen={editInventoryOpen}
-        onClose={() => setEditInventoryOpen(false)}
+        isOpen={editInventoryMode !== null}
+        onClose={() => setEditInventoryMode(null)}
         inventory={currentInventory}
         onUpdated={refreshInventories}
+        mode={editInventoryMode || 'info'}
       />
 
       <BatchLocationsPrintModal
@@ -334,6 +552,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           onClose={() => setCouponsOpen(false)}
         />
       )}
-    </div>
+    </>
   );
 };

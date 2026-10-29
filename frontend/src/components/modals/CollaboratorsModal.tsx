@@ -224,7 +224,7 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
+      <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
         {/* Cabecera */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff]">
           <div className="flex items-center gap-3">
@@ -259,7 +259,7 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
           )}
 
           {/* Formulario de Invitación */}
-          <form onSubmit={handleInvite} className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+          <form onSubmit={handleInvite} className="mobile-flat-section p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
             <span className="text-xs font-bold text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
               <UserPlus className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /> Invitar Nuevo Colaborador
             </span>
@@ -267,7 +267,7 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
               Invita a un miembro por su correo electrónico. Tendrá acceso completo a consultar, crear, mover y retirar productos en este inventario.
             </p>
 
-            <div className="flex gap-2">
+            <div className="flex max-md:flex-col gap-2">
               <div className="relative flex-1">
                 <input
                   type="email"
@@ -310,7 +310,7 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
                 return (
                   <div
                     key={m.id}
-                    className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3"
+                    className="mobile-flat-row p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0">
@@ -362,7 +362,7 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
               {invitations.map(inv => (
                 <div
                   key={inv.id}
-                  className="p-3 bg-amber-50/50 dark:bg-amber-500/5 rounded-2xl border border-amber-200 dark:border-amber-500/20 flex items-center justify-between"
+                  className="mobile-flat-row p-3 bg-amber-50/50 dark:bg-amber-500/5 rounded-2xl border border-amber-200 dark:border-amber-500/20 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2.5">
                     <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400" />

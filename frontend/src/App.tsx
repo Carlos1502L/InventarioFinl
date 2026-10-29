@@ -11,6 +11,7 @@ import { PendingInvitationsBanner } from './components/ui/PendingInvitationsBann
 import { AuthPage } from './pages/AuthPage';
 import { HomePage } from './pages/HomePage';
 import { InventoryPage } from './pages/InventoryPage';
+import { LocationsPage, LocationSubTab } from './pages/LocationsPage';
 import { SalesPage } from './pages/SalesPage';
 import { SalesHistoryPage } from './pages/SalesHistoryPage';
 import { ReportsPage } from './pages/ReportsPage';
@@ -27,6 +28,7 @@ import { LocationsManagementModal } from './components/modals/LocationsManagemen
 import { CollaboratorsModal } from './components/modals/CollaboratorsModal';
 import { InventorySelectorModal } from './components/modals/InventorySelectorModal';
 import { BarcodeScannerModal } from './components/modals/BarcodeScannerModal';
+import { RestockProductModal } from './components/modals/RestockProductModal';
 
 import { Loader2, Layers, Plus, Sparkles } from 'lucide-react';
 
@@ -67,8 +69,20 @@ export const AppContent: React.FC = () => {
   const [collaboratorsModalOpen, setCollaboratorsModalOpen] = useState(false);
   const [inventorySelectorOpen, setInventorySelectorOpen] = useState(false);
 
-  // Escáner Rápido Global (Bottom Nav / Sidebar)
+  // Estado del Módulo de Gestión de Ubicaciones
+  const [locationSubTab, setLocationSubTab] = useState<LocationSubTab>('assign');
+  const [locationTargetProduct, setLocationTargetProduct] = useState<Product | null>(null);
+
+  const openLocationsWorkspace = (subTab: LocationSubTab = 'assign', prod: Product | null = null) => {
+    setLocationSubTab(subTab);
+    setLocationTargetProduct(prod);
+    setActiveTab('locations');
+  };
+
+  // Escáner Rápido Global (Bottom Nav / Sidebar) y Reingreso por Escaneo
   const [quickScanOpen, setQuickScanOpen] = useState(false);
+  const [scannedRestockProduct, setScannedRestockProduct] = useState<Product | null>(null);
+  const [stockSearchFilter, setStockSearchFilter] = useState<string>('');
 
   // Cargar datos del inventario seleccionado
   const fetchInventoryData = useCallback(async () => {
@@ -131,11 +145,10 @@ export const AppContent: React.FC = () => {
   const handleQuickScanSuccess = (code: string) => {
     setQuickScanOpen(false);
 
-    // 1. Buscar si es un producto existente
+    // 1. Buscar si es un producto existente -> Abrir diálogo de Reingreso de Existencias (3.2)
     const matchedProduct = products.find(p => p.code.toLowerCase() === code.toLowerCase());
     if (matchedProduct) {
-      setSelectedProduct(matchedProduct);
-      setProductDetailOpen(true);
+      setScannedRestockProduct(matchedProduct);
       return;
     }
 
@@ -163,7 +176,7 @@ export const AppContent: React.FC = () => {
         </div>
         <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#616161]">
           <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
-          <span>INICIANDO CATÁLOGO AWWWARDS...</span>
+          <span>INICIANDO INVENTARIO...</span>
         </div>
       </div>
     );
@@ -175,7 +188,7 @@ export const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1E3A5F] flex flex-col font-normal selection:bg-[#1E3A5F] selection:text-white transition-colors duration-200">
+    <div className="min-h-screen max-md:fixed max-md:inset-0 max-md:h-[100dvh] max-md:w-full max-md:overflow-hidden md:overflow-visible md:h-auto bg-white md:bg-[#EAEFF5] text-[#1E3A5F] flex flex-col font-normal selection:bg-[#1E3A5F] selection:text-white transition-colors duration-200">
       {/* Sidebar Lateral Fijo Desktop (>= 1024px) */}
       <Sidebar
         activeTab={activeTab}
@@ -187,29 +200,31 @@ export const AppContent: React.FC = () => {
         onQuickScan={() => setQuickScanOpen(true)}
         onOpenInventorySelector={() => setInventorySelectorOpen(true)}
         onOpenCategories={() => setCategoriesModalOpen(true)}
-        onOpenLocations={() => setLocationsModalOpen(true)}
+        onOpenLocations={() => openLocationsWorkspace('assign')}
         onOpenCollaborators={() => setCollaboratorsModalOpen(true)}
         isBusiness={isBusiness}
       />
 
-      {/* Barra de Navegación Superior */}
+      {/* Barra de Navegación Superior (Visible en >= 768px) */}
       <Navbar
         activeTab={activeTab}
         onOpenInventorySelector={() => setInventorySelectorOpen(true)}
         onOpenCollaborators={() => setCollaboratorsModalOpen(true)}
-        onOpenLocations={() => setLocationsModalOpen(true)}
+        onOpenLocations={() => openLocationsWorkspace('assign')}
         onOpenCategories={() => setCategoriesModalOpen(true)}
         onQuickScan={() => setQuickScanOpen(true)}
       />
 
       {/* Contenedor Principal Responsive con offset para el Sidebar en Desktop y safe area en móvil */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 pt-5 lg:pl-[266px] pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-12">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-0 pt-0 md:px-6 md:pt-5 lg:pl-[266px] pb-0 md:pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-12 max-md:h-full max-md:overflow-hidden md:overflow-visible">
         {/* Banner de Invitaciones Pendientes */}
-        <PendingInvitationsBanner />
+        <div className="px-4 md:px-0">
+          <PendingInvitationsBanner />
+        </div>
 
         {/* Banner si el usuario no tiene inventario activo */}
         {!currentInventory && (
-          <div className="mb-6 p-6 bg-[#ffffff] border border-[#E5E7EB] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm font-mono">
+          <div className="mx-4 md:mx-0 mt-4 md:mt-0 mb-6 p-6 bg-[#ffffff] border border-[#E5E7EB] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm font-mono">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-5 h-5 stroke-[1.5]" />
@@ -270,8 +285,22 @@ export const AppContent: React.FC = () => {
               setProductToEdit(null);
               setProductFormOpen(true);
             }}
+            onOpenLocationsModule={(sub, prod) => openLocationsWorkspace(sub || 'assign', prod || null)}
             onRefresh={fetchInventoryData}
             loading={dataLoading}
+            initialSearchTerm={stockSearchFilter}
+            onClearInitialSearch={() => setStockSearchFilter('')}
+          />
+        )}
+
+        {/* VISTA 2.B: GESTIÓN DE UBICACIONES (ASIGNAR, CONSULTAR, MOVER, ESTANTES) */}
+        {activeTab === 'locations' && (
+          <LocationsPage
+            products={products}
+            locations={locations}
+            onRefresh={fetchInventoryData}
+            initialSubTab={locationSubTab}
+            initialProduct={locationTargetProduct}
           />
         )}
 
@@ -280,12 +309,15 @@ export const AppContent: React.FC = () => {
           <SalesPage
             products={products}
             onSaleCompleted={fetchInventoryData}
+            onNavigateToHistory={() => setActiveTab('sales-history')}
           />
         )}
 
         {/* VISTA 4: HISTORIAL DE TRANSACCIONES (Solo NEGOCIO) */}
         {activeTab === 'sales-history' && isBusiness && (
-          <SalesHistoryPage />
+          <SalesHistoryPage
+            onNavigateToSales={() => setActiveTab('sales')}
+          />
         )}
 
         {/* VISTA 5: REPORTES Y EXPORTACIÓN */}
@@ -342,6 +374,12 @@ export const AppContent: React.FC = () => {
         subcategories={subcategories}
         locations={locations}
         products={products}
+        onRedirectToStock={(prod) => {
+          setProductFormOpen(false);
+          setStockSearchFilter(prod.code);
+          setActiveTab('inventory');
+          setScannedRestockProduct(prod);
+        }}
       />
 
       {/* 2. Modal de Detalle de Producto (Ficha Técnica Suiza) */}
@@ -358,6 +396,10 @@ export const AppContent: React.FC = () => {
           setProductDetailOpen(false);
           setSelectedProduct(p);
           setMoveModalOpen(true);
+        }}
+        onAssignLocation={(p) => {
+          setProductDetailOpen(false);
+          openLocationsWorkspace('assign', p);
         }}
         onWithdraw={(p) => {
           setProductDetailOpen(false);
@@ -420,6 +462,19 @@ export const AppContent: React.FC = () => {
         onScanSuccess={handleQuickScanSuccess}
         title="ESCANEAR CÓDIGO // BÚSQUEDA RÁPIDA"
         instructions="Apunta la cámara al código de barras o QR de cualquier producto o estantería."
+      />
+
+      {/* 3.2: Modal de Reingreso de Stock al escanear código existente */}
+      <RestockProductModal
+        product={scannedRestockProduct}
+        isOpen={Boolean(scannedRestockProduct)}
+        onClose={() => setScannedRestockProduct(null)}
+        onRestocked={fetchInventoryData}
+        onViewDetails={prod => {
+          setScannedRestockProduct(null);
+          setSelectedProduct(prod);
+          setProductDetailOpen(true);
+        }}
       />
     </div>
   );

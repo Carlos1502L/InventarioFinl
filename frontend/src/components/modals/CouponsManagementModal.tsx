@@ -3,6 +3,7 @@ import { X, Tag, Plus, Trash2, CheckCircle2, XCircle, Percent, DollarSign, Loade
 import { Coupon, DiscountType } from '../../types/database';
 import { supabase, formatCurrency } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { MinimalDropdown } from '../ui/MinimalDropdown';
 
 interface CouponsManagementModalProps {
   isOpen: boolean;
@@ -164,7 +165,7 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="mobile-dark-modal bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Cabecera */}
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90">
           <div className="flex items-center gap-2.5">
@@ -199,14 +200,14 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
           )}
 
           {/* Formulario de Creación */}
-          <form onSubmit={handleCreateCoupon} className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+          <form onSubmit={handleCreateCoupon} className="mobile-flat-section p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
             <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               <Plus className="w-4 h-4 text-purple-500" /> Crear Nuevo Cupón
             </span>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {/* Código */}
-              <div>
+              <div className="col-span-2 sm:col-span-1">
                 <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
                   Código (Ej: DESC10) <span className="text-purple-500">*</span>
                 </label>
@@ -225,6 +226,16 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                 <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
                   Tipo de Descuento
                 </label>
+                <MinimalDropdown
+                  value={discountType}
+                  onChange={(val) => setDiscountType(val as DiscountType)}
+                  options={[
+                    { value: 'PERCENTAGE', label: 'Porcentaje (%)' },
+                    { value: 'FIXED', label: `Monto Fijo (${currentInventory?.currency || '$'})` }
+                  ]}
+                />
+                {false && (/*
+                </label>
                 <select
                   value={discountType}
                   onChange={e => setDiscountType(e.target.value as DiscountType)}
@@ -233,6 +244,7 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                   <option value="PERCENTAGE">Porcentaje (%)</option>
                   <option value="FIXED">Monto Fijo ({currentInventory?.currency || '$'})</option>
                 </select>
+                */ null)}
               </div>
 
               {/* Valor del Descuento */}
@@ -295,7 +307,7 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                 return (
                   <div
                     key={coupon.id}
-                    className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3"
+                    className="mobile-flat-row p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3"
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${

@@ -10,8 +10,31 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0',
     port: 3000,
-    open: true
+    open: true,
+    allowedHosts: true,
+    proxy: {
+      '/auth/v1': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+      '/rest/v1': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+      '/storage/v1': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+      '/health': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+    },
   }
 });
-

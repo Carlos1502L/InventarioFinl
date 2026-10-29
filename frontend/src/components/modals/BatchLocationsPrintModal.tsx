@@ -55,8 +55,8 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
       if (error) throw error;
       const list = data || [];
       setLocations(list);
-      // Por defecto seleccionar todas
-      setSelectedIds(new Set(list.map(l => l.id)));
+      // Por defecto no seleccionar ninguna al entrar
+      setSelectedIds(new Set());
     } catch (err) {
       console.error('Error cargando ubicaciones para impresión:', err);
     } finally {
@@ -402,7 +402,7 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="mobile-dark-modal bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Cabecera */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90">
           <div className="flex items-center gap-3">
@@ -411,7 +411,7 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
             </div>
             <div>
               <h3 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg">
-                Imprimir Tarjetas de Ubicaciones
+                Imprimir ubicación
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Selecciona las ubicaciones para imprimir sus códigos QR (85.6 × 53.9 mm)
@@ -462,7 +462,7 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
         </div>
 
         {/* Lista de Ubicaciones */}
-        <div className="p-4 overflow-y-auto space-y-2 flex-1">
+        <div className="px-4 py-3 overflow-y-auto flex-1">
           {loading ? (
             <div className="py-12 text-center space-y-2">
               <Loader2 className="w-6 h-6 animate-spin text-amber-500 mx-auto" />
@@ -478,15 +478,53 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
               </p>
             </div>
           ) : (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-medium text-neutral-400">
+                  Ubicaciones ({filteredLocations.length})
+                </span>
+              </div>
+              <div className="mobile-scroll-box bg-neutral-50/70 border border-neutral-200/80 rounded-2xl px-3.5 max-h-44 overflow-y-auto overscroll-contain divide-y divide-neutral-100 custom-scrollbar">
+              {filteredLocations.map(loc => {
+                const isSelected = selectedIds.has(loc.id);
+                return (
+                  <div
+                    key={loc.id}
+                    onClick={() => toggleSelect(loc.id)}
+                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors"
+                  >
+                    <div className="min-w-0 flex-1 pr-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`text-sm truncate ${isSelected ? 'font-semibold text-neutral-950' : 'font-medium text-neutral-700'}`}>
+                          {loc.name}
+                        </span>
+                        <span className="text-xs text-neutral-400 font-normal shrink-0">
+                          {loc.code}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="shrink-0 flex items-center justify-center">
+                      {isSelected ? (
+                        <CheckSquare className="w-5 h-5 text-neutral-950 dark:text-amber-400" />
+                      ) : (
+                        <Square className="w-5 h-5 text-neutral-300 dark:text-slate-600" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              </div>
+            </div>
+          ) || (
             filteredLocations.map(loc => {
               const isSelected = selectedIds.has(loc.id);
               return (
                 <div
                   key={loc.id}
                   onClick={() => toggleSelect(loc.id)}
-                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                  className={`mobile-flat-row p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                     isSelected
-                      ? 'bg-amber-50/70 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/40 shadow-sm'
+                      ? 'mobile-card-active bg-amber-50/70 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/40 shadow-sm'
                       : 'bg-white dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                 >
@@ -533,26 +571,26 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
         {/* Acciones de impresión */}
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-            Formato: <strong>Tarjeta PVC / Adhesiva (85.6 × 53.9 mm)</strong>
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            <span>Medida (85.6 x 53.9 mm)</span>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={handleExportPDF}
               disabled={isProcessing || selectedIds.size === 0}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 transition-all active:scale-95 disabled:opacity-50"
+              className="mobile-inline-btn flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 max-md:py-3 bg-slate-100 hover:bg-slate-200 max-md:bg-neutral-100 max-md:text-neutral-800 max-md:border-0 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold max-md:font-semibold rounded-xl max-md:rounded-2xl border border-slate-200 dark:border-slate-700 transition-all active:scale-95 disabled:opacity-50"
             >
-              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-indigo-500" />}
-              Descargar PDF ({selectedIds.size})
+              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-indigo-500 max-md:text-neutral-700 shrink-0" />}
+              <span className="truncate">Descargar ({selectedIds.size})</span>
             </button>
             <button
               onClick={handlePrint}
               disabled={isProcessing || selectedIds.size === 0}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-amber-600/20 transition-all active:scale-95 disabled:opacity-50"
+              className="mobile-inline-btn flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 max-md:py-3 bg-amber-600 hover:bg-amber-500 max-md:bg-neutral-950 text-white text-xs font-bold max-md:font-semibold rounded-xl max-md:rounded-2xl shadow-lg max-md:shadow-none shadow-amber-600/20 transition-all active:scale-95 disabled:opacity-50"
             >
-              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
-              Imprimir Seleccionadas ({selectedIds.size})
+              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4 shrink-0" />}
+              <span className="truncate">Imprimir ({selectedIds.size})</span>
             </button>
           </div>
         </div>

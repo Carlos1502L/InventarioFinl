@@ -1,10 +1,11 @@
 export type InventoryRole = 'owner' | 'collaborator';
 export type InventoryType = 'PERSONAL' | 'BUSINESS';
 export type ProductStatus = 'ACTIVE' | 'INACTIVE' | 'WITHDRAWN' | 'ARCHIVED';
-export type ActionType = 'CREATE' | 'UPDATE' | 'MOVE' | 'WITHDRAW' | 'RESTOCK' | 'DELETE' | 'SALE';
+export type ActionType = 'CREATE' | 'UPDATE' | 'MOVE' | 'ASSIGN' | 'WITHDRAW' | 'RESTOCK' | 'DELETE' | 'SALE';
 export type PaymentMethod = 'CASH' | 'YAPE' | 'PLIN' | 'CARD' | 'TRANSFER' | 'OTHER';
 export type DiscountType = 'PERCENTAGE' | 'FIXED';
 export type CouponStatus = 'ACTIVE' | 'INACTIVE';
+export type UnitType = 'UNIT' | 'BOX';
 
 export interface Coupon {
   id: string;
@@ -97,6 +98,22 @@ export interface Location {
   product_count?: number;
 }
 
+export interface ProductLocation {
+  id: string;
+  inventory_id: string;
+  product_id: string;
+  location_id: string;
+  quantity: number;
+  created_at: string;
+  updated_at: string;
+  locations?: {
+    id: string;
+    name: string;
+    code: string;
+    description?: string | null;
+  } | null;
+}
+
 export interface Product {
   id: string;
   inventory_id: string;
@@ -106,11 +123,16 @@ export interface Product {
   price: number; // Precio de Venta Final o Precio Base Personal
   cost_price?: number; // RF-01.2: Precio de Costo
   markup_percentage?: number; // RF-01.2: Porcentaje de Ganancia
+  unit_type?: UnitType;
+  units_per_box?: number | null;
   stock: number;
   min_stock: number; // RF-04.1: Configurable desde 1
   category_id: string | null;
   subcategory_id: string | null;
-  location_id: string;
+  location_id: string | null;
+  product_locations?: ProductLocation[];
+  assigned_stock?: number;
+  unassigned_stock?: number;
   images: string[]; // Máximo 3 URLs
   status: ProductStatus;
   withdrawal_reason?: string | null;

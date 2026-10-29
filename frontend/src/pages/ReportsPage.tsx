@@ -12,6 +12,7 @@ import {
 import { Product, Category, Subcategory, Location } from '../types/database';
 import { formatCurrency } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { MinimalDropdown } from '../components/ui/MinimalDropdown';
 import jsPDF from 'jspdf';
 
 interface ReportsPageProps {
@@ -285,6 +286,65 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
           <div>
             <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Categoría</label>
+            <MinimalDropdown
+              value={filterCategory}
+              onChange={(val) => {
+                setFilterCategory(val);
+                setFilterSubcategory('ALL');
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: 'ALL', label: 'Todas las Categorías' },
+                ...categories.map((c) => ({ value: c.id, label: c.name }))
+              ]}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Subcategoría</label>
+            <MinimalDropdown
+              value={filterSubcategory}
+              onChange={(val) => {
+                setFilterSubcategory(val);
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: 'ALL', label: 'Todas las Subcategorías' },
+                ...activeSubcategories.map((s) => ({ value: s.id, label: s.name }))
+              ]}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Ubicación Física</label>
+            <MinimalDropdown
+              value={filterLocation}
+              onChange={(val) => {
+                setFilterLocation(val);
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: 'ALL', label: 'Todas las Ubicaciones' },
+                ...locations.map((l) => ({ value: l.id, label: l.name, badge: l.code }))
+              ]}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Estado de Existencia</label>
+            <MinimalDropdown
+              value={filterStatus}
+              onChange={(val) => {
+                setFilterStatus(val);
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: 'ALL', label: 'Todos los Estados' },
+                { value: 'ACTIVE', label: 'Activos en Manifiesto' },
+                { value: 'WITHDRAWN', label: 'Retirados / Baja' }
+              ]}
+            />
+            {false && (/*
             <select
               value={filterCategory}
               onChange={e => {
@@ -298,7 +358,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
               {categories.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
-            </select>
+
           </div>
 
           <div>
@@ -316,7 +376,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
               {activeSubcategories.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
-            </select>
+
           </div>
 
           <div>
@@ -333,7 +393,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
               {locations.map(l => (
                 <option key={l.id} value={l.id}>{l.name} ({l.code})</option>
               ))}
-            </select>
+
           </div>
 
           <div>
@@ -349,7 +409,8 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
               <option value="ALL">Todos los Estados</option>
               <option value="ACTIVE">Activos en Manifiesto</option>
               <option value="WITHDRAWN">Retirados / Baja</option>
-            </select>
+            */ null)}
+
           </div>
         </div>
       </div>

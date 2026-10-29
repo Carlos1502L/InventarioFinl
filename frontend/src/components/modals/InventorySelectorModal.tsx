@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Layers, Plus, CheckCircle, Shield, Users, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
+import { MinimalDropdown } from '../ui/MinimalDropdown';
 
 interface InventorySelectorModalProps {
   isOpen: boolean;
@@ -93,7 +94,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-lg overflow-hidden shadow-xl flex flex-col">
+      <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-lg overflow-hidden shadow-xl flex flex-col">
         {/* Cabecera */}
         <div className="px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -140,19 +141,19 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                       selectInventory(inv);
                       onClose();
                     }}
-                    className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group ${
+                    className={`mobile-flat-row w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group ${
                       isSelected
-                        ? 'bg-[#E8B4A0]/10 border-[#1E3A5F] ring-1 ring-[#1E3A5F]'
+                        ? 'bg-[#E8B4A0]/10 border-[#1E3A5F] ring-1 ring-[#1E3A5F] mobile-card-active'
                         : 'bg-white border-[#E5E7EB] hover:border-[#1E3A5F] hover:bg-[#F8F9FA]'
                     }`}
                   >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-[#1E3A5F] text-sm group-hover:text-[#1E3A5F] transition-colors uppercase">
+                    <div className="min-w-0 flex-1 pr-3 space-y-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <h4 className="font-bold text-[#1E3A5F] text-sm group-hover:text-[#1E3A5F] transition-colors uppercase truncate">
                           {inv.name}
                         </h4>
                         <span
-                          className={`text-[9px] uppercase px-2 py-0.5 rounded-full tracking-wider flex items-center gap-1 ${
+                          className={`shrink-0 text-[9px] uppercase px-2 py-0.5 rounded-full tracking-wider flex items-center gap-1 ${
                             isOwner
                               ? 'bg-[#1E3A5F] text-white'
                               : 'bg-[#F8F9FA] text-[#616161] border border-[#E5E7EB]'
@@ -162,15 +163,12 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                           {isOwner ? 'Dueño' : 'Colaborador'}
                         </span>
                       </div>
-                      {inv.description && (
-                        <p className="text-[11px] text-[#616161] line-clamp-1">{inv.description}</p>
-                      )}
-                      <span className="text-[10px] text-[#616161] block">
-                        MONEDA // {inv.currency || 'USD'}
+                      <span className="text-[10px] text-[#616161] block truncate">
+                        MONEDA // {inv.currency || 'USD'}{inv.description ? ` · ${inv.description}` : ''}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       {isSelected ? (
                         <div className="w-8 h-8 rounded-full bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center shadow-sm">
                           <CheckCircle className="w-4 h-4" />
@@ -226,25 +224,37 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
               <div>
                 <label className="block text-xs uppercase tracking-wider text-[#1E3A5F] mb-1">
                   Moneda Predeterminada
+                </label>{/*
                 </label>
                 <select
                   value={newInvCurrency}
-                  onChange={e => setNewInvCurrency(e.target.value)}
+                */}<MinimalDropdown
+                  value={newInvCurrency}
+                  onChange={(val) => setNewInvCurrency(val)}
+                  options={[
+                    { value: 'PEN', label: 'Soles Peruanos (S/ PEN)' },
+                    { value: 'USD', label: 'Dólar Estadounidense ($ USD)' },
+                    { value: 'EUR', label: 'Euros (€ EUR)' },
+                    { value: 'MXN', label: 'Pesos Mexicanos ($ MXN)' },
+                    { value: 'COP', label: 'Pesos Colombianos ($ COP)' }
+                  ]}
+                />
+                <select className="hidden">{/*
                   className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                 >
                   <option value="PEN">Soles Peruanos (S/ PEN)</option>
                   <option value="USD">Dólar Estadounidense ($ USD)</option>
                   <option value="EUR">Euros (€ EUR)</option>
                   <option value="MXN">Pesos Mexicanos ($ MXN)</option>
-                  <option value="COP">Pesos Colombianos ($ COP)</option>
+                  <option value="COP">Pesos Colombianos ($ COP)</option>*/}
                 </select>
               </div>
 
-              <div className="flex justify-end gap-2.5 pt-2">
+              <div className="flex max-md:flex-col-reverse justify-end gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsCreatingNew(false)}
-                  className="min-h-[44px] px-4 text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] transition-colors"
+                  className="mobile-cancel-btn min-h-[44px] px-4 text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] transition-colors"
                 >
                   Volver a la Lista
                 </button>

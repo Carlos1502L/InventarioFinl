@@ -14,14 +14,20 @@ import {
   Loader2,
   ChevronRight,
   CreditCard,
-  QrCode
+  QrCode,
+  ArrowUpRight,
+  ShoppingCart
 } from 'lucide-react';
 import { Sale, SaleItem } from '../types/database';
 import { supabase, formatCurrency, formatDate } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import jsPDF from 'jspdf';
 
-export const SalesHistoryPage: React.FC = () => {
+interface SalesHistoryPageProps {
+  onNavigateToSales?: () => void;
+}
+
+export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateToSales }) => {
   const { currentInventory } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(false);
@@ -182,7 +188,194 @@ export const SalesHistoryPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-28 sm:pb-12 max-w-7xl mx-auto font-normal text-[#1E3A5F]">
+    <>
+      {/* =========================================================
+          VISTA MÓVIL ULTRA MINIMALISTA (< 768px / md:hidden)
+         ========================================================= */}
+      <div className="md:hidden fixed inset-0 h-[100dvh] max-h-[100dvh] w-full flex flex-col overflow-hidden bg-white text-neutral-900">
+        
+        {/* CAPA 1: Header Oscuro Principal (Fijo / shrink-0) */}
+        <header className="shrink-0 bg-neutral-950 text-white rounded-b-[2.5rem] z-20 select-none px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-5">
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-xl font-semibold tracking-tight text-white">
+              Historial de Ventas
+            </h1>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {onNavigateToSales && (
+                <button
+                  type="button"
+                  onClick={onNavigateToSales}
+                  aria-label="Volver al Punto de Venta"
+                  className="h-10 px-3.5 rounded-full bg-neutral-800/70 hover:bg-neutral-800 text-neutral-200 flex items-center gap-1.5 text-xs font-medium transition-colors active:scale-95"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5 stroke-[1.75]" />
+                  <span>Cobrar</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleExportPDF}
+                disabled={filteredSales.length === 0}
+                aria-label="Exportar PDF"
+                className="w-10 h-10 rounded-full bg-neutral-800/70 hover:bg-neutral-800 text-neutral-200 flex items-center justify-center transition-colors active:scale-95 disabled:opacity-40"
+              >
+                <Download className="w-4 h-4 stroke-[1.75]" />
+              </button>
+            </div>
+          </div>
+
+          {/* Total recaudado y cantidad de tickets */}
+          <div className="mt-4 flex items-end justify-between gap-4">
+            <div>
+              <span className="text-xs text-neutral-400 block">
+                Total recaudado
+              </span>
+              <p className="text-4xl font-semibold tracking-tight text-white tabular-nums mt-1">
+                {formatCurrency(totalRevenue, currentInventory?.currency)}
+              </p>
+            </div>
+
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-neutral-800/80 text-neutral-300 text-xs font-medium tabular-nums">
+              {filteredSales.length} {filteredSales.length === 1 ? 'ticket' : 'tickets'}
+            </span>
+          </div>
+        </header>
+
+        {/* CAPA 2: Contenedor Blanco Global (flex-1 flex flex-col overflow-hidden) */}
+        <section className="flex-1 min-h-0 w-full bg-white flex flex-col overflow-hidden">
+          
+          {/* SUB-CAPA 2A: Barra Fija de Herramientas (NUNCA SE MUEVE NI HACE SCROLL) */}
+          <div className="shrink-0 w-full bg-white px-5 pt-4 pb-2.5 space-y-3">
+            {/* Buscador plano */}
+            <div className="flex items-center gap-3 bg-neutral-50 border border-neutral-200/60 rounded-2xl px-4 py-3.5 focus-within:border-neutral-950 focus-within:bg-white transition-all">
+              <Search className="w-5 h-5 text-neutral-400 shrink-0" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por ticket, cliente o método..."
+                className="w-full bg-transparent border-0 outline-none ring-0 p-0 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-0"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="text-xs text-neutral-400 hover:text-neutral-900"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Filtro/rango de fechas en píldoras simples */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDate(todayStr);
+                  setEndDate(todayStr);
+                }}
+                className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                  startDate === todayStr && endDate === todayStr
+                    ? 'bg-neutral-950 text-white'
+                    : 'bg-neutral-100 text-neutral-600'
+                }`}
+              >
+                Hoy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const d = new Date();
+                  d.setDate(d.getDate() - 7);
+                  setStartDate(d.toISOString().split('T')[0]);
+                  setEndDate(todayStr);
+                }}
+                className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                  startDate !== '' && startDate !== todayStr
+                    ? 'bg-neutral-950 text-white'
+                    : 'bg-neutral-100 text-neutral-600'
+                }`}
+              >
+                Últimos 7 días
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDate('');
+                  setEndDate(todayStr);
+                }}
+                className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                  startDate === ''
+                    ? 'bg-neutral-950 text-white'
+                    : 'bg-neutral-100 text-neutral-600'
+                }`}
+              >
+                Todo el historial
+              </button>
+            </div>
+          </div>
+
+          {/* SUB-CAPA 2B: Contenedor de Datos con Scroll Aislado */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 divide-y divide-neutral-100 pb-28">
+            {loading ? (
+              <p className="py-10 text-center text-xs text-neutral-400">
+                Cargando transacciones...
+              </p>
+            ) : filteredSales.length === 0 ? (
+              <p className="py-10 text-center text-xs text-neutral-400">
+                No se encontraron ventas en este periodo.
+              </p>
+            ) : (
+              filteredSales.map((s) => {
+                const firstItem = (s.items?.[0]?.product_name || 'VENTA').toUpperCase();
+                const productTitle =
+                  s.items && s.items.length > 1
+                    ? `${firstItem} (+${s.items.length - 1})`
+                    : firstItem;
+                const timeStr = new Date(s.created_at).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => setSelectedSale(s)}
+                    className="py-4 flex items-center justify-between gap-3 cursor-pointer active:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-600 flex items-center justify-center flex-shrink-0">
+                        <ArrowUpRight className="w-3.5 h-3.5 stroke-[1.75]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-neutral-900 truncate">
+                          {productTitle}
+                        </p>
+                        <p className="text-xs text-neutral-400 truncate mt-0.5">
+                          #{s.id.slice(0, 6).toUpperCase()} · {timeStr} // {(s.payment_method || 'EFECTIVO').toUpperCase()}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right flex-shrink-0">
+                      <span className="text-sm font-semibold text-neutral-900 tabular-nums">
+                        {formatCurrency(s.total_amount, currentInventory?.currency)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </section>
+      </div>
+
+      {/* =========================================================
+          VISTA DE ESCRITORIO (>= 768px / hidden md:block)
+         ========================================================= */}
+      <div className="hidden md:block space-y-6 pb-28 sm:pb-12 max-w-7xl mx-auto font-normal text-[#1E3A5F]">
       {/* 1. Cabecera Editorial */}
       <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -362,11 +555,12 @@ export const SalesHistoryPage: React.FC = () => {
           </div>
         )}
       </div>
+      </div>
 
       {/* Modal de Detalle de Venta */}
       {selectedSale && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl w-full max-w-lg overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
+          <div className="mobile-dark-modal bg-white border border-[#E5E7EB] rounded-2xl w-full max-w-lg overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between p-4 border-b border-[#E5E7EB] bg-white">
               <div className="flex items-center gap-2">
                 <Receipt className="w-4 h-4 text-[#E8B4A0]" />
@@ -383,7 +577,7 @@ export const SalesHistoryPage: React.FC = () => {
             </div>
 
             <div className="p-5 overflow-y-auto space-y-4">
-              <div className="grid grid-cols-2 gap-2 p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] text-xs font-mono">
+              <div className="mobile-flat-section grid grid-cols-2 gap-2 p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] text-xs font-mono">
                 <div>
                   <span className="text-[10px] text-[#616161] block uppercase">Fecha:</span>
                   <span className="text-[#1E3A5F]">{new Date(selectedSale.created_at).toLocaleString()}</span>
@@ -417,25 +611,31 @@ export const SalesHistoryPage: React.FC = () => {
                 <span className="text-[11px] uppercase font-mono tracking-wider text-[#616161] block">
                   Ítems Vendidos ({selectedSale.items?.length || 0})
                 </span>
-                <div className="divide-y divide-[#E5E7EB] border border-[#E5E7EB] rounded-xl overflow-hidden">
-                  {selectedSale.items?.map((it) => (
-                    <div key={it.id} className="p-3 flex items-center justify-between text-xs">
-                      <div>
-                        <p className="font-bold text-[#1E3A5F] uppercase">{it.product_name}</p>
-                        <p className="text-[10px] text-[#616161] font-mono mt-0.5">
-                          <span className="font-semibold">{it.product_code}</span> • {it.quantity} uds × {formatCurrency(it.unit_price, currentInventory?.currency)}
-                        </p>
+                <div className="mobile-flat-section divide-y divide-[#E5E7EB] border border-[#E5E7EB] rounded-xl overflow-hidden">
+                  {selectedSale.items?.map((it) => {
+                    const hasFormattedBreakdown = (it.product_name || '').includes('·');
+                    return (
+                      <div key={it.id} className="mobile-flat-row p-3 flex items-center justify-between text-xs">
+                        <div>
+                          <p className="font-bold text-[#1E3A5F] uppercase">{it.product_name}</p>
+                          <p className="text-[10px] text-[#616161] font-mono mt-0.5">
+                            <span className="font-semibold">{it.product_code}</span>
+                            {hasFormattedBreakdown
+                              ? ` • P. Unit: ${formatCurrency(it.unit_price, currentInventory?.currency)}`
+                              : ` • ${it.quantity} uds × ${formatCurrency(it.unit_price, currentInventory?.currency)}`}
+                          </p>
+                        </div>
+                        <span className="font-mono font-bold text-[#1E3A5F]">
+                          {formatCurrency(it.subtotal, currentInventory?.currency)}
+                        </span>
                       </div>
-                      <span className="font-mono font-bold text-[#1E3A5F]">
-                        {formatCurrency(it.subtotal, currentInventory?.currency)}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Total final */}
-              <div className="flex items-center justify-between p-4 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-mono">
+              <div className="mobile-flat-row flex items-center justify-between p-4 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-mono">
                 <span className="text-xs uppercase tracking-wider text-[#616161] font-bold">TOTAL LIQUIDADO:</span>
                 <span className="text-lg font-bold text-[#1E3A5F]">
                   {formatCurrency(selectedSale.total_amount, currentInventory?.currency)}
@@ -445,6 +645,6 @@ export const SalesHistoryPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };

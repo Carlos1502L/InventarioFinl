@@ -3,6 +3,7 @@ import { X, Tag, Plus, Trash2, Layers, FolderPlus, Loader2 } from 'lucide-react'
 import { Category, Subcategory } from '../../types/database';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { MinimalDropdown } from '../ui/MinimalDropdown';
 
 interface CategoriesManagementModalProps {
   isOpen: boolean;
@@ -120,7 +121,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
+      <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
         {/* Cabecera */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff]">
           <div className="flex items-center gap-3">
@@ -141,12 +142,12 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
         </div>
 
         {/* Pestañas */}
-        <div className="flex border-b border-[#E5E7EB] bg-[#F8F9FA]">
+        <div className="mobile-tabs-bar flex border-b border-[#E5E7EB] bg-[#F8F9FA]">
           <button
             onClick={() => setActiveTab('categories')}
             className={`flex-1 py-3 text-xs uppercase tracking-wider font-mono flex items-center justify-center gap-2 border-b-2 transition-all ${
               activeTab === 'categories'
-                ? 'border-[#1E3A5F] text-[#1E3A5F] bg-white font-medium'
+                ? 'border-[#1E3A5F] text-[#1E3A5F] bg-white font-medium mobile-tab-active'
                 : 'border-transparent text-[#616161] hover:text-[#1E3A5F]'
             }`}
           >
@@ -156,7 +157,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
             onClick={() => setActiveTab('subcategories')}
             className={`flex-1 py-3 text-xs uppercase tracking-wider font-mono flex items-center justify-center gap-2 border-b-2 transition-all ${
               activeTab === 'subcategories'
-                ? 'border-[#1E3A5F] text-[#1E3A5F] bg-white font-medium'
+                ? 'border-[#1E3A5F] text-[#1E3A5F] bg-white font-medium mobile-tab-active'
                 : 'border-transparent text-[#616161] hover:text-[#1E3A5F]'
             }`}
           >
@@ -175,7 +176,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
           {activeTab === 'categories' ? (
             <>
               {/* Formulario Nueva Categoría */}
-              <form onSubmit={handleCreateCategory} className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <form onSubmit={handleCreateCategory} className="mobile-flat-section p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
                   <FolderPlus className="w-4 h-4 text-blue-500 dark:text-blue-400" /> Nueva Categoría
                 </span>
@@ -195,7 +196,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
 
                   <div>
                     <label className="block text-[11px] text-slate-600 dark:text-slate-400 mb-1">Color de Etiqueta</label>
-                    <div className="flex items-center gap-1.5 pt-1">
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
                       {PRESET_COLORS.map(c => (
                         <button
                           key={c}
@@ -243,7 +244,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                   categories.map(cat => (
                     <div
                       key={cat.id}
-                      className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+                      className="mobile-flat-row p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <span
@@ -273,7 +274,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
           ) : (
             <>
               {/* Formulario Nueva Subcategoría */}
-              <form onSubmit={handleCreateSubcategory} className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <form onSubmit={handleCreateSubcategory} className="mobile-flat-section p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
                   <Plus className="w-4 h-4 text-blue-500 dark:text-blue-400" /> Nueva Subcategoría
                 </span>
@@ -281,6 +282,19 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] text-slate-600 dark:text-slate-400 mb-1">Categoría Padre <span className="text-blue-500">*</span></label>
+                    <MinimalDropdown
+                      value={selectedCatId}
+                      onChange={(val) => setSelectedCatId(val)}
+                      placeholder="Selecciona una categoría..."
+                      options={[
+                        { value: '', label: 'Selecciona una categoría...' },
+                        ...categories.map((c) => ({
+                          value: c.id,
+                          label: c.name
+                        }))
+                      ]}
+                    />
+                    {false && (
                     <select
                       value={selectedCatId}
                       onChange={e => setSelectedCatId(e.target.value)}
@@ -294,6 +308,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                         </option>
                       ))}
                     </select>
+                    )}
                   </div>
 
                   <div>
@@ -343,7 +358,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                     return (
                       <div
                         key={sub.id}
-                        className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+                        className="mobile-flat-row p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
                       >
                         <div>
                           <div className="flex items-center gap-2">

@@ -100,7 +100,7 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-        <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
+        <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
           {/* Cabecera */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff]">
             <div className="flex items-center gap-3">
@@ -129,7 +129,7 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
             )}
 
             {/* Formulario Nueva Ubicación */}
-            <form onSubmit={handleCreateLocation} className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+            <form onSubmit={handleCreateLocation} className="mobile-flat-section p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
               <span className="text-xs font-bold text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
                 <Plus className="w-4 h-4 text-amber-500 dark:text-amber-400" /> Nueva Ubicación
               </span>
@@ -213,7 +213,7 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                 locations.map(loc => (
                   <div
                     key={loc.id}
-                    className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+                    className="mobile-flat-row p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
                   >
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">

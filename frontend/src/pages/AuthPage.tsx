@@ -57,7 +57,7 @@ export const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[#F8F9FA] flex items-center justify-center p-4 sm:p-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] selection:bg-[#1E3A5F] selection:text-white">
+    <div className="min-h-[100dvh] max-md:fixed max-md:inset-0 max-md:h-[100dvh] max-md:overflow-hidden max-md:overscroll-none bg-[#F8F9FA] flex items-center justify-center p-4 sm:p-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] selection:bg-[#1E3A5F] selection:text-white">
       {/* Split-Card Container con Altura Fija y Consistente en Ambos Modos */}
       <div className="w-full max-w-md md:max-w-4xl bg-white border border-[#E5E7EB] rounded-2xl shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-2 md:h-[620px]">
         
@@ -112,7 +112,7 @@ export const AuthPage: React.FC = () => {
             PANEL DERECHO: FORMULARIO SPLIT-CARD (BLANCO PAPER)
             Altura exacta uniforme para Iniciar Sesión y Registro
            ========================================================= */}
-        <div className="bg-white p-6 sm:p-8 md:p-12 flex flex-col h-[540px] md:h-full justify-between relative overflow-hidden">
+        <div className="bg-white p-6 sm:p-8 md:p-12 flex flex-col h-[470px] md:h-full justify-between relative overflow-hidden">
           
           {/* Identificador de marca visible en móvil (para no saturar pantalla en iPhone) */}
           <div className="flex md:hidden items-center justify-center gap-2 mb-2 flex-shrink-0">
@@ -265,21 +265,6 @@ export const AuthPage: React.FC = () => {
                     >
                       ¿Olvidaste tu contraseña?
                     </button>
-                  </div>
-
-                  {/* Micro tarjeta de seguridad que equilibra exactamente la altura con Registro */}
-                  <div className="p-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-2xl flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-lg bg-[#1E3A5F]/5 border border-[#1E3A5F]/10 flex items-center justify-center flex-shrink-0">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#1E3A5F]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#1E3A5F]">
-                        Terminal Criptográfica Activa
-                      </p>
-                      <p className="text-[10px] text-[#616161] font-light truncate">
-                        Cifrado TLS 1.3 con almacenamiento particionado
-                      </p>
-                    </div>
                   </div>
                 </div>
 

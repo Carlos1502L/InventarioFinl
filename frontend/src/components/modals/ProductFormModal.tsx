@@ -1,9 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Camera, Barcode, Upload, Trash2, Loader2, MapPin, Tag, Layers, Check, Plus, AlertCircle, Sparkles, GitBranch } from 'lucide-react';
-import { Product, Category, Subcategory, Location } from '../../types/database';
-import { supabase, uploadProductImage, logAuditAction, formatCurrency } from '../../services/supabase';
+import {
+  X,
+  Camera,
+  Barcode,
+  Upload,
+  Trash2,
+  Loader2,
+  MapPin,
+  Tag,
+  Layers,
+  Check,
+  Plus,
+  AlertCircle,
+  Sparkles,
+  GitBranch,
+  Package
+} from 'lucide-react';
+import { Product, Category, Subcategory, Location, UnitType } from '../../types/database';
+import {
+  supabase,
+  uploadProductImage,
+  logAuditAction,
+  formatCurrency,
+  formatCleanDecimal,
+  formatStockDisplay,
+  getBoxBreakdown
+} from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
+import { RestockProductModal } from './RestockProductModal';
+import { MinimalDropdown } from '../ui/MinimalDropdown';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -14,6 +40,7 @@ interface ProductFormModalProps {
   subcategories: Subcategory[];
   locations: Location[];
   products?: Product[];
+  onRedirectToStock?: (product: Product) => void;
 }
 
 export const ProductFormModal: React.FC<ProductFormModalProps> = ({
@@ -24,7 +51,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   categories,
   subcategories,
   locations,
-  products = []
+  products = [],
+  onRedirectToStock
 }) => {
   const { currentInventory, user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,6 +69,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [costPrice, setCostPrice] = useState<string>('0.00');
   const [markupPercentage, setMarkupPercentage] = useState<string>('20.00');
   const [price, setPrice] = useState<string>('0.00');
+
+  // Requerimiento Unidad de Medida Dual: 'UNIT' | 'BOX'
+  const [unitType, setUnitType] = useState<UnitType>('UNIT');
+  const [unitsPerBox, setUnitsPerBox] = useState<string>('12');
+  const [initialLooseUnits, setInitialLooseUnits] = useState<string>('0');
 
   // Stock y Control de Stock Mínimo (RF-04.1: Umbral inicial configurable en 1)
   const [stock, setStock] = useState<string>('1');
@@ -59,16 +92,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [variantSize, setVariantSize] = useState('');
   const [variantRegion, setVariantRegion] = useState('');
 
-  // RF-06.2: Detección inteligente de duplicados por QR
+  // RF-06.2 & 3.2: Detección inteligente de duplicados por QR / Código de Barras
   const [duplicateDetectedProduct, setDuplicateDetectedProduct] = useState<Product | null>(null);
-  const [duplicateAddQuantity, setDuplicateAddQuantity] = useState<number>(1);
-  const [isAddingStockDirectly, setIsAddingStockDirectly] = useState(false);
 
   // Estados de UI y Cámara
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  
+
   // Escáner Modal
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scanTarget, setScanTarget] = useState<'productCode' | 'locationCode'>('productCode');
@@ -88,8 +119,22 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setCostPrice(initialCost);
       setMarkupPercentage(initialMarkup);
 
-      setStock(productToEdit.stock !== undefined ? String(productToEdit.stock) : '0');
-      // RF-04.1: Si no tiene min_stock, defecto 1
+      const editUnitType: UnitType = productToEdit.unit_type === 'BOX' ? 'BOX' : 'UNIT';
+      setUnitType(editUnitType);
+      setUnitsPerBox(
+        productToEdit.units_per_box && productToEdit.units_per_box > 0
+          ? String(productToEdit.units_per_box)
+          : '12'
+      );
+      setInitialLooseUnits('0');
+
+      setStock(
+        productToEdit.stock !== undefined
+          ? editUnitType === 'BOX'
+            ? formatCleanDecimal(productToEdit.stock, 4)
+            : String(Math.round(Number(productToEdit.stock)))
+          : '0'
+      );
       setMinStock(productToEdit.min_stock !== undefined ? String(productToEdit.min_stock) : '1');
 
       setCategoryId(productToEdit.category_id || '');
@@ -116,9 +161,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setCostPrice('0.00');
       setMarkupPercentage('20.00');
       setPrice('0.00');
+      setUnitType('UNIT');
+      setUnitsPerBox('12');
+      setInitialLooseUnits('0');
       setStock('1');
       setMinStock('1'); // RF-04.1: Configuración inicial en 1 unidad
-      setCategoryId(categories[0]?.id || '');
+      setCategoryId('');
       setSubcategoryId('');
       setLocationId(locations[0]?.id || '');
       setImages([]);
@@ -205,7 +253,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     setImages(prev => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
-  // RF-06.2: Manejo de lectura exitosa del escáner óptico con detección de duplicados
+  // RF-06.2 & 3.2: Manejo de lectura exitosa del escáner óptico con detección de duplicados
   const handleScanSuccess = (scannedText: string) => {
     const cleanText = scannedText.trim();
     if (scanTarget === 'productCode') {
@@ -215,9 +263,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       );
 
       if (existing) {
-        // RF-06.2: Preguntar: "Producto existente, ¿desea añadir stock?"
+        // 3.2: Mostrar diálogo: "El producto ya existe en el sistema. ¿Deseas añadir más existencias?"
         setDuplicateDetectedProduct(existing);
-        setDuplicateAddQuantity(1);
       } else {
         setCode(cleanText);
       }
@@ -233,48 +280,16 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }
   };
 
-  // RF-06.2: Sumar stock directamente al producto existente detectado por QR
-  const handleConfirmAddStock = async () => {
-    if (!duplicateDetectedProduct || !currentInventory || !user) return;
-    try {
-      setIsAddingStockDirectly(true);
-      const newStock = (duplicateDetectedProduct.stock || 0) + Number(duplicateAddQuantity);
-
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({
-          stock: newStock,
-          last_modified_by: user.id,
-          last_modified_by_email: user.email
-        })
-        .eq('id', duplicateDetectedProduct.id);
-
-      if (updateError) throw updateError;
-
-      // Registrar auditoría de reabastecimiento
-      await logAuditAction({
-        inventoryId: currentInventory.id,
-        productId: duplicateDetectedProduct.id,
-        productName: duplicateDetectedProduct.name,
-        actionType: 'RESTOCK',
-        details: `Reabastecimiento vía escáner QR: Se añadieron ${duplicateAddQuantity} unidades. Stock total: ${newStock}`,
-        metadata: {
-          added_quantity: duplicateAddQuantity,
-          previous_stock: duplicateDetectedProduct.stock,
-          new_stock: newStock
-        }
-      });
-
-      setDuplicateDetectedProduct(null);
-      onSaved();
-      onClose();
-    } catch (err: any) {
-      console.error('Error sumando stock:', err);
-      setErrorMsg(err.message || 'Error al actualizar el stock del producto.');
-    } finally {
-      setIsAddingStockDirectly(false);
-    }
-  };
+  // Cálculo reactivo de stock consolidado (cuando es BOX suma cajas + unidades sueltas / units_per_box)
+  const parsedUpb = parseInt(unitsPerBox, 10) || 0;
+  const parsedBaseStock = parseFloat(stock) || 0;
+  const parsedLoose = parseInt(initialLooseUnits, 10) || 0;
+  const consolidatedStock =
+    unitType === 'BOX'
+      ? parsedUpb > 0
+        ? Number((parsedBaseStock + parsedLoose / parsedUpb).toFixed(4))
+        : parsedBaseStock
+      : Math.round(parsedBaseStock);
 
   // Guardar Producto (Nuevo o Edición)
   const handleSubmit = async (e: React.FormEvent) => {
@@ -289,9 +304,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setErrorMsg('El código o SKU del producto es obligatorio.');
       return;
     }
-    if (!locationId) {
-      setErrorMsg('Debes asignar una ubicación física válida.');
-      return;
+
+    // 4. Validación Técnica de Creación para tipo Caja (BOX)
+    if (unitType === 'BOX') {
+      if (!unitsPerBox.trim() || !Number.isInteger(parsedUpb) || parsedUpb <= 0) {
+        setErrorMsg('Para productos tipo Caja, "Unidades por caja" debe ser un número entero mayor a 0.');
+        return;
+      }
     }
 
     try {
@@ -301,7 +320,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       const parsedPrice = parseFloat(price) || 0;
       const parsedCostPrice = parseFloat(costPrice) || 0;
       const parsedMarkup = parseFloat(markupPercentage) || 0;
-      const parsedStock = parseInt(stock, 10) || 0;
       const parsedMinStock = Math.max(1, parseInt(minStock, 10) || 1); // RF-04.1
 
       // Armar atributos de variante si aplica
@@ -318,11 +336,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         price: parsedPrice,
         cost_price: isBusiness ? parsedCostPrice : 0,
         markup_percentage: isBusiness ? parsedMarkup : 0,
-        stock: parsedStock,
+        unit_type: unitType,
+        units_per_box: unitType === 'BOX' ? parsedUpb : null,
+        stock: consolidatedStock,
         min_stock: parsedMinStock,
         category_id: categoryId || null,
         subcategory_id: subcategoryId || null,
-        location_id: locationId,
+        location_id: productToEdit ? (productToEdit.location_id || null) : null,
         images: images,
         is_variant: isVariant,
         parent_id: isVariant && parentId ? parentId : null,
@@ -331,6 +351,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         last_modified_by: user.id,
         last_modified_by_email: user.email
       };
+
+      const formattedStockLabel = formatStockDisplay({
+        stock: consolidatedStock,
+        unit_type: unitType,
+        units_per_box: unitType === 'BOX' ? parsedUpb : null
+      });
 
       if (productToEdit) {
         // ACTUALIZACIÓN
@@ -346,12 +372,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           productId: productToEdit.id,
           productName: payload.name,
           actionType: 'UPDATE',
-          details: `Producto actualizado por ${user.email}. Precio: ${parsedPrice}, Stock: ${parsedStock}`,
+          details: `Producto actualizado por ${user.email}. Unidad: ${unitType}${unitType === 'BOX' ? ` (1 caja = ${parsedUpb} und)` : ''}, Precio: ${parsedPrice}, Stock: ${formattedStockLabel}`,
           metadata: {
             previous_price: productToEdit.price,
             new_price: parsedPrice,
             previous_stock: productToEdit.stock,
-            new_stock: parsedStock
+            new_stock: consolidatedStock,
+            unit_type: unitType,
+            units_per_box: unitType === 'BOX' ? parsedUpb : null
           }
         });
       } else {
@@ -369,8 +397,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           productId: newProd.id,
           productName: payload.name,
           actionType: 'CREATE',
-          details: `Producto creado (${payload.code}) con stock inicial de ${parsedStock} unidades.`,
-          metadata: { initial_stock: parsedStock, price: parsedPrice }
+          details: `Producto creado (${payload.code}) en modo ${unitType === 'BOX' ? `CAJA (1 caja = ${parsedUpb} und)` : 'UNIDAD'} con stock inicial de ${formattedStockLabel}.`,
+          metadata: {
+            initial_stock: consolidatedStock,
+            unit_type: unitType,
+            units_per_box: unitType === 'BOX' ? parsedUpb : null,
+            price: parsedPrice
+          }
         });
       }
 
@@ -393,40 +426,54 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const selectedLocationObj = locations.find(l => l.id === locationId);
   const selectedCategoryObj = categories.find(c => c.id === categoryId);
   const selectedSubcategoryObj = subcategories.find(s => s.id === subcategoryId);
-  const numStock = Number(stock || 0);
   const numMinStock = Number(minStock || 0);
-  const isStockLow = numStock < numMinStock;
+  const isStockLow = consolidatedStock < numMinStock;
+
+  const previewStockText = formatStockDisplay({
+    stock: consolidatedStock,
+    unit_type: unitType,
+    units_per_box: unitType === 'BOX' ? parsedUpb : null
+  });
+
+  const previewBoxBreakdown = getBoxBreakdown({
+    stock: consolidatedStock,
+    unit_type: unitType,
+    units_per_box: unitType === 'BOX' ? parsedUpb : null
+  });
 
   return (
     <>
-      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] overflow-y-auto animate-in fade-in">
-        <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl lg:max-w-5xl my-auto overflow-hidden shadow-xl flex flex-col max-h-[85vh]">
-          {/* Cabecera Editorial Awwwards */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] shrink-0 z-20">
-            <div>
-              <span className="text-[10px] tracking-widest uppercase font-mono text-[#E8B4A0] block">
-                {productToEdit ? 'EDICIÓN DE MANIFIESTO' : 'NUEVO REGISTRO EN CATÁLOGO'}
-              </span>
-              <h3 className="font-bold text-[#1E3A5F] text-lg uppercase tracking-tight">
-                {productToEdit ? 'Modificar Ficha Técnica' : 'Registrar Nuevo Ítem'}
-              </h3>
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 max-md:bg-black/75 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] overflow-y-auto animate-in fade-in">
+        <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl lg:max-w-5xl my-auto overflow-hidden shadow-xl flex flex-col max-h-[85vh]">
+          {/* Cabecera Editorial Awwwards / En móvil: Bloque 1 Cabecera Oscura Curva con Handle */}
+          <div className="px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] shrink-0 z-20">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col max-md:flex-col-reverse">
+                <span className="text-[10px] tracking-widest uppercase font-mono text-[#E8B4A0] block">
+                  {productToEdit ? 'Edición de manifiesto en catálogo' : 'Nuevo registro en catálogo'}
+                </span>
+                <h3 className="font-bold text-[#1E3A5F] text-lg uppercase tracking-tight">
+                  {productToEdit ? 'Modificar Producto' : 'Crear Nuevo Producto'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
 
           {/* Formulario Asimétrico 2 Columnas (60% Formulario / 40% Previsualización en Vivo en Tablets y Desktop) */}
-          <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-hidden flex-1 min-h-0 flex flex-col">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1 min-h-0">
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-hidden max-md:overflow-y-auto flex-1 min-h-0 flex flex-col max-md:block">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1 min-h-0 max-md:block">
               
               {/* =========================================================
                   PANEL IZQUIERDO (~60%): ENTRADA Y FORMULARIO (ÚNICO CON SCROLL)
                  ========================================================= */}
-              <div className="w-full lg:col-span-7 max-h-[calc(85vh-120px)] overflow-y-auto pr-3 space-y-4 custom-scrollbar">
+              <div className="w-full lg:col-span-7 max-h-[calc(85vh-120px)] max-md:max-h-none overflow-y-auto max-md:overflow-visible pr-3 max-md:pr-0 space-y-4 custom-scrollbar">
                 {errorMsg && (
                   <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
@@ -479,12 +526,185 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </div>
                 </div>
 
+                {/* 3.1: SELECTOR DE UNIDAD DE MEDIDA DUAL: [ Unidad ] | [ Caja ] */}
+                <div className="mobile-flat-section p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <span className="text-xs font-bold text-[#1E3A5F] max-md:text-neutral-700 max-md:font-semibold max-md:normal-case uppercase tracking-wider block">
+                        Unidad de Medida Operativa <span className="text-[#E8B4A0]">*</span>
+                      </span>
+                      <span className="text-[11px] text-[#616161]">
+                        Define si el control de inventario se realiza por unidad individual o por caja fraccionable
+                      </span>
+                    </div>
+
+                    {/* Botones Selector [ Unidad ] | [ Caja ] */}
+                    <div className="mobile-segmented grid grid-cols-2 gap-1.5 p-1 bg-white border border-[#E5E7EB] rounded-xl shrink-0 font-mono text-xs">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUnitType('UNIT');
+                          setInitialLooseUnits('0');
+                          setStock(prev => String(Math.max(0, Math.round(parseFloat(prev) || 1))));
+                        }}
+                        className={`px-4 py-2 rounded-lg font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                          unitType === 'UNIT'
+                            ? 'bg-[#1E3A5F] text-white shadow-sm mobile-pill-active'
+                            : 'text-[#616161] hover:text-[#1E3A5F]'
+                        }`}
+                      >
+                        <Package className="w-3.5 h-3.5" />
+                        <span>Unidad</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUnitType('BOX')}
+                        className={`px-4 py-2 rounded-lg font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                          unitType === 'BOX'
+                            ? 'bg-[#1E3A5F] text-white shadow-sm mobile-pill-active'
+                            : 'text-[#616161] hover:text-[#1E3A5F]'
+                        }`}
+                      >
+                        <Layers className="w-3.5 h-3.5" />
+                        <span>Caja</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Campos Dinámicos según Selección: Unidad vs Caja */}
+                  {unitType === 'UNIT' ? (
+                    <div className="pt-2 border-t border-[#E5E7EB] grid grid-cols-1 sm:grid-cols-2 gap-3 animate-in fade-in">
+                      <div>
+                        <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
+                          {productToEdit ? 'Stock Actual (Unidades)' : 'Stock Inicial (Unidades)'} <span className="text-[#E8B4A0]">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={stock}
+                          onChange={e => setStock(e.target.value)}
+                          required
+                          className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
+                          Stock Mínimo (Alerta en und)
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={minStock}
+                          onChange={e => setMinStock(e.target.value)}
+                          required
+                          placeholder="1"
+                          className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="pt-3 border-t border-[#E5E7EB] space-y-3 animate-in fade-in">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Campo 1: Unidades por caja (units_per_box) */}
+                        <div>
+                          <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
+                            Unidades por caja <span className="text-[#E8B4A0]">*</span>
+                          </label>
+                          <p className="text-[10px] text-[#616161] mb-1.5">
+                            ¿Cuántas unidades contiene 1 caja?
+                          </p>
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={unitsPerBox}
+                            onChange={e => setUnitsPerBox(e.target.value)}
+                            placeholder="Ej: 50"
+                            required
+                            className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                          />
+                        </div>
+
+                        {/* Campo 2: Cantidad inicial de cajas */}
+                        <div>
+                          <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
+                            {productToEdit ? 'Cantidad de cajas' : 'Cantidad inicial de cajas'} <span className="text-[#E8B4A0]">*</span>
+                          </label>
+                          <p className="text-[10px] text-[#616161] mb-1.5">
+                            Cajas a registrar en inventario
+                          </p>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={stock}
+                            onChange={e => setStock(e.target.value)}
+                            placeholder="Ej: 2"
+                            required
+                            className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Unidades sueltas opcionales al registrar/editar y Stock Mínimo en Cajas */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
+                            Unidades sueltas adicionales (Opcional)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={initialLooseUnits}
+                            onChange={e => setInitialLooseUnits(e.target.value)}
+                            placeholder="0"
+                            className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-1.5 text-xs font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
+                            Alerta Stock Mínimo (Cajas)
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={minStock}
+                            onChange={e => setMinStock(e.target.value)}
+                            required
+                            placeholder="1"
+                            className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-1.5 text-xs font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Leyenda de consolidación en vivo */}
+                      {parsedUpb > 0 && (
+                        <div className="p-3 bg-white border border-[#E5E7EB] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs font-mono">
+                          <span className="text-[#616161]">
+                            Equivalencia: <strong className="text-[#1E3A5F]">1 caja = {parsedUpb} unidades</strong>
+                          </span>
+                          <span className="text-[#1E3A5F] font-bold">
+                            Balance: {previewStockText}
+                            {previewBoxBreakdown.breakdownLabel ? ` (${previewBoxBreakdown.breakdownLabel})` : ''}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* RF-03.1: Sección de Variantes del Producto */}
-                <div className="p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3">
+                <div className="mobile-flat-section p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <GitBranch className="w-4 h-4 text-[#1E3A5F]" />
-                      <span className="text-xs font-medium text-[#1E3A5F] uppercase tracking-wider">
+                      <GitBranch className="w-4 h-4 text-[#1E3A5F] max-md:text-neutral-600" />
+                      <span className="text-xs font-medium text-[#1E3A5F] max-md:text-neutral-700 max-md:font-semibold max-md:normal-case uppercase tracking-wider">
                         ¿Es variante de otro ítem?
                       </span>
                     </div>
@@ -495,7 +715,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         onChange={e => setIsVariant(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-10 h-5 bg-[#E5E7EB] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1E3A5F]"></div>
+                      <div className="w-10 h-5 bg-[#E5E7EB] max-md:bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1E3A5F] max-md:peer-checked:bg-neutral-950"></div>
                     </label>
                   </div>
 
@@ -505,21 +725,22 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         <label className="block text-[11px] font-medium text-[#616161] uppercase tracking-wider mb-1">
                           Producto Principal (Padre)
                         </label>
-                        <select
+                        <MinimalDropdown
                           value={parentId}
-                          onChange={e => setParentId(e.target.value)}
-                          className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
-                        >
-                          <option value="">Selecciona el producto principal...</option>
-                          {candidateParents.map(parent => (
-                            <option key={parent.id} value={parent.id}>
-                              {parent.name} ({parent.code})
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(val) => setParentId(val)}
+                          placeholder="Selecciona el producto principal..."
+                          options={[
+                            { value: '', label: 'Selecciona el producto principal...' },
+                            ...candidateParents.map((parent) => ({
+                              value: parent.id,
+                              label: parent.name,
+                              badge: parent.code
+                            }))
+                          ]}
+                        />
                       </div>
 
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <div>
                           <label className="block text-[10px] text-[#616161] uppercase tracking-wider mb-1">Color</label>
                           <input
@@ -555,94 +776,52 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   )}
                 </div>
 
-                {/* 3. Ubicación Asignada con Escáner de QR */}
-                <div>
-                  <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
-                    Ubicación Física Asignada <span className="text-[#E8B4A0]">*</span>
-                  </label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <select
-                        value={locationId}
-                        onChange={e => setLocationId(e.target.value)}
-                        required
-                        className="w-full min-h-[44px] bg-[#ffffff] border border-[#E5E7EB] rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] transition-all"
-                      >
-                        <option value="" disabled>Selecciona una ubicación...</option>
-                        {locations.map(loc => (
-                          <option key={loc.id} value={loc.id}>
-                            {loc.name} ({loc.code})
-                          </option>
-                        ))}
-                      </select>
-                      <MapPin className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setScanTarget('locationCode');
-                        setScannerOpen(true);
-                      }}
-                      className="inline-flex items-center gap-1.5 px-4 min-h-[44px] bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs uppercase tracking-wider transition-all whitespace-nowrap active:scale-95"
-                    >
-                      <Camera className="w-4 h-4 text-[#1E3A5F]" /> QR Estante
-                    </button>
-                  </div>
-                </div>
-
                 {/* 4. Categoría y Subcategoría */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">Categoría</label>
-                    <div className="relative">
-                      <select
-                        value={categoryId}
-                        onChange={e => {
-                          setCategoryId(e.target.value);
-                          setSubcategoryId('');
-                        }}
-                        className="w-full min-h-[44px] bg-[#ffffff] border border-[#E5E7EB] rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] transition-all"
-                      >
-                        <option value="">Sin Categoría</option>
-                        {categories.map(cat => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </option>
-                        ))}
-                      </select>
-                      <Tag className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
-                    </div>
+                    <MinimalDropdown
+                      value={categoryId}
+                      onChange={(val) => {
+                        setCategoryId(val);
+                        setSubcategoryId('');
+                      }}
+                      placeholder="Ninguna"
+                      options={[
+                        { value: '', label: 'Ninguna' },
+                        ...categories.map((cat) => ({
+                          value: cat.id,
+                          label: cat.name
+                        }))
+                      ]}
+                    />
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">Subcategoría</label>
-                    <div className="relative">
-                      <select
-                        value={subcategoryId}
-                        onChange={e => setSubcategoryId(e.target.value)}
-                        disabled={!categoryId || filteredSubcategories.length === 0}
-                        className="w-full min-h-[44px] bg-[#ffffff] border border-[#E5E7EB] rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] disabled:opacity-50 transition-all"
-                      >
-                        <option value="">Ninguna</option>
-                        {filteredSubcategories.map(sub => (
-                          <option key={sub.id} value={sub.id}>
-                            {sub.name}
-                          </option>
-                        ))}
-                      </select>
-                      <Layers className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
-                    </div>
+                    <MinimalDropdown
+                      value={subcategoryId}
+                      onChange={(val) => setSubcategoryId(val)}
+                      placeholder="Ninguna"
+                      options={[
+                        { value: '', label: 'Ninguna' },
+                        ...filteredSubcategories.map((sub) => ({
+                          value: sub.id,
+                          label: sub.name
+                        }))
+                      ]}
+                    />
                   </div>
                 </div>
 
                 {/* RF-01: Precios (Negocio vs Personal) */}
                 {isBusiness ? (
-                  <div className="p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3">
-                    <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#1E3A5F]">
+                  <div className="mobile-flat-section p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3">
+                    <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#1E3A5F] max-md:hidden">
                       <Sparkles className="w-3.5 h-3.5 text-[#E8B4A0]" />
                       <span>Estructura Financiera (Modo Comercial)</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="block text-[11px] text-[#616161] uppercase tracking-wider mb-1">
                           Costo ({currentInventory?.currency || 'USD'})
@@ -688,7 +867,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB]">
+                  <div className="mobile-flat-section p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB]">
                     <label className="block text-xs font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
                       Valor Base Estimado ({currentInventory?.currency || 'USD'})
                     </label>
@@ -703,38 +882,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     />
                   </div>
                 )}
-
-                {/* Stock Actual y Stock Mínimo */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
-                      Stock Actual <span className="text-[#E8B4A0]">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={stock}
-                      onChange={e => setStock(e.target.value)}
-                      required
-                      className="w-full min-h-[44px] bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-4 py-2.5 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
-                      Stock Mínimo (Alerta)
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={minStock}
-                      onChange={e => setMinStock(e.target.value)}
-                      required
-                      placeholder="1"
-                      className="w-full min-h-[44px] bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-4 py-2.5 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
-                    />
-                  </div>
-                </div>
 
                 {/* Descripción */}
                 <div>
@@ -792,10 +939,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     >
                       <Camera className="w-6 h-6 text-[#1E3A5F]/60 mx-auto mb-1" />
                       <p className="text-xs text-[#1E3A5F] font-light">
-                        Toma foto con la cámara o selecciona desde tu galería
-                      </p>
-                      <p className="text-[10px] text-[#616161] mt-0.5 font-mono">
-                        Compresión automática a WebP sin pérdida de nitidez
+                        Toma o carga de imágenes
                       </p>
                     </div>
                   ) : (
@@ -832,18 +976,18 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 </div>
 
                 {/* Botones de Acción para Dispositivos Móviles (< lg: sin panel de previsualización) */}
-                <div className="pt-4 border-t border-[#E5E7EB] flex items-center gap-2 lg:hidden">
+                <div className="pt-4 mt-4 mb-2 border-t border-[#E5E7EB] max-md:border-0 flex max-md:flex-col-reverse items-center gap-2 lg:hidden">
                   <button
                     type="button"
                     onClick={onClose}
-                    className="min-h-[44px] px-5 text-xs uppercase tracking-wider font-medium text-[#616161] hover:text-[#1E3A5F] hover:bg-black/5 rounded-full border border-transparent transition-colors"
+                    className="mobile-cancel-btn min-h-[44px] max-md:min-h-0 px-5 text-xs uppercase tracking-wider font-medium text-[#616161] hover:text-[#1E3A5F] hover:bg-black/5 rounded-full border border-transparent transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting || isUploadingImage}
-                    className="min-h-[44px] flex-1 inline-flex items-center justify-center gap-2 px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-semibold rounded-full shadow-sm disabled:opacity-50 transition-all active:scale-95"
+                    className="mobile-primary-btn min-h-[44px] flex-1 inline-flex items-center justify-center gap-2 px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-semibold rounded-full shadow-sm disabled:opacity-50 transition-all active:scale-[0.98]"
                   >
                     {isSubmitting ? (
                       <>
@@ -852,7 +996,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       </>
                     ) : (
                       <>
-                        <Check className="w-4 h-4 text-[#E8B4A0]" />
+                        <Check className="w-4 h-4 text-[#E8B4A0] max-md:hidden" />
                         <span>{productToEdit ? 'Guardar Cambios' : 'Confirmar Registro'}</span>
                       </>
                     )}
@@ -862,7 +1006,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
               {/* =========================================================
                   PANEL DERECHO (~40%): PREVISUALIZACIÓN EN VIVO & ACCIONES
-                  (Completamente estática y fija: lg:col-span-5 sticky top-0 self-start)
                  ========================================================= */}
               <div className="hidden lg:block lg:col-span-5 sticky top-0 self-start">
                 <div className="bg-[#F8F9FA] border border-[#E5E7EB] rounded-2xl p-5 flex flex-col justify-between shadow-sm">
@@ -902,11 +1045,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       {isStockLow ? (
                         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E8B4A0] text-[#1E3A5F] border border-[#1E3A5F]/15 text-[10px] font-mono font-bold shadow-sm">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#1E3A5F] animate-ping"></span>
-                          <span>STOCK BAJO ({numStock} UDS)</span>
+                          <span>STOCK BAJO ({previewStockText.toUpperCase()})</span>
                         </div>
                       ) : (
                         <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm border border-[#E5E7EB] text-[#1E3A5F] text-[10px] font-mono">
-                          <span>{numStock} UDS DISPONIBLES</span>
+                          <span>{previewStockText.toUpperCase()} DISPONIBLES</span>
                         </div>
                       )}
                     </div>
@@ -925,6 +1068,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
                     {/* Metadata Pills */}
                     <div className="flex flex-wrap gap-1.5 text-[10px]">
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#1E3A5F] text-white uppercase">
+                        {unitType === 'BOX' ? `CAJA (${parsedUpb || 0} UND)` : 'UNIDAD'}
+                      </span>
                       {selectedCategoryObj && (
                         <span className="px-2.5 py-0.5 rounded-full bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E8B4A0]/50 uppercase">
                           {selectedCategoryObj.name}
@@ -935,12 +1081,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           {selectedSubcategoryObj.name}
                         </span>
                       )}
-                      {selectedLocationObj && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] border border-[#1E3A5F]/20 uppercase">
-                          <MapPin className="w-3 h-3 text-[#1E3A5F]" />
-                          {selectedLocationObj.name}
-                        </span>
-                      )}
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#E8B4A0]/25 text-[#1E3A5F] border border-[#E8B4A0]/60 uppercase font-bold">
+                        <MapPin className="w-3 h-3 text-[#1E3A5F]" />
+                        {productToEdit ? 'MULTI-UBICACIÓN' : 'STOCK PENDIENTE DE UBICAR'}
+                      </span>
                     </div>
 
                     {/* Bloque Financiero Reactivo */}
@@ -1002,80 +1146,75 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         </div>
       </div>
 
-      {/* RF-06.2: Modal Interactivo de Producto Duplicado detectado por Escáner */}
+      {/* Modal de Confirmación de Código Existente (Evita duplicar registros) */}
       {duplicateDetectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#E8B4A0]/25 text-[#1E3A5F] border border-[#E8B4A0] flex items-center justify-center flex-shrink-0">
-                <Barcode className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="font-light text-[#1E3A5F] text-base uppercase tracking-tight">
-                  Producto Existente Detectado
-                </h4>
-                <p className="text-xs text-[#616161] font-mono">
-                  REF: <span className="text-[#1E3A5F] font-semibold">{duplicateDetectedProduct.code}</span>
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] text-xs space-y-1.5 font-mono">
-              <p className="font-medium text-[#1E3A5F] text-sm uppercase">{duplicateDetectedProduct.name}</p>
-              <p className="text-[#616161]">
-                Stock actual: <strong className="text-[#1E3A5F]">{duplicateDetectedProduct.stock} unidades</strong>
-              </p>
-              <p className="text-[#616161]">
-                Precio: <strong className="text-[#1E3A5F]">{formatCurrency(duplicateDetectedProduct.price, currentInventory?.currency)}</strong>
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs font-mono uppercase tracking-wider text-[#1E3A5F]">
-                ¿Añadir stock a este registro?
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="1"
-                  value={duplicateAddQuantity}
-                  onChange={e => setDuplicateAddQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                  className="w-24 min-h-[44px] bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm text-center font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
-                />
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="mobile-dark-modal bg-white rounded-3xl w-full max-w-sm shadow-2xl text-neutral-900 overflow-hidden">
+            {/* Cabecera */}
+            <div className="p-6 pb-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-11 h-11 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0 max-md:hidden">
+                    <AlertCircle className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-semibold text-neutral-900 leading-snug">
+                      Código existente
+                    </h3>
+                    <p className="text-xs text-neutral-500 mt-1">
+                      El código <strong className="font-mono">{duplicateDetectedProduct.code}</strong> ya pertenece a un producto registrado. ¿Deseas añadir unidades?
+                    </p>
+                  </div>
+                </div>
                 <button
                   type="button"
-                  onClick={handleConfirmAddStock}
-                  disabled={isAddingStockDirectly}
-                  className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 px-4 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm active:scale-95 disabled:opacity-50 transition-all"
+                  onClick={() => setDuplicateDetectedProduct(null)}
+                  className="md:hidden w-8 h-8 rounded-full bg-neutral-900 text-neutral-400 hover:text-white flex items-center justify-center shrink-0"
                 >
-                  {isAddingStockDirectly ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  ) : (
-                    <Plus className="w-4 h-4 text-[#E8B4A0]" />
-                  )}
-                  <span>Sumar al Stock</span>
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-[#E5E7EB] flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setCode(duplicateDetectedProduct.code);
-                  setDuplicateDetectedProduct(null);
-                }}
-                className="text-xs text-[#616161] hover:text-[#1E3A5F] transition-colors"
-              >
-                Usar código de todas formas
-              </button>
-              <button
-                type="button"
-                onClick={() => setDuplicateDetectedProduct(null)}
-                className="px-3.5 py-1.5 text-xs font-medium text-[#1E3A5F] hover:bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] transition-colors"
-              >
-                Cerrar
-              </button>
+            {/* Cuerpo (En móvil: Bloque 2 blanco plano) */}
+            <div className="px-6 pb-6 pt-3 space-y-5">
+              <div className="mobile-flat-row bg-neutral-50 rounded-2xl p-3.5 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-neutral-900 truncate">
+                    {duplicateDetectedProduct.name}
+                  </p>
+                  <p className="text-xs text-neutral-400 truncate mt-0.5">
+                    SKU {duplicateDetectedProduct.code}
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-neutral-100 text-xs font-semibold text-neutral-800 tabular-nums flex-shrink-0">
+                  {formatStockDisplay(duplicateDetectedProduct)}
+                </span>
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row items-center gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setDuplicateDetectedProduct(null)}
+                  className="mobile-cancel-btn w-full sm:flex-1 py-3 px-4 rounded-2xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold uppercase tracking-wider transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = duplicateDetectedProduct;
+                    setDuplicateDetectedProduct(null);
+                    onClose();
+                    if (onRedirectToStock && target) {
+                      onRedirectToStock(target);
+                    }
+                  }}
+                  className="mobile-primary-btn w-full sm:flex-1 py-3 px-4 rounded-2xl bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-semibold uppercase tracking-wider transition-colors active:scale-[0.98]"
+                >
+                  Ir a Stock
+                </button>
+              </div>
             </div>
           </div>
         </div>

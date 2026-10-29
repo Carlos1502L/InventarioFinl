@@ -279,7 +279,7 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
+      <div className="mobile-dark-modal bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
         {/* Cabecera */}
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90">
           <div className="flex items-center gap-2.5">
@@ -300,7 +300,7 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
         </div>
 
         {/* Vista previa en escala real */}
-        <div className="p-6 bg-slate-100 dark:bg-slate-950 flex flex-col items-center justify-center">
+        <div className="p-6 overflow-y-auto bg-slate-100 dark:bg-slate-950 flex flex-col items-center justify-center">
           <div className="text-xs text-slate-500 mb-3 flex items-center gap-1.5 font-medium">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
             Vista previa exacta para impresión térmica / tarjeta plástica
@@ -309,7 +309,7 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
           {/* Tarjeta con proporción real 85.6 x 53.9 mm */}
           <div
             ref={printAreaRef}
-            className="w-[342px] h-[215px] bg-white rounded-xl p-3 border-2 border-slate-300 shadow-2xl flex flex-col justify-between text-slate-900 relative overflow-hidden select-none"
+            className="qr-light-surface w-[342px] h-[215px] bg-white rounded-xl p-3 border-2 border-slate-300 shadow-2xl flex flex-col justify-between text-slate-900 relative overflow-hidden select-none"
           >
             {/* Encabezado */}
             <div className="bg-slate-900 text-white text-center py-1.5 px-2 rounded-md font-bold text-[10px] tracking-wide uppercase truncate">
@@ -319,7 +319,7 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
             {/* Contenido Central */}
             <div className="flex items-center gap-3 my-auto">
               {/* QR Code */}
-              <div className="w-24 h-24 bg-white border border-slate-200 rounded-lg p-1 flex-shrink-0 flex items-center justify-center">
+              <div className="qr-light-surface w-24 h-24 bg-white border border-slate-200 rounded-lg p-1 flex-shrink-0 flex items-center justify-center">
                 {qrDataUrl ? (
                   <img src={qrDataUrl} alt="QR Code" className="w-full h-full object-contain" />
                 ) : (

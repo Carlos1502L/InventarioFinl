@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Layers,
   LayoutDashboard,
   Package,
   ShoppingCart,
@@ -12,9 +11,7 @@ import {
   LogOut,
   ChevronRight,
   User,
-  Tag,
-  MapPin,
-  Users
+  MapPin
 } from 'lucide-react';
 import { TabType } from './BottomNav';
 import { useAuth } from '../../context/AuthContext';
@@ -35,11 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onChangeTab,
   onQuickScan,
-  onOpenCreateModal,
   onOpenInventorySelector,
-  onOpenCategories,
-  onOpenLocations,
-  onOpenCollaborators,
   isBusiness = true
 }) => {
   const { currentInventory, user, signOut } = useAuth();
@@ -47,6 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems = [
     { id: 'home' as TabType, label: 'HOME // RESUMEN', icon: LayoutDashboard },
     { id: 'inventory' as TabType, label: 'STOCK // CATÁLOGO', icon: Package },
+    { id: 'locations' as TabType, label: 'UBICACIONES // ALMACÉN', icon: MapPin },
     ...(isBusiness ? [
       { id: 'sales' as TabType, label: 'PUNTO DE VENTA', icon: ShoppingCart },
       { id: 'sales-history' as TabType, label: 'HISTORIAL VENTAS', icon: Receipt },
