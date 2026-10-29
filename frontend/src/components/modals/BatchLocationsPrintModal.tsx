@@ -104,7 +104,7 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
     });
   };
 
-  // 1. Impresión directa en navegador
+  // 1. Impresión directa en navegador (Acomodar en hoja A4/Carta estándar sin perder tamaño)
   const handlePrint = async () => {
     if (selectedLocations.length === 0) {
       alert('Selecciona al menos una ubicación para imprimir.');
@@ -120,32 +120,30 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
         selectedLocations.map(async loc => {
           const qrUrl = await generateQrUrl(loc.code);
           return `
-            <div class="card-page">
-              <div class="card">
-                <div class="header">
-                  <span>${currentInventory?.name || 'SISTEMA DE INVENTARIO'}</span>
+            <div class="card">
+              <div class="header">
+                <span>${currentInventory?.name || 'SISTEMA DE INVENTARIO'}</span>
+              </div>
+              <div class="body">
+                <div class="qr-box">
+                  <img src="${qrUrl}" alt="QR ${loc.code}" />
                 </div>
-                <div class="body">
-                  <div class="qr-box">
-                    <img src="${qrUrl}" alt="QR ${loc.code}" />
-                  </div>
-                  <div class="details">
-                    <div class="loc-code">${loc.code}</div>
-                    <div class="loc-name">${loc.name}</div>
-                    ${loc.description ? `<div class="loc-desc">${loc.description}</div>` : ''}
-                    <div class="badge">UBICACIÓN FÍSICA</div>
-                  </div>
+                <div class="details">
+                  <div class="loc-code">${loc.code}</div>
+                  <div class="loc-name">${loc.name}</div>
+                  ${loc.description ? `<div class="loc-desc">${loc.description}</div>` : ''}
+                  <div class="badge">UBICACIÓN FÍSICA</div>
                 </div>
-                <div class="footer">
-                  <span>Escanea para transferir o inventariar</span>
-                </div>
+              </div>
+              <div class="footer">
+                <span>Escanea para transferir o inventariar</span>
               </div>
             </div>
           `;
         })
       );
 
-      const printWindow = window.open('', '_blank', 'width=750,height=500');
+      const printWindow = window.open('', '_blank', 'width=850,height=600');
       if (!printWindow) {
         alert('Por favor habilita las ventanas emergentes en tu navegador para imprimir.');
         return;
@@ -158,8 +156,8 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
             <title>Impresión de Ubicaciones (${selectedLocations.length})</title>
             <style>
               @page {
-                size: 85.6mm 53.9mm;
-                margin: 0;
+                size: A4 portrait;
+                margin: 8mm 6mm;
               }
               * {
                 box-sizing: border-box;
@@ -168,20 +166,17 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
               }
               body {
-                background: #f8fafc;
+                background: #ffffff;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
               }
-              .card-page {
-                width: 85.6mm;
-                height: 53.9mm;
-                page-break-after: always;
-                break-after: page;
-                display: flex;
-                align-items: center;
+              .sheet-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 85.6mm);
+                grid-auto-rows: 53.9mm;
+                gap: 5mm 6mm;
                 justify-content: center;
                 margin: 0 auto;
-                background: #ffffff;
               }
               .card {
                 width: 85.6mm;
@@ -190,8 +185,11 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
                 display: flex;
                 flex-direction: column;
                 border: 1px dashed #cbd5e1;
+                border-radius: 2mm;
                 background: #ffffff;
                 box-sizing: border-box;
+                page-break-inside: avoid;
+                break-inside: avoid;
               }
               .header {
                 background: #0f172a;
@@ -263,6 +261,7 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
                 -webkit-line-clamp: 2;
                 -webkit-box-orient: vertical;
                 overflow: hidden;
+                line-height: 1.2;
               }
               .badge {
                 align-self: flex-start;
@@ -288,7 +287,9 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
             </style>
           </head>
           <body>
-            ${cardsHtml.join('')}
+            <div class="sheet-grid">
+              ${cardsHtml.join('')}
+            </div>
             <script>
               window.onload = function() {
                 setTimeout(function() {
@@ -310,7 +311,7 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
     }
   };
 
-  // 2. Exportar a PDF (Tarjeta de Crédito estándar 85.6 x 53.9 mm)
+  // 2. Exportar a PDF: Acomodar en hoja A4 estándar (2 col x 4 filas = 8 viñetas por hoja sin perder tamaño)
   const handleExportPDF = async () => {
     if (selectedLocations.length === 0) {
       alert('Selecciona al menos una ubicación para exportar.');
@@ -322,70 +323,85 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
 
     try {
       const doc = new jsPDF({
-        orientation: 'landscape',
+        orientation: 'portrait',
         unit: 'mm',
-        format: [85.6, 53.9]
+        format: 'a4'
       });
+
+      const cardWidth = 85.6;
+      const cardHeight = 53.9;
+      const colGap = 6;
+      const rowGap = 5;
+      const cardsPerPage = 8; // 2 columnas x 4 filas = 8 viñetas por hoja
+      const startX = (210 - (2 * cardWidth + colGap)) / 2; // ~16.4 mm centrado en A4
+      const startY = 12; // margen superior
 
       for (let i = 0; i < selectedLocations.length; i++) {
         const loc = selectedLocations[i];
-        if (i > 0) {
-          doc.addPage([85.6, 53.9], 'landscape');
+        const itemOnPage = i % cardsPerPage;
+        const col = itemOnPage % 2;
+        const row = Math.floor(itemOnPage / 2);
+
+        if (i > 0 && itemOnPage === 0) {
+          doc.addPage('a4', 'portrait');
         }
+
+        const ox = startX + col * (cardWidth + colGap);
+        const oy = startY + row * (cardHeight + rowGap);
 
         // Borde exterior
         doc.setDrawColor(203, 213, 225);
         doc.setLineWidth(0.3);
-        doc.roundedRect(2, 2, 81.6, 49.9, 2, 2, 'S');
+        doc.roundedRect(ox, oy, cardWidth, cardHeight, 2, 2, 'S');
 
         // Encabezado
         doc.setFillColor(15, 23, 42);
-        doc.roundedRect(3.5, 3.5, 78.6, 6.5, 1, 1, 'F');
+        doc.roundedRect(ox + 2, oy + 2, cardWidth - 4, 6.5, 1, 1, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(7.5);
         doc.setFont('helvetica', 'bold');
-        doc.text(currentInventory?.name || 'SISTEMA DE INVENTARIO', 42.8, 7.8, { align: 'center' });
+        doc.text(currentInventory?.name || 'SISTEMA DE INVENTARIO', ox + cardWidth / 2, oy + 6.3, { align: 'center' });
 
         // QR Code
         const qrUrl = await generateQrUrl(loc.code);
-        doc.addImage(qrUrl, 'PNG', 4.5, 12, 26, 26);
+        doc.addImage(qrUrl, 'PNG', ox + 3.5, oy + 11.5, 26, 26);
 
         // Detalles
         doc.setTextColor(15, 23, 42);
-        doc.setFontSize(11);
+        doc.setFontSize(10.5);
         doc.setFont('helvetica', 'bold');
-        doc.text(loc.code, 33, 17);
+        doc.text(loc.code, ox + 32, oy + 16.5);
 
-        doc.setFontSize(8);
+        doc.setFontSize(7.5);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(71, 85, 105);
-        const nameText = loc.name.length > 28 ? loc.name.substring(0, 26) + '...' : loc.name;
-        doc.text(nameText, 33, 22);
+        const nameText = loc.name.length > 25 ? loc.name.substring(0, 23) + '...' : loc.name;
+        doc.text(nameText, ox + 32, oy + 21.5);
 
         if (loc.description) {
-          doc.setFontSize(6.5);
+          doc.setFontSize(6);
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(100, 116, 139);
           const splitDesc = doc.splitTextToSize(loc.description, 48);
-          doc.text(splitDesc.slice(0, 2), 33, 27);
+          doc.text(splitDesc.slice(0, 2), ox + 32, oy + 26.5);
         }
 
         // Badge
         doc.setFillColor(239, 246, 255);
         doc.setDrawColor(191, 219, 254);
-        doc.roundedRect(33, 33, 30, 4.5, 0.8, 0.8, 'FD');
+        doc.roundedRect(ox + 32, oy + 32, 28, 4.2, 0.8, 0.8, 'FD');
         doc.setTextColor(37, 99, 235);
         doc.setFontSize(5.5);
         doc.setFont('helvetica', 'bold');
-        doc.text('UBICACIÓN FÍSICA', 48, 36.2, { align: 'center' });
+        doc.text('UBICACIÓN FÍSICA', ox + 46, oy + 35.1, { align: 'center' });
 
         // Pie
         doc.setDrawColor(226, 232, 240);
-        doc.line(3.5, 45, 82.1, 45);
+        doc.line(ox + 2, oy + cardHeight - 7, ox + cardWidth - 2, oy + cardHeight - 7);
         doc.setTextColor(148, 163, 184);
         doc.setFontSize(5.5);
         doc.setFont('helvetica', 'normal');
-        doc.text('Escanea para transferir o inventariar', 42.8, 48.5, { align: 'center' });
+        doc.text('Escanea para transferir o inventariar', ox + cardWidth / 2, oy + cardHeight - 3, { align: 'center' });
       }
 
       doc.save(`Ubicaciones_${currentInventory?.name || 'Inventario'}_${new Date().toISOString().split('T')[0]}.pdf`);
