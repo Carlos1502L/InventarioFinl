@@ -515,56 +515,6 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
               })}
               </div>
             </div>
-          ) || (
-            filteredLocations.map(loc => {
-              const isSelected = selectedIds.has(loc.id);
-              return (
-                <div
-                  key={loc.id}
-                  onClick={() => toggleSelect(loc.id)}
-                  className={`mobile-flat-row p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                    isSelected
-                      ? 'mobile-card-active bg-amber-50/70 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/40 shadow-sm'
-                      : 'bg-white dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <button
-                      type="button"
-                      className="text-amber-600 dark:text-amber-400 focus:outline-none shrink-0"
-                      onClick={e => {
-                        e.stopPropagation();
-                        toggleSelect(loc.id);
-                      }}
-                    >
-                      {isSelected ? (
-                        <CheckSquare className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                      ) : (
-                        <Square className="w-5 h-5 text-slate-300 dark:text-slate-600" />
-                      )}
-                    </button>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-black text-slate-900 dark:text-white px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded-md">
-                          {loc.code}
-                        </span>
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                          {loc.name}
-                        </h4>
-                      </div>
-                      {loc.description && (
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                          {loc.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <span className="text-[10px] text-slate-400 font-mono shrink-0">
-                    ID: {loc.id.substring(0, 8)}
-                  </span>
-                </div>
-              );
-            })
           )}
         </div>
 
