@@ -22,6 +22,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const isStartingRef = useRef<boolean>(false);
   const elementId = 'interactive-barcode-scanner';
 
   // Sonido de feedback al escanear exitosamente (Web Audio API)
@@ -47,22 +48,40 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   };
 
   const stopScanner = async () => {
-    if (scannerRef.current && isScanning) {
+    if (scannerRef.current) {
       try {
-        await scannerRef.current.stop();
+        if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop();
+        }
         await scannerRef.current.clear();
       } catch (err) {
         console.warn('Error al detener escáner:', err);
       } finally {
+        scannerRef.current = null;
         setIsScanning(false);
+        isStartingRef.current = false;
       }
     }
   };
 
   const startScanner = async (cameraId?: string) => {
+    if (isStartingRef.current) return;
+    isStartingRef.current = true;
+
     try {
       setErrorMsg(null);
       await stopScanner();
+
+      // Asegurar que el elemento contenedor exista en el DOM
+      let retries = 0;
+      while (!document.getElementById(elementId) && retries < 10) {
+        await new Promise(res => setTimeout(res, 50));
+        retries++;
+      }
+
+      if (!document.getElementById(elementId)) {
+        throw new Error('El visor de la cámara no está listo en pantalla.');
+      }
 
       const html5QrCode = new Html5Qrcode(elementId, {
         formatsToSupport: [
@@ -78,55 +97,64 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       });
       scannerRef.current = html5QrCode;
 
-      // RF-02: Resolución mínima 720p/1080p y solicitud de enfoque continuo
-      const cameraConfig: any = cameraId
+      // Configuración de escaneo (Encuadre rectangular horizontal para códigos 1D / RF-02)
+      const scanConfig = {
+        fps: 20,
+        qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+          const width = Math.min(Math.floor(viewfinderWidth * 0.88), 340);
+          const height = Math.min(Math.floor(width * 0.45), Math.floor(viewfinderHeight * 0.45), 160);
+          return {
+            width: Math.max(250, width),
+            height: Math.max(110, height)
+          };
+        }
+      };
+
+      const handleSuccess = (decodedText: string, result: any) => {
+        playBeep();
+        stopScanner().then(() => {
+          onScanSuccess(decodedText, result?.result?.format?.formatName);
+          onClose();
+        });
+      };
+
+      const handleError = () => {
+        // Ignorar frames sin código detectado
+      };
+
+      // Configuración de cámara con fallback progresivo:
+      // Usamos solo 'ideal' (NUNCA 'min', que provoca OverconstrainedError en cámaras de móvil/webcams)
+      const idealConstraints: any = cameraId
         ? {
             deviceId: { exact: cameraId },
-            width: { min: 1280, ideal: 1920 },
-            height: { min: 720, ideal: 1080 },
-            advanced: [{ focusMode: 'continuous' }]
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
           }
         : {
             facingMode: 'environment',
-            width: { min: 1280, ideal: 1920 },
-            height: { min: 720, ideal: 1080 },
-            advanced: [{ focusMode: 'continuous' }]
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
           };
 
-      await html5QrCode.start(
-        cameraConfig,
-        {
-          fps: 20,
-          // RF-02: Encuadre rectangular horizontal para códigos 1D a media distancia
-          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-            const width = Math.min(Math.floor(viewfinderWidth * 0.88), 340);
-            const height = Math.min(Math.floor(width * 0.45), Math.floor(viewfinderHeight * 0.45), 160);
-            return {
-              width: Math.max(250, width),
-              height: Math.max(110, height)
-            };
-          }
-        },
-        (decodedText, result) => {
-          playBeep();
-          stopScanner().then(() => {
-            onScanSuccess(decodedText, result.result.format?.formatName);
-            onClose();
-          });
-        },
-        () => {
-          // Ignorar frames sin código detectado
-        }
-      );
+      try {
+        await html5QrCode.start(idealConstraints, scanConfig, handleSuccess, handleError);
+      } catch (constraintErr: any) {
+        console.warn('Constraints ideales rechazadas por el sensor, iniciando con configuración básica:', constraintErr);
+        // Fallback garantizado sin restricciones de tamaño:
+        const fallbackConfig = cameraId ? cameraId : { facingMode: 'environment' };
+        await html5QrCode.start(fallbackConfig, scanConfig, handleSuccess, handleError);
+      }
 
-      // RF-02: Activar enfoque continuo nativo sobre la pista de video si el hardware lo soporta
+      setIsScanning(true);
+
+      // RF-02: Solicitar enfoque continuo directamente sobre la pista activa de hardware
       try {
         const videoElem = document.querySelector(`#${elementId} video`) as HTMLVideoElement | null;
         if (videoElem && videoElem.srcObject) {
           const stream = videoElem.srcObject as MediaStream;
           const track = stream.getVideoTracks()[0];
-          if (track && track.applyConstraints) {
-            const capabilities: any = track.getCapabilities ? track.getCapabilities() : {};
+          if (track && track.applyConstraints && track.getCapabilities) {
+            const capabilities: any = track.getCapabilities();
             if (capabilities.focusMode && Array.isArray(capabilities.focusMode) && capabilities.focusMode.includes('continuous')) {
               await track.applyConstraints({
                 advanced: [{ focusMode: 'continuous' }] as any
@@ -135,17 +163,31 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
           }
         }
       } catch (trackErr) {
-        console.warn('Enfoque continuo de hardware no aplicable directamente:', trackErr);
+        // Si el hardware no soporta control de autofocus vía JS, continúa normalmente
       }
 
-      setIsScanning(true);
+      // Enumerar cámaras disponibles tras conceder permisos para llenar el selector
+      Html5Qrcode.getCameras()
+        .then(devices => {
+          if (devices && devices.length > 0) {
+            setCameras(devices);
+          }
+        })
+        .catch(() => {});
+
     } catch (err: any) {
       console.error('Error iniciando escáner de cámara:', err);
-      setErrorMsg(
-        err.name === 'NotAllowedError'
-          ? 'Permiso de cámara denegado. Por favor, concede acceso a la cámara en los ajustes del navegador.'
-          : 'No se pudo acceder a la cámara. Verifica que ningún otro programa la esté usando.'
-      );
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setErrorMsg('Permiso de cámara denegado. Concede acceso a la cámara en los permisos de tu navegador.');
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setErrorMsg('No se encontró ninguna cámara disponible en tu dispositivo.');
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        setErrorMsg('La cámara está siendo utilizada por otra aplicación. Ciérrala y reintenta.');
+      } else {
+        setErrorMsg(err.message || 'No se pudo acceder a la cámara. Por favor reintenta la conexión.');
+      }
+    } finally {
+      isStartingRef.current = false;
     }
   };
 
@@ -155,31 +197,16 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       return;
     }
 
-    // Inicializar cámaras disponibles
-    Html5Qrcode.getCameras()
-      .then((devices) => {
-        if (devices && devices.length > 0) {
-          setCameras(devices);
-          // Preferir cámara trasera si existe
-          const backCam = devices.find(d =>
-            d.label.toLowerCase().includes('back') ||
-            d.label.toLowerCase().includes('trasera') ||
-            d.label.toLowerCase().includes('rear') ||
-            d.label.toLowerCase().includes('environment')
-          );
-          const chosenId = backCam ? backCam.id : devices[0].id;
-          setSelectedCameraId(chosenId);
-          startScanner(chosenId);
-        } else {
-          startScanner();
-        }
-      })
-      .catch((err) => {
-        console.warn('Error listando dispositivos de video:', err);
-        startScanner();
-      });
+    let isMounted = true;
+    const timer = setTimeout(() => {
+      if (isMounted) {
+        startScanner(selectedCameraId || undefined);
+      }
+    }, 150);
 
     return () => {
+      isMounted = false;
+      clearTimeout(timer);
       stopScanner();
     };
   }, [isOpen]);
@@ -212,68 +239,71 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
         </div>
 
         {/* Visor de Cámara */}
-        <div className="overflow-y-auto max-md:space-y-4"><div className="mobile-camera-visor relative bg-black flex items-center justify-center min-h-[320px]">
-          <div id={elementId} className="w-full h-full overflow-hidden" />
+        <div className="overflow-y-auto max-md:space-y-4">
+          <div className="mobile-camera-visor relative bg-black flex items-center justify-center min-h-[320px]">
+            <div id={elementId} className="w-full h-full overflow-hidden" />
 
-          {/* RF-02: Guía visual de enfoque rectangular horizontal superpuesta */}
-          {isScanning && !errorMsg && (
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
-              <div className="w-[88%] max-w-[340px] h-32 sm:h-36 border-2 border-dashed border-[#E8B4A0] max-md:border-white/50 rounded-2xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]">
-                {/* Esquinas resaltadas */}
-                <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-[#1E3A5F] max-md:border-white rounded-tl" />
-                <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-[#1E3A5F] max-md:border-white rounded-tr" />
-                <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-[#1E3A5F] max-md:border-white rounded-bl" />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-[#1E3A5F] max-md:border-white rounded-br" />
-                {/* Línea de escaneo láser horizontal animada */}
-                <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 h-0.5 bg-gradient-to-r from-transparent via-[#E8B4A0] max-md:via-emerald-400 to-transparent animate-pulse shadow-[0_0_8px_#E8B4A0] max-md:shadow-[0_0_8px_#10b981]" />
-                <div className="absolute -bottom-7 inset-x-0 text-center text-[10px] text-white/90 font-mono tracking-wider font-semibold">
-                  ENCUADRAR CÓDIGO 1D / QR AQUÍ
+            {/* RF-02: Guía visual de enfoque rectangular horizontal superpuesta */}
+            {isScanning && !errorMsg && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
+                <div className="w-[88%] max-w-[340px] h-32 sm:h-36 border-2 border-dashed border-[#E8B4A0] max-md:border-white/50 rounded-2xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]">
+                  {/* Esquinas resaltadas */}
+                  <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-[#1E3A5F] max-md:border-white rounded-tl" />
+                  <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-[#1E3A5F] max-md:border-white rounded-tr" />
+                  <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-[#1E3A5F] max-md:border-white rounded-bl" />
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-[#1E3A5F] max-md:border-white rounded-br" />
+                  {/* Línea de escaneo láser horizontal animada */}
+                  <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 h-0.5 bg-gradient-to-r from-transparent via-[#E8B4A0] max-md:via-emerald-400 to-transparent animate-pulse shadow-[0_0_8px_#E8B4A0] max-md:shadow-[0_0_8px_#10b981]" />
+                  <div className="absolute -bottom-7 inset-x-0 text-center text-[10px] text-white/90 font-mono tracking-wider font-semibold">
+                    ENCUADRAR CÓDIGO 1D / QR AQUÍ
+                  </div>
                 </div>
               </div>
+            )}
+
+            {/* Mensaje de Error */}
+            {errorMsg && (
+              <div className="absolute inset-0 bg-[#1E3A5F]/95 max-md:bg-neutral-950/95 flex flex-col items-center justify-center p-6 text-center z-10">
+                <AlertCircle className="w-12 h-12 text-[#E8B4A0] mb-3" />
+                <p className="text-sm text-white mb-4 max-w-xs">{errorMsg}</p>
+                <button
+                  onClick={() => startScanner(selectedCameraId || undefined)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-[#1E3A5F] mobile-pill-active text-xs font-semibold rounded-xl shadow transition-all active:scale-95"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Reintentar Conexión
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Controles y Selector de Cámara */}
+          <div className="mobile-flat-section p-4 bg-[#F8F9FA] border-t border-[#E5E7EB] space-y-3">
+            <p className="text-xs text-[#616161] text-center">{instructions}</p>
+
+            {cameras.length > 1 && (
+              <div className="mobile-flat-section flex items-center gap-3 justify-between text-xs text-[#1E3A5F] bg-white p-2.5 rounded-xl border border-[#E5E7EB]">
+                <span className="text-[#616161]">Cámara:</span>
+                <select
+                  value={selectedCameraId}
+                  onChange={(e) => {
+                    const newCamId = e.target.value;
+                    setSelectedCameraId(newCamId);
+                    startScanner(newCamId);
+                  }}
+                  className="bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] text-xs rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-[#1E3A5F] outline-none"
+                >
+                  {cameras.map((cam, idx) => (
+                    <option key={cam.id} value={cam.id}>
+                      {cam.label || `Cámara ${idx + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex items-center justify-center gap-2 text-[11px] text-[#616161]">
+              <Volume2 className="w-3 h-3 text-[#1E3A5F]" /> Señal háptica y auditiva al detectar
             </div>
-          )}
-
-          {/* Mensaje de Error */}
-          {errorMsg && (
-            <div className="absolute inset-0 bg-[#1E3A5F]/95 max-md:bg-neutral-950/95 flex flex-col items-center justify-center p-6 text-center">
-              <AlertCircle className="w-12 h-12 text-[#E8B4A0] mb-3" />
-              <p className="text-sm text-white mb-4">{errorMsg}</p>
-              <button
-                onClick={() => startScanner(selectedCameraId)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-[#1E3A5F] mobile-pill-active text-xs font-semibold rounded-xl shadow transition-all active:scale-95"
-              >
-                <RefreshCw className="w-3.5 h-3.5" /> Reintentar Conexión
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Controles y Selector de Cámara */}
-        <div className="mobile-flat-section p-4 bg-[#F8F9FA] border-t border-[#E5E7EB] space-y-3">
-          <p className="text-xs text-[#616161] text-center">{instructions}</p>
-
-          {cameras.length > 1 && (
-            <div className="mobile-flat-section flex items-center gap-3 justify-between text-xs text-[#1E3A5F] bg-white p-2.5 rounded-xl border border-[#E5E7EB]">
-              <span className="text-[#616161]">Cámara:</span>
-              <select
-                value={selectedCameraId}
-                onChange={(e) => {
-                  setSelectedCameraId(e.target.value);
-                  startScanner(e.target.value);
-                }}
-                className="bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] text-xs rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-[#1E3A5F] outline-none"
-              >
-                {cameras.map((cam, idx) => (
-                  <option key={cam.id} value={cam.id}>
-                    {cam.label || `Cámara ${idx + 1}`}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="flex items-center justify-center gap-2 text-[11px] text-[#616161]">
-            <Volume2 className="w-3 h-3 text-[#1E3A5F]" /> Señal háptica y auditiva al detectar</div>
           </div>
         </div>
       </div>
