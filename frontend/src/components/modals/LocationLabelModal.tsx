@@ -4,6 +4,7 @@ import jsPDF from 'jspdf';
 import { X, Printer, Download, QrCode as QrIcon, CheckCircle2 } from 'lucide-react';
 import { Location } from '../../types/database';
 import { useAuth } from '../../context/AuthContext';
+import { escapeHtml } from '../../utils/security';
 
 interface LocationLabelModalProps {
   location: Location | null;
@@ -51,7 +52,7 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Etiqueta - ${location.code}</title>
+          <title>Etiqueta - ${escapeHtml(location.code)}</title>
           <style>
             @page {
               size: 85.6mm 53.9mm;
@@ -170,16 +171,16 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
         </head>
         <body>
           <div class="card">
-            <div class="header">${inventoryTitle}</div>
+            <div class="header">${escapeHtml(inventoryTitle)}</div>
             <div class="body">
               <div class="qr-box">
                 <img src="${qrDataUrl}" alt="QR" />
               </div>
               <div class="details">
                 <div class="badge">Ubicación Asignada</div>
-                <div class="loc-name">${location.name}</div>
-                <div class="code-box">${location.code}</div>
-                ${location.description ? `<div class="desc">${location.description}</div>` : ''}
+                <div class="loc-name">${escapeHtml(location.name)}</div>
+                <div class="code-box">${escapeHtml(location.code)}</div>
+                ${location.description ? `<div class="desc">${escapeHtml(location.description)}</div>` : ''}
               </div>
             </div>
             <div class="footer">Dimensiones: 85.6 mm × 53.9 mm (Tarjeta de Crédito) • Escaneo Directo PWA</div>

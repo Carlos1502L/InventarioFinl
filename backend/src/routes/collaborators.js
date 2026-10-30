@@ -1,177 +1,198 @@
 import express from 'express';
 import { supabaseAdmin } from '../config/supabase.js';
-import { requireAuth } from '../middlewares/auth.js';
+import { requireAuth, verifyTenantAccess } from '../middlewares/auth.js';
+import { validate } from '../middlewares/validate.js';
+import {
+  inviteCollaboratorSchema,
+  inventoryIdParamSchema,
+  removeCollaboratorParamsSchema
+} from '../schemas/collaboratorSchemas.js';
 
 const router = express.Router();
 
 /**
  * GET /api/collaborators/:inventory_id
  * Lista los miembros y las invitaciones pendientes de un inventario
+ * Protegido contra BOLA: Solo usuarios autorizados del inventario pueden ver colaboradores
  */
-router.get('/:inventory_id', requireAuth, async (req, res) => {
-  try {
-    const { inventory_id } = req.params;
+router.get(
+  '/:inventory_id',
+  requireAuth,
+  validate(inventoryIdParamSchema, 'params'),
+  verifyTenantAccess({ source: 'params', key: 'inventory_id', requiredRole: 'member' }),
+  async (req, res, next) => {
+    try {
+      const { inventory_id } = req.params;
 
-    // Obtener miembros actuales
-    const { data: members, error: errMembers } = await supabaseAdmin
-      .from('inventory_users')
-      .select(`
-        id,
-        role,
-        created_at,
-        user_id,
-        profiles (
+      // Obtener miembros actuales
+      const { data: members, error: errMembers } = await supabaseAdmin
+        .from('inventory_users')
+        .select(`
           id,
-          email,
-          full_name,
-          avatar_url
-        )
-      `)
-      .eq('inventory_id', inventory_id);
+          role,
+          created_at,
+          user_id,
+          profiles (
+            id,
+            email,
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq('inventory_id', inventory_id);
 
-    if (errMembers) throw errMembers;
+      if (errMembers) throw errMembers;
 
-    // Obtener invitaciones pendientes
-    const { data: invitations, error: errInv } = await supabaseAdmin
-      .from('inventory_invitations')
-      .select('*')
-      .eq('inventory_id', inventory_id)
-      .eq('status', 'pending');
+      // Obtener invitaciones pendientes
+      const { data: invitations, error: errInv } = await supabaseAdmin
+        .from('inventory_invitations')
+        .select('*')
+        .eq('inventory_id', inventory_id)
+        .eq('status', 'pending');
 
-    if (errInv) throw errInv;
+      if (errInv) throw errInv;
 
-    res.json({
-      success: true,
-      members: members || [],
-      invitations: invitations || []
-    });
-  } catch (error) {
-    console.error('Error obteniendo colaboradores:', error);
-    res.status(500).json({ error: 'Error al consultar colaboradores: ' + error.message });
+      res.json({
+        success: true,
+        members: members || [],
+        invitations: invitations || []
+      });
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 /**
  * POST /api/collaborators/invite
- * Invita a un usuario por correo electrónico a colaborar en el inventario
+ * Invita a un usuario por correo electrónico a colaborar en el inventario.
+ * Restringido estrictamente al PROPIETARIO del inventario.
  */
-router.post('/invite', requireAuth, async (req, res) => {
-  try {
-    const { inventory_id, email, role = 'collaborator' } = req.body;
+router.post(
+  '/invite',
+  requireAuth,
+  validate(inviteCollaboratorSchema, 'body'),
+  verifyTenantAccess({ source: 'body', key: 'inventory_id', requiredRole: 'owner' }),
+  async (req, res, next) => {
+    try {
+      const { inventory_id, email, role } = req.body;
+      const cleanEmail = email.trim().toLowerCase();
 
-    if (!inventory_id || !email) {
-      return res.status(400).json({ error: 'inventory_id y email son obligatorios.' });
-    }
-
-    const cleanEmail = email.trim().toLowerCase();
-
-    // 1. Verificar si el usuario ya está registrado en la base de datos (profiles)
-    const { data: existingProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('id, email, full_name')
-      .eq('email', cleanEmail)
-      .maybeSingle();
-
-    if (existingProfile) {
-      // Verificar si ya es miembro
-      const { data: alreadyMember } = await supabaseAdmin
-        .from('inventory_users')
-        .select('id')
-        .eq('inventory_id', inventory_id)
-        .eq('user_id', existingProfile.id)
+      // 1. Verificar si el usuario ya está registrado en la base de datos (profiles)
+      const { data: existingProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('id, email, full_name')
+        .eq('email', cleanEmail)
         .maybeSingle();
 
-      if (alreadyMember) {
-        return res.status(400).json({ error: 'El usuario ya es colaborador de este inventario.' });
+      if (existingProfile) {
+        // Verificar si ya es miembro
+        const { data: alreadyMember } = await supabaseAdmin
+          .from('inventory_users')
+          .select('id')
+          .eq('inventory_id', inventory_id)
+          .eq('user_id', existingProfile.id)
+          .maybeSingle();
+
+        if (alreadyMember) {
+          return res.status(400).json({
+            success: false,
+            code: 'ALREADY_MEMBER',
+            message: 'El usuario ya es colaborador de este inventario.',
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        // Añadir directamente a inventory_users
+        const { data: newMember, error: errAdd } = await supabaseAdmin
+          .from('inventory_users')
+          .insert({
+            inventory_id,
+            user_id: existingProfile.id,
+            role
+          })
+          .select()
+          .single();
+
+        if (errAdd) throw errAdd;
+
+        return res.json({
+          success: true,
+          message: `El usuario ${cleanEmail} ha sido añadido exitosamente como colaborador.`,
+          member: newMember,
+          status: 'added_directly'
+        });
       }
 
-      // Añadir directamente a inventory_users
-      const { data: newMember, error: errAdd } = await supabaseAdmin
-        .from('inventory_users')
-        .insert({
-          inventory_id,
-          user_id: existingProfile.id,
-          role
-        })
+      // 2. Si no está registrado aún, registrar invitación pendiente
+      const { data: invitation, error: errInvite } = await supabaseAdmin
+        .from('inventory_invitations')
+        .upsert(
+          {
+            inventory_id,
+            email: cleanEmail,
+            role,
+            status: 'pending',
+            invited_by: req.user.id
+          },
+          { onConflict: 'inventory_id, email' }
+        )
         .select()
         .single();
 
-      if (errAdd) throw errAdd;
+      if (errInvite) throw errInvite;
 
-      return res.json({
+      res.json({
         success: true,
-        message: `El usuario ${cleanEmail} ha sido añadido exitosamente como colaborador.`,
-        member: newMember,
-        status: 'added_directly'
+        message: `Invitación enviada para ${cleanEmail}. Se vinculará automáticamente cuando se registre en la aplicación.`,
+        invitation,
+        status: 'pending_invitation'
       });
+    } catch (error) {
+      next(error);
     }
-
-    // 2. Si no está registrado aún, registrar invitación pendiente
-    const { data: invitation, error: errInvite } = await supabaseAdmin
-      .from('inventory_invitations')
-      .upsert(
-        {
-          inventory_id,
-          email: cleanEmail,
-          role,
-          status: 'pending',
-          invited_by: req.user.id
-        },
-        { onConflict: 'inventory_id, email' }
-      )
-      .select()
-      .single();
-
-    if (errInvite) throw errInvite;
-
-    res.json({
-      success: true,
-      message: `Invitación enviada para ${cleanEmail}. Se vinculará automáticamente cuando se registre en la aplicación.`,
-      invitation,
-      status: 'pending_invitation'
-    });
-  } catch (error) {
-    console.error('Error invitando colaborador:', error);
-    res.status(500).json({ error: 'Error al enviar invitación: ' + error.message });
   }
-});
+);
 
 /**
  * DELETE /api/collaborators/:inventory_id/:user_id
- * Remueve a un colaborador del inventario (Solo Dueño)
+ * Remueve a un colaborador del inventario (Restringido a Dueño)
  */
-router.delete('/:inventory_id/:user_id', requireAuth, async (req, res) => {
-  try {
-    const { inventory_id, user_id } = req.params;
+router.delete(
+  '/:inventory_id/:user_id',
+  requireAuth,
+  validate(removeCollaboratorParamsSchema, 'params'),
+  verifyTenantAccess({ source: 'params', key: 'inventory_id', requiredRole: 'owner' }),
+  async (req, res, next) => {
+    try {
+      const { inventory_id, user_id } = req.params;
 
-    // Verificar que quien hace la petición sea el dueño
-    const { data: inv } = await supabaseAdmin
-      .from('inventories')
-      .select('owner_id')
-      .eq('id', inventory_id)
-      .single();
+      // El dueño no puede auto-eliminarse de su inventario
+      if (req.user.id === user_id) {
+        return res.status(400).json({
+          success: false,
+          code: 'CANNOT_REMOVE_SELF',
+          message: 'El dueño no puede ser removido de su propio inventario.',
+          timestamp: new Date().toISOString()
+        });
+      }
 
-    if (!inv || inv.owner_id !== req.user.id) {
-      return res.status(403).json({ error: 'Solo el dueño del inventario puede remover colaboradores.' });
+      const { error: errDel } = await supabaseAdmin
+        .from('inventory_users')
+        .delete()
+        .eq('inventory_id', inventory_id)
+        .eq('user_id', user_id);
+
+      if (errDel) throw errDel;
+
+      res.json({
+        success: true,
+        message: 'Colaborador removido exitosamente.'
+      });
+    } catch (error) {
+      next(error);
     }
-
-    if (inv.owner_id === user_id) {
-      return res.status(400).json({ error: 'El dueño no puede ser removido de su propio inventario.' });
-    }
-
-    const { error: errDel } = await supabaseAdmin
-      .from('inventory_users')
-      .delete()
-      .eq('inventory_id', inventory_id)
-      .eq('user_id', user_id);
-
-    if (errDel) throw errDel;
-
-    res.json({ success: true, message: 'Colaborador removido exitosamente.' });
-  } catch (error) {
-    console.error('Error eliminando colaborador:', error);
-    res.status(500).json({ error: 'Error al remover colaborador: ' + error.message });
   }
-});
+);
 
 export default router;

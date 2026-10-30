@@ -4,6 +4,7 @@ import { X, Printer, CheckSquare, Square, Search, Tag, Loader2 } from 'lucide-re
 import { Product } from '../../types/database';
 import { formatCurrency } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { escapeHtml } from '../../utils/security';
 
 interface BatchLabelsModalProps {
   products: Product[];
@@ -112,15 +113,15 @@ export const BatchLabelsModal: React.FC<BatchLabelsModalProps> = ({
         <div class="label-card">
           <div class="label-content">
             <div class="label-info">
-              <span class="inventory-tag">${inventoryName}</span>
-              <h4 class="product-title">${prod.name}</h4>
-              <p class="product-code">SKU: <strong>${prod.code}</strong></p>
-              <p class="product-loc">📍 ${locName}</p>
-              <div class="product-price">${priceStr}</div>
+              <span class="inventory-tag">${escapeHtml(inventoryName)}</span>
+              <h4 class="product-title">${escapeHtml(prod.name)}</h4>
+              <p class="product-code">SKU: <strong>${escapeHtml(prod.code)}</strong></p>
+              <p class="product-loc">📍 ${escapeHtml(locName)}</p>
+              <div class="product-price">${escapeHtml(priceStr)}</div>
             </div>
             <div class="label-qr">
-              ${qrUrl ? `<img src="${qrUrl}" alt="${prod.code}" />` : ''}
-              <span class="qr-code-text">${prod.code}</span>
+              ${qrUrl ? `<img src="${qrUrl}" alt="${escapeHtml(prod.code)}" />` : ''}
+              <span class="qr-code-text">${escapeHtml(prod.code)}</span>
             </div>
           </div>
         </div>
@@ -131,7 +132,7 @@ export const BatchLabelsModal: React.FC<BatchLabelsModalProps> = ({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Etiquetas en Lote - ${inventoryName}</title>
+          <title>Etiquetas en Lote - ${escapeHtml(inventoryName)}</title>
           <style>
             @page {
               size: A4 portrait;

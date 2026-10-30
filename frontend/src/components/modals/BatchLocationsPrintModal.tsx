@@ -16,6 +16,7 @@ import {
 import { supabase } from '../../services/supabase';
 import { Location } from '../../types/database';
 import { useAuth } from '../../context/AuthContext';
+import { escapeHtml } from '../../utils/security';
 
 interface BatchLocationsPrintModalProps {
   isOpen: boolean;
@@ -119,19 +120,24 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
       const cardsHtml = await Promise.all(
         selectedLocations.map(async loc => {
           const qrUrl = await generateQrUrl(loc.code);
+          const safeInvName = escapeHtml(currentInventory?.name || 'SISTEMA DE INVENTARIO');
+          const safeCode = escapeHtml(loc.code);
+          const safeName = escapeHtml(loc.name);
+          const safeDesc = loc.description ? escapeHtml(loc.description) : '';
+
           return `
             <div class="card">
               <div class="header">
-                <span>${currentInventory?.name || 'SISTEMA DE INVENTARIO'}</span>
+                <span>${safeInvName}</span>
               </div>
               <div class="body">
                 <div class="qr-box">
-                  <img src="${qrUrl}" alt="QR ${loc.code}" />
+                  <img src="${qrUrl}" alt="QR ${safeCode}" />
                 </div>
                 <div class="details">
-                  <div class="loc-code">${loc.code}</div>
-                  <div class="loc-name">${loc.name}</div>
-                  ${loc.description ? `<div class="loc-desc">${loc.description}</div>` : ''}
+                  <div class="loc-code">${safeCode}</div>
+                  <div class="loc-name">${safeName}</div>
+                  ${safeDesc ? `<div class="loc-desc">${safeDesc}</div>` : ''}
                   <div class="badge">UBICACIÓN FÍSICA</div>
                 </div>
               </div>

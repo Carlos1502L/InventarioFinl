@@ -345,7 +345,18 @@ CREATE POLICY "inventories_delete" ON public.inventories FOR DELETE TO authentic
 CREATE POLICY "inv_users_select" ON public.inventory_users FOR SELECT TO authenticated
     USING (public.has_inventory_access(inventory_id));
 CREATE POLICY "inv_users_insert" ON public.inventory_users FOR INSERT TO authenticated
-    WITH CHECK (user_id = auth.uid() OR public.is_inventory_owner(inventory_id));
+    WITH CHECK (
+        public.is_inventory_owner(inventory_id)
+        OR (
+            user_id = auth.uid()
+            AND EXISTS (
+                SELECT 1 FROM public.inventory_invitations
+                WHERE inventory_id = public.inventory_users.inventory_id
+                  AND LOWER(email) = LOWER(auth.jwt()->>'email')
+                  AND status = 'pending'
+            )
+        )
+    );
 CREATE POLICY "inv_users_delete" ON public.inventory_users FOR DELETE TO authenticated
     USING (user_id = auth.uid() OR public.is_inventory_owner(inventory_id));
 
@@ -615,10 +626,16 @@ DECLARE
     v_sale_id UUID;
     v_loc RECORD;
     v_remaining_deduct NUMERIC(12, 4);
+    v_effective_seller_id UUID;
+    v_effective_seller_email TEXT;
 BEGIN
     IF NOT public.has_inventory_access(p_inventory_id) THEN
         RAISE EXCEPTION 'No tienes permiso para operar en este inventario.';
     END IF;
+
+    -- Prevenir suplantación de identidad (Impersonation): Forzar auth.uid() si el caller está autenticado
+    v_effective_seller_id := CASE WHEN auth.uid() IS NOT NULL THEN auth.uid() ELSE p_seller_id END;
+    v_effective_seller_email := CASE WHEN auth.jwt()->>'email' IS NOT NULL THEN auth.jwt()->>'email' ELSE p_seller_email END;
 
     -- 1. BLOQUEO TRANSACCIONAL DE CADA PRODUCTO (FOR UPDATE)
     FOR v_item IN SELECT * FROM jsonb_to_recordset(p_items) AS (
@@ -651,7 +668,7 @@ BEGIN
         inventory_id, seller_id, seller_email, total_amount, payment_method,
         customer_name, customer_contact, notes
     ) VALUES (
-        p_inventory_id, p_seller_id, p_seller_email, p_total_amount, p_payment_method,
+        p_inventory_id, v_effective_seller_id, v_effective_seller_email, p_total_amount, p_payment_method,
         p_customer_name, p_customer_contact,
         CASE WHEN p_coupon_code IS NOT NULL AND p_coupon_code <> '' 
              THEN COALESCE(p_notes, '') || ' [Cupón: ' || p_coupon_code || ' (-' || p_discount_amount || ')]'
@@ -671,8 +688,8 @@ BEGIN
     LOOP
         UPDATE public.products
         SET stock = GREATEST(0, ROUND((stock - v_item.quantity)::numeric, 4)),
-            last_modified_by = p_seller_id,
-            last_modified_by_email = p_seller_email,
+            last_modified_by = v_effective_seller_id,
+            last_modified_by_email = v_effective_seller_email,
             updated_at = NOW()
         WHERE id = v_item.product_id;
 
