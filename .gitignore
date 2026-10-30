@@ -1,16 +1,44 @@
-# Default ignored files
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Variables de entorno y secretos (NUNCA subir a control de versiones)
+.env
+.env.*
+!.env.example
+*.local
+*.env.local
+
+# Archivos de build y compilación
+dist/
+dist-ssr/
+build/
+*.tsbuildinfo
+
+# Uploads y archivos generados locales
+backend/uploads/
+uploads/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editores, IDEs y SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
 /shelf/
 /workspace.xml
-# Ignored default folder with query files
 /queries/
-# Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
-# Editor-based HTTP Client requests
 /httpRequests/
-
-# Node dependencies
-node_modules/
 
 # Nested git folder
 /InventarioFinl/
