@@ -355,11 +355,11 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
             </button>
           </div>
 
-          {/* 2. ÁREA DE CAPTURA RÁPIDA (BÚSQUEDA ANCHA + CÁMARA PEQUEÑA A LA DERECHA) */}
+          {/* 2. ÁREA DE CAPTURA RÁPIDA (BÚSQUEDA ANCHA A LA IZQUIERDA + ESCÁNER PEQUEÑO A LA DERECHA AL MISMO NIVEL) */}
           <div className="p-4 sm:p-6 pb-2 border-b border-[#E5E7EB] bg-[#F8F9FA]/80 shrink-0 space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-[#616161] absolute left-3.5 top-3 pointer-events-none" />
+            <div className="flex items-center gap-2.5 w-full">
+              <div className="relative flex-1 min-w-0">
+                <Search className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={searchTerm}
@@ -368,28 +368,29 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
                     setIsSearching(true);
                   }}
                   placeholder="Buscar producto por nombre o SKU..."
-                  className="w-full min-h-[42px] bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl pl-10 pr-9 py-2 text-xs font-mono uppercase text-[#1E3A5F] placeholder-[#616161] focus:outline-none transition-colors shadow-sm"
+                  className="w-full h-11 bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl pl-10 pr-9 text-xs font-mono uppercase text-[#1E3A5F] placeholder-[#616161] focus:outline-none transition-colors shadow-xs"
                 />
                 {searchTerm && (
                   <button
+                    type="button"
                     onClick={() => {
                       setSearchTerm('');
                       setIsSearching(false);
                     }}
-                    className="absolute right-3 top-3 text-[#616161] hover:text-[#1E3A5F]"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#616161] hover:text-[#1E3A5F] p-1"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
 
-              {/* Botón Escáner Continuo pequeño a la derecha */}
+              {/* Botón Escáner Continuo pequeño a la derecha al mismo nivel */}
               <button
                 type="button"
                 onClick={() => setScannerOpen(true)}
                 title="Abrir escáner continuo de cámara"
                 aria-label="Escanear con cámara"
-                className="w-10 h-10 min-h-[42px] rounded-xl border border-[#1E3A5F] bg-[#1E3A5F] hover:bg-[#172E4C] text-white flex items-center justify-center transition-all active:scale-95 shadow-sm shrink-0"
+                className="w-11 h-11 flex items-center justify-center bg-white hover:bg-[#F8F9FA] border border-[#E5E7EB] hover:border-[#1E3A5F] rounded-xl text-[#1E3A5F] active:scale-95 transition-all shadow-xs shrink-0"
               >
                 <Camera className="w-4 h-4" />
               </button>
