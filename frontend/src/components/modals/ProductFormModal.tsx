@@ -746,9 +746,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         setScanTarget('productCode');
                         setScannerOpen(true);
                       }}
-                      className="inline-flex items-center gap-1.5 px-4 min-h-[44px] bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] hover:border-black rounded-xl text-xs uppercase tracking-wider transition-all whitespace-nowrap active:scale-95"
+                      className="inline-flex items-center gap-1.5 px-4 min-h-[44px] bg-white hover:bg-[#F8F9FA] text-black border border-neutral-300 hover:border-black rounded-xl text-xs uppercase tracking-wider transition-all whitespace-nowrap active:scale-95"
                     >
-                      <Camera className="w-4 h-4 text-black" /> Escanear
+                      <Camera className="w-4 h-4 text-black stroke-[2.5]" style={{ color: '#000000', stroke: '#000000' }} /> Escanear
                     </button>
                   </div>
                 </div>
