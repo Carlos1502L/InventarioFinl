@@ -42,6 +42,24 @@ export const HomePage: React.FC<HomePageProps> = ({
   const [recentSales, setRecentSales] = useState<Sale[]>([]);
   const [loadingSales, setLoadingSales] = useState(false);
 
+  // Estado reactivo de conectividad para el indicador del Home (Online / Offline)
+  const [isOnline, setIsOnline] = useState<boolean>(() =>
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // Resumen de métricas por inventario para alimentar todas las tarjetas del Wallet Stack
   const [inventorySummaries, setInventorySummaries] = useState<
     Record<string, { valuacion: number; skusCount: number; alertaCount: number; totalUnits: number }>
@@ -330,17 +348,29 @@ export const HomePage: React.FC<HomePageProps> = ({
                         : 'opacity-80 brightness-75 hover:opacity-90 cursor-pointer'
                   }`}
                 >
-                  {/* Fila superior de la tarjeta: Punto indicador + Nombre del inventario + Chip de Tipo */}
+                  {/* Fila superior de la tarjeta: Punto indicador Online/Offline + Nombre del inventario + Chip de Tipo */}
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
                       <span
-                        className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                          isFront ? 'bg-emerald-400' : isPeeking ? 'bg-emerald-400' : 'bg-emerald-400/70'
+                        title={isOnline ? 'En línea' : 'Sin conexión (Offline)'}
+                        className={`w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-300 ${
+                          isOnline
+                            ? isFront
+                              ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
+                              : isPeeking
+                                ? 'bg-emerald-400'
+                                : 'bg-emerald-400/70'
+                            : 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)] animate-pulse'
                         }`}
                       />
                       <span className="text-xs font-semibold text-white truncate tracking-wide">
                         {card.nombre}
                       </span>
+                      {!isOnline && (
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 flex-shrink-0 font-medium">
+                          Offline
+                        </span>
+                      )}
                     </div>
 
                     <span
@@ -574,9 +604,14 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="border-b border-[#E5E7EB] pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#1E3A5F] inline-block" />
+              <span
+                title={isOnline ? 'En línea' : 'Sin conexión (Offline)'}
+                className={`w-2 h-2 rounded-full inline-block transition-colors ${
+                  isOnline ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+                }`}
+              />
               <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#616161]">
-                INVENTORY MANIFEST // SPECIFICATION SHEET
+                INVENTORY MANIFEST // SPECIFICATION SHEET { !isOnline && '• [SIN CONEXIÓN]' }
               </p>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1E3A5F] uppercase">
