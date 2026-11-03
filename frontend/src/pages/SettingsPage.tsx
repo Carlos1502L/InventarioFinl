@@ -14,13 +14,16 @@ import {
   User,
   Sliders,
   Printer,
-  Ticket
+  Ticket,
+  Database
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../services/supabase';
 import { EditInventoryModal } from '../components/modals/EditInventoryModal';
 import { BatchLocationsPrintModal } from '../components/modals/BatchLocationsPrintModal';
 import { CouponsManagementModal } from '../components/modals/CouponsManagementModal';
+import { BackupManagementCard } from '../components/settings/BackupManagementCard';
+import { BackupManagementModal } from '../components/modals/BackupManagementModal';
 
 interface SettingsPageProps {
   onOpenCategories: () => void;
@@ -39,6 +42,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [editInventoryMode, setEditInventoryMode] = useState<'info' | 'payments' | null>(null);
   const [batchLocationsOpen, setBatchLocationsOpen] = useState(false);
   const [couponsOpen, setCouponsOpen] = useState(false);
+  const [backupModalOpen, setBackupModalOpen] = useState(false);
+
+  const isOwner =
+    currentInventory?.role === 'owner' ||
+    currentInventory?.is_owner === true ||
+    currentInventory?.owner_id === user?.id;
 
   const isBusiness = currentInventory?.inventory_type !== 'PERSONAL';
 
@@ -240,6 +249,28 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               </div>
               <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
             </button>
+
+            {/* Copias de Seguridad (Exclusivo Propietario / Owner) */}
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => setBackupModalOpen(true)}
+                className="w-full py-4 flex items-center justify-between gap-3 text-left active:opacity-70 transition-opacity"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <Database className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-neutral-900 truncate">
+                      Copias de Seguridad (Backups)
+                    </p>
+                    <p className="text-xs text-neutral-400 truncate">
+                      Respaldo manual, programado y restauración
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+              </button>
+            )}
           </div>
 
           {/* Botón de cerrar sesión en tono sobrio al final de la lista */}
@@ -495,6 +526,26 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           </button>
         </div>
 
+        {/* =========================================================
+            04 // COPIAS DE SEGURIDAD & RESTAURACIÓN (EXCLUSIVO OWNER)
+           ========================================================= */}
+        {isOwner && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#E8B4A0]" />
+              <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#1E3A5F]">
+                04 // COPIAS DE SEGURIDAD & RESTAURACIÓN
+              </h3>
+            </div>
+
+            <BackupManagementCard
+              onRestoreCompleted={() => {
+                refreshInventories();
+              }}
+            />
+          </div>
+        )}
+
         {/* Tarjeta de Aplicación PWA */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs space-y-3">
           <div className="flex items-center gap-2.5">
@@ -550,6 +601,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         <CouponsManagementModal
           isOpen={couponsOpen}
           onClose={() => setCouponsOpen(false)}
+        />
+      )}
+
+      {/* Modal Móvil de Copias de Seguridad */}
+      {isOwner && (
+        <BackupManagementModal
+          isOpen={backupModalOpen}
+          onClose={() => setBackupModalOpen(false)}
+          onRestoreCompleted={() => {
+            refreshInventories();
+          }}
         />
       )}
     </>

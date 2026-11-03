@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import { createAuditLogSchema } from '../src/schemas/auditSchemas.js';
 import { inviteCollaboratorSchema } from '../src/schemas/collaboratorSchemas.js';
 import { reportQuerySchema } from '../src/schemas/reportSchemas.js';
+import {
+  exportAndSendBackupSchema,
+  saveBackupSettingsSchema,
+  restoreBackupSchema
+} from '../src/schemas/backupSchemas.js';
 
 test('Zod DTO Security: createAuditLogSchema', async (t) => {
   await t.test('debe rechazar un inventory_id que no sea UUID', () => {
@@ -61,5 +66,62 @@ test('Zod DTO Security: reportQuerySchema', async (t) => {
     };
     const result = reportQuerySchema.safeParse(invalid);
     assert.equal(result.success, false);
+  });
+});
+
+test('Zod DTO Security: Backup Schemas', async (t) => {
+  await t.test('exportAndSendBackupSchema debe validar UUID y correo', () => {
+    const invalid = { inventory_id: 'not-uuid', target_email: 'not-an-email' };
+    assert.equal(exportAndSendBackupSchema.safeParse(invalid).success, false);
+
+    const valid = {
+      inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      target_email: 'propietario@empresa.com'
+    };
+    assert.equal(exportAndSendBackupSchema.safeParse(valid).success, true);
+  });
+
+  await t.test('saveBackupSettingsSchema debe validar intervalo mínimo y formato de hora', () => {
+    const invalidTime = {
+      inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      target_email: 'propietario@empresa.com',
+      interval_days: 0,
+      execution_time: '25:99'
+    };
+    assert.equal(saveBackupSettingsSchema.safeParse(invalidTime).success, false);
+
+    const valid = {
+      inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      target_email: 'propietario@empresa.com',
+      is_scheduled: true,
+      interval_days: 3,
+      execution_time: '03:30'
+    };
+    const parsed = saveBackupSettingsSchema.safeParse(valid);
+    assert.equal(parsed.success, true);
+  });
+
+  await t.test('restoreBackupSchema debe exigir versión 1.0 estricta y data válida', () => {
+    const invalidVersion = {
+      inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      backup_payload: {
+        version: '2.0',
+        exported_at: new Date().toISOString(),
+        source_inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+        data: { categories: [], locations: [], products: [], product_locations: [], sales: [] }
+      }
+    };
+    assert.equal(restoreBackupSchema.safeParse(invalidVersion).success, false);
+
+    const valid = {
+      inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      backup_payload: {
+        version: '1.0',
+        exported_at: new Date().toISOString(),
+        source_inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+        data: { categories: [], locations: [], products: [], product_locations: [], sales: [] }
+      }
+    };
+    assert.equal(restoreBackupSchema.safeParse(valid).success, true);
   });
 });

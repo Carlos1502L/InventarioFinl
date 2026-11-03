@@ -9,6 +9,8 @@ import reportsRouter from './src/routes/reports.js';
 import labelsRouter from './src/routes/labels.js';
 import auditRouter from './src/routes/audit.js';
 import collaboratorsRouter from './src/routes/collaborators.js';
+import backupRouter from './src/routes/backup.js';
+import { initBackupScheduler } from './src/services/backupScheduler.js';
 
 dotenv.config();
 
@@ -112,6 +114,7 @@ app.use('/api/', globalApiLimiter);
 // Rutas de la API con limitadores específicos
 app.use('/api/reports', heavyResourceLimiter, reportsRouter);
 app.use('/api/labels', heavyResourceLimiter, labelsRouter);
+app.use('/api/backup', heavyResourceLimiter, backupRouter);
 app.use('/api/audit', auditRouter);
 app.use('/api/collaborators', collaboratorsRouter);
 
@@ -162,4 +165,6 @@ app.listen(PORT, () => {
   console.log(`🚀 [Backend Render] Servidor escuchando en http://localhost:${PORT}`);
   console.log(`📊 Reportes: http://localhost:${PORT}/api/reports`);
   console.log(`🏷️ Etiquetas: http://localhost:${PORT}/api/labels`);
+  console.log(`📦 Respaldos: http://localhost:${PORT}/api/backup`);
+  initBackupScheduler();
 });
