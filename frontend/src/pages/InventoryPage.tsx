@@ -264,9 +264,9 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                 onClick={() => setSearchScannerOpen(true)}
                 aria-label="Escanear código para buscar"
                 title="Escanear código"
-                className="w-12 h-12 flex items-center justify-center bg-white border border-neutral-300 hover:border-black rounded-2xl text-black active:scale-95 transition-all shrink-0 shadow-xs"
+                className="w-12 h-12 flex items-center justify-center bg-black hover:bg-neutral-800 border border-black rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
               >
-                <Camera className="w-6 h-6 text-black stroke-[2.5]" style={{ color: '#000000', stroke: '#000000' }} />
+                <Camera className="w-5 h-5 text-white" />
               </button>
             </div>
 
@@ -480,11 +480,11 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             {/* Escáner de Cámara */}
             <button
               onClick={() => setSearchScannerOpen(true)}
-              className="flex-1 sm:flex-initial min-h-[44px] px-4 rounded-full border border-neutral-300 hover:border-black bg-white text-black flex items-center justify-center gap-2 transition-all active:bg-[#F8F9FA] shadow-sm"
+              className="flex-1 sm:flex-initial min-h-[44px] px-4 rounded-full border border-black bg-black hover:bg-neutral-800 text-white flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm"
               title="Escanear código de barras o QR"
             >
-              <Camera className="w-4 h-4 stroke-[2.5] text-black" style={{ color: '#000000', stroke: '#000000' }} />
-              <span className="text-xs font-mono uppercase tracking-wider font-semibold text-black">ESCANEAR</span>
+              <Camera className="w-4 h-4 text-white" />
+              <span className="text-xs font-mono uppercase tracking-wider font-semibold text-white">ESCANEAR</span>
             </button>
 
             {/* Toggle de Filtros */}

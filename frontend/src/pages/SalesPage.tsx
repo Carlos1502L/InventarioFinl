@@ -776,9 +776,9 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                 onClick={() => setScannerOpen(true)}
                 aria-label="Escanear código para agregar al carrito"
                 title="Escanear código"
-                className="w-12 h-12 flex items-center justify-center bg-white border border-neutral-300 hover:border-black rounded-2xl text-black active:scale-95 transition-all shrink-0 shadow-xs"
+                className="w-12 h-12 flex items-center justify-center bg-black hover:bg-neutral-800 border border-black rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
               >
-                <Camera className="w-6 h-6 text-black stroke-[2.5]" style={{ color: '#000000', stroke: '#000000' }} />
+                <Camera className="w-5 h-5 text-white" />
               </button>
             </div>
 
@@ -1220,10 +1220,10 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
               <button
                 type="button"
                 onClick={() => setScannerOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white hover:bg-[#F8F9FA] text-black border border-neutral-300 hover:border-black rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 whitespace-nowrap shadow-xs"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-black hover:bg-neutral-800 text-white border border-black rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 whitespace-nowrap shadow-sm"
               >
-                <Camera className="w-4 h-4 text-black stroke-[2.5]" style={{ color: '#000000', stroke: '#000000' }} />
-                <span className="font-semibold text-black">Escanear</span>
+                <Camera className="w-4 h-4 text-white" />
+                <span className="font-semibold text-white">Escanear</span>
               </button>
             </div>
 
