@@ -604,14 +604,9 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="border-b border-[#E5E7EB] pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <span
-                title={isOnline ? 'En línea' : 'Sin conexión (Offline)'}
-                className={`w-2 h-2 rounded-full inline-block transition-colors ${
-                  isOnline ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
-                }`}
-              />
+              <span className="w-2 h-2 rounded-full bg-[#1E3A5F] inline-block" />
               <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#616161]">
-                INVENTORY MANIFEST // SPECIFICATION SHEET { !isOnline && '• [SIN CONEXIÓN]' }
+                INVENTORY MANIFEST // SPECIFICATION SHEET
               </p>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1E3A5F] uppercase">

@@ -898,10 +898,10 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       setCameraScanTarget('assignProduct');
                       setCameraScannerOpen(true);
                     }}
-                    className="w-12 h-12 flex items-center justify-center bg-neutral-50 border border-neutral-200/60 rounded-2xl text-neutral-600 hover:text-neutral-950 active:scale-95 transition-all shrink-0"
+                    className="w-12 h-12 flex items-center justify-center bg-black hover:bg-neutral-800 border border-black rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
                     aria-label="Cámara"
                   >
-                    <Camera className="w-5 h-5" />
+                    <Camera className="w-5 h-5 text-white" />
                   </button>
                 </form>
 
@@ -1169,10 +1169,10 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       setCameraScanTarget('consultProduct');
                       setCameraScannerOpen(true);
                     }}
-                    className="w-12 h-12 flex items-center justify-center bg-neutral-50 border border-neutral-200/60 rounded-2xl text-neutral-600 hover:text-neutral-950 active:scale-95 transition-all shrink-0"
+                    className="w-12 h-12 flex items-center justify-center bg-black hover:bg-neutral-800 border border-black rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
                     aria-label="Cámara"
                   >
-                    <Camera className="w-5 h-5" />
+                    <Camera className="w-5 h-5 text-white" />
                   </button>
                 </form>
 
@@ -1325,10 +1325,10 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       setCameraScanTarget('moveProduct');
                       setCameraScannerOpen(true);
                     }}
-                    className="w-12 h-12 flex items-center justify-center bg-neutral-50 border border-neutral-200/60 rounded-2xl text-neutral-600 hover:text-neutral-950 active:scale-95 transition-all shrink-0"
+                    className="w-12 h-12 flex items-center justify-center bg-black hover:bg-neutral-800 border border-black rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
                     aria-label="Cámara"
                   >
-                    <Camera className="w-5 h-5" />
+                    <Camera className="w-5 h-5 text-white" />
                   </button>
                 </form>
 
@@ -2286,10 +2286,10 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     setCameraScanTarget('consultProduct');
                     setCameraScannerOpen(true);
                   }}
-                  className="min-h-[46px] px-4 bg-black hover:bg-neutral-800 text-white border border-black rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5"
+                  className="min-h-[46px] px-4 bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5"
                 >
-                  <Camera className="w-4 h-4 text-white" />
-                  <span className="font-semibold text-white">Cámara</span>
+                  <Camera className="w-4 h-4" />
+                  <span>Cámara</span>
                 </button>
               </div>
             </form>
@@ -2526,11 +2526,11 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     setCameraScanTarget('moveProduct');
                     setCameraScannerOpen(true);
                   }}
-                  className="px-3.5 min-h-[44px] bg-black hover:bg-neutral-800 text-white border border-black rounded-xl text-xs uppercase flex items-center justify-center gap-1.5"
+                  className="px-3.5 min-h-[44px] bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs uppercase flex items-center justify-center gap-1.5"
                   title="Escanear con cámara"
                 >
-                  <Camera className="w-4 h-4 text-white" />
-                  <span className="sm:hidden font-semibold text-white">Cámara</span>
+                  <Camera className="w-4 h-4" />
+                  <span className="sm:hidden">Cámara</span>
                 </button>
               </div>
             </form>
