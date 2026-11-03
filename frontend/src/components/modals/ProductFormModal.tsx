@@ -27,6 +27,9 @@ import {
   getBoxBreakdown
 } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { compressImage } from '../../utils/imageCompression';
+import { saveProductLocally, isNetworkOrOfflineError } from '../../services/offlineSync';
+import { showAppToast } from '../ui/ToastNotification';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { RestockProductModal } from './RestockProductModal';
 import { MinimalDropdown } from '../ui/MinimalDropdown';
@@ -34,7 +37,7 @@ import { MinimalDropdown } from '../ui/MinimalDropdown';
 interface ProductFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (savedProduct?: Product) => void;
   productToEdit?: Product | null;
   categories: Category[];
   subcategories: Subcategory[];
@@ -84,6 +87,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [subcategoryId, setSubcategoryId] = useState<string>('');
   const [locationId, setLocationId] = useState<string>('');
   const [images, setImages] = useState<string[]>([]);
+  // Blobs locales WebP para guardado y renderizado inmediato sin red
+  const [localBlobs, setLocalBlobs] = useState<Array<{ filename: string; blob: Blob; previewUrl: string }>>([]);
 
   // RF-03.1: Variantes de Producto
   const [isVariant, setIsVariant] = useState(false);
@@ -170,6 +175,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setSubcategoryId('');
       setLocationId(locations[0]?.id || '');
       setImages([]);
+      setLocalBlobs([]);
       setIsVariant(false);
       setParentId('');
       setVariantColor('');
@@ -215,7 +221,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   // Lista de posibles productos padres para variantes
   const candidateParents = products.filter(p => !p.is_variant && p.id !== productToEdit?.id);
 
-  // Manejador de subida de imágenes con compresión automática
+  // Manejador de subida de imágenes con compresión automática y soporte offline
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !currentInventory) return;
@@ -230,16 +236,42 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setErrorMsg(null);
 
       const newUrls: string[] = [];
+      const newBlobs: Array<{ filename: string; blob: Blob; previewUrl: string }> = [];
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         if (file.size > 15 * 1024 * 1024) {
           throw new Error(`La imagen "${file.name}" supera el límite de 15 MB.`);
         }
-        const url = await uploadProductImage(file, currentInventory.id);
-        newUrls.push(url);
+
+        // Compresión obligatoria a WebP < 300KB
+        const compressedFile = await compressImage(file, 1200, 1200, 0.8);
+
+        // Fallback transparente si estamos sin conexión
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          const previewUrl = URL.createObjectURL(compressedFile);
+          newUrls.push(previewUrl);
+          newBlobs.push({ filename: compressedFile.name, blob: compressedFile, previewUrl });
+        } else {
+          try {
+            const url = await uploadProductImage(compressedFile, currentInventory.id);
+            newUrls.push(url);
+          } catch (uploadErr) {
+            if (isNetworkOrOfflineError(uploadErr)) {
+              const previewUrl = URL.createObjectURL(compressedFile);
+              newUrls.push(previewUrl);
+              newBlobs.push({ filename: compressedFile.name, blob: compressedFile, previewUrl });
+            } else {
+              throw uploadErr;
+            }
+          }
+        }
       }
 
       setImages(prev => [...prev, ...newUrls].slice(0, 3));
+      if (newBlobs.length > 0) {
+        setLocalBlobs(prev => [...prev, ...newBlobs].slice(0, 3));
+      }
     } catch (err: any) {
       console.error('Error subiendo imagen:', err);
       setErrorMsg(err.message || 'Error al subir la imagen.');
@@ -250,7 +282,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   };
 
   const removeImage = (indexToRemove: number) => {
+    const targetUrl = images[indexToRemove];
     setImages(prev => prev.filter((_, idx) => idx !== indexToRemove));
+    if (targetUrl) {
+      setLocalBlobs(prev => prev.filter(b => b.previewUrl !== targetUrl));
+    }
   };
 
   // RF-06.2 & 3.2: Manejo de lectura exitosa del escáner óptico con detección de duplicados
@@ -358,6 +394,89 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         units_per_box: unitType === 'BOX' ? parsedUpb : null
       });
 
+      // Helper para guardar provisionalmente en IndexedDB y actualizar catálogo en memoria
+      const saveOfflineProvisional = async () => {
+        const localTempId = crypto.randomUUID();
+        const queuedBlobs = localBlobs.filter(b => images.includes(b.previewUrl));
+
+        await saveProductLocally({
+          local_temp_id: localTempId,
+          product_data: {
+            inventory_id: currentInventory.id,
+            name: name.trim(),
+            sku: code.trim(),
+            code: code.trim(),
+            description: description.trim() || undefined,
+            category_id: categoryId || undefined,
+            sub_category_id: subcategoryId || undefined,
+            cost_price: isBusiness ? parsedCostPrice : 0,
+            price: parsedPrice,
+            unit_type: unitType,
+            units_per_box: unitType === 'BOX' ? parsedUpb : undefined,
+            stock: consolidatedStock,
+            min_stock_alert: parsedMinStock,
+            location_id: locationId || undefined,
+            is_variant: isVariant,
+            parent_id: isVariant && parentId ? parentId : undefined,
+            variant_attributes: isVariant ? variantAttributes : {},
+            status: 'ACTIVE',
+            last_modified_by: user.id,
+            last_modified_by_email: user.email
+          },
+          images_blobs: queuedBlobs.map(b => ({ filename: b.filename, blob: b.blob }))
+        });
+
+        const selectedLoc = locations.find(l => l.id === locationId);
+        const selectedCat = categories.find(c => c.id === categoryId);
+        const selectedSub = subcategories.find(s => s.id === subcategoryId);
+
+        const provisionalProduct: Product = {
+          id: localTempId,
+          inventory_id: currentInventory.id,
+          name: name.trim(),
+          code: code.trim(),
+          description: description.trim() || null,
+          price: parsedPrice,
+          cost_price: isBusiness ? parsedCostPrice : 0,
+          markup_percentage: isBusiness ? parsedMarkup : 0,
+          unit_type: unitType,
+          units_per_box: unitType === 'BOX' ? parsedUpb : null,
+          stock: consolidatedStock,
+          min_stock: parsedMinStock,
+          category_id: categoryId || null,
+          subcategory_id: subcategoryId || null,
+          location_id: locationId || null,
+          images: images,
+          is_variant: isVariant,
+          parent_id: isVariant && parentId ? parentId : null,
+          variant_attributes: isVariant ? variantAttributes : {},
+          status: 'ACTIVE',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          last_modified_by: user.id,
+          last_modified_by_email: user.email || null,
+          categories: selectedCat
+            ? { id: selectedCat.id, name: selectedCat.name, color: selectedCat.color }
+            : null,
+          subcategories: selectedSub
+            ? { id: selectedSub.id, name: selectedSub.name }
+            : null,
+          locations: selectedLoc
+            ? { id: selectedLoc.id, name: selectedLoc.name, code: selectedLoc.code }
+            : null
+        };
+
+        onSaved(provisionalProduct);
+        showAppToast('Producto guardado localmente (se subirá al conectar a internet)', 'info', 4000);
+        onClose();
+      };
+
+      // Si no hay conexión a internet al crear producto, derivar directamente a IndexedDB
+      if (!productToEdit && typeof navigator !== 'undefined' && !navigator.onLine) {
+        await saveOfflineProvisional();
+        return;
+      }
+
       if (productToEdit) {
         // ACTUALIZACIÓN
         const { error: updateError } = await supabase
@@ -382,15 +501,49 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             units_per_box: unitType === 'BOX' ? parsedUpb : null
           }
         });
+
+        onSaved();
+        onClose();
       } else {
-        // CREACIÓN
+        // CREACIÓN ONLINE CON SUBIDA DE FOTOS Y FALLBACK RESILIENTE
+        const uploadedImages: string[] = [];
+        for (const imgUrl of images) {
+          const matchingBlob = localBlobs.find(b => b.previewUrl === imgUrl);
+          if (matchingBlob) {
+            try {
+              const url = await uploadProductImage(
+                new File([matchingBlob.blob], matchingBlob.filename, {
+                  type: matchingBlob.blob.type || 'image/webp'
+                }),
+                currentInventory.id
+              );
+              uploadedImages.push(url);
+            } catch (uploadErr) {
+              if (isNetworkOrOfflineError(uploadErr)) {
+                await saveOfflineProvisional();
+                return;
+              }
+              throw uploadErr;
+            }
+          } else {
+            uploadedImages.push(imgUrl);
+          }
+        }
+        payload.images = uploadedImages;
+
         const { data: newProd, error: insertError } = await supabase
           .from('products')
           .insert(payload)
           .select()
           .single();
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          if (isNetworkOrOfflineError(insertError)) {
+            await saveOfflineProvisional();
+            return;
+          }
+          throw insertError;
+        }
 
         await logAuditAction({
           inventoryId: currentInventory.id,
@@ -405,11 +558,85 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             price: parsedPrice
           }
         });
+
+        onSaved(newProd);
+        onClose();
+      }
+    } catch (err: any) {
+      if (!productToEdit && isNetworkOrOfflineError(err)) {
+        try {
+          // Fallback final resiliente ante pérdida abrupta de paquetes
+          const localTempId = crypto.randomUUID();
+          await saveProductLocally({
+            local_temp_id: localTempId,
+            product_data: {
+              inventory_id: currentInventory.id,
+              name: name.trim(),
+              sku: code.trim(),
+              code: code.trim(),
+              description: description.trim() || undefined,
+              category_id: categoryId || undefined,
+              sub_category_id: subcategoryId || undefined,
+              cost_price: isBusiness ? parseFloat(costPrice) || 0 : 0,
+              price: parseFloat(price) || 0,
+              unit_type: unitType,
+              units_per_box: unitType === 'BOX' ? parsedUpb : undefined,
+              stock: consolidatedStock,
+              min_stock_alert: Math.max(1, parseInt(minStock, 10) || 1),
+              location_id: locationId || undefined,
+              is_variant: isVariant,
+              parent_id: isVariant && parentId ? parentId : undefined,
+              variant_attributes: isVariant ? (isVariant ? { Color: variantColor.trim(), 'Talla/Tamaño': variantSize.trim(), 'Región/Versión': variantRegion.trim() } : {}) : {},
+              status: 'ACTIVE',
+              last_modified_by: user.id,
+              last_modified_by_email: user.email
+            },
+            images_blobs: localBlobs.filter(b => images.includes(b.previewUrl)).map(b => ({ filename: b.filename, blob: b.blob }))
+          });
+
+          const selectedLoc = locations.find(l => l.id === locationId);
+          const selectedCat = categories.find(c => c.id === categoryId);
+          const selectedSub = subcategories.find(s => s.id === subcategoryId);
+
+          const provProd: Product = {
+            id: localTempId,
+            inventory_id: currentInventory.id,
+            name: name.trim(),
+            code: code.trim(),
+            description: description.trim() || null,
+            price: parseFloat(price) || 0,
+            cost_price: isBusiness ? parseFloat(costPrice) || 0 : 0,
+            markup_percentage: isBusiness ? parseFloat(markupPercentage) || 0 : 0,
+            unit_type: unitType,
+            units_per_box: unitType === 'BOX' ? parsedUpb : null,
+            stock: consolidatedStock,
+            min_stock: Math.max(1, parseInt(minStock, 10) || 1),
+            category_id: categoryId || null,
+            subcategory_id: subcategoryId || null,
+            location_id: locationId || null,
+            images: images,
+            is_variant: isVariant,
+            parent_id: isVariant && parentId ? parentId : null,
+            variant_attributes: isVariant ? { Color: variantColor.trim(), 'Talla/Tamaño': variantSize.trim(), 'Región/Versión': variantRegion.trim() } : {},
+            status: 'ACTIVE',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            last_modified_by: user.id,
+            last_modified_by_email: user.email || null,
+            categories: selectedCat ? { id: selectedCat.id, name: selectedCat.name, color: selectedCat.color } : null,
+            subcategories: selectedSub ? { id: selectedSub.id, name: selectedSub.name } : null,
+            locations: selectedLoc ? { id: selectedLoc.id, name: selectedLoc.name, code: selectedLoc.code } : null
+          };
+
+          onSaved(provProd);
+          showAppToast('Producto guardado localmente (se subirá al conectar a internet)', 'info', 4000);
+          onClose();
+          return;
+        } catch (innerErr) {
+          console.warn('[OfflineFallback] Error en fallback final:', innerErr);
+        }
       }
 
-      onSaved();
-      onClose();
-    } catch (err: any) {
       console.error('Error guardando producto:', err);
       if (err.code === '23505') {
         setErrorMsg(`Ya existe otro producto con el código "${code}" en este inventario.`);

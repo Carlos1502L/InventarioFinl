@@ -12,7 +12,8 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
-  GitBranch
+  GitBranch,
+  PackageMinus
 } from 'lucide-react';
 import { Product, Category, Subcategory, Location } from '../types/database';
 import {
@@ -25,6 +26,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import { RestockProductModal } from '../components/modals/RestockProductModal';
+import { BulkWithdrawModal } from '../components/modals/BulkWithdrawModal';
 import { MinimalDropdown } from '../components/ui/MinimalDropdown';
 import { LocationSubTab } from './LocationsPage';
 
@@ -37,6 +39,7 @@ interface InventoryPageProps {
   onOpenCreateModal: () => void;
   onOpenLocationsModule?: (subTab?: LocationSubTab, product?: Product) => void;
   onRefresh: () => void;
+  onBulkWithdrawn?: (withdrawnItems: Array<{ product_id: string; quantity: number }>) => void;
   loading: boolean;
   initialSearchTerm?: string;
   onClearInitialSearch?: () => void;
@@ -51,11 +54,15 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
   onOpenCreateModal,
   onOpenLocationsModule,
   onRefresh,
+  onBulkWithdrawn,
   loading,
   initialSearchTerm,
   onClearInitialSearch
 }) => {
   const { currentInventory } = useAuth();
+
+  // Modal de Salida Masiva (Multi-Withdraw)
+  const [bulkWithdrawOpen, setBulkWithdrawOpen] = useState(false);
 
   // Filtros y Búsqueda
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '');
@@ -184,6 +191,15 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </h1>
 
             <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setBulkWithdrawOpen(true)}
+                aria-label="Salida de mercadería en lote"
+                title="Salida de mercadería en lote"
+                className="w-10 h-10 rounded-full border border-neutral-700/80 bg-neutral-900/60 hover:bg-neutral-800 text-neutral-200 flex items-center justify-center transition-colors active:scale-95"
+              >
+                <PackageMinus className="w-4 h-4 stroke-[1.75]" />
+              </button>
               <button
                 type="button"
                 onClick={onOpenCreateModal}
@@ -405,6 +421,17 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">ACTUALIZAR</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setBulkWithdrawOpen(true)}
+            aria-label="Salida de mercadería en lote"
+            title="Salida de mercadería en lote"
+            className="min-h-[44px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm"
+          >
+            <PackageMinus className="w-4 h-4 stroke-[1.5]" />
+            <span className="hidden sm:inline">SALIDA EN LOTE</span>
           </button>
 
           <button
@@ -957,6 +984,19 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
         onViewDetails={prod => {
           setRestockTargetProduct(null);
           onSelectProduct(prod);
+        }}
+      />
+      {/* Modal de Salida Masiva de Mercadería (Multi-Withdraw) */}
+      <BulkWithdrawModal
+        isOpen={bulkWithdrawOpen}
+        onClose={() => setBulkWithdrawOpen(false)}
+        products={products}
+        onWithdrawn={(items) => {
+          if (onBulkWithdrawn) {
+            onBulkWithdrawn(items);
+          } else {
+            onRefresh();
+          }
         }}
       />
     </>

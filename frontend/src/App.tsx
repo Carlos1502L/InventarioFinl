@@ -30,7 +30,7 @@ import { InventorySelectorModal } from './components/modals/InventorySelectorMod
 import { BarcodeScannerModal } from './components/modals/BarcodeScannerModal';
 import { RestockProductModal } from './components/modals/RestockProductModal';
 import { ToastNotification, showAppToast } from './components/ui';
-import { syncPendingSalesSilently } from './services/offlineSync';
+import { syncAllOfflineDataSilently } from './services/offlineSync';
 
 import { Loader2, Layers, Plus, Sparkles } from 'lucide-react';
 
@@ -143,13 +143,13 @@ export const AppContent: React.FC = () => {
     fetchInventoryData();
   }, [fetchInventoryData]);
 
-  // RF-4: Sincronizador Silencioso en Background al reconectar
+  // RF-5: Motor de Sincronización Automática Integral (Creación, Salidas Masivas y Ventas POS)
   useEffect(() => {
     const handleOnline = () => {
-      syncPendingSalesSilently((syncedCount) => {
+      syncAllOfflineDataSilently(() => {
         fetchInventoryData();
         showAppToast(
-          `Se sincronizaron ${syncedCount} ${syncedCount === 1 ? 'venta pendiente' : 'ventas pendientes'} con la base de datos.`,
+          'Sincronización en segundo plano completada con éxito.',
           'success',
           4500
         );
@@ -167,6 +167,38 @@ export const AppContent: React.FC = () => {
       window.removeEventListener('online', handleOnline);
     };
   }, [fetchInventoryData]);
+
+  // Inyección reactiva inmediata de productos guardados (soporte offline)
+  const handleProductSaved = (savedProduct?: Product) => {
+    if (savedProduct) {
+      setProducts((prev) => {
+        const exists = prev.some((p) => p.id === savedProduct.id);
+        if (exists) {
+          return prev.map((p) => (p.id === savedProduct.id ? savedProduct : p));
+        }
+        return [savedProduct, ...prev];
+      });
+    }
+    fetchInventoryData();
+  };
+
+  // Descuento reactivo inmediato de stock por salida masiva (soporte offline)
+  const handleBulkWithdrawn = (withdrawn: Array<{ product_id: string; quantity: number }>) => {
+    setProducts((prev) => {
+      const map = new Map(withdrawn.map((w) => [w.product_id, w.quantity]));
+      return prev.map((p) => {
+        if (map.has(p.id)) {
+          const delta = map.get(p.id)!;
+          return {
+            ...p,
+            stock: Math.max(0, Number((p.stock - delta).toFixed(4)))
+          };
+        }
+        return p;
+      });
+    });
+    fetchInventoryData();
+  };
 
   // Manejador del Escaneo Rápido Central
   const handleQuickScanSuccess = (code: string) => {
@@ -314,6 +346,7 @@ export const AppContent: React.FC = () => {
             }}
             onOpenLocationsModule={(sub, prod) => openLocationsWorkspace(sub || 'assign', prod || null)}
             onRefresh={fetchInventoryData}
+            onBulkWithdrawn={handleBulkWithdrawn}
             loading={dataLoading}
             initialSearchTerm={stockSearchFilter}
             onClearInitialSearch={() => setStockSearchFilter('')}
@@ -395,7 +428,7 @@ export const AppContent: React.FC = () => {
       <ProductFormModal
         isOpen={productFormOpen}
         onClose={() => setProductFormOpen(false)}
-        onSaved={fetchInventoryData}
+        onSaved={handleProductSaved}
         productToEdit={productToEdit}
         categories={categories}
         subcategories={subcategories}

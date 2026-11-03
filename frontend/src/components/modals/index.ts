@@ -1,6 +1,7 @@
 export { BarcodeScannerModal } from './BarcodeScannerModal';
 export { BatchLabelsModal } from './BatchLabelsModal';
 export { BatchLocationsPrintModal } from './BatchLocationsPrintModal';
+export { BulkWithdrawModal } from './BulkWithdrawModal';
 export { CategoriesManagementModal } from './CategoriesManagementModal';
 export { CollaboratorsModal } from './CollaboratorsModal';
 export { CouponsManagementModal } from './CouponsManagementModal';

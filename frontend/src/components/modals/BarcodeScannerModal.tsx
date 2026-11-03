@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import { X, Camera, RefreshCw, AlertCircle, Volume2 } from 'lucide-react';
+import { X, Camera, RefreshCw, AlertCircle, Volume2, CheckCircle2 } from 'lucide-react';
 
 interface BarcodeScannerModalProps {
   isOpen: boolean;
@@ -8,6 +8,7 @@ interface BarcodeScannerModalProps {
   onScanSuccess: (decodedText: string, format?: string) => void;
   title?: string;
   instructions?: string;
+  continuous?: boolean;
 }
 
 export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
@@ -15,12 +16,16 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   onClose,
   onScanSuccess,
   title = 'Escanear Código de Barras / QR',
-  instructions = 'Apunta la cámara del dispositivo hacia el código para escanearlo automáticamente.'
+  instructions = 'Apunta la cámara del dispositivo hacia el código para escanearlo automáticamente.',
+  continuous = false
 }) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cameras, setCameras] = useState<Array<{ id: string; label: string }>>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
+  const [recentScansCount, setRecentScansCount] = useState<number>(0);
+  const lastScanRef = useRef<{ code: string; time: number } | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const elementId = 'interactive-barcode-scanner';
 
@@ -50,7 +55,6 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
     if (scannerRef.current) {
       try {
         const state = scannerRef.current.getState ? scannerRef.current.getState() : 0;
-        // Html5QrcodeScannerState.SCANNING es 2
         if (state === 2 || (scannerRef.current as any).isScanning) {
           await scannerRef.current.stop();
         }
@@ -69,7 +73,6 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       setErrorMsg(null);
       await stopScanner();
 
-      // Esperar brevemente para garantizar renderizado del contenedor
       let retries = 0;
       while (!document.getElementById(elementId) && retries < 10) {
         await new Promise(r => setTimeout(r, 50));
@@ -98,7 +101,6 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
         cameraConfig,
         {
           fps: 15,
-          // Encuadre rectangular horizontal para códigos 1D (RF-02)
           qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
             const width = Math.min(Math.floor(viewfinderWidth * 0.88), 300);
             const height = Math.min(Math.floor(width * 0.5), Math.floor(viewfinderHeight * 0.55), 150);
@@ -110,11 +112,29 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
           aspectRatio: 1.333333
         },
         (decodedText, result) => {
+          const now = Date.now();
+          // Prevenir lecturas repetidas en ráfaga para el mismo código en escaneo continuo
+          if (
+            lastScanRef.current &&
+            lastScanRef.current.code === decodedText &&
+            now - lastScanRef.current.time < 1200
+          ) {
+            return;
+          }
+          lastScanRef.current = { code: decodedText, time: now };
+
           playBeep();
-          stopScanner().then(() => {
+
+          if (continuous) {
+            setLastScannedCode(decodedText);
+            setRecentScansCount(c => c + 1);
             onScanSuccess(decodedText, result?.result?.format?.formatName);
-            onClose();
-          });
+          } else {
+            stopScanner().then(() => {
+              onScanSuccess(decodedText, result?.result?.format?.formatName);
+              onClose();
+            });
+          }
         },
         () => {
           // Ignorar frames sin código detectado
@@ -136,7 +156,6 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
         console.warn('Video check:', vErr);
       }
 
-      // RF-02: Solicitar enfoque continuo sobre la pista activa de hardware si está disponible
       try {
         const stream = (html5QrCode as any).localMediaStream as MediaStream ||
           (document.querySelector(`#${elementId} video`) as HTMLVideoElement)?.srcObject as MediaStream;
@@ -151,7 +170,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
             }
           }
         }
-      } catch (focusErr) {
+      } catch {
         // Enfoque continuo es una mejora opcional
       }
 
@@ -169,6 +188,9 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   useEffect(() => {
     if (!isOpen) {
       stopScanner();
+      setLastScannedCode(null);
+      setRecentScansCount(0);
+      lastScanRef.current = null;
       return;
     }
 
@@ -177,7 +199,6 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       .then((devices) => {
         if (devices && devices.length > 0) {
           setCameras(devices);
-          // Preferir cámara trasera si existe
           const backCam = devices.find(d =>
             d.label.toLowerCase().includes('back') ||
             d.label.toLowerCase().includes('trasera') ||
@@ -214,7 +235,9 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
             </div>
             <div>
               <h3 className="font-light text-[#1E3A5F] text-base uppercase tracking-tight">{title}</h3>
-              <p className="text-[11px] text-[#616161]">Escáner Óptico de Alta Velocidad</p>
+              <p className="text-[11px] text-[#616161]">
+                {continuous ? 'Modo Escaneo Continuo Activo' : 'Escáner Óptico de Alta Velocidad'}
+              </p>
             </div>
           </div>
           <button
@@ -245,7 +268,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                   {/* Línea de escaneo láser horizontal animada */}
                   <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 h-0.5 bg-gradient-to-r from-transparent via-[#E8B4A0] max-md:via-emerald-400 to-transparent animate-pulse shadow-[0_0_8px_#E8B4A0] max-md:shadow-[0_0_8px_#10b981]" />
                   <div className="absolute -bottom-7 inset-x-0 text-center text-[10px] text-white/90 font-mono tracking-wider font-semibold">
-                    APUNTA AL CÓDIGO DE BARRAS O QR
+                    {continuous ? 'ESCANEA SUCESIVAMENTE SIN CERRAR' : 'APUNTA AL CÓDIGO DE BARRAS O QR'}
                   </div>
                 </div>
               </div>
@@ -265,6 +288,19 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
               </div>
             )}
           </div>
+
+          {/* Banner de último código escaneado (en modo continuo) */}
+          {continuous && lastScannedCode && (
+            <div className="mx-4 mt-3 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900 animate-in fade-in slide-in-from-top-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="truncate">Código: <b>{lastScannedCode}</b></span>
+              </div>
+              <span className="px-2 py-0.5 bg-emerald-200 text-emerald-800 rounded text-[10px] font-bold">
+                +{recentScansCount}
+              </span>
+            </div>
+          )}
 
           {/* Controles y Selector de Cámara */}
           <div className="mobile-flat-section p-4 bg-[#F8F9FA] border-t border-[#E5E7EB] space-y-3">
@@ -293,6 +329,19 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
             <div className="flex items-center justify-center gap-2 text-[11px] text-[#616161]">
               <Volume2 className="w-3 h-3 text-[#1E3A5F]" /> Señal háptica y auditiva al detectar
             </div>
+
+            {continuous && (
+              <button
+                type="button"
+                onClick={() => {
+                  stopScanner();
+                  onClose();
+                }}
+                className="w-full min-h-[44px] py-2.5 rounded-xl bg-[#1E3A5F] hover:bg-[#172E4C] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98]"
+              >
+                <span>Terminar Escaneo ({recentScansCount} leídos)</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
