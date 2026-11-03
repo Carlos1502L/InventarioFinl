@@ -34,6 +34,19 @@ export const Navbar: React.FC<NavbarProps> = ({
     user?.email?.split('@')[0] ||
     'Usuario';
 
+  const [isOnline, setIsOnline] = React.useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  React.useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   return (
     <header className="hidden md:block sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E5E7EB] transition-colors lg:pl-[250px] pt-[env(safe-area-inset-top,0px)]">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-4">
@@ -42,8 +55,14 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-3">
           {/* Logo en Móvil (Visible solo en < lg) */}
           <div className="flex lg:hidden items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] overflow-hidden flex items-center justify-center flex-shrink-0 shadow-xs">
+            <div className="relative w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] overflow-hidden flex items-center justify-center flex-shrink-0 shadow-xs">
               <img src="/logo.png" alt="Stockly" className="w-full h-full object-cover" loading="lazy" decoding="async" />
+              <span
+                className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-white transition-colors ${
+                  isOnline ? 'bg-emerald-500' : 'bg-amber-500'
+                }`}
+                title={isOnline ? 'Conectado' : 'Fuera de línea'}
+              />
             </div>
             <button
               onClick={onOpenInventorySelector}
@@ -57,7 +76,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Saludo Dinámico según la hora al Usuario Logueado (Desktop >= lg) */}
-          <div className="hidden lg:block">
+          <div className="hidden lg:flex items-center gap-2">
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 transition-colors ${
+                isOnline ? 'bg-emerald-500' : 'bg-amber-500'
+              }`}
+              title={isOnline ? 'Conectado a la nube' : 'Modo fuera de línea'}
+            />
             <h2 className="text-base sm:text-lg font-bold text-[#1E3A5F] tracking-tight leading-none">
               {getTimeBasedGreeting()}: <span className="font-semibold text-[#1E3A5F]">{displayName}</span>
             </h2>

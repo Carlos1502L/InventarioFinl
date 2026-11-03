@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ShoppingCart,
   Search,
@@ -31,6 +31,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import { SuccessCheckModal } from '../components/modals/SuccessCheckModal';
+import { saveSaleLocally, isNetworkOrOfflineError, QueuedSalePayload } from '../services/offlineSync';
+import { showAppToast } from '../components/ui/ToastNotification';
 import jsPDF from 'jspdf';
 
 interface SalesPageProps {
@@ -72,8 +74,21 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
     total: number;
     receiptNumber: string;
     items?: Array<{ label: string; subtotal: number }>;
+    isOffline?: boolean;
   } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Escáner Modal para Venta Rápida por Cámara
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -458,7 +473,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
     setTimeout(() => setCopiedText(false), 2000);
   };
 
-  // PROCESAR VENTA CON PROTECCIÓN DE CONCURRENCIA TRANSACCIONAL (FOR UPDATE)
+  // PROCESAR VENTA CON PROTECCIÓN DE CONCURRENCIA TRANSACCIONAL Y FAILOVER OFFLINE
   const handleProcessSale = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentInventory || !user) return;
@@ -492,135 +507,101 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
         };
       });
 
-      // 1. INTENTAR PROCESAMIENTO ATÓMICO VÍA RPC CON "FOR UPDATE"
+      const rpcPayload: QueuedSalePayload = {
+        p_inventory_id: currentInventory.id,
+        p_seller_id: user.id,
+        p_seller_email: user.email || null,
+        p_total_amount: finalTotal,
+        p_payment_method: paymentMethod,
+        p_customer_name: customerName.trim() || null,
+        p_customer_contact: customerContact.trim() || null,
+        p_notes: saleNotes.trim() || null,
+        p_items: saleItemsPayload,
+        p_coupon_code: appliedCoupon?.code || null,
+        p_discount_amount: discountAmount
+      };
+
       let saleIdCreated: string | null = null;
-      let usedRpc = false;
+      let isOfflineSale = false;
 
-      try {
-        const { data: rpcRes, error: rpcError } = await supabase.rpc('process_pos_sale', {
-          p_inventory_id: currentInventory.id,
-          p_seller_id: user.id,
-          p_seller_email: user.email,
-          p_total_amount: finalTotal,
-          p_payment_method: paymentMethod,
-          p_customer_name: customerName.trim() || null,
-          p_customer_contact: customerContact.trim() || null,
-          p_notes: saleNotes.trim() || null,
-          p_items: saleItemsPayload,
-          p_coupon_code: appliedCoupon?.code || null,
-          p_discount_amount: discountAmount
-        });
+      // RF-1.1: Evaluación de conectividad previa
+      const currentOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
-        if (rpcError) {
-          if (rpcError.message && rpcError.message.toLowerCase().includes('stock insuficiente')) {
-            throw new Error(
-              `⚠️ Concurrencia detectada: ${rpcError.message}. Otro usuario acaba de comprar este artículo o no hay suficientes existencias.`
-            );
+      if (!currentOnline) {
+        // Sin red: omitir llamada remota y derivar inmediatamente a IndexedDB
+        const localId = await saveSaleLocally(rpcPayload);
+        saleIdCreated = `local-${localId}-${Date.now()}`;
+        isOfflineSale = true;
+      } else {
+        // RF-1.2: Llamada con failover a la RPC process_pos_sale
+        try {
+          const { data: rpcRes, error: rpcError } = await supabase.rpc('process_pos_sale', rpcPayload);
+
+          if (rpcError) {
+            // RF-1.3: Captura de fallos de red / timeout / offline
+            if (isNetworkOrOfflineError(rpcError)) {
+              console.warn('[POS] Falla de red en RPC process_pos_sale, derivando a IndexedDB:', rpcError);
+              const localId = await saveSaleLocally(rpcPayload);
+              saleIdCreated = `local-${localId}-${Date.now()}`;
+              isOfflineSale = true;
+            } else {
+              // RF-1.4: Regla de negocio o validación de BD (concurrencia, stock insuficiente) -> propagar sin encolar
+              if (rpcError.message && rpcError.message.toLowerCase().includes('stock insuficiente')) {
+                throw new Error(
+                  `⚠️ Concurrencia detectada: ${rpcError.message}. Otro usuario acaba de comprar este artículo o no hay suficientes existencias.`
+                );
+              }
+              throw rpcError;
+            }
+          } else if (rpcRes && rpcRes.sale_id) {
+            saleIdCreated = rpcRes.sale_id;
+            isOfflineSale = false;
           }
-          if (rpcError.code === '42883' || rpcError.message.includes('does not exist')) {
-            usedRpc = false;
+        } catch (rpcCatchErr: any) {
+          if (isNetworkOrOfflineError(rpcCatchErr)) {
+            console.warn('[POS] Excepción de red en llamada RPC, derivando a IndexedDB:', rpcCatchErr);
+            const localId = await saveSaleLocally(rpcPayload);
+            saleIdCreated = `local-${localId}-${Date.now()}`;
+            isOfflineSale = true;
           } else {
-            throw rpcError;
+            // Propagar errores de validación de negocio
+            throw rpcCatchErr;
           }
-        } else if (rpcRes && rpcRes.sale_id) {
-          saleIdCreated = rpcRes.sale_id;
-          usedRpc = true;
-        }
-      } catch (rpcCatchErr: any) {
-        if (
-          rpcCatchErr.message.includes('Concurrencia detectada') ||
-          rpcCatchErr.message.includes('Stock insuficiente')
-        ) {
-          throw rpcCatchErr;
-        }
-        usedRpc = false;
-      }
-
-      // 2. FALLBACK SEGURO SI RPC NO ESTÁ INSTALADO
-      if (!usedRpc) {
-        for (const item of cart) {
-          const { data: freshProd, error: checkErr } = await supabase
-            .from('products')
-            .select('stock, name, unit_type, units_per_box')
-            .eq('id', item.product.id)
-            .single();
-
-          if (checkErr || !freshProd) {
-            throw new Error(`El producto "${item.product.name}" ya no existe en el catálogo.`);
-          }
-
-          if (Number(freshProd.stock) + 0.0002 < item.quantity) {
-            throw new Error(
-              `⚠️ Stock insuficiente: El producto "${item.product.name}" solo cuenta con ${formatStockDisplay(freshProd)} en existencia.`
-            );
-          }
-        }
-
-        const saleNotesWithCoupon = appliedCoupon
-          ? `${saleNotes ? saleNotes + ' | ' : ''}[Cupón: ${appliedCoupon.code} (-${discountAmount.toFixed(2)})]`
-          : saleNotes.trim() || null;
-
-        const { data: saleData, error: saleError } = await supabase
-          .from('sales')
-          .insert({
-            inventory_id: currentInventory.id,
-            seller_id: user.id,
-            seller_email: user.email,
-            total_amount: finalTotal,
-            payment_method: paymentMethod,
-            customer_name: customerName.trim() || null,
-            customer_contact: customerContact.trim() || null,
-            notes: saleNotesWithCoupon
-          })
-          .select()
-          .single();
-
-        if (saleError) throw saleError;
-        saleIdCreated = saleData.id;
-
-        const linesToInsert = saleItemsPayload.map(item => ({
-          sale_id: saleData.id,
-          ...item
-        }));
-        await supabase.from('sale_items').insert(linesToInsert);
-
-        for (const item of cart) {
-          const remaining = Math.max(0, Number((Number(item.product.stock) - item.quantity).toFixed(4)));
-          await supabase
-            .from('products')
-            .update({
-              stock: remaining,
-              last_modified_by: user.id,
-              last_modified_by_email: user.email,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', item.product.id);
         }
       }
 
-      // 3. Registrar auditoría
-      await logAuditAction({
-        inventoryId: currentInventory.id,
-        actionType: 'SALE',
-        details: `Venta registrada por total de ${formatCurrency(finalTotal, currentInventory.currency)} mediante ${paymentMethod}. ${
-          appliedCoupon ? `Cupón: ${appliedCoupon.code}` : ''
-        }`,
-        metadata: {
-          sale_id: saleIdCreated,
-          items_count: cart.length,
-          payment_method: paymentMethod,
-          coupon_applied: appliedCoupon?.code || null,
-          discount_amount: discountAmount
+      // Registro de auditoría solo si la llamada fue en vivo a Supabase
+      if (!isOfflineSale) {
+        try {
+          await logAuditAction({
+            inventoryId: currentInventory.id,
+            actionType: 'SALE',
+            details: `Venta registrada por total de ${formatCurrency(finalTotal, currentInventory.currency)} mediante ${paymentMethod}. ${
+              appliedCoupon ? `Cupón: ${appliedCoupon.code}` : ''
+            }`,
+            metadata: {
+              sale_id: saleIdCreated,
+              items_count: cart.length,
+              payment_method: paymentMethod,
+              coupon_applied: appliedCoupon?.code || null,
+              discount_amount: discountAmount
+            }
+          });
+        } catch (auditErr) {
+          console.warn('No se pudo registrar log de auditoría en vivo:', auditErr);
         }
-      });
+      }
 
       const receiptItemsSnapshot = saleItemsPayload.map(i => ({
         label: i.product_name,
         subtotal: i.subtotal
       }));
 
-      // 4. Limpiar estado del terminal y disparar SuccessCheckModal
-      const receiptNum = `VTA-${Date.now().toString().slice(-6)}`;
+      // RF-1.5: Cierre de flujo idéntico (vaciar carrito, cerrar modal, resetear campos)
+      const receiptNum = isOfflineSale
+        ? `OFF-${Date.now().toString().slice(-6)}`
+        : `VTA-${Date.now().toString().slice(-6)}`;
+
       setCart([]);
       setPaymentMethod('CASH');
       setShowCustomerInfo(false);
@@ -636,8 +617,18 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
         saleId: saleIdCreated || Date.now().toString(),
         total: finalTotal,
         receiptNumber: receiptNum,
-        items: receiptItemsSnapshot
+        items: receiptItemsSnapshot,
+        isOffline: isOfflineSale
       });
+
+      // RF-2: Notificación toast específica para venta offline
+      if (isOfflineSale) {
+        showAppToast(
+          'Venta guardada en este dispositivo (sin conexión). Se sincronizará automáticamente.',
+          'info',
+          4500
+        );
+      }
 
       onSaleCompleted();
     } catch (err: any) {
@@ -701,9 +692,17 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
         {/* CAPA 1: Header Oscuro Principal (Fijo / shrink-0) */}
         <header className="shrink-0 bg-neutral-950 text-white rounded-b-[2.5rem] z-20 select-none px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-5">
           <div className="flex items-center justify-between gap-4">
-            <h1 className="text-xl font-semibold tracking-tight text-white">
-              Terminal de Cobro
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold tracking-tight text-white">
+                Terminal de Cobro
+              </h1>
+              <span
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  isOnline ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+                }`}
+                title={isOnline ? 'En línea' : 'Modo fuera de línea'}
+              />
+            </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
               {onNavigateToHistory && (
@@ -1184,9 +1183,17 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
           {/* Tarjeta de Búsqueda */}
           <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-[#1E3A5F] font-bold block">
-                CATÁLOGO ACTIVO
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-[#1E3A5F] font-bold block">
+                  CATÁLOGO ACTIVO
+                </span>
+                <span
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    isOnline ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+                  }`}
+                  title={isOnline ? 'En línea' : 'Modo fuera de línea'}
+                />
+              </div>
               <span className="text-xs text-[#616161]">{products.length} ítems indexados</span>
             </div>
 
@@ -1844,6 +1851,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
       {/* Modal Minimalista de Confirmación de Cobro (Auto-dismiss 1.5s) */}
       <SuccessCheckModal
         isOpen={Boolean(saleSuccessData)}
+        label={saleSuccessData?.isOffline ? "Venta guardada (sin conexión)" : "Cobro exitoso"}
         onClose={() => {
           setCart([]);
           setPaymentMethod('CASH');

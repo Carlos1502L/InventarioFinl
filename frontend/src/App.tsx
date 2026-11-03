@@ -29,6 +29,8 @@ import { CollaboratorsModal } from './components/modals/CollaboratorsModal';
 import { InventorySelectorModal } from './components/modals/InventorySelectorModal';
 import { BarcodeScannerModal } from './components/modals/BarcodeScannerModal';
 import { RestockProductModal } from './components/modals/RestockProductModal';
+import { ToastNotification, showAppToast } from './components/ui';
+import { syncPendingSalesSilently } from './services/offlineSync';
 
 import { Loader2, Layers, Plus, Sparkles } from 'lucide-react';
 
@@ -139,6 +141,31 @@ export const AppContent: React.FC = () => {
 
   useEffect(() => {
     fetchInventoryData();
+  }, [fetchInventoryData]);
+
+  // RF-4: Sincronizador Silencioso en Background al reconectar
+  useEffect(() => {
+    const handleOnline = () => {
+      syncPendingSalesSilently((syncedCount) => {
+        fetchInventoryData();
+        showAppToast(
+          `Se sincronizaron ${syncedCount} ${syncedCount === 1 ? 'venta pendiente' : 'ventas pendientes'} con la base de datos.`,
+          'success',
+          4500
+        );
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+
+    // Intentar sincronizar al iniciar la aplicación si hay conexión
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      handleOnline();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
   }, [fetchInventoryData]);
 
   // Manejador del Escaneo Rápido Central
@@ -476,6 +503,8 @@ export const AppContent: React.FC = () => {
           setProductDetailOpen(true);
         }}
       />
+      {/* Notificación Toast Global Flotante (Zero-UI Alterations) */}
+      <ToastNotification />
     </div>
   );
 };
