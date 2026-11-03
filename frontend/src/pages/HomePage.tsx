@@ -225,7 +225,8 @@ export const HomePage: React.FC<HomePageProps> = ({
     return activeCard ? [activeCard, ...backCards] : mapped;
   }, [inventories, currentInventory, metrics, inventorySummaries]);
 
-  const visibleStackCards = useMemo(() => walletCards.slice(0, 3), [walletCards]);
+  // Mostrar únicamente 2 tarjetas como máximo para evitar desbordamiento en móviles
+  const visibleStackCards = useMemo(() => walletCards.slice(0, 2), [walletCards]);
   const hasMultipleCards = visibleStackCards.length > 1;
 
   return (
