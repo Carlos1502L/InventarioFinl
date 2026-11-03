@@ -2286,9 +2286,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     setCameraScanTarget('consultProduct');
                     setCameraScannerOpen(true);
                   }}
-                  className="min-h-[46px] px-4 bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5"
+                  className="min-h-[46px] px-4 bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] hover:border-black rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5"
                 >
-                  <Camera className="w-4 h-4" />
+                  <Camera className="w-4 h-4 text-black" />
                   <span>Cámara</span>
                 </button>
               </div>
@@ -2526,10 +2526,10 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     setCameraScanTarget('moveProduct');
                     setCameraScannerOpen(true);
                   }}
-                  className="px-3.5 min-h-[44px] bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs uppercase flex items-center justify-center gap-1.5"
+                  className="px-3.5 min-h-[44px] bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] hover:border-black rounded-xl text-xs uppercase flex items-center justify-center gap-1.5"
                   title="Escanear con cámara"
                 >
-                  <Camera className="w-4 h-4" />
+                  <Camera className="w-4 h-4 text-black" />
                   <span className="sm:hidden">Cámara</span>
                 </button>
               </div>

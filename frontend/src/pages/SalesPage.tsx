@@ -776,9 +776,9 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                 onClick={() => setScannerOpen(true)}
                 aria-label="Escanear código para agregar al carrito"
                 title="Escanear código"
-                className="w-12 h-12 flex items-center justify-center bg-neutral-50 border border-neutral-200/60 rounded-2xl text-neutral-600 hover:text-neutral-950 active:scale-95 transition-all shrink-0"
+                className="w-12 h-12 flex items-center justify-center bg-neutral-50 border border-neutral-200/60 rounded-2xl text-black hover:text-neutral-900 active:scale-95 transition-all shrink-0"
               >
-                <Camera className="w-5 h-5" />
+                <Camera className="w-5 h-5 text-black" />
               </button>
             </div>
 
@@ -1220,9 +1220,9 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
               <button
                 type="button"
                 onClick={() => setScannerOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 whitespace-nowrap shadow-xs"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] hover:border-black rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 whitespace-nowrap shadow-xs"
               >
-                <Camera className="w-4 h-4 text-[#1E3A5F]" />
+                <Camera className="w-4 h-4 text-black" />
                 <span>Escanear</span>
               </button>
             </div>

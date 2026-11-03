@@ -295,9 +295,9 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setScannerOpen(true)}
-                      className="inline-flex items-center gap-1.5 px-4 min-h-[44px] bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs uppercase tracking-wider shrink-0"
+                      className="inline-flex items-center gap-1.5 px-4 min-h-[44px] bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] hover:border-black rounded-xl text-xs uppercase tracking-wider shrink-0"
                     >
-                      <Camera className="w-4 h-4 text-[#1E3A5F]" /> QR
+                      <Camera className="w-4 h-4 text-black" /> QR
                     </button>
                   </div>
                   {selectedLocation && (

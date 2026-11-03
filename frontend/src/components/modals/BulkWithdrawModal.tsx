@@ -390,9 +390,9 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
                 onClick={() => setScannerOpen(true)}
                 title="Abrir escáner continuo de cámara"
                 aria-label="Escanear con cámara"
-                className="w-11 h-11 flex items-center justify-center bg-white hover:bg-[#F8F9FA] border border-[#E5E7EB] hover:border-[#1E3A5F] rounded-xl text-[#1E3A5F] active:scale-95 transition-all shadow-xs shrink-0"
+                className="w-11 h-11 flex items-center justify-center bg-white hover:bg-[#F8F9FA] border border-[#E5E7EB] hover:border-black rounded-xl text-black active:scale-95 transition-all shadow-xs shrink-0"
               >
-                <Camera className="w-4 h-4" />
+                <Camera className="w-4 h-4 text-black" />
               </button>
             </div>
 
