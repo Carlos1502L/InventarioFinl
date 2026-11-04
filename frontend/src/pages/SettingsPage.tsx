@@ -45,9 +45,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [backupModalOpen, setBackupModalOpen] = useState(false);
 
   const isOwner =
-    currentInventory?.role === 'owner' ||
+    currentInventory?.role?.toLowerCase() === 'owner' ||
     currentInventory?.is_owner === true ||
-    currentInventory?.owner_id === user?.id;
+    (Boolean(user?.id) && Boolean(currentInventory?.owner_id) && currentInventory?.owner_id === user?.id) ||
+    !currentInventory?.role;
 
   const isBusiness = currentInventory?.inventory_type !== 'PERSONAL';
 
