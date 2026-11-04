@@ -1109,21 +1109,19 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                  {/* Hora de Ejecución limpia, compacta y sin desbordes */}
-                  <div className="sm:col-span-6 space-y-1.5">
-                    <label className="text-xs font-semibold text-[#1E3A5F] flex items-center gap-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                  {/* Hora de Envío: Label a la izquierda y selector a la derecha al mismo nivel */}
+                  <div className="sm:col-span-6 flex items-center justify-between gap-3 h-11 px-1">
+                    <label className="text-xs font-semibold text-[#1E3A5F] flex items-center gap-1.5 shrink-0">
                       <Clock className="w-3.5 h-3.5 text-[#E8B4A0]" />
-                      Hora de Ejecución (24h)
+                      <span>Hora de envío (24h)</span>
                     </label>
-                    <div className="flex items-center">
-                      <input
-                        type="time"
-                        value={executionTime || '02:00'}
-                        onChange={(e) => setExecutionTime(e.target.value || '02:00')}
-                        className="w-32 max-w-[140px] h-11 px-3.5 bg-neutral-50 border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl text-xs font-mono font-bold text-[#1E3A5F] focus:outline-none shadow-xs text-center shrink-0"
-                      />
-                    </div>
+                    <input
+                      type="time"
+                      value={executionTime || '02:00'}
+                      onChange={(e) => setExecutionTime(e.target.value || '02:00')}
+                      className="w-28 max-w-[120px] h-10 px-2.5 bg-neutral-50 border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl text-xs font-mono font-bold text-[#1E3A5F] focus:outline-none shadow-xs text-center shrink-0"
+                    />
                   </div>
 
                   {/* Botón Guardar Programación */}

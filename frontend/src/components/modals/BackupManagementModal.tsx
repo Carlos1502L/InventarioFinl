@@ -1117,20 +1117,18 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Hora de Envío: Compacto, centrado y sin desbordes */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-[#1E3A5F] flex items-center gap-1.5">
+                    {/* Hora de Envío: Label a la izquierda y selector a la derecha al mismo nivel */}
+                    <div className="flex items-center justify-between gap-3 pt-1">
+                      <label className="text-xs font-semibold text-[#1E3A5F] flex items-center gap-1.5 shrink-0">
                         <Clock className="w-3.5 h-3.5 text-[#E8B4A0]" />
-                        Hora de envío (24h)
+                        <span>Hora de envío (24h)</span>
                       </label>
-                      <div className="flex items-center">
-                        <input
-                          type="time"
-                          value={executionTime || '02:00'}
-                          onChange={(e) => setExecutionTime(e.target.value || '02:00')}
-                          className="w-28 max-w-[120px] h-9 px-2.5 bg-neutral-100 rounded-xl text-xs font-mono font-bold text-[#1E3A5F] border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] text-center shrink-0 shadow-2xs"
-                        />
-                      </div>
+                      <input
+                        type="time"
+                        value={executionTime || '02:00'}
+                        onChange={(e) => setExecutionTime(e.target.value || '02:00')}
+                        className="w-28 max-w-[120px] h-9 px-2.5 bg-neutral-100 rounded-xl text-xs font-mono font-bold text-[#1E3A5F] border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] text-center shrink-0 shadow-2xs"
+                      />
                     </div>
 
                     {/* Próximo envío badge */}
