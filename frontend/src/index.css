@@ -395,7 +395,7 @@ div:has(> label:empty + span.hidden) {
   }
 
   /* 5. Inputs, Selects, Textareas y Barras de Búsqueda: UNA SOLA CASILLA (#f5f5f5), CERO DOBLE BLOQUE */
-  .mobile-dark-modal div.relative:has(> svg):has(> select),
+  .mobile-dark-modal div.relative:not(.frequency-pill-container):has(> svg):has(> select),
   .mobile-dark-modal div.relative:has(> svg):has(> input) {
     display: block !important;
     position: relative !important;
@@ -408,7 +408,7 @@ div:has(> label:empty + span.hidden) {
   }
 
   .mobile-dark-modal input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent),
-  .mobile-dark-modal select,
+  .mobile-dark-modal select:not(.frequency-pill-select),
   .mobile-dark-modal textarea {
     width: 100% !important;
     background-color: #f5f5f5 !important;
@@ -426,7 +426,7 @@ div:has(> label:empty + span.hidden) {
   }
 
   /* Ícono dentro de input/select: posicionado limpiamente dentro de la única casilla */
-  .mobile-dark-modal div.relative:has(> svg):has(> select) > svg,
+  .mobile-dark-modal div.relative:not(.frequency-pill-container):has(> svg):has(> select) > svg,
   .mobile-dark-modal div.relative:has(> svg):has(> input) > svg {
     position: absolute !important;
     left: 0.875rem !important;
@@ -440,8 +440,48 @@ div:has(> label:empty + span.hidden) {
   }
 
   .mobile-dark-modal div.relative:has(> svg) > input:not([type="checkbox"]):not([type="radio"]),
-  .mobile-dark-modal div.relative:has(> svg) > select {
+  .mobile-dark-modal div.relative:not(.frequency-pill-container):has(> svg) > select {
     padding-left: 2.5rem !important;
+  }
+
+  /* Cápsulas de frecuencia de envío: Centradas, sin recortes de texto y con selector táctil nativo */
+  .frequency-pill-container {
+    position: relative !important;
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .frequency-pill-select {
+    width: 100% !important;
+    height: 2.75rem !important; /* 44px */
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    padding-left: 0.5rem !important;
+    padding-right: 1.5rem !important;
+    line-height: 2.75rem !important;
+    font-size: 0.75rem !important;
+    text-align: center !important;
+    text-align-last: center !important;
+    -webkit-text-align-last: center !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    border-radius: 1rem !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+    outline: none !important;
+  }
+
+  .frequency-pill-icon {
+    position: absolute !important;
+    right: 0.625rem !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 0.875rem !important;
+    height: 0.875rem !important;
+    pointer-events: none !important;
+    z-index: 10 !important;
   }
 
   .mobile-dark-modal input:not([type="checkbox"]):not([type="radio"])::placeholder,

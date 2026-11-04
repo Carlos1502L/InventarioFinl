@@ -1037,58 +1037,33 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       )}
                     </div>
 
-                    {/* Frecuencia de envío: Cápsulas suaves y centradas idénticas al diseño nativo */}
+                    {/* Frecuencia de envío: Cápsulas de selección directa con selector nativo táctil sin cortes */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-[#1E3A5F] block">
                         Frecuencia de envío
                       </label>
                       <div className="grid grid-cols-2 gap-2">
                         {/* Campo 1: Predeterminado (Diario, Semanal, Quincenal) */}
-                        <div
-                          className={`relative w-full h-11 px-3 rounded-2xl border flex items-center justify-between transition-all cursor-pointer ${
-                            frequencyOption !== 'custom'
-                              ? 'bg-neutral-100 border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
-                              : 'bg-neutral-100/70 border-transparent text-neutral-500 font-medium'
-                          }`}
-                        >
-                          <div className="flex-1 text-center truncate pr-1">
-                            <span className="text-xs leading-normal">
-                              {frequencyOption === '1'
-                                ? 'Diario (1 día)'
-                                : frequencyOption === '15'
-                                ? 'Quincenal (15 días)'
-                                : 'Semanal (7 días)'}
-                            </span>
-                          </div>
-                          <ChevronDown className="w-3.5 h-3.5 text-neutral-400 shrink-0 pointer-events-none" />
+                        <div className="frequency-pill-container">
                           <select
                             value={frequencyOption === 'custom' ? '7' : frequencyOption}
                             onChange={(e) => setFrequencyOption(e.target.value as any)}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            className={`frequency-pill-select transition-all ${
+                              frequencyOption !== 'custom'
+                                ? 'bg-neutral-100 border border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
+                                : 'bg-neutral-100/70 border border-neutral-200/60 text-neutral-500 font-medium'
+                            }`}
                             aria-label="Frecuencia predeterminada"
                           >
-                            <option value="1">Diario (1 día)</option>
-                            <option value="7">Semanal (7 días)</option>
-                            <option value="15">Quincenal (15 días)</option>
+                            <option value="1" className="text-neutral-900 bg-white">Diario (1 día)</option>
+                            <option value="7" className="text-neutral-900 bg-white">Semanal (7 días)</option>
+                            <option value="15" className="text-neutral-900 bg-white">Quincenal (15 días)</option>
                           </select>
+                          <ChevronDown className="frequency-pill-icon text-neutral-400" />
                         </div>
 
-                        {/* Campo 2: Personalizado (Abre el scroll wheel nativo al pulsar) */}
-                        <div
-                          className={`relative w-full h-11 px-3 rounded-2xl border flex items-center justify-between transition-all cursor-pointer ${
-                            frequencyOption === 'custom'
-                              ? 'bg-neutral-100 border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
-                              : 'bg-neutral-100/70 border-transparent text-neutral-500 font-medium'
-                          }`}
-                        >
-                          <div className="flex-1 text-center truncate pr-1">
-                            <span className="text-xs leading-normal">
-                              {frequencyOption === 'custom'
-                                ? `${customDays} ${customDays === 1 ? 'día' : 'días'}`
-                                : 'Personalizado'}
-                            </span>
-                          </div>
-                          <ChevronDown className="w-3.5 h-3.5 text-neutral-400 shrink-0 pointer-events-none" />
+                        {/* Campo 2: Personalizado (Abre el scroll wheel / menú nativo para desplazar días) */}
+                        <div className="frequency-pill-container">
                           <select
                             value={frequencyOption === 'custom' ? String(customDays) : ''}
                             onChange={(e) => {
@@ -1098,27 +1073,34 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                                 setFrequencyOption('custom');
                               }
                             }}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            className={`frequency-pill-select transition-all ${
+                              frequencyOption === 'custom'
+                                ? 'bg-neutral-100 border border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
+                                : 'bg-neutral-100/70 border border-neutral-200/60 text-neutral-500 font-medium'
+                            }`}
                             aria-label="Días personalizados"
                           >
-                            <option value="" disabled>Personalizado</option>
+                            <option value="" disabled hidden className="text-neutral-400 bg-white">
+                              Personalizado
+                            </option>
                             {Array.from({ length: 30 }, (_, i) => i + 1).map((d) => (
-                              <option key={d} value={d}>
+                              <option key={d} value={d} className="text-neutral-900 bg-white">
                                 {d} {d === 1 ? 'día' : 'días'}
                               </option>
                             ))}
-                            <option value="45">45 días</option>
-                            <option value="60">60 días</option>
-                            <option value="90">90 días</option>
-                            <option value="180">180 días</option>
-                            <option value="365">365 días</option>
+                            <option value="45" className="text-neutral-900 bg-white">45 días</option>
+                            <option value="60" className="text-neutral-900 bg-white">60 días</option>
+                            <option value="90" className="text-neutral-900 bg-white">90 días</option>
+                            <option value="180" className="text-neutral-900 bg-white">180 días</option>
+                            <option value="365" className="text-neutral-900 bg-white">365 días</option>
                           </select>
+                          <ChevronDown className="frequency-pill-icon text-neutral-400" />
                         </div>
                       </div>
                     </div>
 
-                    {/* Hora de Envío: Label a la izquierda y selector a la derecha al mismo nivel */}
-                    <div className="flex items-center justify-between gap-3 pt-1">
+                    {/* Hora de Envío: Centrado visualmente junto al recuadro de hora */}
+                    <div className="flex items-center justify-center gap-2.5 py-1">
                       <label className="text-xs font-semibold text-[#1E3A5F] flex items-center gap-1.5 shrink-0">
                         <Clock className="w-3.5 h-3.5 text-[#E8B4A0]" />
                         <span>Hora de envío (24h)</span>
@@ -1127,7 +1109,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                         type="time"
                         value={executionTime || '02:00'}
                         onChange={(e) => setExecutionTime(e.target.value || '02:00')}
-                        className="w-28 max-w-[120px] h-9 px-2.5 bg-neutral-100 rounded-xl text-xs font-mono font-bold text-[#1E3A5F] border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] text-center shrink-0 shadow-2xs"
+                        className="w-24 max-w-[100px] h-8 px-2 bg-neutral-100 rounded-lg text-xs font-mono font-bold text-[#1E3A5F] border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] text-center shrink-0 shadow-2xs"
                       />
                     </div>
 

@@ -488,7 +488,6 @@ export class BackupService {
       restored_counts: restoredCounts
     };
   }
-  }
 }
 
 export const backupService = new BackupService();
