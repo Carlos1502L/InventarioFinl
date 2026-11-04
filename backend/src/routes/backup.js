@@ -93,6 +93,22 @@ router.post(
         });
       }
 
+      // Persistir correo verificado en la configuración para sincronización entre dispositivos (móvil y web)
+      try {
+        await supabaseAdmin
+          .from('inventory_backup_settings')
+          .upsert(
+            {
+              inventory_id,
+              target_email: cleanEmail,
+              updated_at: new Date().toISOString()
+            },
+            { onConflict: 'inventory_id' }
+          );
+      } catch (upsertErr) {
+        console.warn('⚠️ [verify-code] No se pudo persistir en settings:', upsertErr.message);
+      }
+
       return res.json({
         success: true,
         verified_email: cleanEmail,
@@ -300,6 +316,16 @@ router.get(
         throw error;
       }
 
+      // Sincronizar estado de verificación para que persista entre móvil y web
+      const verifiedEntry = otpService.getVerifiedEmail(inventory_id);
+      let verifiedEmail = verifiedEntry?.email || null;
+      let verificationToken = verifiedEntry?.token || null;
+
+      if (!verifiedEmail && data?.target_email) {
+        verifiedEmail = data.target_email;
+        verificationToken = otpService.setVerifiedEmail(inventory_id, data.target_email);
+      }
+
       res.json({
         success: true,
         settings: data || {
@@ -311,7 +337,9 @@ router.get(
           timezone: 'America/Lima',
           last_run_at: null,
           next_run_at: null
-        }
+        },
+        verified_email: verifiedEmail,
+        verification_token: verificationToken
       });
     } catch (err) {
       console.error('❌ Error restaurando backup:', err);

@@ -8,6 +8,8 @@ class OtpService {
   constructor() {
     // Memoria volátil para OTPs activos: key = `${inventoryId}:${normalizedEmail}`
     this.otpStore = new Map();
+    // Memoria volátil para correos verificados por inventario: key = inventoryId
+    this.verifiedStore = new Map();
     // Limpieza periódica cada 5 minutos de códigos expirados
     setInterval(() => this.cleanupExpired(), 5 * 60 * 1000).unref();
   }
@@ -98,13 +100,51 @@ class OtpService {
     // Código válido -> consumirlo para que no se reuse
     this.otpStore.delete(key);
 
-    // Generar token firmado de autorización
+    // Generar token firmado de autorización y registrar verificación para el inventario
     const token = this.generateVerificationToken(inventoryId, email);
+    this.setVerifiedEmail(inventoryId, email, token);
 
     return {
       success: true,
       verification_token: token
     };
+  }
+
+  /**
+   * Registra un correo como verificado para un inventario.
+   */
+  setVerifiedEmail(inventoryId, email, token = null) {
+    const cleanEmail = email.trim().toLowerCase();
+    const activeToken = token || this.generateVerificationToken(inventoryId, cleanEmail);
+    this.verifiedStore.set(inventoryId, {
+      email: cleanEmail,
+      token: activeToken,
+      verifiedAt: Date.now()
+    });
+    return activeToken;
+  }
+
+  /**
+   * Obtiene el correo verificado activo de un inventario si existe.
+   */
+  getVerifiedEmail(inventoryId) {
+    const entry = this.verifiedStore.get(inventoryId);
+    if (!entry) return null;
+
+    const check = this.verifyToken(inventoryId, entry.email, entry.token);
+    if (check.valid) {
+      return entry;
+    }
+
+    // Renovar token si fue validado recientemente (validez 24h)
+    if (Date.now() - entry.verifiedAt < 24 * 60 * 60 * 1000) {
+      const refreshedToken = this.generateVerificationToken(inventoryId, entry.email);
+      entry.token = refreshedToken;
+      return entry;
+    }
+
+    this.verifiedStore.delete(inventoryId);
+    return null;
   }
 
   /**

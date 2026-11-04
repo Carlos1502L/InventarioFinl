@@ -14,7 +14,8 @@ import {
   FileJson,
   ShieldCheck,
   KeyRound,
-  Edit2
+  Edit2,
+  RotateCcw
 } from 'lucide-react';
 import { supabase, getApiUrl } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -107,6 +108,43 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
     }
   }, [scheduledEmail, manualEmail, isEmailVerified, verificationToken]);
 
+  // Sincronización de correo verificado entre vistas y sesiones
+  useEffect(() => {
+    if (!currentInventory?.id) return;
+
+    // 1. Cargar de localStorage si existe verificación previa para este inventario
+    try {
+      const stored = localStorage.getItem(`stockly_verified_backup_${currentInventory.id}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.email && parsed?.token) {
+          setManualEmail(parsed.email);
+          setIsEmailVerified(true);
+          setVerificationToken(parsed.token);
+          setScheduledEmail(parsed.email);
+          setIsScheduledEmailVerified(true);
+          setScheduledVerificationToken(parsed.token);
+        }
+      }
+    } catch (e) {}
+
+    // 2. Escuchar evento de sincronización en tiempo real entre componentes (web y móvil)
+    const handleSync = (e: any) => {
+      const detail = e.detail;
+      if (detail?.email && detail?.token) {
+        setManualEmail(detail.email);
+        setIsEmailVerified(true);
+        setVerificationToken(detail.token);
+        setScheduledEmail(detail.email);
+        setIsScheduledEmailVerified(true);
+        setScheduledVerificationToken(detail.token);
+      }
+    };
+
+    window.addEventListener('stockly_backup_verified', handleSync);
+    return () => window.removeEventListener('stockly_backup_verified', handleSync);
+  }, [currentInventory?.id]);
+
   // Precargar correo con el del usuario logueado
   useEffect(() => {
     if (user?.email) {
@@ -115,7 +153,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
     }
   }, [user]);
 
-  // Cargar configuración guardada de respaldos programados
+  // Cargar configuración guardada de respaldos programados y estado verificado de backend
   useEffect(() => {
     const fetchSettings = async () => {
       if (!currentInventory?.id || !isOpen) return;
@@ -133,6 +171,23 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
 
         if (res.ok) {
           const json = await res.json();
+
+          // Sincronizar correo verificado desde el backend
+          if (json.verified_email && json.verification_token) {
+            setManualEmail(json.verified_email);
+            setIsEmailVerified(true);
+            setVerificationToken(json.verification_token);
+            setScheduledEmail(json.verified_email);
+            setIsScheduledEmailVerified(true);
+            setScheduledVerificationToken(json.verification_token);
+            try {
+              localStorage.setItem(
+                `stockly_verified_backup_${currentInventory.id}`,
+                JSON.stringify({ email: json.verified_email, token: json.verification_token })
+              );
+            } catch (e) {}
+          }
+
           if (json.settings) {
             const s = json.settings;
             setIsScheduled(Boolean(s.is_scheduled));
@@ -254,6 +309,17 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
       setIsEmailVerified(true);
       setOtpSent(false);
       setOtpCode('');
+      try {
+        localStorage.setItem(
+          `stockly_verified_backup_${currentInventory.id}`,
+          JSON.stringify({ email: target, token: data.verification_token })
+        );
+        window.dispatchEvent(
+          new CustomEvent('stockly_backup_verified', {
+            detail: { email: target, token: data.verification_token }
+          })
+        );
+      } catch (e) {}
       showAppToast('✓ Correo verificado exitosamente. Ahora puedes generar el respaldo.', 'success', 4000);
     } catch (err: any) {
       console.error('Error verificando OTP:', err);
@@ -463,6 +529,17 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
       setIsScheduledEmailVerified(true);
       setScheduledOtpSent(false);
       setScheduledOtpCode('');
+      try {
+        localStorage.setItem(
+          `stockly_verified_backup_${currentInventory.id}`,
+          JSON.stringify({ email: target, token: data.verification_token })
+        );
+        window.dispatchEvent(
+          new CustomEvent('stockly_backup_verified', {
+            detail: { email: target, token: data.verification_token }
+          })
+        );
+      } catch (e) {}
       showAppToast('Correo verificado exitosamente.', 'success', 4000);
     } catch (err: any) {
       console.error('Error verificando OTP programado:', err);
@@ -957,63 +1034,90 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       )}
                     </div>
 
-                    {/* Frecuencia (Grid 2x2 para evitar desbordes) */}
+                    {/* Frecuencia de envío: Select a la izquierda y Botón Personalizado a la derecha */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-[#1E3A5F] block">
                         Frecuencia de envío
                       </label>
                       <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { label: 'Diario (1 día)', value: '1' },
-                          { label: 'Semanal (7 días)', value: '7' },
-                          { label: 'Quincenal (15 días)', value: '15' },
-                          { label: 'Personalizado', value: 'custom' }
-                        ].map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => setFrequencyOption(opt.value as any)}
-                            className={`min-h-[40px] px-2 rounded-xl text-xs font-medium transition-all flex items-center justify-center border ${
-                              frequencyOption === opt.value
+                        {/* Campo 1: Select con opciones predeterminadas */}
+                        <div className="relative">
+                          <select
+                            value={frequencyOption === 'custom' ? '7' : frequencyOption}
+                            onChange={(e) => setFrequencyOption(e.target.value as any)}
+                            className={`w-full h-10 px-3 pr-7 rounded-xl text-xs font-medium border appearance-none transition-all cursor-pointer ${
+                              frequencyOption !== 'custom'
                                 ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] font-bold shadow-xs'
-                                : 'bg-neutral-50 text-neutral-700 border-neutral-200/80 hover:bg-neutral-100'
+                                : 'bg-neutral-100 text-neutral-700 border-neutral-200'
                             }`}
                           >
-                            {opt.label}
+                            <option value="1" className="bg-white text-neutral-800">Diario (1 día)</option>
+                            <option value="7" className="bg-white text-neutral-800">Semanal (7 días)</option>
+                            <option value="15" className="bg-white text-neutral-800">Quincenal (15 días)</option>
+                          </select>
+                          <div className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs ${
+                            frequencyOption !== 'custom' ? 'text-white' : 'text-neutral-500'
+                          }`}>
+                            ▾
+                          </div>
+                        </div>
+
+                        {/* Campo 2: Botón Personalizado al mismo nivel y del mismo tamaño */}
+                        {frequencyOption !== 'custom' ? (
+                          <button
+                            type="button"
+                            onClick={() => setFrequencyOption('custom')}
+                            className="w-full h-10 px-3 rounded-xl text-xs font-medium border border-neutral-200 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-all flex items-center justify-center cursor-pointer active:scale-98"
+                          >
+                            Personalizado
                           </button>
-                        ))}
+                        ) : (
+                          <div className="w-full h-10 px-2.5 rounded-xl border border-[#1E3A5F] bg-white flex items-center justify-between shadow-xs">
+                            <span className="text-[11px] font-bold text-[#1E3A5F] shrink-0">Días:</span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="365"
+                              value={customDays}
+                              onChange={(e) => setCustomDays(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                              className="w-14 text-center text-xs font-mono font-bold text-[#1E3A5F] focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setFrequencyOption('7')}
+                              className="text-[10px] text-neutral-400 hover:text-neutral-700 p-0.5"
+                              title="Volver a Semanal"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    {/* Días personalizados si aplica */}
-                    {frequencyOption === 'custom' && (
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-[#1E3A5F] block">
-                          Cada cuántos días (mín. 1)
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="365"
-                          value={customDays}
-                          onChange={(e) => setCustomDays(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                          className="w-full h-11 px-3.5 bg-neutral-100 rounded-xl text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
-                        />
-                      </div>
-                    )}
-
-                    {/* Hora de Ejecución */}
+                    {/* Hora de Envío con Reset y Anti-Desborde */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-[#1E3A5F] flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-[#E8B4A0]" />
                         Hora de envío (24h)
                       </label>
-                      <input
-                        type="time"
-                        value={executionTime}
-                        onChange={(e) => setExecutionTime(e.target.value)}
-                        className="w-full h-11 px-3.5 bg-neutral-100 rounded-xl text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
-                      />
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="time"
+                          value={executionTime || '02:00'}
+                          onChange={(e) => setExecutionTime(e.target.value || '02:00')}
+                          className="w-32 max-w-[130px] h-9 px-2.5 bg-neutral-100 rounded-lg text-xs font-mono font-medium text-[#1E3A5F] border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] shrink-0"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setExecutionTime('02:00')}
+                          className="h-9 px-2.5 rounded-lg border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-neutral-600 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
+                          title="Restablecer hora a 02:00 AM"
+                        >
+                          <RotateCcw className="w-3 h-3 text-neutral-500" />
+                          <span>Reset (02:00)</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* Próximo envío badge */}
