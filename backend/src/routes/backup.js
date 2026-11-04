@@ -178,7 +178,6 @@ router.post(
  * POST /api/backup/export-and-send
  * Genera el archivo .json con toda la información relacional y lo despacha como adjunto al correo.
  * Restricción estricta: Solo el Propietario (Owner) del inventario.
- * Requiere que el correo destino haya sido validado previamente con OTP (verification_token).
  */
 router.post(
   '/export-and-send',
@@ -191,27 +190,9 @@ router.post(
     res.setTimeout(180000);
 
     try {
-      const { inventory_id, verification_token } = req.body;
+      const { inventory_id } = req.body;
       const cleanEmail = (req.body.email || req.body.target_email || '').trim().toLowerCase();
       const invName = req.inventory?.name || 'Inventario';
-
-      // Validación estricta de OTP (RF-4)
-      if (!verification_token) {
-        return res.status(403).json({
-          success: false,
-          code: 'OTP_REQUIRED',
-          message: 'Es obligatorio validar el correo mediante código de verificación (OTP) antes de enviar el respaldo.'
-        });
-      }
-
-      const tokenCheck = otpService.verifyToken(inventory_id, cleanEmail, verification_token);
-      if (!tokenCheck.valid) {
-        return res.status(403).json({
-          success: false,
-          code: 'INVALID_VERIFICATION_TOKEN',
-          message: tokenCheck.error || 'Token de verificación inválido o expirado. Valida tu correo nuevamente.'
-        });
-      }
 
       // 1. Extraer los datos relacionales completos (100% SELECT paralelo - RF-1 y RF-3)
       const payload = await backupService.exportInventoryData(inventory_id);

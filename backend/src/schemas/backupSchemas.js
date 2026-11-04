@@ -18,8 +18,7 @@ export const verifyCodeSchema = z.object({
 export const exportAndSendBackupSchema = z.object({
   inventory_id: z.string().uuid({ message: 'El ID de inventario debe ser un UUID válido.' }),
   email: z.string().email({ message: 'Debe proporcionar un correo electrónico válido.' }).max(255).optional(),
-  target_email: z.string().email({ message: 'Debe proporcionar un correo electrónico de destino válido.' }).max(255).optional(),
-  verification_token: z.string().optional()
+  target_email: z.string().email({ message: 'Debe proporcionar un correo electrónico de destino válido.' }).max(255).optional()
 }).refine((data) => data.email || data.target_email, {
   message: 'Debe proporcionar el correo electrónico de destino (email o target_email).'
 });
