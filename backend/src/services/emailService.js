@@ -148,6 +148,10 @@ class EmailService {
     }
 
     // Opción 2: Nodemailer con SMTP configurado
+    if (!this.transporter) {
+      this.initTransporter();
+    }
+
     if (this.transporter) {
       try {
         const info = await this.transporter.sendMail({
