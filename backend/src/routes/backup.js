@@ -524,13 +524,15 @@ router.post(
   verifyTenantAccess({ source: 'body', key: 'inventory_id', requiredRole: 'owner' }),
   async (req, res, next) => {
     try {
-      const { inventory_id, new_exchange_rate, currency } = req.body;
+      const { inventory_id, new_exchange_rate, new_rate, currency, new_currency } = req.body;
+      const targetRate = Number(new_exchange_rate || new_rate);
+      const targetCurrency = currency || new_currency || null;
 
       const result = await backupService.recalculateInventoryPrices(
         inventory_id,
-        new_exchange_rate,
+        targetRate,
         req.user.id,
-        currency
+        targetCurrency
       );
 
       res.json({

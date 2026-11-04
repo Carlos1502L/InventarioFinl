@@ -648,8 +648,8 @@ export class BackupService {
       exchange_rate_updated_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    if (newCurrency && ['PEN', 'USD', 'EUR'].includes(newCurrency)) {
-      invUpdate.currency = newCurrency;
+    if (newCurrency && typeof newCurrency === 'string' && newCurrency.trim().length >= 2) {
+      invUpdate.currency = newCurrency.trim().toUpperCase();
     }
 
     const { error: updInvErr } = await supabaseAdmin

@@ -18,7 +18,8 @@ import {
   Coins,
   RefreshCw,
   Clock,
-  Info
+  Info,
+  Save
 } from 'lucide-react';
 import { Inventory, InventoryType } from '../../types/database';
 import { supabase, uploadProductImage, getApiUrl, formatDate } from '../../services/supabase';
@@ -55,7 +56,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
 }) => {
   const { user, selectInventory, refreshInventories, inventories } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'general' | 'payments' | 'transfer' | 'danger'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'currency' | 'payments' | 'transfer' | 'danger'>('general');
 
   // Datos Generales
   const [name, setName] = useState('');
@@ -64,6 +65,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
   const [exchangeRate, setExchangeRate] = useState('1.000');
   const [inventoryType, setInventoryType] = useState<InventoryType>('BUSINESS');
   const [isSavingGeneral, setIsSavingGeneral] = useState(false);
+  const [isSavingCurrencyOnly, setIsSavingCurrencyOnly] = useState(false);
 
   // Recálculo Masivo de Precios
   const [isRecalculating, setIsRecalculating] = useState(false);
@@ -156,7 +158,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
   const isValidRate = !isNaN(parsedNewRate) && parsedNewRate > 0;
   const ratio = isValidRate && currentRate > 0 ? parsedNewRate / currentRate : 1.0;
 
-  // 1. Guardar Cambios Generales (Solo Dueño)
+  // 1. Guardar Cambios Generales de Detalles (Solo Dueño)
   const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isOwner) return;
@@ -166,28 +168,18 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
       return;
     }
 
-    if (!isValidRate) {
-      setFeedbackMsg({ text: 'Ingresa una tasa de cambio numérica válida (ej. 3.750).', type: 'error' });
-      return;
-    }
-
     try {
       setIsSavingGeneral(true);
       setFeedbackMsg(null);
 
       const nowIso = new Date().toISOString();
-      const rateNumber = Number(parsedNewRate.toFixed(3));
-      const hasRateChanged = rateNumber !== currentRate;
 
       const { error } = await supabase
         .from('inventories')
         .update({
           name: name.trim(),
           description: description.trim() || null,
-          currency: currency,
           inventory_type: inventoryType,
-          exchange_rate: rateNumber,
-          exchange_rate_updated_at: hasRateChanged ? nowIso : (inventory.exchange_rate_updated_at || nowIso),
           updated_at: nowIso
         })
         .eq('id', inventory.id);
@@ -195,7 +187,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
       if (error) throw error;
 
       setFeedbackMsg({ text: 'Detalles del inventario actualizados exitosamente.', type: 'success' });
-      showAppToast('Información del inventario actualizada.', 'success');
+      showAppToast('Detalles del inventario guardados.', 'success');
       await refreshInventories();
       onUpdated();
     } catch (err: any) {
@@ -206,7 +198,47 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
     }
   };
 
-  // Recálculo Masivo de Precios (Solo Dueño)
+  // 2. Guardar Solo Moneda y Tasa (Sin recalcular catálogo de productos)
+  const handleSaveCurrencyOnly = async () => {
+    if (!isOwner) return;
+    if (!isValidRate) {
+      setFeedbackMsg({ text: 'Ingresa una tasa de cambio numérica válida (ej. 3.750).', type: 'error' });
+      return;
+    }
+
+    try {
+      setIsSavingCurrencyOnly(true);
+      setFeedbackMsg(null);
+
+      const nowIso = new Date().toISOString();
+      const rateNumber = Number(parsedNewRate.toFixed(3));
+      const hasRateChanged = rateNumber !== currentRate;
+
+      const { error } = await supabase
+        .from('inventories')
+        .update({
+          currency: currency,
+          exchange_rate: rateNumber,
+          exchange_rate_updated_at: hasRateChanged ? nowIso : (inventory.exchange_rate_updated_at || nowIso),
+          updated_at: nowIso
+        })
+        .eq('id', inventory.id);
+
+      if (error) throw error;
+
+      setFeedbackMsg({ text: 'Moneda y tasa de cambio guardadas correctamente.', type: 'success' });
+      showAppToast('Moneda y tasa de cambio actualizadas.', 'success');
+      await refreshInventories();
+      onUpdated();
+    } catch (err: any) {
+      console.error('Error guardando moneda/tasa:', err);
+      setFeedbackMsg({ text: err.message || 'Error al guardar la moneda y tasa.', type: 'error' });
+    } finally {
+      setIsSavingCurrencyOnly(false);
+    }
+  };
+
+  // 3. Recálculo Masivo de Precios (Botón "Actualizar precios") con Triple Red de Seguridad
   const handleExecuteRecalculate = async () => {
     if (!isOwner || !inventory?.id) return;
     if (!isValidRate) {
@@ -216,31 +248,105 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
 
     setIsRecalculating(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('No hay sesión de autenticación activa.');
+      const targetRate = Number(parsedNewRate.toFixed(3));
+      let updatedCount = 0;
 
-      const res = await fetch(getApiUrl('/backup/recalculate-prices'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          inventory_id: inventory.id,
-          new_rate: Number(parsedNewRate.toFixed(3)),
-          new_currency: currency
-        })
-      });
+      // Intento 1: Llamada a la API del backend
+      let apiSucceeded = false;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) throw new Error('No hay sesión de usuario activa.');
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || 'Error al recalcular precios del inventario.');
+        const res = await fetch(getApiUrl('/backup/recalculate-prices'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            inventory_id: inventory.id,
+            new_exchange_rate: targetRate,
+            new_rate: targetRate,
+            currency: currency,
+            new_currency: currency
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          updatedCount = data.result?.updated_products ?? data.affected_products ?? 0;
+          apiSucceeded = true;
+        } else {
+          throw new Error(data.message || 'El servidor backend retornó error.');
+        }
+      } catch (apiErr: any) {
+        console.warn('⚠️ [Actualizar precios] Backend no disponible o falló:', apiErr.message);
+      }
+
+      // Intento 2: Fallback directo a la función RPC en Supabase
+      if (!apiSucceeded) {
+        try {
+          const { data: rpcData, error: rpcErr } = await supabase.rpc('recalculate_inventory_prices', {
+            p_inventory_id: inventory.id,
+            p_new_rate: targetRate,
+            p_new_currency: currency
+          });
+
+          if (!rpcErr && rpcData?.success) {
+            updatedCount = rpcData.updated_products || 0;
+            apiSucceeded = true;
+          } else if (rpcErr) {
+            console.warn('⚠️ [Actualizar precios] RPC falló:', rpcErr.message);
+          }
+        } catch (rpcCatch: any) {
+          console.warn('⚠️ [Actualizar precios] Excepción en RPC:', rpcCatch.message);
+        }
+      }
+
+      // Intento 3: Fallback de recálculo directo en cliente sobre Supabase
+      if (!apiSucceeded) {
+        const { data: prods, error: pErr } = await supabase
+          .from('products')
+          .select('id, price, cost_price')
+          .eq('inventory_id', inventory.id);
+
+        if (pErr) throw pErr;
+
+        if (Array.isArray(prods) && prods.length > 0) {
+          for (const p of prods) {
+            const newPrice = Math.round((Number(p.price) || 0) * ratio * 100) / 100;
+            const newCost = Math.round((Number(p.cost_price) || 0) * ratio * 100) / 100;
+
+            await supabase
+              .from('products')
+              .update({
+                price: newPrice,
+                cost_price: newCost,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', p.id)
+              .eq('inventory_id', inventory.id);
+
+            updatedCount++;
+          }
+        }
+
+        const nowIso = new Date().toISOString();
+        await supabase
+          .from('inventories')
+          .update({
+            exchange_rate: targetRate,
+            currency: currency,
+            exchange_rate_updated_at: nowIso,
+            updated_at: nowIso
+          })
+          .eq('id', inventory.id);
       }
 
       setRecalcModalOpen(false);
       showAppToast(
-        `Precios recalculados con éxito (${data.affected_products || 0} productos actualizados).`,
+        `Precios actualizados con éxito (${updatedCount} productos actualizados a la tasa ${targetRate.toFixed(3)}).`,
         'success',
         6000
       );
@@ -252,14 +358,14 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
       await refreshInventories();
       onUpdated();
     } catch (err: any) {
-      console.error('Error recalculando precios:', err);
-      showAppToast(err.message || 'No se pudo completar el recálculo masivo.', 'error');
+      console.error('Error actualizando precios:', err);
+      showAppToast(err.message || 'No se pudo completar la actualización de precios.', 'error');
     } finally {
       setIsRecalculating(false);
     }
   };
 
-  // 2. Subir QR de Yape / Plin
+  // 4. Subir QR de Yape / Plin
   const handleUploadPaymentQr = async (type: 'yape' | 'plin', file: File) => {
     if (!isOwner) return;
     try {
@@ -316,7 +422,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
     }
   };
 
-  // 3. Transferir Propiedad a un Colaborador
+  // 5. Transferir Propiedad a un Colaborador
   const handleTransferOwnership = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isOwner) return;
@@ -378,7 +484,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
     }
   };
 
-  // 4. Eliminar Inventario con Palabra de Seguridad
+  // 6. Eliminar Inventario con Palabra de Seguridad
   const handleDeleteInventory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isOwner) return;
@@ -460,50 +566,70 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Pestañas de Navegación (Solo para el Dueño en modo normal) */}
-          {mode !== 'payments' && isOwner && (
-            <div className="mobile-tabs-bar flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 text-xs font-semibold overflow-x-auto">
+          {/* Barra de Pestañas Deslizable Horizontalmente (Swipeable Tabs) */}
+          {mode !== 'payments' && (
+            <div className="mobile-tabs-bar flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 text-xs font-semibold overflow-x-auto scroll-smooth overscroll-x-contain">
+              {/* Pestaña 1: Detalles */}
               <button
                 type="button"
                 onClick={() => setActiveTab('general')}
-                className={`flex-1 py-3 px-3 min-w-[90px] flex items-center justify-center gap-1.5 border-b-2 transition-all ${
+                className={`py-3 px-4 min-w-[100px] shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === 'general'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-500/5 mobile-tab-active'
-                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-500/5 mobile-tab-active font-bold'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
                 }`}
               >
                 <Layers className="w-4 h-4" /> Detalles
               </button>
 
+              {/* Pestaña 2: Moneda & Tasa (Deslizable hacia la derecha) */}
               <button
                 type="button"
-                onClick={() => setActiveTab('transfer')}
-                className={`flex-1 py-3 px-3 min-w-[110px] flex items-center justify-center gap-1.5 border-b-2 transition-all ${
-                  activeTab === 'transfer'
-                    ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-500/5 mobile-tab-active'
-                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                onClick={() => setActiveTab('currency')}
+                className={`py-3 px-4 min-w-[130px] shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                  activeTab === 'currency'
+                    ? 'border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-500/5 mobile-tab-active font-bold'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
                 }`}
               >
-                <UserCheck className="w-4 h-4" /> Cambiar Dueño
+                <Coins className="w-4 h-4" /> Moneda & Tasa
               </button>
 
-              <button
-                type="button"
-                onClick={() => setActiveTab('danger')}
-                className={`flex-1 py-3 px-3 min-w-[90px] flex items-center justify-center gap-1.5 border-b-2 transition-all ${
-                  activeTab === 'danger'
-                    ? 'border-rose-500 text-rose-600 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-500/5 mobile-tab-active'
-                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Trash2 className="w-4 h-4" /> Eliminar
-              </button>
+              {/* Pestaña 3: Cambiar Dueño (Solo Dueño) */}
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('transfer')}
+                  className={`py-3 px-4 min-w-[125px] shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'transfer'
+                      ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-500/5 mobile-tab-active font-bold'
+                      : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
+                  }`}
+                >
+                  <UserCheck className="w-4 h-4" /> Cambiar Dueño
+                </button>
+              )}
+
+              {/* Pestaña 4: Eliminar (Solo Dueño) */}
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('danger')}
+                  className={`py-3 px-4 min-w-[95px] shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'danger'
+                      ? 'border-rose-500 text-rose-600 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-500/5 mobile-tab-active font-bold'
+                      : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
+                  }`}
+                >
+                  <Trash2 className="w-4 h-4" /> Eliminar
+                </button>
+              )}
             </div>
           )}
 
@@ -521,257 +647,299 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
               </div>
             )}
 
-            {/* VISTA 1: COLABORADORES (SOLO LECTURA DE INFORMACIÓN) */}
-            {mode !== 'payments' && !isOwner && (
-              <div className="space-y-4">
-                {/* Nombre y Tipo */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-                      Depósito Activo
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
-                      {inventory.inventory_type === 'PERSONAL' ? (
-                        <>
-                          <User className="w-3 h-3" /> Personal
-                        </>
-                      ) : (
-                        <>
-                          <Briefcase className="w-3 h-3" /> Negocio
-                        </>
-                      )}
-                    </span>
-                  </div>
-                  <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                    {inventory.name}
-                  </h4>
-                </div>
-
-                {/* Moneda y Tipo de Cambio (Solo Lectura) */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-                  <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
-                    <Coins className="w-4 h-4 text-amber-500" />
-                    <span>Moneda y Tipo de Cambio</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                      <span className="text-[10px] text-slate-400 block uppercase font-mono">
-                        Moneda Operativa
+            {/* TAB 1: DETALLES GENERALES */}
+            {mode !== 'payments' && activeTab === 'general' && (
+              !isOwner ? (
+                /* Vista Colaborador: Solo Lectura */
+                <div className="space-y-4">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                        Depósito Activo
                       </span>
-                      <strong className="text-sm text-slate-900 dark:text-white block mt-0.5">
-                        {inventory.currency || 'PEN'}
-                      </strong>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
+                        {inventory.inventory_type === 'PERSONAL' ? (
+                          <>
+                            <User className="w-3 h-3" /> Personal
+                          </>
+                        ) : (
+                          <>
+                            <Briefcase className="w-3 h-3" /> Negocio
+                          </>
+                        )}
+                      </span>
                     </div>
+                    <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                      {inventory.name}
+                    </h4>
+                  </div>
 
-                    <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                      <span className="text-[10px] text-slate-400 block uppercase font-mono">
-                        Tasa de Cambio
-                      </span>
-                      <strong className="text-sm font-mono text-[#1E3A5F] dark:text-sky-400 block mt-0.5">
-                        {Number(inventory.exchange_rate || 1.000).toFixed(3)}
-                      </strong>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Descripción del Inventario
+                    </label>
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 min-h-[70px] leading-relaxed">
+                      {inventory.description || 'Sin notas descriptivas establecidas por el dueño.'}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-mono pt-1">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Última actualización de tasa: {rateLastUpdated}</span>
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="w-full sm:w-auto px-6 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
+                    >
+                      Cerrar
+                    </button>
                   </div>
                 </div>
-
-                {/* Campo Descripción del Inventario (Solo lectura establecida por el dueño) */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Descripción del Inventario
-                  </label>
-                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 min-h-[60px] leading-relaxed">
-                    {inventory.description || 'Sin notas descriptivas establecidas por el dueño.'}
+              ) : (
+                /* Vista Dueño: Formulario Editable */
+                <form onSubmit={handleSaveGeneral} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Nombre del Inventario <span className="text-blue-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      placeholder="Ej: Depósito Central, Colección Personal..."
+                      required
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
+                    />
                   </div>
-                </div>
 
-                <div className="pt-2 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="w-full sm:w-auto px-6 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Tipo de Inventario
+                    </label>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setInventoryType('BUSINESS')}
+                        className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                          inventoryType === 'BUSINESS'
+                            ? 'bg-blue-50/80 dark:bg-blue-600/10 border-blue-500 ring-2 ring-blue-500/20 mobile-card-active'
+                            : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Briefcase className={`w-4 h-4 ${inventoryType === 'BUSINESS' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
+                          <span className="font-bold text-xs text-slate-900 dark:text-white">Negocio / Venta</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Precios de costo, markup %, caja y módulo de ventas.
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setInventoryType('PERSONAL')}
+                        className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                          inventoryType === 'PERSONAL'
+                            ? 'bg-blue-50/80 dark:bg-blue-600/10 border-blue-500 ring-2 ring-blue-500/20 mobile-card-active'
+                            : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <User className={`w-4 h-4 ${inventoryType === 'PERSONAL' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
+                          <span className="font-bold text-xs text-slate-900 dark:text-white">Personal / Colección</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Control propio de objetos con precio base y valorización.
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Descripción del Inventario
+                    </label>
+                    <textarea
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      placeholder="Notas descriptivas o dirección del depósito..."
+                      rows={3}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex max-md:flex-col-reverse justify-end gap-2.5">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="mobile-cancel-btn px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSavingGeneral}
+                      className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-50 transition-all active:scale-95 cursor-pointer"
+                    >
+                      {isSavingGeneral ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                      <span>Guardar Cambios</span>
+                    </button>
+                  </div>
+                </form>
+              )
             )}
 
-            {/* VISTA 2: DUEÑO (EDICIÓN COMPLETA, MONEDA Y RECÁLCULO) */}
-            {mode !== 'payments' && isOwner && activeTab === 'general' && (
-              <form onSubmit={handleSaveGeneral} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Nombre del Inventario <span className="text-blue-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    placeholder="Ej: Depósito Central, Colección Personal..."
-                    required
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
-                  />
-                </div>
-
-                {/* Selector de Tipo de Inventario */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Tipo de Inventario
-                  </label>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setInventoryType('BUSINESS')}
-                      className={`p-3 rounded-2xl border text-left transition-all ${
-                        inventoryType === 'BUSINESS'
-                          ? 'bg-blue-50/80 dark:bg-blue-600/10 border-blue-500 ring-2 ring-blue-500/20 mobile-card-active'
-                          : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Briefcase className={`w-4 h-4 ${inventoryType === 'BUSINESS' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
-                        <span className="font-bold text-xs text-slate-900 dark:text-white">Negocio / Venta</span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Precios de costo, markup %, caja y módulo de ventas.
-                      </p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setInventoryType('PERSONAL')}
-                      className={`p-3 rounded-2xl border text-left transition-all ${
-                        inventoryType === 'PERSONAL'
-                          ? 'bg-blue-50/80 dark:bg-blue-600/10 border-blue-500 ring-2 ring-blue-500/20 mobile-card-active'
-                          : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <User className={`w-4 h-4 ${inventoryType === 'PERSONAL' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
-                        <span className="font-bold text-xs text-slate-900 dark:text-white">Personal / Colección</span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Control propio de objetos con precio base y valorización.
-                      </p>
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Descripción del Inventario
-                  </label>
-                  <textarea
-                    value={description}
-                    onChange={e => setDescription(e.target.value)}
-                    placeholder="Notas descriptivas o dirección del depósito..."
-                    rows={2}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
-                  />
-                </div>
-
-                {/* SECCIÓN INTEGRADA: MONEDA Y TIPO DE CAMBIO */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+            {/* TAB 2: MONEDA Y TASA DE CAMBIO */}
+            {mode !== 'payments' && activeTab === 'currency' && (
+              !isOwner ? (
+                /* Vista Colaborador: Solo Lectura */
+                <div className="space-y-4">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                    <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
                       <Coins className="w-4 h-4 text-amber-500" />
-                      <span>Moneda y Tipo de Cambio</span>
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400">
-                      Operatividad de Catálogo
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Moneda del Inventario */}
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                        Moneda del Inventario
-                      </label>
-                      <MinimalDropdown
-                        value={currency}
-                        onChange={(val) => setCurrency(val)}
-                        options={SUPPORTED_CURRENCIES}
-                      />
+                      <span>Moneda y Tipo de Cambio Operativo</span>
                     </div>
 
-                    {/* Tasa de Cambio Operativa */}
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center justify-between">
-                        <span>Tasa de Cambio Operativa</span>
-                        <span className="text-[9px] font-mono text-slate-400">3 decimales</span>
-                      </label>
-                      <input
-                        type="number"
-                        step="0.001"
-                        min="0.001"
-                        max="99999.999"
-                        value={exchangeRate}
-                        onChange={e => setExchangeRate(e.target.value)}
-                        placeholder="Ej. 3.750"
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+                        <span className="text-[10px] text-slate-400 block uppercase font-mono">
+                          Moneda Base
+                        </span>
+                        <strong className="text-sm text-slate-900 dark:text-white block mt-0.5">
+                          {inventory.currency || 'PEN'}
+                        </strong>
+                      </div>
 
-                  {/* Marca de tiempo de última actualización */}
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-                    <span className="flex items-center gap-1">
+                      <div className="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+                        <span className="text-[10px] text-slate-400 block uppercase font-mono">
+                          Tasa Operativa
+                        </span>
+                        <strong className="text-sm font-mono text-[#1E3A5F] dark:text-sky-400 block mt-0.5">
+                          {Number(inventory.exchange_rate || 1.000).toFixed(3)}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-mono pt-1">
                       <Clock className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Última act. de tasa:</span>
-                    </span>
-                    <span className="text-slate-700 dark:text-slate-300 font-medium">
-                      {rateLastUpdated}
-                    </span>
+                      <span>Última actualización de tasa: {rateLastUpdated}</span>
+                    </div>
                   </div>
 
-                  {/* Botón de Recálculo Masivo de Precios */}
-                  <div className="pt-1">
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="w-full sm:w-auto px-6 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Vista Dueño: Control de Divisas, Ajuste y Botón "Actualizar precios" */
+                <div className="space-y-4">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <Coins className="w-4 h-4 text-amber-500" />
+                        <span>Gestión de Moneda y Tipo de Cambio</span>
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        Catálogo & Precios
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {/* Moneda del Inventario */}
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                          Moneda del Inventario
+                        </label>
+                        <MinimalDropdown
+                          value={currency}
+                          onChange={(val) => setCurrency(val)}
+                          options={SUPPORTED_CURRENCIES}
+                        />
+                      </div>
+
+                      {/* Tasa de Cambio Operativa */}
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center justify-between">
+                          <span>Tasa de Cambio Operativa</span>
+                          <span className="text-[9px] font-mono text-slate-400">3 decimales</span>
+                        </label>
+                        <input
+                          type="number"
+                          step="0.001"
+                          min="0.001"
+                          max="99999.999"
+                          value={exchangeRate}
+                          onChange={e => setExchangeRate(e.target.value)}
+                          placeholder="Ej. 3.750"
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Marca de tiempo de última actualización */}
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Última act. de tasa:</span>
+                      </span>
+                      <span className="text-slate-700 dark:text-slate-300 font-medium">
+                        {rateLastUpdated}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Botones de Acción en Pestaña Moneda */}
+                  <div className="space-y-2 pt-1">
+                    {/* Botón Principal: Actualizar precios */}
                     <button
                       type="button"
                       onClick={() => {
                         if (!isValidRate) {
-                          showAppToast('Ingresa una tasa de cambio numérica válida antes de recalcular.', 'warning');
+                          showAppToast('Ingresa una tasa de cambio numérica válida antes de actualizar precios.', 'warning');
                           return;
                         }
                         setRecalcModalOpen(true);
                       }}
-                      disabled={isSavingGeneral || isRecalculating || !isValidRate}
-                      className="w-full h-9 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/40 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800/60 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer disabled:opacity-50"
+                      disabled={isSavingCurrencyOnly || isRecalculating || !isValidRate}
+                      className="w-full h-11 px-4 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer shadow-xs disabled:opacity-50"
                     >
-                      <RefreshCw className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                      <span>Actualizar Tipo de Cambio y Recalcular Precios</span>
+                      {isRecalculating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
+                          <span>Actualizando precios...</span>
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-4 h-4 text-[#E8B4A0]" />
+                          <span>Actualizar precios</span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Botón Secundario: Guardar Moneda / Tasa sin recalcular */}
+                    <button
+                      type="button"
+                      onClick={handleSaveCurrencyOnly}
+                      disabled={isSavingCurrencyOnly || isRecalculating || !isValidRate}
+                      className="w-full h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer disabled:opacity-50"
+                    >
+                      {isSavingCurrencyOnly ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Save className="w-3.5 h-3.5" />
+                      )}
+                      <span>Guardar Moneda / Tasa (Sin recalcular catálogo)</span>
                     </button>
                   </div>
                 </div>
-
-                <div className="pt-2 flex max-md:flex-col-reverse justify-end gap-2.5">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="mobile-cancel-btn px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSavingGeneral || isRecalculating}
-                    className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-50 transition-all active:scale-95 cursor-pointer"
-                  >
-                    {isSavingGeneral ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                    <span>Guardar Cambios</span>
-                  </button>
-                </div>
-              </form>
+              )
             )}
 
-            {/* TAB 2: PASARELA DE PAGOS YAPE / PLIN (RF-06.3) */}
+            {/* TAB 3: PASARELA DE PAGOS YAPE / PLIN (RF-06.3) */}
             {(mode === 'payments' || activeTab === 'payments') && (
               <form onSubmit={handleSavePayments} className="space-y-4">
                 <div className="p-3 bg-emerald-50 dark:bg-emerald-600/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
@@ -917,7 +1085,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
               </form>
             )}
 
-            {/* TAB 3: TRANSFERIR PROPIEDAD (Solo Dueño) */}
+            {/* TAB 4: TRANSFERIR PROPIEDAD (Solo Dueño) */}
             {activeTab === 'transfer' && isOwner && (
               <form onSubmit={handleTransferOwnership} className="space-y-4">
                 <div className="p-3.5 bg-indigo-50/70 dark:bg-indigo-600/10 border border-indigo-200 dark:border-indigo-500/30 rounded-2xl space-y-1.5">
@@ -979,7 +1147,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
               </form>
             )}
 
-            {/* TAB 4: ZONA DE PELIGRO (Solo Dueño) */}
+            {/* TAB 5: ZONA DE PELIGRO (Solo Dueño) */}
             {activeTab === 'danger' && isOwner && (
               <form onSubmit={handleDeleteInventory} className="space-y-4">
                 <div className="p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-2xl space-y-2">
@@ -1029,7 +1197,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
         </div>
       </div>
 
-      {/* Modal de Confirmación Transaccional de Recálculo Masivo */}
+      {/* Modal de Confirmación Transaccional: Actualizar precios */}
       {recalcModalOpen && (
         <div className="fixed inset-0 z-60 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-neutral-200 space-y-4 animate-in zoom-in-95">
@@ -1039,10 +1207,10 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
               </div>
               <div>
                 <h4 className="font-bold text-sm sm:text-base text-neutral-900">
-                  ¿Confirmar Recálculo Masivo de Precios?
+                  ¿Confirmar Actualización de Precios?
                 </h4>
                 <p className="text-xs text-neutral-500 mt-0.5">
-                  Operación transaccional sobre el catálogo de productos
+                  Operación masiva sobre el catálogo de productos
                 </p>
               </div>
             </div>
@@ -1095,12 +1263,12 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                 {isRecalculating ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8B4A0]" />
-                    <span>Recalculando...</span>
+                    <span>Actualizando...</span>
                   </>
                 ) : (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 text-[#E8B4A0]" />
-                    <span>Sí, Recalcular Precios</span>
+                    <span>Sí, Actualizar Precios</span>
                   </>
                 )}
               </button>

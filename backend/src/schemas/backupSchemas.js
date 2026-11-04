@@ -66,6 +66,10 @@ export const restoreBackupSchema = z.object({
 
 export const recalculatePricesSchema = z.object({
   inventory_id: z.string().uuid({ message: 'El ID de inventario debe ser un UUID válido.' }),
-  new_exchange_rate: z.number().positive({ message: 'La nueva tasa de cambio debe ser un número positivo mayor a 0.' }),
-  currency: z.enum(['PEN', 'USD', 'EUR']).optional()
+  new_exchange_rate: z.number().positive({ message: 'La nueva tasa de cambio debe ser un número positivo mayor a 0.' }).optional(),
+  new_rate: z.number().positive({ message: 'La nueva tasa de cambio debe ser un número positivo mayor a 0.' }).optional(),
+  currency: z.string().optional(),
+  new_currency: z.string().optional()
+}).refine(data => data.new_exchange_rate !== undefined || data.new_rate !== undefined, {
+  message: 'La nueva tasa de cambio debe ser un número positivo mayor a 0.'
 });

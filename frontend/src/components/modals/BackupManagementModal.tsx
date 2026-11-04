@@ -1144,17 +1144,17 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Hora de Envío: Centrado visualmente junto al recuadro de hora */}
-                    <div className="flex items-center justify-center gap-2.5 py-1">
-                      <label className="text-xs font-semibold text-[#1E3A5F] flex items-center gap-1.5 shrink-0">
-                        <Clock className="w-3.5 h-3.5 text-[#E8B4A0]" />
+                    {/* Hora de Envío: Centrado visualmente junto al recuadro de hora EN LA VERSIÓN MÓVIL */}
+                    <div className="w-full flex items-center justify-center gap-3 py-2 px-1">
+                      <label className="text-xs font-semibold text-[#1E3A5F] flex items-center gap-1.5 shrink-0 select-none">
+                        <Clock className="w-4 h-4 text-[#E8B4A0]" />
                         <span>Hora de envío (24h)</span>
                       </label>
                       <input
                         type="time"
                         value={executionTime || '02:00'}
                         onChange={(e) => setExecutionTime(e.target.value || '02:00')}
-                        className="w-20 h-7.5 px-1.5 bg-neutral-100 rounded-lg text-xs font-mono font-bold text-[#1E3A5F] border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] text-center shrink-0 shadow-2xs"
+                        className="w-24 h-9 px-2 bg-neutral-100 rounded-xl text-xs font-mono font-bold text-[#1E3A5F] border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] text-center shrink-0 shadow-2xs cursor-pointer"
                       />
                     </div>
 

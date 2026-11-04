@@ -453,7 +453,7 @@ div:has(> label:empty + span.hidden) {
     box-shadow: none !important;
   }
 
-  .mobile-dark-modal input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent),
+  .mobile-dark-modal input:not([type="checkbox"]):not([type="radio"]):not([type="time"]):not(.bg-transparent),
   .mobile-dark-modal select:not(.frequency-pill-select):not(.opacity-0),
   .mobile-dark-modal textarea {
     width: 100% !important;
@@ -476,6 +476,19 @@ div:has(> label:empty + span.hidden) {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
+  }
+
+  .mobile-dark-modal input[type="time"] {
+    width: auto !important;
+    min-width: 5.5rem !important;
+    max-width: 6.5rem !important;
+    height: 2.25rem !important;
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.8125rem !important;
+    text-align: center !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
   /* Ícono dentro de input/select: posicionado limpiamente dentro de la única casilla */
