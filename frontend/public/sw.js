@@ -1,4 +1,4 @@
-const CACHE_NAME = 'stockly-pwa-v6';
+const CACHE_NAME = 'stockly-pwa-v7';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

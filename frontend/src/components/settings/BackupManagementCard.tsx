@@ -757,19 +757,19 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
             <div className="space-y-2">
               {/* Input y Estado de Verificación */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-[#1E3A5F] block">
-                    Correo electrónico destinatario
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <label className="text-xs font-semibold text-[#1E3A5F] truncate min-w-0 shrink">
+                    Correo de destino
                   </label>
                   {isEmailVerified && (
-                    <div className="flex items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Verificado
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shrink-0">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Verificado
                       </span>
                       <button
                         type="button"
                         onClick={handleResetVerification}
-                        className="text-[11px] text-neutral-400 hover:text-neutral-700 cursor-pointer underline font-medium"
+                        className="text-[11px] text-neutral-400 hover:text-neutral-700 cursor-pointer underline font-medium shrink-0"
                       >
                         Cambiar
                       </button>
@@ -778,10 +778,14 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 w-full min-w-0">
-                  <div className="relative flex-1 min-w-0">
-                    <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0 z-10" />
+                  <div className="flex-1 min-w-0 h-11 bg-neutral-100 rounded-xl px-3.5 flex items-center gap-2.5 border border-transparent focus-within:ring-1 focus-within:ring-[#1E3A5F]">
+                    <Mail className="w-4 h-4 text-[#616161] shrink-0 pointer-events-none" />
                     <input
-                      type="email"
+                      type="text"
+                      inputMode="email"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck="false"
                       value={manualEmail}
                       onChange={(e) => {
                         setManualEmail(e.target.value);
@@ -790,10 +794,10 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                       placeholder="propietario@ejemplo.com"
                       disabled={isExporting || isEmailVerified}
                       readOnly={isEmailVerified}
-                      className={`w-full h-11 border rounded-xl pl-11 pr-3.5 text-xs truncate focus:outline-none transition-all shadow-xs ${
+                      className={`w-full flex-1 min-w-0 bg-transparent text-xs font-medium focus:outline-none truncate border-none p-0 shadow-none ${
                         isEmailVerified
-                          ? 'bg-neutral-100 text-neutral-600 border-neutral-300 cursor-not-allowed font-medium'
-                          : 'bg-white text-[#1E3A5F] border-[#E5E7EB] focus:border-[#1E3A5F]'
+                          ? 'text-neutral-600 cursor-not-allowed'
+                          : 'text-[#1E3A5F]'
                       }`}
                     />
                   </div>
@@ -941,19 +945,19 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                   
                   {/* Correo Fijo de Destino con Validación Minimalista */}
                   <div className="sm:col-span-6 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-[#1E3A5F] block">
-                        Correo fijo de destino
+                    <div className="flex items-center justify-between gap-2 min-w-0">
+                      <label className="text-xs font-semibold text-[#1E3A5F] truncate min-w-0 shrink">
+                        Correo de destino
                       </label>
                       {isScheduledEmailVerified && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Verificado
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shrink-0">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Verificado
                           </span>
                           <button
                             type="button"
                             onClick={handleResetScheduledVerification}
-                            className="text-[11px] text-neutral-400 hover:text-neutral-700 cursor-pointer underline font-medium"
+                            className="text-[11px] text-neutral-400 hover:text-neutral-700 cursor-pointer underline font-medium shrink-0"
                           >
                             Cambiar
                           </button>
@@ -962,10 +966,14 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2 w-full min-w-0">
-                      <div className="relative flex-1 min-w-0">
-                        <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0 z-10" />
+                      <div className="flex-1 min-w-0 h-11 bg-neutral-100 rounded-xl px-3.5 flex items-center gap-2.5 border border-transparent focus-within:ring-1 focus-within:ring-[#1E3A5F]">
+                        <Mail className="w-4 h-4 text-[#616161] shrink-0 pointer-events-none" />
                         <input
-                          type="email"
+                          type="text"
+                          inputMode="email"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck="false"
                           value={scheduledEmail}
                           onChange={(e) => {
                             setScheduledEmail(e.target.value);
@@ -974,10 +982,10 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                           placeholder="propietario@empresa.com"
                           disabled={isScheduledEmailVerified}
                           readOnly={isScheduledEmailVerified}
-                          className={`w-full h-11 border rounded-xl pl-11 pr-3.5 text-xs truncate focus:outline-none transition-all shadow-xs ${
+                          className={`w-full flex-1 min-w-0 bg-transparent text-xs font-medium focus:outline-none truncate border-none p-0 shadow-none ${
                             isScheduledEmailVerified
-                              ? 'bg-neutral-100 text-neutral-600 border-neutral-300 cursor-not-allowed font-medium'
-                              : 'bg-white text-[#1E3A5F] border-[#E5E7EB] focus:border-[#1E3A5F]'
+                              ? 'text-neutral-600 cursor-not-allowed'
+                              : 'text-[#1E3A5F]'
                           }`}
                         />
                       </div>

@@ -775,19 +775,19 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
             {activeTab === 'manual' && (
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-[#1E3A5F] block">
-                      Correo electrónico destinatario
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <label className="text-xs font-semibold text-[#1E3A5F] truncate min-w-0 shrink">
+                      Correo de destino
                     </label>
                     {isEmailVerified && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-medium">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Verificado
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-medium shrink-0">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Verificado
                         </span>
                         <button
                           type="button"
                           onClick={handleResetVerification}
-                          className="text-[10px] text-neutral-400 hover:text-neutral-700 underline font-medium cursor-pointer"
+                          className="text-[10px] text-neutral-400 hover:text-neutral-700 underline font-medium cursor-pointer shrink-0"
                         >
                           Cambiar
                         </button>
@@ -796,10 +796,14 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 w-full min-w-0">
-                    <div className="relative flex-1 min-w-0">
-                      <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0 z-10" />
+                    <div className="flex-1 min-w-0 h-11 bg-neutral-100 rounded-xl px-3.5 flex items-center gap-2.5 border border-transparent focus-within:ring-1 focus-within:ring-[#1E3A5F]">
+                      <Mail className="w-4 h-4 text-[#616161] shrink-0 pointer-events-none" />
                       <input
-                        type="email"
+                        type="text"
+                        inputMode="email"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck="false"
                         value={manualEmail}
                         onChange={(e) => {
                           setManualEmail(e.target.value);
@@ -808,10 +812,10 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                         placeholder="propietario@ejemplo.com"
                         disabled={isExporting || isEmailVerified}
                         readOnly={isEmailVerified}
-                        className={`w-full h-11 rounded-xl pl-11 pr-3.5 text-xs truncate focus:outline-none transition-all ${
+                        className={`w-full flex-1 min-w-0 bg-transparent text-xs font-medium focus:outline-none truncate border-none p-0 shadow-none ${
                           isEmailVerified
-                            ? 'bg-neutral-100 text-neutral-600 border border-neutral-300 cursor-not-allowed font-medium'
-                            : 'bg-neutral-100 text-[#1E3A5F] border border-transparent focus:ring-1 focus:ring-[#1E3A5F]'
+                            ? 'text-neutral-600 cursor-not-allowed'
+                            : 'text-[#1E3A5F]'
                         }`}
                       />
                     </div>
@@ -948,19 +952,19 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                   <div className="space-y-3.5 animate-in fade-in">
                     {/* Correo de destino con Validación Minimalista */}
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-semibold text-[#1E3A5F] block">
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <label className="text-xs font-semibold text-[#1E3A5F] truncate min-w-0 shrink">
                           Correo de destino
                         </label>
                         {isScheduledEmailVerified && (
-                          <div className="flex items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-medium">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Verificado
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-medium shrink-0">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Verificado
                             </span>
                             <button
                               type="button"
                               onClick={handleResetScheduledVerification}
-                              className="text-[10px] text-neutral-400 hover:text-neutral-700 underline font-medium cursor-pointer"
+                              className="text-[10px] text-neutral-400 hover:text-neutral-700 underline font-medium cursor-pointer shrink-0"
                             >
                               Cambiar
                             </button>
@@ -969,10 +973,14 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       </div>
 
                       <div className="flex items-center gap-2 w-full min-w-0">
-                        <div className="relative flex-1 min-w-0">
-                          <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0 z-10" />
+                        <div className="flex-1 min-w-0 h-11 bg-neutral-100 rounded-xl px-3.5 flex items-center gap-2.5 border border-transparent focus-within:ring-1 focus-within:ring-[#1E3A5F]">
+                          <Mail className="w-4 h-4 text-[#616161] shrink-0 pointer-events-none" />
                           <input
-                            type="email"
+                            type="text"
+                            inputMode="email"
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            spellCheck="false"
                             value={scheduledEmail}
                             onChange={(e) => {
                               setScheduledEmail(e.target.value);
@@ -981,10 +989,10 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                             placeholder="propietario@empresa.com"
                             disabled={isScheduledEmailVerified}
                             readOnly={isScheduledEmailVerified}
-                            className={`w-full h-11 rounded-xl pl-11 pr-3.5 text-xs truncate focus:outline-none transition-all ${
+                            className={`w-full flex-1 min-w-0 bg-transparent text-xs font-medium focus:outline-none truncate border-none p-0 shadow-none ${
                               isScheduledEmailVerified
-                                ? 'bg-neutral-100 text-neutral-600 border border-neutral-300 cursor-not-allowed font-medium'
-                                : 'bg-neutral-100 text-[#1E3A5F] border border-transparent focus:ring-1 focus:ring-[#1E3A5F]'
+                                ? 'text-neutral-600 cursor-not-allowed'
+                                : 'text-[#1E3A5F]'
                             }`}
                           />
                         </div>
