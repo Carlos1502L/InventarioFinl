@@ -14,8 +14,7 @@ import {
   FileJson,
   ShieldCheck,
   KeyRound,
-  Edit2,
-  RotateCcw
+  Edit2
 } from 'lucide-react';
 import { supabase, getApiUrl } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -688,6 +687,9 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
       setSelectedFile(null);
       showAppToast('¡Copia de seguridad restaurada exitosamente!', 'success', 6000);
 
+      // Despachar evento global para que la app recargue todos los productos, categorías y ubicaciones
+      window.dispatchEvent(new CustomEvent('stockly_inventory_data_updated'));
+
       if (onRestoreCompleted) {
         onRestoreCompleted();
       }
@@ -1034,23 +1036,30 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       )}
                     </div>
 
-                    {/* Frecuencia de envío: Select a la izquierda y Botón Personalizado a la derecha */}
+                    {/* Frecuencia de envío: Select centrado a la izquierda y menú desplazable para días a la derecha */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-[#1E3A5F] block">
                         Frecuencia de envío
                       </label>
                       <div className="grid grid-cols-2 gap-2">
-                        {/* Campo 1: Select con opciones predeterminadas */}
+                        {/* Campo 1: Select predeterminado con texto perfectamente centrado */}
                         <div className="relative">
                           <select
-                            value={frequencyOption === 'custom' ? '7' : frequencyOption}
-                            onChange={(e) => setFrequencyOption(e.target.value as any)}
-                            className={`w-full h-10 px-3 pr-7 rounded-xl text-xs font-medium border appearance-none transition-all cursor-pointer ${
+                            value={frequencyOption === 'custom' ? '' : frequencyOption}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                setFrequencyOption(e.target.value as any);
+                              }
+                            }}
+                            className={`w-full h-10 px-3 pr-7 rounded-xl text-xs font-semibold border appearance-none transition-all cursor-pointer text-center [text-align-last:center] ${
                               frequencyOption !== 'custom'
-                                ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] font-bold shadow-xs'
+                                ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-xs'
                                 : 'bg-neutral-100 text-neutral-700 border-neutral-200'
                             }`}
                           >
+                            <option value="" disabled className="text-neutral-400 bg-white">
+                              Predeterminado
+                            </option>
                             <option value="1" className="bg-white text-neutral-800">Diario (1 día)</option>
                             <option value="7" className="bg-white text-neutral-800">Semanal (7 días)</option>
                             <option value="15" className="bg-white text-neutral-800">Quincenal (15 días)</option>
@@ -1062,62 +1071,58 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                           </div>
                         </div>
 
-                        {/* Campo 2: Botón Personalizado al mismo nivel y del mismo tamaño */}
-                        {frequencyOption !== 'custom' ? (
-                          <button
-                            type="button"
-                            onClick={() => setFrequencyOption('custom')}
-                            className="w-full h-10 px-3 rounded-xl text-xs font-medium border border-neutral-200 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-all flex items-center justify-center cursor-pointer active:scale-98"
+                        {/* Campo 2: Menú desplazable para días personalizados (rueda/picker nativo como hora) */}
+                        <div className="relative">
+                          <select
+                            value={frequencyOption === 'custom' ? String(customDays) : ''}
+                            onChange={(e) => {
+                              const days = parseInt(e.target.value, 10);
+                              if (!isNaN(days) && days >= 1) {
+                                setCustomDays(days);
+                                setFrequencyOption('custom');
+                              }
+                            }}
+                            className={`w-full h-10 px-3 pr-7 rounded-xl text-xs font-semibold border appearance-none transition-all cursor-pointer text-center [text-align-last:center] ${
+                              frequencyOption === 'custom'
+                                ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-xs'
+                                : 'bg-neutral-100 text-neutral-700 border-neutral-200'
+                            }`}
                           >
-                            Personalizado
-                          </button>
-                        ) : (
-                          <div className="w-full h-10 px-2.5 rounded-xl border border-[#1E3A5F] bg-white flex items-center justify-between shadow-xs">
-                            <span className="text-[11px] font-bold text-[#1E3A5F] shrink-0">Días:</span>
-                            <input
-                              type="number"
-                              min="1"
-                              max="365"
-                              value={customDays}
-                              onChange={(e) => setCustomDays(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                              className="w-14 text-center text-xs font-mono font-bold text-[#1E3A5F] focus:outline-none"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setFrequencyOption('7')}
-                              className="text-[10px] text-neutral-400 hover:text-neutral-700 p-0.5"
-                              title="Volver a Semanal"
-                            >
-                              ✕
-                            </button>
+                            <option value="" disabled={frequencyOption === 'custom'} className="text-neutral-400 bg-white">
+                              Personalizado
+                            </option>
+                            {Array.from({ length: 30 }, (_, i) => i + 1).map((d) => (
+                              <option key={d} value={d} className="bg-white text-neutral-800">
+                                {d} {d === 1 ? 'día' : 'días'}
+                              </option>
+                            ))}
+                            <option value="45" className="bg-white text-neutral-800">45 días</option>
+                            <option value="60" className="bg-white text-neutral-800">60 días</option>
+                            <option value="90" className="bg-white text-neutral-800">90 días</option>
+                            <option value="180" className="bg-white text-neutral-800">180 días</option>
+                            <option value="365" className="bg-white text-neutral-800">365 días</option>
+                          </select>
+                          <div className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs ${
+                            frequencyOption === 'custom' ? 'text-white' : 'text-neutral-500'
+                          }`}>
+                            ▾
                           </div>
-                        )}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Hora de Envío con Reset y Anti-Desborde */}
+                    {/* Hora de Envío: Solo campo de hora centrado y limpio */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-[#1E3A5F] flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-[#E8B4A0]" />
                         Hora de envío (24h)
                       </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="time"
-                          value={executionTime || '02:00'}
-                          onChange={(e) => setExecutionTime(e.target.value || '02:00')}
-                          className="w-32 max-w-[130px] h-9 px-2.5 bg-neutral-100 rounded-lg text-xs font-mono font-medium text-[#1E3A5F] border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] shrink-0"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setExecutionTime('02:00')}
-                          className="h-9 px-2.5 rounded-lg border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-neutral-600 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
-                          title="Restablecer hora a 02:00 AM"
-                        >
-                          <RotateCcw className="w-3 h-3 text-neutral-500" />
-                          <span>Reset (02:00)</span>
-                        </button>
-                      </div>
+                      <input
+                        type="time"
+                        value={executionTime || '02:00'}
+                        onChange={(e) => setExecutionTime(e.target.value || '02:00')}
+                        className="w-full h-10 px-3 bg-neutral-100 rounded-xl text-xs font-mono font-bold text-[#1E3A5F] border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] text-center [text-align-last:center]"
+                      />
                     </div>
 
                     {/* Próximo envío badge */}

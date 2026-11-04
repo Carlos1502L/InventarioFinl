@@ -30,13 +30,15 @@ interface SettingsPageProps {
   onOpenLocations: () => void;
   onOpenCollaborators: () => void;
   onOpenInventorySelector: () => void;
+  onRefreshInventoryData?: () => void;
 }
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({
   onOpenCategories,
   onOpenLocations,
   onOpenCollaborators,
-  onOpenInventorySelector
+  onOpenInventorySelector,
+  onRefreshInventoryData
 }) => {
   const { currentInventory, user, profile, signOut, refreshInventories } = useAuth();
   const [editInventoryMode, setEditInventoryMode] = useState<'info' | 'payments' | null>(null);
@@ -542,6 +544,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <BackupManagementCard
               onRestoreCompleted={() => {
                 refreshInventories();
+                if (onRefreshInventoryData) onRefreshInventoryData();
               }}
             />
           </div>
@@ -612,6 +615,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           onClose={() => setBackupModalOpen(false)}
           onRestoreCompleted={() => {
             refreshInventories();
+            if (onRefreshInventoryData) onRefreshInventoryData();
           }}
         />
       )}

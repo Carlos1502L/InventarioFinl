@@ -168,6 +168,18 @@ export const AppContent: React.FC = () => {
     };
   }, [fetchInventoryData]);
 
+  // Sincronización reactiva cuando se restaura una copia de seguridad
+  useEffect(() => {
+    const handleBackupRestoreUpdated = () => {
+      fetchInventoryData();
+      refreshInventories();
+    };
+    window.addEventListener('stockly_inventory_data_updated', handleBackupRestoreUpdated);
+    return () => {
+      window.removeEventListener('stockly_inventory_data_updated', handleBackupRestoreUpdated);
+    };
+  }, [fetchInventoryData, refreshInventories]);
+
   // Inyección reactiva inmediata de productos guardados (soporte offline)
   const handleProductSaved = (savedProduct?: Product) => {
     if (savedProduct) {
@@ -406,6 +418,7 @@ export const AppContent: React.FC = () => {
             onOpenLocations={() => setLocationsModalOpen(true)}
             onOpenCollaborators={() => setCollaboratorsModalOpen(true)}
             onOpenInventorySelector={() => setInventorySelectorOpen(true)}
+            onRefreshInventoryData={fetchInventoryData}
           />
         )}
       </main>

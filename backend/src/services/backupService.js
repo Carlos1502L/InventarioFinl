@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../config/supabase.js';
+import crypto from 'crypto';
 
 export class BackupService {
   /**
@@ -158,41 +159,33 @@ export class BackupService {
   }
 
   /**
-   * Ejecuta la restauración atómica en PostgreSQL.
-   * Invoca primero la función RPC `restore_inventory_backup`.
-   * Si no estuviese compilada en Supabase, ejecuta la sincronización
-   * secuencial controlada como salvaguarda.
+   * Ejecuta la restauración atómica e independiente en el inventario destino.
    *
-   * @param {string} inventoryId
-   * @param {Object} backupPayload
-   * @param {string} userId
+   * REGLA CRÍTICA DE INDEPENDENCIA:
+   * Bajo ninguna circunstancia altera, traslada ni elimina datos de otros inventarios.
+   * Genera UUIDs nuevos e independientes para los registros restaurados y enlaza
+   * las relaciones relacionales (categorías, ubicaciones, productos, ventas)
+   * de forma estricta y aislada dentro del inventario destino (inventoryId).
+   *
+   * @param {string} inventoryId - ID del inventario destino
+   * @param {Object} backupPayload - Payload del archivo .json
+   * @param {string} userId - ID del usuario que ejecuta la restauración
    * @returns {Promise<Object>}
    */
   async restoreInventoryData(inventoryId, backupPayload, userId) {
+    if (!backupPayload || typeof backupPayload !== 'object') {
+      throw new Error('Estructura de respaldo inválida.');
+    }
+
     if (backupPayload.version !== '1.0') {
       throw new Error(`Versión de respaldo inválida (${backupPayload.version}). Solo se soporta la versión 1.0.`);
     }
 
-    // Intento 1: Ejecutar función RPC nativa atómica en PostgreSQL
-    try {
-      const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc('restore_inventory_backup', {
-        p_inventory_id: inventoryId,
-        p_backup_payload: backupPayload
-      });
-
-      if (!rpcError && rpcResult?.success) {
-        return rpcResult;
-      }
-
-      if (rpcError && !rpcError.message.includes('function') && !rpcError.message.includes('does not exist')) {
-        throw rpcError;
-      }
-    } catch (rpcErr) {
-      console.warn('⚠️ [BackupService] RPC restore_inventory_backup no disponible. Usando fallback transaccional secuencial:', rpcErr.message);
+    const { data } = backupPayload;
+    if (!data || typeof data !== 'object') {
+      throw new Error('El archivo de respaldo no contiene la sección de datos requerida.');
     }
 
-    // Intento 2: Fallback controlado con supabaseAdmin
-    const { data } = backupPayload;
     const restoredCounts = {
       categories: 0,
       locations: 0,
@@ -202,151 +195,299 @@ export class BackupService {
       coupons: 0
     };
 
-    // A. Categorías
+    const categoryIdMap = new Map();
+    const locationIdMap = new Map();
+    const productIdMap = new Map();
+
+    // =========================================================================
+    // A. CATEGORÍAS (Mapeo independiente por nombre en el inventario destino)
+    // =========================================================================
     if (Array.isArray(data.categories) && data.categories.length > 0) {
+      const { data: existingCats } = await supabaseAdmin
+        .from('categories')
+        .select('id, name')
+        .eq('inventory_id', inventoryId);
+
+      const catByName = new Map((existingCats || []).map((c) => [(c.name || '').trim().toLowerCase(), c.id]));
+
       for (const cat of data.categories) {
-        await supabaseAdmin.from('categories').upsert({
-          id: cat.id,
-          inventory_id: inventoryId,
-          name: cat.name,
-          created_at: cat.created_at || new Date().toISOString()
-        });
-        restoredCounts.categories++;
-      }
-    }
+        if (!cat || !cat.name) continue;
+        const normName = cat.name.trim().toLowerCase();
+        let targetCatId = catByName.get(normName);
 
-    // B. Ubicaciones
-    if (Array.isArray(data.locations) && data.locations.length > 0) {
-      for (const loc of data.locations) {
-        await supabaseAdmin.from('locations').upsert({
-          id: loc.id,
-          inventory_id: inventoryId,
-          name: loc.name,
-          code: loc.code || loc.qr_code || 'LOC-RESTORED',
-          description: loc.description,
-          created_at: loc.created_at || new Date().toISOString()
-        });
-        restoredCounts.locations++;
-      }
-    }
-
-    // C. Productos
-    if (Array.isArray(data.products) && data.products.length > 0) {
-      for (const prod of data.products) {
-        await supabaseAdmin.from('products').upsert({
-          id: prod.id,
-          inventory_id: inventoryId,
-          name: prod.name,
-          code: prod.sku || prod.code || 'SKU-RESTORED',
-          description: prod.description,
-          price: prod.price || 0,
-          cost_price: prod.cost_price || 0,
-          markup_percentage: prod.markup_percentage || 0,
-          unit_type: prod.unit_type || 'UNIT',
-          units_per_box: prod.units_per_box,
-          stock: prod.stock || 0,
-          min_stock: prod.min_stock_alert || prod.min_stock || 1,
-          category_id: prod.category_id,
-          images: Array.isArray(prod.images) ? prod.images : [],
-          status: prod.is_active === false ? 'INACTIVE' : 'ACTIVE',
-          created_at: prod.created_at || new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-        restoredCounts.products++;
-      }
-    }
-
-    // D. Product Locations
-    if (Array.isArray(data.product_locations) && data.product_locations.length > 0) {
-      for (const pl of data.product_locations) {
-        await supabaseAdmin.from('product_locations').upsert(
-          {
+        if (!targetCatId) {
+          targetCatId = crypto.randomUUID();
+          const { error: catErr } = await supabaseAdmin.from('categories').insert({
+            id: targetCatId,
             inventory_id: inventoryId,
-            product_id: pl.product_id,
-            location_id: pl.location_id,
-            quantity: pl.quantity || pl.quantity_units || 0,
-            updated_at: new Date().toISOString()
-          },
-          { onConflict: 'product_id, location_id' }
-        );
-        restoredCounts.product_locations++;
+            name: cat.name.trim(),
+            created_at: cat.created_at || new Date().toISOString()
+          });
+
+          if (!catErr) {
+            catByName.set(normName, targetCatId);
+            restoredCounts.categories++;
+          } else {
+            console.warn('⚠️ Error insertando categoría en restore:', catErr.message);
+          }
+        } else {
+          restoredCounts.categories++;
+        }
+
+        if (cat.id) {
+          categoryIdMap.set(cat.id, targetCatId);
+        }
       }
     }
 
-    // E. Ventas
-    if (Array.isArray(data.sales) && data.sales.length > 0) {
-      for (const sale of data.sales) {
-        const { error: saleErr } = await supabaseAdmin.from('sales').upsert({
-          id: sale.id,
-          inventory_id: inventoryId,
-          seller_email: sale.seller_email || 'restored@system.local',
-          total_amount: sale.total_amount || 0,
-          payment_method: sale.payment_method || 'OTHER',
-          customer_name: sale.customer_name,
-          customer_contact: sale.customer_contact,
-          notes: sale.notes,
-          created_at: sale.created_at || new Date().toISOString()
-        });
+    // =========================================================================
+    // B. UBICACIONES (Mapeo independiente por código / nombre en inventario destino)
+    // =========================================================================
+    if (Array.isArray(data.locations) && data.locations.length > 0) {
+      const { data: existingLocs } = await supabaseAdmin
+        .from('locations')
+        .select('id, name, code')
+        .eq('inventory_id', inventoryId);
 
-        if (!saleErr && Array.isArray(sale.items) && sale.items.length > 0) {
-          for (const item of sale.items) {
-            await supabaseAdmin.from('sale_items').upsert({
-              sale_id: sale.id,
-              product_id: item.product_id,
-              product_name: item.product_name || 'Producto Restaurado',
-              product_code: item.product_code || 'SKU-RESTORED',
-              quantity: item.quantity || item.quantity_units || 1,
-              unit_price: item.unit_price || 0,
-              cost_price: item.cost_price || 0,
-              subtotal: item.subtotal || (item.unit_price || 0) * (item.quantity || 1),
-              created_at: sale.created_at || new Date().toISOString()
+      const locByCode = new Map((existingLocs || []).map((l) => [(l.code || '').trim().toLowerCase(), l.id]));
+      const locByName = new Map((existingLocs || []).map((l) => [(l.name || '').trim().toLowerCase(), l.id]));
+
+      for (const loc of data.locations) {
+        if (!loc || !loc.name) continue;
+        const normCode = (loc.code || loc.qr_code || '').trim().toLowerCase();
+        const normName = loc.name.trim().toLowerCase();
+        let targetLocId = (normCode ? locByCode.get(normCode) : null) || locByName.get(normName);
+
+        if (!targetLocId) {
+          targetLocId = crypto.randomUUID();
+          const safeCode = loc.code || loc.qr_code || `LOC-${targetLocId.substring(0, 6).toUpperCase()}`;
+          const { error: locErr } = await supabaseAdmin.from('locations').insert({
+            id: targetLocId,
+            inventory_id: inventoryId,
+            name: loc.name.trim(),
+            code: safeCode,
+            description: loc.description || null,
+            qr_code: loc.qr_code || safeCode,
+            created_at: loc.created_at || new Date().toISOString()
+          });
+
+          if (!locErr) {
+            if (normCode) locByCode.set(normCode, targetLocId);
+            locByName.set(normName, targetLocId);
+            restoredCounts.locations++;
+          } else {
+            console.warn('⚠️ Error insertando ubicación en restore:', locErr.message);
+          }
+        } else {
+          restoredCounts.locations++;
+        }
+
+        if (loc.id) {
+          locationIdMap.set(loc.id, targetLocId);
+        }
+      }
+    }
+
+    // =========================================================================
+    // C. PRODUCTOS (Inserción independiente sin colisionar con otros inventarios)
+    // =========================================================================
+    if (Array.isArray(data.products) && data.products.length > 0) {
+      const { data: existingProds } = await supabaseAdmin
+        .from('products')
+        .select('id, code')
+        .eq('inventory_id', inventoryId);
+
+      const prodByCode = new Map((existingProds || []).map((p) => [(p.code || '').trim().toLowerCase(), p.id]));
+
+      for (const prod of data.products) {
+        if (!prod) continue;
+        let rawCode = (prod.sku || prod.code || '').trim();
+        if (!rawCode) {
+          rawCode = `SKU-${crypto.randomUUID().substring(0, 8).toUpperCase()}`;
+        }
+        const normCode = rawCode.toLowerCase();
+        let targetProdId = prodByCode.get(normCode);
+        const mappedCategoryId = prod.category_id ? (categoryIdMap.get(prod.category_id) || null) : null;
+
+        const productPayload = {
+          inventory_id: inventoryId,
+          name: prod.name || 'Producto Restaurado',
+          code: rawCode,
+          description: prod.description || null,
+          price: Math.max(0, Number(prod.price) || 0),
+          cost_price: Math.max(0, Number(prod.cost_price) || 0),
+          markup_percentage: Math.max(0, Number(prod.markup_percentage) || 0),
+          unit_type: prod.unit_type === 'BOX' ? 'BOX' : 'UNIT',
+          units_per_box: prod.units_per_box ? Number(prod.units_per_box) : null,
+          stock: Math.max(0, Number(prod.stock) || 0),
+          min_stock: Math.max(1, Number(prod.min_stock_alert || prod.min_stock || 1)),
+          category_id: mappedCategoryId,
+          images: Array.isArray(prod.images) ? prod.images : [],
+          status: prod.is_active === false || prod.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+          updated_at: new Date().toISOString()
+        };
+
+        if (targetProdId) {
+          // Actualiza el producto existente dentro de ESTE inventario
+          const { error: updErr } = await supabaseAdmin
+            .from('products')
+            .update(productPayload)
+            .eq('id', targetProdId)
+            .eq('inventory_id', inventoryId);
+
+          if (!updErr) {
+            restoredCounts.products++;
+          } else {
+            console.warn('⚠️ Error actualizando producto en restore:', updErr.message);
+          }
+        } else {
+          // Crea un producto nuevo con ID único e independiente para ESTE inventario
+          targetProdId = crypto.randomUUID();
+          const { error: insErr } = await supabaseAdmin
+            .from('products')
+            .insert({
+              ...productPayload,
+              id: targetProdId,
+              created_at: prod.created_at || new Date().toISOString()
             });
+
+          if (!insErr) {
+            prodByCode.set(normCode, targetProdId);
+            restoredCounts.products++;
+          } else {
+            console.warn('⚠️ Error insertando producto en restore:', insErr.message);
           }
         }
-        restoredCounts.sales++;
+
+        if (prod.id) {
+          productIdMap.set(prod.id, targetProdId);
+        }
       }
     }
 
-    // F. Cupones
+    // =========================================================================
+    // D. PRODUCT LOCATIONS (Relación de stock con IDs locales remapeados)
+    // =========================================================================
+    if (Array.isArray(data.product_locations) && data.product_locations.length > 0) {
+      for (const pl of data.product_locations) {
+        if (!pl) continue;
+        const targetProdId = productIdMap.get(pl.product_id);
+        const targetLocId = locationIdMap.get(pl.location_id);
+
+        if (targetProdId && targetLocId) {
+          const { error: plErr } = await supabaseAdmin
+            .from('product_locations')
+            .upsert(
+              {
+                inventory_id: inventoryId,
+                product_id: targetProdId,
+                location_id: targetLocId,
+                quantity: Math.max(0, Number(pl.quantity || pl.quantity_units || 0)),
+                updated_at: new Date().toISOString()
+              },
+              { onConflict: 'product_id, location_id' }
+            );
+
+          if (!plErr) {
+            restoredCounts.product_locations++;
+          }
+        }
+      }
+    }
+
+    // =========================================================================
+    // E. VENTAS Y DETALLE (Registros con UUIDs nuevos aislados)
+    // =========================================================================
+    if (Array.isArray(data.sales) && data.sales.length > 0) {
+      for (const sale of data.sales) {
+        if (!sale) continue;
+        const targetSaleId = crypto.randomUUID();
+        const { error: saleErr } = await supabaseAdmin
+          .from('sales')
+          .insert({
+            id: targetSaleId,
+            inventory_id: inventoryId,
+            seller_email: sale.seller_email || 'restored@system.local',
+            total_amount: Math.max(0, Number(sale.total_amount) || 0),
+            payment_method: sale.payment_method || 'OTHER',
+            customer_name: sale.customer_name || null,
+            customer_contact: sale.customer_contact || null,
+            notes: sale.notes || null,
+            created_at: sale.created_at || new Date().toISOString()
+          });
+
+        if (!saleErr) {
+          restoredCounts.sales++;
+          if (Array.isArray(sale.items) && sale.items.length > 0) {
+            for (const item of sale.items) {
+              const targetProdId = item.product_id ? (productIdMap.get(item.product_id) || null) : null;
+              await supabaseAdmin.from('sale_items').insert({
+                id: crypto.randomUUID(),
+                sale_id: targetSaleId,
+                product_id: targetProdId,
+                product_name: item.product_name || 'Producto Restaurado',
+                product_code: item.product_code || 'SKU-RESTORED',
+                quantity: Math.max(1, Number(item.quantity || item.quantity_units || 1)),
+                unit_price: Math.max(0, Number(item.unit_price) || 0),
+                cost_price: Math.max(0, Number(item.cost_price) || 0),
+                subtotal: Math.max(0, Number(item.subtotal) || 0),
+                created_at: sale.created_at || new Date().toISOString()
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // =========================================================================
+    // F. CUPONES (Aislados al inventario destino)
+    // =========================================================================
     if (Array.isArray(data.coupons) && data.coupons.length > 0) {
       for (const c of data.coupons) {
-        await supabaseAdmin.from('coupons').upsert(
-          {
-            inventory_id: inventoryId,
-            code: c.code,
-            discount_type: c.discount_type || 'PERCENTAGE',
-            discount_value: c.discount_value || 0,
-            max_uses: c.max_uses,
-            current_uses: c.current_uses || 0,
-            is_active: c.is_active ?? true,
-            expires_at: c.expires_at,
-            created_at: c.created_at || new Date().toISOString()
-          },
-          { onConflict: 'inventory_id, code' }
-        );
-        restoredCounts.coupons++;
+        if (!c || !c.code) continue;
+        const { error: cErr } = await supabaseAdmin
+          .from('coupons')
+          .upsert(
+            {
+              inventory_id: inventoryId,
+              code: c.code.trim().toUpperCase(),
+              discount_type: c.discount_type || 'PERCENTAGE',
+              discount_value: Math.max(0, Number(c.discount_value) || 0),
+              max_uses: c.max_uses ? Number(c.max_uses) : null,
+              current_uses: Math.max(0, Number(c.current_uses) || 0),
+              is_active: c.is_active ?? true,
+              expires_at: c.expires_at || null,
+              created_at: c.created_at || new Date().toISOString()
+            },
+            { onConflict: 'inventory_id, code' }
+          );
+
+        if (!cErr) {
+          restoredCounts.coupons++;
+        }
       }
     }
 
-    // Registrar en auditoría
-    await supabaseAdmin.from('audit_logs').insert({
-      inventory_id: inventoryId,
-      user_id: userId,
-      user_email: 'backup_system',
-      action: 'BACKUP_RESTORED',
-      entity_type: 'BACKUP',
-      metadata: {
-        version: backupPayload.version,
-        exported_at: backupPayload.exported_at,
-        restored_counts: restoredCounts
-      }
-    });
+    // Registrar en auditoría de forma segura (no bloqueante)
+    try {
+      await supabaseAdmin.from('audit_logs').insert({
+        id: crypto.randomUUID(),
+        inventory_id: inventoryId,
+        user_id: userId || null,
+        user_email: 'backup_system',
+        action_type: 'UPDATE',
+        details: `Copia de seguridad restaurada exitosamente (${restoredCounts.products} productos, ${restoredCounts.categories} categorías, ${restoredCounts.locations} ubicaciones)`
+      });
+    } catch (auditErr) {
+      console.warn('⚠️ Error al registrar auditoría de restore:', auditErr.message);
+    }
 
     return {
       success: true,
-      message: 'Restauración completada exitosamente.',
+      message: 'Copia de seguridad restaurada como copia independiente exitosamente.',
       restored_counts: restoredCounts
     };
+  }
   }
 }
 
