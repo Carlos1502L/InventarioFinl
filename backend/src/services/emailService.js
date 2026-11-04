@@ -25,7 +25,11 @@ class EmailService {
         auth: {
           user: smtpUser,
           pass: smtpPass
-        }
+        },
+        // Timeouts estrictos para evitar que Render quede colgado si los puertos SMTP están bloqueados
+        connectionTimeout: 6000, // 6 segundos máximo para conectar
+        greetingTimeout: 6000,
+        socketTimeout: 12000
       });
       console.log(`✉️ [EmailService] Configurado transporte SMTP: ${smtpHost}:${smtpPort}`);
     } else {
@@ -110,7 +114,41 @@ class EmailService {
 
     let sendError = null;
 
-    // Opción 1: Resend API si existe RESEND_API_KEY
+    // Opción 1: Google Apps Script Webhook vía HTTPS (Puerto 443 - Inmune al bloqueo de puertos SMTP en Render)
+    if (process.env.GMAIL_SCRIPT_URL) {
+      try {
+        const response = await fetch(process.env.GMAIL_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to,
+            subject,
+            html: htmlContent,
+            attachments: [
+              {
+                filename,
+                content: buffer.toString('base64'),
+                contentType: 'application/json'
+              }
+            ]
+          })
+        });
+
+        const data = await response.json();
+        if (data.success || response.ok) {
+          console.log(`✅ [EmailService] Respaldo enviado exitosamente vía Google Apps Script a ${to}`);
+          return { success: true, mode: 'gas_webhook' };
+        } else {
+          console.error('❌ [EmailService] Error en Google Apps Script Webhook:', data);
+          sendError = data.error || 'Error en Webhook de Google Apps Script';
+        }
+      } catch (err) {
+        console.error('❌ [EmailService] Error enviando con Google Apps Script:', err);
+        sendError = err.message;
+      }
+    }
+
+    // Opción 2: Resend API si existe RESEND_API_KEY (Puerto 443)
     if (process.env.RESEND_API_KEY) {
       try {
         const response = await fetch('https://api.resend.com/emails', {
@@ -147,7 +185,7 @@ class EmailService {
       }
     }
 
-    // Opción 2: Nodemailer con SMTP configurado
+    // Opción 3: Nodemailer con SMTP configurado
     if (!this.transporter) {
       this.initTransporter();
     }
@@ -172,7 +210,15 @@ class EmailService {
         return { success: true, messageId: info.messageId, mode: 'smtp' };
       } catch (smtpErr) {
         console.error('❌ [EmailService] Error enviando correo vía SMTP:', smtpErr);
-        sendError = smtpErr.message;
+        if (
+          smtpErr.code === 'ETIMEDOUT' ||
+          smtpErr.message?.includes('ETIMEDOUT') ||
+          smtpErr.message?.includes('greeting never received')
+        ) {
+          sendError = `Tiempo agotado (Timeout). Render bloquea los puertos SMTP salientes (587 y 465) en su capa gratuita. Utiliza GMAIL_SCRIPT_URL (HTTPS) o RESEND_API_KEY.`;
+        } else {
+          sendError = smtpErr.message;
+        }
       }
     }
 
@@ -259,7 +305,34 @@ class EmailService {
 
     let sendError = null;
 
-    // Opción 1: Resend si existe
+    // Opción 1: Google Apps Script Webhook vía HTTPS (Puerto 443 - Inmune a bloqueos SMTP de Render)
+    if (process.env.GMAIL_SCRIPT_URL) {
+      try {
+        const response = await fetch(process.env.GMAIL_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to,
+            subject,
+            html: htmlContent
+          })
+        });
+
+        const data = await response.json();
+        if (data.success || response.ok) {
+          console.log(`✅ [EmailService] Código OTP enviado vía Google Apps Script a ${to}`);
+          return { success: true, mode: 'gas_webhook' };
+        } else {
+          console.error('❌ [EmailService] Error en Google Apps Script OTP:', data);
+          sendError = data.error || 'Error en Google Apps Script';
+        }
+      } catch (err) {
+        console.error('❌ [EmailService] Error de red enviando OTP con Google Apps Script:', err);
+        sendError = err.message;
+      }
+    }
+
+    // Opción 2: Resend si existe (Puerto 443)
     if (process.env.RESEND_API_KEY) {
       try {
         const response = await fetch('https://api.resend.com/emails', {
@@ -290,7 +363,7 @@ class EmailService {
       }
     }
 
-    // Opción 2: Nodemailer SMTP
+    // Opción 3: Nodemailer SMTP
     if (!this.transporter) {
       this.initTransporter();
     }
@@ -308,7 +381,15 @@ class EmailService {
         return { success: true, messageId: info.messageId, mode: 'smtp' };
       } catch (smtpErr) {
         console.error('❌ [EmailService] Error enviando OTP vía SMTP:', smtpErr);
-        sendError = smtpErr.message;
+        if (
+          smtpErr.code === 'ETIMEDOUT' ||
+          smtpErr.message?.includes('ETIMEDOUT') ||
+          smtpErr.message?.includes('greeting never received')
+        ) {
+          sendError = `Tiempo agotado (Timeout). Render bloquea los puertos SMTP salientes (587 y 465) en su capa gratuita. Utiliza GMAIL_SCRIPT_URL (HTTPS) o RESEND_API_KEY.`;
+        } else {
+          sendError = smtpErr.message;
+        }
       }
     }
 

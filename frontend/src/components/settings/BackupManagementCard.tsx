@@ -144,6 +144,9 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
     }
 
     setIsSendingOtp(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 segundos máximo
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -155,11 +158,14 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
+        signal: controller.signal,
         body: JSON.stringify({
           inventory_id: currentInventory.id,
           email: target
         })
       });
+
+      clearTimeout(timeoutId);
 
       const data = await res.json();
       if (!res.ok) {
@@ -169,8 +175,13 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
       setOtpSent(true);
       showAppToast(`Código de 6 dígitos enviado a ${target}. Revisa tu bandeja.`, 'success', 6000);
     } catch (err: any) {
-      console.error('Error enviando OTP:', err);
-      showAppToast(err.message || 'No se pudo enviar el código OTP.', 'error');
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        showAppToast('Tiempo de espera agotado al despachar correo. Render bloquea puertos SMTP en cuentas gratuitas.', 'error', 8000);
+      } else {
+        console.error('Error enviando OTP:', err);
+        showAppToast(err.message || 'No se pudo enviar el código OTP.', 'error');
+      }
     } finally {
       setIsSendingOtp(false);
     }
