@@ -120,32 +120,16 @@ export function MobileAuthScreen() {
   return (
     <motion.div
       animate={{
-        backgroundColor: stage === 'LOGIN_READY' ? '#F8F9FA' : '#000000',
+        backgroundColor: stage === 'LOGIN_READY' ? '#ffffff' : '#000000',
       }}
       transition={{ duration: 0.55, ease: 'easeInOut' }}
-      className="relative min-h-[100dvh] w-full text-[#1E3A5F] flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto overscroll-y-contain select-none pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] font-sans"
+      className="relative min-h-[100dvh] w-full text-neutral-900 flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto overscroll-y-contain select-none pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] font-sans"
     >
-      {/* Acentos geométricos del estilo móvil que aparecen sutilmente al terminar la animación */}
-      <AnimatePresence>
-        {stage === 'LOGIN_READY' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6 }}
-            className="pointer-events-none"
-          >
-            <div className="fixed top-[-80px] right-[-80px] w-72 h-72 rounded-full bg-[#E8B4A0]/15 blur-3xl pointer-events-none" />
-            <div className="fixed bottom-[-80px] left-[-80px] w-80 h-80 rounded-full bg-[#1E3A5F]/5 blur-3xl pointer-events-none" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* =========================================================
           FASE 1 Y 2: ANIMACIÓN CINÉTICA (LETRAS BLANCAS SOBRE FONDO NEGRO)
          ========================================================= */}
       {stage !== 'LOGIN_READY' && (
         <div className="relative z-20 flex items-center justify-center my-auto min-h-[60vh]">
-          
           {/* Destello blanco de la onda expansiva en la explosión */}
           {stage === 'EXPLODING' && (
             <motion.div
@@ -211,20 +195,21 @@ export function MobileAuthScreen() {
       )}
 
       {/* =========================================================
-          FASE 3: CARGA DEL LOGIN MÓVIL (LIMPIO, MINIMALISTA Y EXACTO)
-          Adopta el diseño y estilo de la aplicación móvil de Stockly
+          FASE 3: CARGA DEL LOGIN MÓVIL
+          Adopta 100% el estilo visual nativo de la app móvil:
+          Limpio, minimalista, paleta neutral/negro, fuentes sans-serif
          ========================================================= */}
       <AnimatePresence>
         {stage === 'LOGIN_READY' && (
           <motion.div
-            initial={{ scale: 0.88, opacity: 0, y: 16 }}
+            initial={{ scale: 0.92, opacity: 0, y: 14 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-30 w-full max-w-sm sm:max-w-md bg-white border border-[#E5E7EB] rounded-2xl shadow-sm p-6 sm:p-8 flex flex-col justify-between my-auto"
+            className="relative z-30 w-full max-w-sm bg-white border border-neutral-200/80 rounded-3xl shadow-sm p-6 sm:p-7 flex flex-col justify-between my-auto"
           >
-            {/* Encabezado: Logo e identificador Stockly */}
-            <div className="flex items-center justify-center gap-2 mb-3.5 flex-shrink-0">
-              <div className="w-8 h-8 rounded-lg bg-white border border-[#E5E7EB] overflow-hidden flex items-center justify-center shadow-xs">
+            {/* Encabezado: Logo e identidad minimalista */}
+            <div className="flex flex-col items-center justify-center text-center mb-5 flex-shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-neutral-950 border border-neutral-800 flex items-center justify-center shadow-sm overflow-hidden mb-3">
                 <img
                   src="/logo.png"
                   alt="Stockly"
@@ -233,62 +218,62 @@ export function MobileAuthScreen() {
                   decoding="async"
                 />
               </div>
-              <span className="font-mono text-sm uppercase tracking-[0.2em] text-[#1E3A5F] font-bold">
-                STOCKLY
-              </span>
+              <h1 className="text-xl font-bold tracking-tight text-neutral-950">
+                Stockly
+              </h1>
+              <p className="text-xs text-neutral-500 mt-0.5 font-normal">
+                Gestión y control de inventario
+              </p>
             </div>
 
-            {/* Selector de modo con cápsula deslizante */}
-            <div className="relative p-1 bg-[#F8F9FA] border border-[#E5E7EB] rounded-full mb-3.5 select-none overflow-hidden flex-shrink-0">
-              <div
-                className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-[#1E3A5F] shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                  isRegister ? 'translate-x-full left-1' : 'translate-x-0 left-1'
+            {/* Segmented Control / Selector de modo nativo móvil */}
+            <div className="p-1 bg-neutral-100 rounded-2xl flex items-center mb-4 select-none flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegister(false);
+                  setIsResetPassword(false);
+                  setErrorMsg(null);
+                  setSuccessMsg(null);
+                }}
+                className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                  !isRegister && !isResetPassword
+                    ? 'bg-neutral-950 text-white shadow-xs'
+                    : 'text-neutral-500 hover:text-neutral-900'
                 }`}
-              />
-              <div className="relative grid grid-cols-2 z-10 font-mono text-xs font-bold uppercase tracking-wider">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsRegister(false);
-                    setIsResetPassword(false);
-                    setErrorMsg(null);
-                    setSuccessMsg(null);
-                  }}
-                  className={`py-2 rounded-full transition-colors duration-200 text-center cursor-pointer ${
-                    !isRegister && !isResetPassword ? 'text-white' : 'text-[#616161] hover:text-[#1E3A5F]'
-                  }`}
-                >
-                  INICIAR SESIÓN
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsRegister(true);
-                    setIsResetPassword(false);
-                    setErrorMsg(null);
-                    setSuccessMsg(null);
-                  }}
-                  className={`py-2 rounded-full transition-colors duration-200 text-center cursor-pointer ${
-                    isRegister ? 'text-white' : 'text-[#616161] hover:text-[#1E3A5F]'
-                  }`}
-                >
-                  REGISTRARME
-                </button>
-              </div>
+              >
+                Iniciar sesión
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegister(true);
+                  setIsResetPassword(false);
+                  setErrorMsg(null);
+                  setSuccessMsg(null);
+                }}
+                className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                  isRegister
+                    ? 'bg-neutral-950 text-white shadow-xs'
+                    : 'text-neutral-500 hover:text-neutral-900'
+                }`}
+              >
+                Registrarme
+              </button>
             </div>
 
-            {/* Mensajes de Alerta y Notificación */}
+            {/* Alertas y Mensajes de Estado */}
             <div className="min-h-[16px] mb-2 flex-shrink-0">
               {errorMsg && (
-                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-light flex items-center gap-2 animate-in fade-in duration-200">
-                  <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
-                  <span>{errorMsg}</span>
+                <div className="p-3 bg-red-50 border border-red-200/80 rounded-2xl text-xs text-red-700 flex items-center gap-2 animate-in fade-in duration-200">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span className="leading-snug">{errorMsg}</span>
                 </div>
               )}
               {successMsg && (
-                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-light flex items-center gap-2 animate-in fade-in duration-200">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span>{successMsg}</span>
+                <div className="p-3 bg-emerald-50 border border-emerald-200/80 rounded-2xl text-xs text-emerald-800 flex items-center gap-2 animate-in fade-in duration-200">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="leading-snug">{successMsg}</span>
                 </div>
               )}
             </div>
@@ -297,45 +282,45 @@ export function MobileAuthScreen() {
             {isResetPassword ? (
               <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div>
-                  <h2 className="text-xl font-bold text-[#1E3A5F] tracking-tight">
+                  <h2 className="text-base font-semibold text-neutral-950">
                     Recuperar contraseña
                   </h2>
-                  <p className="text-xs text-[#616161] mt-1 font-light">
+                  <p className="text-xs text-neutral-500 mt-0.5">
                     Ingresa tu correo para recibir un enlace de restablecimiento.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F] mb-1.5">
-                    CORREO ELECTRÓNICO
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    Correo electrónico
                   </label>
                   <div className="relative">
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="usuario@dominio.com"
+                      placeholder="nombre@ejemplo.com"
                       required
-                      className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl pl-10 pr-4 text-xs font-light text-[#1E3A5F] placeholder-[#616161] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] transition-all font-sans"
+                      className="w-full bg-neutral-50 border border-neutral-200/80 focus:border-neutral-950 focus:bg-white rounded-2xl pl-10 pr-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all font-sans"
                     />
-                    <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                    <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3.5" />
                   </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={resetLoading}
-                  className="w-full min-h-[44px] py-3 bg-[#1E3A5F] hover:bg-[#172E4C] text-white text-xs font-mono font-bold uppercase tracking-wider rounded-full transition-all active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                  className="w-full py-3.5 bg-neutral-950 hover:bg-neutral-900 text-white text-sm font-semibold rounded-2xl transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                 >
                   {resetLoading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
-                      <span>ENVIANDO ENLACE...</span>
+                      <Loader2 className="w-4 h-4 animate-spin text-neutral-400" />
+                      <span>Enviando enlace...</span>
                     </>
                   ) : (
                     <>
-                      <span>ENVIAR ENLACE</span>
-                      <ArrowRight className="w-4 h-4 text-[#E8B4A0]" />
+                      <span>Enviar enlace</span>
+                      <ArrowRight className="w-4 h-4 text-neutral-400" />
                     </>
                   )}
                 </button>
@@ -348,70 +333,58 @@ export function MobileAuthScreen() {
                       setErrorMsg(null);
                       setSuccessMsg(null);
                     }}
-                    className="text-xs font-mono text-[#1E3A5F] hover:underline cursor-pointer"
+                    className="text-xs text-neutral-500 hover:text-neutral-950 transition-colors cursor-pointer"
                   >
-                    ← Volver a Iniciar Sesión
+                    ← Volver al inicio de sesión
                   </button>
                 </div>
               </form>
             ) : (
               /* VISTA 2: INICIAR SESIÓN O REGISTRO */
               <form onSubmit={handleAuth} className="space-y-3.5">
-                {/* Título de bienvenida */}
-                <div>
-                  <h2 className="text-xl font-bold text-[#1E3A5F] tracking-tight">
-                    {isRegister ? 'Crear nueva cuenta' : 'Bienvenido de nuevo'}
-                  </h2>
-                  <p className="text-xs text-[#616161] mt-1 font-light">
-                    {isRegister
-                      ? 'Ingresa tus datos para habilitar tu catálogo de trabajo.'
-                      : 'Introduce tus credenciales para acceder a tus depósitos.'}
-                  </p>
-                </div>
-
-                {/* Campo Nombre (solo en Registro) */}
+                {/* Campo Nombre Completo (solo en registro) */}
                 {isRegister && (
                   <div>
-                    <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F] mb-1.5">
-                      NOMBRE COMPLETO
+                    <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                      Nombre completo
                     </label>
                     <div className="relative">
                       <input
                         type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Carlos Pérez"
+                        placeholder="Ej. Carlos Gómez"
                         required={isRegister}
-                        className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl pl-10 pr-4 text-xs font-light text-[#1E3A5F] placeholder-[#616161] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] transition-all font-sans"
+                        className="w-full bg-neutral-50 border border-neutral-200/80 focus:border-neutral-950 focus:bg-white rounded-2xl pl-10 pr-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all font-sans"
                       />
-                      <User className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                      <User className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3.5" />
                     </div>
                   </div>
                 )}
 
                 {/* Campo Correo Electrónico */}
                 <div>
-                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F] mb-1.5">
-                    CORREO ELECTRÓNICO
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    Correo electrónico
                   </label>
                   <div className="relative">
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="usuario@dominio.com"
+                      placeholder="nombre@ejemplo.com"
                       required
-                      className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl pl-10 pr-4 text-xs font-light text-[#1E3A5F] placeholder-[#616161] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] transition-all font-sans"
+                      className="w-full bg-neutral-50 border border-neutral-200/80 focus:border-neutral-950 focus:bg-white rounded-2xl pl-10 pr-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all font-sans"
                     />
-                    <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                    <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3.5" />
                   </div>
                 </div>
 
                 {/* Campo Contraseña */}
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
-                    <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F]">
-                      CONTRASEÑA
+                    <label className="block text-xs font-medium text-neutral-700">
+                      Contraseña
                     </label>
                     {!isRegister && (
                       <button
@@ -421,7 +394,7 @@ export function MobileAuthScreen() {
                           setErrorMsg(null);
                           setSuccessMsg(null);
                         }}
-                        className="text-[11px] font-mono text-[#1E3A5F] hover:underline cursor-pointer"
+                        className="text-xs text-neutral-500 hover:text-neutral-950 transition-colors cursor-pointer"
                       >
                         ¿Olvidaste tu contraseña?
                       </button>
@@ -434,9 +407,9 @@ export function MobileAuthScreen() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       required
-                      className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl pl-10 pr-4 text-xs font-light text-[#1E3A5F] placeholder-[#616161] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] transition-all font-sans"
+                      className="w-full bg-neutral-50 border border-neutral-200/80 focus:border-neutral-950 focus:bg-white rounded-2xl pl-10 pr-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all font-sans"
                     />
-                    <Lock className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                    <Lock className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3.5" />
                   </div>
                 </div>
 
@@ -445,34 +418,36 @@ export function MobileAuthScreen() {
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <div
                       onClick={() => setRememberMe(!rememberMe)}
-                      className={`w-4 h-4 rounded border transition-colors flex items-center justify-center ${
-                        rememberMe ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white' : 'border-[#E5E7EB] bg-white'
+                      className={`w-4 h-4 rounded-md border transition-colors flex items-center justify-center ${
+                        rememberMe
+                          ? 'bg-neutral-950 border-neutral-950 text-white'
+                          : 'border-neutral-300 bg-white'
                       }`}
                     >
                       {rememberMe && <Check className="w-3 h-3 stroke-[2.5]" />}
                     </div>
-                    <span className="text-xs text-[#616161] font-light">
-                      {isRegister ? 'Acepto condiciones de uso del sistema' : 'Recordar sesión'}
+                    <span className="text-xs text-neutral-500 font-normal">
+                      {isRegister ? 'Acepto las condiciones de uso' : 'Recordar mi sesión'}
                     </span>
                   </label>
                 </div>
 
-                {/* Botón Principal Azul Marino con Acento Nude #E8B4A0 */}
+                {/* Botón Principal Negro Minimalista */}
                 <div className="pt-2">
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full min-h-[44px] py-3 bg-[#1E3A5F] hover:bg-[#172E4C] text-white text-xs font-mono font-bold uppercase tracking-wider rounded-full transition-all active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                    className="w-full py-3.5 bg-neutral-950 hover:bg-neutral-900 text-white text-sm font-semibold rounded-2xl transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                   >
                     {loading ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
-                        <span>PROCESANDO...</span>
+                        <Loader2 className="w-4 h-4 animate-spin text-neutral-400" />
+                        <span>Procesando...</span>
                       </>
                     ) : (
                       <>
-                        <span>{isRegister ? 'CREAR CUENTA' : 'ENTRAR AL SISTEMA'}</span>
-                        <ArrowRight className="w-4 h-4 text-[#E8B4A0]" />
+                        <span>{isRegister ? 'Crear cuenta' : 'Iniciar sesión'}</span>
+                        <ArrowRight className="w-4 h-4 text-neutral-400" />
                       </>
                     )}
                   </button>
