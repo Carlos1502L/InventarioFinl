@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import {
+  Mail,
+  Lock,
+  User,
+  ArrowRight,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Check
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 
@@ -12,14 +21,15 @@ interface LetterItem {
   delay: number;
 }
 
+// Coordenadas asimétricas fuera de pantalla con tiempos extendidos para mayor presencia visual
 const LETTERS: LetterItem[] = [
-  { char: 'S', initialX: -120, initialY: -80,  rotate: -25, delay: 0.00 },
-  { char: 'T', initialX: 0,    initialY: -110, rotate: 10,  delay: 0.06 },
-  { char: 'O', initialX: -130, initialY: 15,   rotate: -15, delay: 0.12 },
-  { char: 'C', initialX: -90,  initialY: 120,  rotate: 20,  delay: 0.04 },
-  { char: 'K', initialX: 100,  initialY: 110,  rotate: -20, delay: 0.10 },
-  { char: 'L', initialX: 130,  initialY: -10,  rotate: 15,  delay: 0.05 },
-  { char: 'Y', initialX: 110,  initialY: -90,  rotate: -30, delay: 0.14 },
+  { char: 'S', initialX: -140, initialY: -100, rotate: -25, delay: 0.00 },
+  { char: 'T', initialX: 0,    initialY: -140, rotate: 12,  delay: 0.08 },
+  { char: 'O', initialX: -150, initialY: 20,   rotate: -15, delay: 0.16 },
+  { char: 'C', initialX: -110, initialY: 140,  rotate: 20,  delay: 0.06 },
+  { char: 'K', initialX: 120,  initialY: 130,  rotate: -20, delay: 0.14 },
+  { char: 'L', initialX: 150,  initialY: -20,  rotate: 15,  delay: 0.10 },
+  { char: 'Y', initialX: 130,  initialY: -120, rotate: -30, delay: 0.22 },
 ];
 
 export function MobileAuthScreen() {
@@ -31,6 +41,7 @@ export function MobileAuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -91,8 +102,8 @@ export function MobileAuthScreen() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin
-        }
+          redirectTo: window.location.origin,
+        },
       });
       if (error) throw error;
     } catch (err: any) {
@@ -114,7 +125,7 @@ export function MobileAuthScreen() {
       setResetLoading(true);
       setErrorMsg(null);
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/reset-password`
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
       setSuccessMsg('Te hemos enviado un enlace para restablecer tu contraseña. Revisa tu bandeja.');
@@ -127,34 +138,41 @@ export function MobileAuthScreen() {
   };
 
   return (
-    <div className="relative min-h-[100dvh] w-full bg-[#070d18] text-slate-100 flex items-center justify-center p-4 sm:p-6 overflow-hidden select-none pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+    <div className="relative min-h-[100dvh] w-full bg-[#F8F9FA] text-[#1E3A5F] flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto overscroll-y-contain select-none pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] font-sans">
       
-      {/* Fondo tenue con brillo central */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.08)_0%,transparent_70%)] pointer-events-none" />
+      {/* Acentos geométricos de fondo suaves idénticos al estilo editorial */}
+      <div className="fixed top-[-80px] right-[-80px] w-72 h-72 rounded-full bg-[#E8B4A0]/15 blur-3xl pointer-events-none" />
+      <div className="fixed bottom-[-80px] left-[-80px] w-80 h-80 rounded-full bg-[#1E3A5F]/5 blur-3xl pointer-events-none" />
 
-      {/* FASE 1 Y 2: LOGOTIPO ANIMADO Y EXPLOSIÓN */}
+      {/* =========================================================
+          FASE 1 Y 2: LOGOTIPO CINÉTICO ANIMADO Y EXPANSIÓN
+         ========================================================= */}
       {stage !== 'LOGIN_READY' && (
-        <div className="relative z-20 flex items-center justify-center">
+        <div className="relative z-20 flex items-center justify-center my-auto min-h-[60vh]">
           
-          {/* Destello central de la explosión */}
+          {/* Destello de onda expansiva en color Nude editorial (#E8B4A0) */}
           {stage === 'EXPLODING' && (
             <motion.div
-              initial={{ scale: 0, opacity: 1 }}
-              animate={{ scale: 4, opacity: 0 }}
-              transition={{ duration: 0.45, ease: 'easeOut' }}
-              className="absolute w-28 h-28 rounded-full bg-sky-400 blur-xl pointer-events-none"
+              initial={{ scale: 0, opacity: 0.85 }}
+              animate={{ scale: 4.2, opacity: 0 }}
+              transition={{ duration: 0.55, ease: 'easeOut' }}
+              className="absolute w-32 h-32 rounded-full bg-[#E8B4A0] blur-2xl pointer-events-none"
             />
           )}
 
-          {/* Letras convergentes */}
+          {/* Letras convergentes con tipografía Mono corporativa Stockly */}
           <motion.div
-            className="flex text-4xl sm:text-5xl font-extrabold tracking-wider font-mono text-white"
+            className="flex text-4xl sm:text-5xl font-mono font-bold tracking-[0.2em] text-[#1E3A5F] select-none"
             animate={
               stage === 'EXPLODING'
-                ? { scale: [1, 0.85, 2.2], opacity: [1, 1, 0], filter: ['blur(0px)', 'blur(0px)', 'blur(8px)'] }
+                ? {
+                    scale: [1, 0.88, 2.3],
+                    opacity: [1, 1, 0],
+                    filter: ['blur(0px)', 'blur(0px)', 'blur(10px)'],
+                  }
                 : { scale: 1, opacity: 1 }
             }
-            transition={stage === 'EXPLODING' ? { duration: 0.4, ease: 'easeInOut' } : {}}
+            transition={stage === 'EXPLODING' ? { duration: 0.5, ease: 'easeInOut' } : {}}
             onAnimationComplete={() => {
               if (stage === 'EXPLODING') setStage('LOGIN_READY');
             }}
@@ -167,7 +185,7 @@ export function MobileAuthScreen() {
                   y: `${item.initialY}vh`,
                   rotate: item.rotate,
                   opacity: 0,
-                  filter: 'blur(10px)',
+                  filter: 'blur(12px)',
                 }}
                 animate={{
                   x: 0,
@@ -177,17 +195,17 @@ export function MobileAuthScreen() {
                   filter: 'blur(0px)',
                 }}
                 transition={{
-                  duration: 0.75,
+                  duration: 1.05,
                   delay: item.delay,
-                  ease: [0.16, 1, 0.3, 1], // easeOutExpo para frenada nítida
+                  ease: [0.16, 1, 0.3, 1], // Desaceleración suave y elegante
                 }}
                 onAnimationComplete={() => {
-                  // Cuando la última letra termina de encajar
+                  // Pausa táctica cuando la última letra encaja en su posición
                   if (index === LETTERS.length - 1 && stage === 'CONVERGING') {
-                    setTimeout(() => setStage('EXPLODING'), 200);
+                    setTimeout(() => setStage('EXPLODING'), 450);
                   }
                 }}
-                className="inline-block text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-sky-400 drop-shadow-[0_0_12px_rgba(56,189,248,0.4)]"
+                className="inline-block text-[#1E3A5F] drop-shadow-[0_4px_16px_rgba(30,58,95,0.18)]"
               >
                 {item.char}
               </motion.span>
@@ -196,159 +214,208 @@ export function MobileAuthScreen() {
         </div>
       )}
 
-      {/* FASE 3: FORMULARIO DE LOGIN REVELADO TRAS LA EXPLOSIÓN */}
+      {/* =========================================================
+          FASE 3: TARJETA DE LOGIN MÓVIL REVELADA TRAS LA EXPANSIÓN
+          Adopta 100% el diseño, fuentes, colores y bordes de la versión móvil
+         ========================================================= */}
       <AnimatePresence>
         {stage === 'LOGIN_READY' && (
           <motion.div
-            initial={{ scale: 0.4, opacity: 0, filter: 'blur(14px)' }}
-            animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
+            initial={{ scale: 0.88, opacity: 0, y: 16 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-30 w-full max-w-sm rounded-2xl bg-[#0b1524]/90 border border-sky-500/25 p-6 sm:p-7 shadow-[0_0_40px_rgba(56,189,248,0.12)] backdrop-blur-xl"
+            className="relative z-30 w-full max-w-md bg-white border border-[#E5E7EB] rounded-2xl shadow-sm p-6 sm:p-8 flex flex-col justify-between my-auto"
           >
-            {/* Cabecera del formulario */}
-            <div className="mb-5 text-center">
-              <h2 className="text-xl font-bold font-mono tracking-widest text-white">STOCKLY</h2>
-              <p className="text-xs text-sky-400/80 font-sans mt-1">Acceso seguro a inventario</p>
+            {/* Encabezado: Logo corporativo e identificador móvil */}
+            <div className="flex items-center justify-center gap-2 mb-3 flex-shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-white border border-[#E5E7EB] overflow-hidden flex items-center justify-center shadow-xs">
+                <img
+                  src="/logo.png"
+                  alt="Stockly"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <span className="font-mono text-sm uppercase tracking-[0.2em] text-[#1E3A5F] font-bold">
+                STOCKLY
+              </span>
             </div>
 
-            {/* Selector Modo Iniciar Sesión / Registrarme */}
-            <div className="grid grid-cols-2 p-1 bg-[#060c16] rounded-xl border border-slate-800 mb-4 text-xs font-mono">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsRegister(false);
-                  setIsResetPassword(false);
-                  setErrorMsg(null);
-                  setSuccessMsg(null);
-                }}
-                className={`py-1.5 rounded-lg transition-all cursor-pointer ${
-                  !isRegister && !isResetPassword
-                    ? 'bg-sky-500/20 text-sky-300 font-bold border border-sky-500/30'
-                    : 'text-slate-400 hover:text-white'
+            {/* Selector con Píldora Deslizante Fluida en Azul Marino #1E3A5F */}
+            <div className="relative p-1 bg-[#F8F9FA] border border-[#E5E7EB] rounded-full mb-3.5 select-none overflow-hidden flex-shrink-0">
+              <div
+                className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-[#1E3A5F] shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                  isRegister ? 'translate-x-full left-1' : 'translate-x-0 left-1'
                 }`}
-              >
-                INICIAR SESIÓN
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsRegister(true);
-                  setIsResetPassword(false);
-                  setErrorMsg(null);
-                  setSuccessMsg(null);
-                }}
-                className={`py-1.5 rounded-lg transition-all cursor-pointer ${
-                  isRegister
-                    ? 'bg-sky-500/20 text-sky-300 font-bold border border-sky-500/30'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                REGISTRARME
-              </button>
+              />
+              <div className="relative grid grid-cols-2 z-10 font-mono text-xs font-bold uppercase tracking-wider">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRegister(false);
+                    setIsResetPassword(false);
+                    setErrorMsg(null);
+                    setSuccessMsg(null);
+                  }}
+                  className={`py-2 rounded-full transition-colors duration-200 text-center cursor-pointer ${
+                    !isRegister && !isResetPassword ? 'text-white' : 'text-[#616161] hover:text-[#1E3A5F]'
+                  }`}
+                >
+                  INICIAR SESIÓN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRegister(true);
+                    setIsResetPassword(false);
+                    setErrorMsg(null);
+                    setSuccessMsg(null);
+                  }}
+                  className={`py-2 rounded-full transition-colors duration-200 text-center cursor-pointer ${
+                    isRegister ? 'text-white' : 'text-[#616161] hover:text-[#1E3A5F]'
+                  }`}
+                >
+                  REGISTRARME
+                </button>
+              </div>
             </div>
 
-            {/* Mensajes de feedback */}
-            {errorMsg && (
-              <div className="p-3 mb-4 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-300 flex items-start gap-2 animate-in fade-in">
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                <span className="flex-1 leading-relaxed">{errorMsg}</span>
-              </div>
-            )}
-            {successMsg && (
-              <div className="p-3 mb-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-300 flex items-start gap-2 animate-in fade-in">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <span className="flex-1 leading-relaxed">{successMsg}</span>
-              </div>
-            )}
+            {/* Mensajes de Alerta y Notificación */}
+            <div className="min-h-[16px] mb-2 flex-shrink-0">
+              {errorMsg && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-light flex items-center gap-2 animate-in fade-in duration-200">
+                  <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+              {successMsg && (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-light flex items-center gap-2 animate-in fade-in duration-200">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span>{successMsg}</span>
+                </div>
+              )}
+            </div>
 
-            {/* Formulario de Recuperación o Autenticación */}
+            {/* VISTA 1: RECUPERACIÓN DE CONTRASEÑA */}
             {isResetPassword ? (
               <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div>
-                  <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1.5">
-                    Correo para recuperación
+                  <h2 className="text-xl font-bold text-[#1E3A5F] tracking-tight">
+                    Recuperar contraseña
+                  </h2>
+                  <p className="text-xs text-[#616161] mt-1 font-light">
+                    Ingresa tu correo para recibir un enlace de restablecimiento.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F] mb-1.5">
+                    CORREO ELECTRÓNICO
                   </label>
-                  <input
-                    type="text"
-                    inputMode="email"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck="false"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="usuario@correo.com"
-                    required
-                    className="w-full rounded-xl bg-[#060c16] border border-slate-700/80 px-3.5 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/40 transition-all font-sans"
-                  />
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="usuario@dominio.com"
+                      required
+                      className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl pl-10 pr-4 text-xs font-light text-[#1E3A5F] placeholder-[#616161] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] transition-all font-sans"
+                    />
+                    <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                  </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={resetLoading}
-                  className="w-full rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="w-full min-h-[44px] py-3 bg-[#1E3A5F] hover:bg-[#172E4C] text-white text-xs font-mono font-bold uppercase tracking-wider rounded-full transition-all active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                 >
                   {resetLoading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin text-white" />
-                      <span>Enviando enlace...</span>
+                      <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
+                      <span>ENVIANDO ENLACE...</span>
                     </>
                   ) : (
-                    <span>Enviar Enlace de Recuperación</span>
+                    <>
+                      <span>ENVIAR ENLACE</span>
+                      <ArrowRight className="w-4 h-4 text-[#E8B4A0]" />
+                    </>
                   )}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsResetPassword(false);
-                    setErrorMsg(null);
-                    setSuccessMsg(null);
-                  }}
-                  className="w-full text-center text-xs text-sky-400 hover:underline pt-1 cursor-pointer"
-                >
-                  ← Volver a Iniciar Sesión
-                </button>
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsResetPassword(false);
+                      setErrorMsg(null);
+                      setSuccessMsg(null);
+                    }}
+                    className="text-xs font-mono text-[#1E3A5F] hover:underline cursor-pointer"
+                  >
+                    ← Volver a Iniciar Sesión
+                  </button>
+                </div>
               </form>
             ) : (
-              <form className="space-y-4" onSubmit={handleAuth}>
+              /* VISTA 2: INICIAR SESIÓN O REGISTRO */
+              <form onSubmit={handleAuth} className="space-y-3.5">
+                {/* Título de bienvenida */}
+                <div>
+                  <h2 className="text-xl font-bold text-[#1E3A5F] tracking-tight">
+                    {isRegister ? 'Crear nueva cuenta' : 'Bienvenido de nuevo'}
+                  </h2>
+                  <p className="text-xs text-[#616161] mt-1 font-light">
+                    {isRegister
+                      ? 'Ingresa tus datos para habilitar tu catálogo de trabajo.'
+                      : 'Introduce tus credenciales para acceder a tus depósitos.'}
+                  </p>
+                </div>
+
+                {/* Campo Nombre (solo en Registro) */}
                 {isRegister && (
                   <div>
-                    <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1.5">
-                      Nombre Completo
+                    <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F] mb-1.5">
+                      NOMBRE COMPLETO
                     </label>
-                    <input
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Juan Pérez"
-                      required={isRegister}
-                      className="w-full rounded-xl bg-[#060c16] border border-slate-700/80 px-3.5 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/40 transition-all font-sans"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Carlos Pérez"
+                        required={isRegister}
+                        className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl pl-10 pr-4 text-xs font-light text-[#1E3A5F] placeholder-[#616161] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] transition-all font-sans"
+                      />
+                      <User className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                    </div>
                   </div>
                 )}
 
+                {/* Campo Correo Electrónico */}
                 <div>
-                  <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1.5">
-                    Correo Electrónico
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F] mb-1.5">
+                    CORREO ELECTRÓNICO
                   </label>
-                  <input
-                    type="text"
-                    inputMode="email"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck="false"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="usuario@correo.com"
-                    required
-                    className="w-full rounded-xl bg-[#060c16] border border-slate-700/80 px-3.5 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/40 transition-all font-sans"
-                  />
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="usuario@dominio.com"
+                      required
+                      className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl pl-10 pr-4 text-xs font-light text-[#1E3A5F] placeholder-[#616161] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] transition-all font-sans"
+                    />
+                    <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                  </div>
                 </div>
 
+                {/* Campo Contraseña */}
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
-                    <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400">
-                      Contraseña
+                    <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F]">
+                      CONTRASEÑA
                     </label>
                     {!isRegister && (
                       <button
@@ -358,58 +425,83 @@ export function MobileAuthScreen() {
                           setErrorMsg(null);
                           setSuccessMsg(null);
                         }}
-                        className="text-[11px] text-sky-400 hover:underline font-sans cursor-pointer"
+                        className="text-[11px] font-mono text-[#1E3A5F] hover:underline cursor-pointer"
                       >
-                        ¿Olvidaste?
+                        ¿Olvidaste tu contraseña?
                       </button>
                     )}
                   </div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    className="w-full rounded-xl bg-[#060c16] border border-slate-700/80 px-3.5 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/40 transition-all font-sans"
-                  />
+                  <div className="relative">
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-2xl pl-10 pr-4 text-xs font-light text-[#1E3A5F] placeholder-[#616161] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] transition-all font-sans"
+                    />
+                    <Lock className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                  </div>
                 </div>
 
-                {/* Botón principal */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full mt-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-white" />
-                      <span>{isRegister ? 'Creando cuenta...' : 'Ingresando...'}</span>
-                    </>
-                  ) : (
-                    <span>{isRegister ? 'Crear Cuenta' : 'Ingresar al Sistema'}</span>
-                  )}
-                </button>
+                {/* Opciones Adicionales */}
+                <div className="flex items-center justify-between pt-0.5">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <div
+                      onClick={() => setRememberMe(!rememberMe)}
+                      className={`w-4 h-4 rounded border transition-colors flex items-center justify-center ${
+                        rememberMe ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white' : 'border-[#E5E7EB] bg-white'
+                      }`}
+                    >
+                      {rememberMe && <Check className="w-3 h-3 stroke-[2.5]" />}
+                    </div>
+                    <span className="text-xs text-[#616161] font-light">
+                      {isRegister ? 'Acepto condiciones de uso del sistema' : 'Recordar sesión'}
+                    </span>
+                  </label>
+                </div>
+
+                {/* Botón Principal Azul Marino con Acento Nude #E8B4A0 */}
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full min-h-[44px] py-3 bg-[#1E3A5F] hover:bg-[#172E4C] text-white text-xs font-mono font-bold uppercase tracking-wider rounded-full transition-all active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
+                        <span>PROCESANDO...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{isRegister ? 'CREAR CUENTA' : 'ENTRAR AL SISTEMA'}</span>
+                        <ArrowRight className="w-4 h-4 text-[#E8B4A0]" />
+                      </>
+                    )}
+                  </button>
+                </div>
               </form>
             )}
 
-            {/* Separador */}
-            <div className="my-5 flex items-center justify-between">
-              <span className="h-[1px] w-full bg-slate-800" />
-              <span className="px-3 text-[10px] font-mono uppercase tracking-wider text-slate-500">O</span>
-              <span className="h-[1px] w-full bg-slate-800" />
+            {/* Separador Editorial */}
+            <div className="my-3.5 flex items-center justify-between">
+              <span className="h-[1px] w-full bg-[#E5E7EB]" />
+              <span className="px-3 text-[10px] font-mono uppercase tracking-wider text-[#616161]">O</span>
+              <span className="h-[1px] w-full bg-[#E5E7EB]" />
             </div>
 
-            {/* Botón secundario OAuth Google */}
+            {/* Botón Continuar con Google con estilo limpio de la versión móvil */}
             <button
               type="button"
               onClick={handleGoogleSignIn}
               disabled={googleLoading}
-              className="w-full flex items-center justify-center gap-2.5 rounded-xl border border-slate-700 bg-[#060c16] py-2.5 text-xs font-medium text-slate-200 hover:border-slate-500 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+              className="w-full min-h-[42px] flex items-center justify-center gap-2.5 rounded-full border border-[#E5E7EB] bg-white hover:bg-[#F8F9FA] py-2.5 text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F] active:scale-[0.98] transition-all cursor-pointer shadow-xs disabled:opacity-50"
             >
               {googleLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-sky-400" />
+                <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
               ) : (
-                <svg className="h-4 w-4" viewBox="0 0 24 24">
+                <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#EA4335"
                     d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.4l3.7 2.9C6.5 7.4 9 5 12 5z"
@@ -428,7 +520,7 @@ export function MobileAuthScreen() {
                   />
                 </svg>
               )}
-              <span>Continuar con Google</span>
+              <span>CONTINUAR CON GOOGLE</span>
             </button>
           </motion.div>
         )}
@@ -436,3 +528,5 @@ export function MobileAuthScreen() {
     </div>
   );
 }
+
+export default MobileAuthScreen;
