@@ -207,21 +207,12 @@ export function MobileAuthScreen() {
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             className="relative z-30 w-full max-w-sm bg-white border border-neutral-200/80 rounded-3xl shadow-sm p-6 sm:p-7 flex flex-col justify-between my-auto"
           >
-            {/* Encabezado: Logo e identidad minimalista */}
-            <div className="flex flex-col items-center justify-center text-center mb-5 flex-shrink-0">
-              <div className="w-12 h-12 rounded-2xl bg-neutral-950 border border-neutral-800 flex items-center justify-center shadow-sm overflow-hidden mb-3">
-                <img
-                  src="/logo.png"
-                  alt="Stockly"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </div>
-              <h1 className="text-xl font-bold tracking-tight text-neutral-950">
+            {/* Encabezado: Identidad minimalista */}
+            <div className="text-center mb-5 flex-shrink-0">
+              <h1 className="text-2xl font-bold tracking-tight text-neutral-950">
                 Stockly
               </h1>
-              <p className="text-xs text-neutral-500 mt-0.5 font-normal">
+              <p className="text-xs text-neutral-500 mt-1 font-normal">
                 Gestión y control de inventario
               </p>
             </div>
