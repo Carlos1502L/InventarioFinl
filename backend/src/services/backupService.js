@@ -612,10 +612,10 @@ export class BackupService {
     const prevRate = Number(inv.exchange_rate) || 1.000;
     const ratio = targetRate / prevRate;
 
-    // 1. Recalcular precios de venta y costos de productos activos
+    // 1. Recalcular precios de venta y costos de productos activos tomando en cuenta el valor de costo y markup
     const { data: prods, error: pErr } = await supabaseAdmin
       .from('products')
-      .select('id, name, price, cost_price')
+      .select('id, name, price, cost_price, markup_percentage')
       .eq('inventory_id', inventoryId);
 
     if (pErr) throw new Error(`Error consultando productos: ${pErr.message}`);
@@ -623,8 +623,14 @@ export class BackupService {
     let updatedCount = 0;
     if (Array.isArray(prods) && prods.length > 0) {
       for (const p of prods) {
-        const newPrice = Math.round((Number(p.price) || 0) * ratio * 100) / 100;
-        const newCost = Math.round((Number(p.cost_price) || 0) * ratio * 100) / 100;
+        const oldCost = Number(p.cost_price) || 0;
+        const oldPrice = Number(p.price) || 0;
+        const markup = Number(p.markup_percentage) || 0;
+
+        const newCost = Math.round(oldCost * ratio * 100) / 100;
+        const newPrice = markup > 0 && newCost > 0
+          ? Math.round(newCost * (1 + markup / 100) * 100) / 100
+          : Math.round(oldPrice * ratio * 100) / 100;
 
         const { error: updErr } = await supabaseAdmin
           .from('products')

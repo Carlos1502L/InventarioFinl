@@ -539,11 +539,15 @@ BEGIN
   -- Factor de conversión: (Nueva Tasa / Tasa Anterior)
   v_ratio := p_new_rate / v_prev_rate;
 
-  -- 2. Recalcular precios de venta y costos de productos activos en el inventario destino
+  -- 2. Recalcular precios de venta y costos de productos activos en el inventario destino tomando en cuenta el valor de costo
   UPDATE public.products
   SET 
-    price = ROUND(price * v_ratio, 2),
     cost_price = ROUND(cost_price * v_ratio, 2),
+    price = CASE 
+      WHEN markup_percentage > 0 AND cost_price > 0 
+        THEN ROUND(ROUND(cost_price * v_ratio, 2) * (1 + markup_percentage / 100.0), 2)
+      ELSE ROUND(price * v_ratio, 2)
+    END,
     updated_at = NOW()
   WHERE inventory_id = p_inventory_id;
   

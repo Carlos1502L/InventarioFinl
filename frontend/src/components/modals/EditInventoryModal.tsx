@@ -69,7 +69,6 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
 
   // Recálculo Masivo de Precios
   const [isRecalculating, setIsRecalculating] = useState(false);
-  const [recalcModalOpen, setRecalcModalOpen] = useState(false);
 
   // Pagos Yape / Plin (RF-06.3)
   const [yapePhone, setYapePhone] = useState('');
@@ -119,7 +118,6 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
       setDeleteConfirmationInput('');
       setSelectedNewOwnerId('');
       setFeedbackMsg(null);
-      setRecalcModalOpen(false);
 
       // Cargar colaboradores para la pestaña de transferencia (Solo si es dueño)
       if (isOwner) {
@@ -308,15 +306,21 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
       if (!apiSucceeded) {
         const { data: prods, error: pErr } = await supabase
           .from('products')
-          .select('id, price, cost_price')
+          .select('id, price, cost_price, markup_percentage')
           .eq('inventory_id', inventory.id);
 
         if (pErr) throw pErr;
 
         if (Array.isArray(prods) && prods.length > 0) {
           for (const p of prods) {
-            const newPrice = Math.round((Number(p.price) || 0) * ratio * 100) / 100;
-            const newCost = Math.round((Number(p.cost_price) || 0) * ratio * 100) / 100;
+            const oldCost = Number(p.cost_price) || 0;
+            const oldPrice = Number(p.price) || 0;
+            const markup = Number(p.markup_percentage) || 0;
+
+            const newCost = Math.round(oldCost * ratio * 100) / 100;
+            const newPrice = markup > 0 && newCost > 0
+              ? Math.round(newCost * (1 + markup / 100) * 100) / 100
+              : Math.round(oldPrice * ratio * 100) / 100;
 
             await supabase
               .from('products')
@@ -344,9 +348,8 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
           .eq('id', inventory.id);
       }
 
-      setRecalcModalOpen(false);
       showAppToast(
-        `Precios actualizados con éxito (${updatedCount} productos actualizados a la tasa ${targetRate.toFixed(3)}).`,
+        `Precios y costos actualizados con éxito (${updatedCount} productos actualizados a la tasa ${targetRate.toFixed(3)}).`,
         'success',
         6000
       );
@@ -574,12 +577,12 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
 
           {/* Barra de Pestañas Deslizable Horizontalmente (Swipeable Tabs) */}
           {mode !== 'payments' && (
-            <div className="mobile-tabs-bar flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 text-xs font-semibold overflow-x-auto scroll-smooth overscroll-x-contain">
+            <div className="mobile-tabs-bar flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 text-xs font-semibold overflow-x-auto no-scrollbar scroll-smooth">
               {/* Pestaña 1: Detalles */}
               <button
                 type="button"
                 onClick={() => setActiveTab('general')}
-                className={`py-3 px-4 min-w-[100px] shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                className={`py-2.5 px-3.5 shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === 'general'
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-500/5 mobile-tab-active font-bold'
                     : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
@@ -588,31 +591,31 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                 <Layers className="w-4 h-4" /> Detalles
               </button>
 
-              {/* Pestaña 2: Moneda & Tasa (Deslizable hacia la derecha) */}
+              {/* Pestaña 2: Moneda */}
               <button
                 type="button"
                 onClick={() => setActiveTab('currency')}
-                className={`py-3 px-4 min-w-[130px] shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                className={`py-2.5 px-3.5 shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === 'currency'
                     ? 'border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-500/5 mobile-tab-active font-bold'
                     : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
                 }`}
               >
-                <Coins className="w-4 h-4" /> Moneda & Tasa
+                <Coins className="w-4 h-4" /> Moneda
               </button>
 
-              {/* Pestaña 3: Cambiar Dueño (Solo Dueño) */}
+              {/* Pestaña 3: Propietario (Solo Dueño) */}
               {isOwner && (
                 <button
                   type="button"
                   onClick={() => setActiveTab('transfer')}
-                  className={`py-3 px-4 min-w-[125px] shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                  className={`py-2.5 px-3.5 shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'transfer'
                       ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-500/5 mobile-tab-active font-bold'
-                      : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
                   }`}
                 >
-                  <UserCheck className="w-4 h-4" /> Cambiar Dueño
+                  <UserCheck className="w-4 h-4" /> Propietario
                 </button>
               )}
 
@@ -621,7 +624,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveTab('danger')}
-                  className={`py-3 px-4 min-w-[95px] shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                  className={`py-2.5 px-3.5 shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'danger'
                       ? 'border-rose-500 text-rose-600 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-500/5 mobile-tab-active font-bold'
                       : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
@@ -893,24 +896,18 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                   </div>
 
                   {/* Botones de Acción en Pestaña Moneda */}
-                  <div className="space-y-2 pt-1">
-                    {/* Botón Principal: Actualizar precios */}
+                  <div className="space-y-2.5 pt-1">
+                    {/* Botón Principal: Actualizar precios (Ejecución Directa) */}
                     <button
                       type="button"
-                      onClick={() => {
-                        if (!isValidRate) {
-                          showAppToast('Ingresa una tasa de cambio numérica válida antes de actualizar precios.', 'warning');
-                          return;
-                        }
-                        setRecalcModalOpen(true);
-                      }}
+                      onClick={handleExecuteRecalculate}
                       disabled={isSavingCurrencyOnly || isRecalculating || !isValidRate}
                       className="w-full h-11 px-4 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer shadow-xs disabled:opacity-50"
                     >
                       {isRecalculating ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
-                          <span>Actualizando precios...</span>
+                          <span>Actualizando precios y costos...</span>
                         </>
                       ) : (
                         <>
@@ -921,19 +918,24 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                     </button>
 
                     {/* Botón Secundario: Guardar Moneda / Tasa sin recalcular */}
-                    <button
-                      type="button"
-                      onClick={handleSaveCurrencyOnly}
-                      disabled={isSavingCurrencyOnly || isRecalculating || !isValidRate}
-                      className="w-full h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer disabled:opacity-50"
-                    >
-                      {isSavingCurrencyOnly ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Save className="w-3.5 h-3.5" />
-                      )}
-                      <span>Guardar Moneda / Tasa (Sin recalcular catálogo)</span>
-                    </button>
+                    <div className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={handleSaveCurrencyOnly}
+                        disabled={isSavingCurrencyOnly || isRecalculating || !isValidRate}
+                        className="w-full h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer disabled:opacity-50"
+                      >
+                        {isSavingCurrencyOnly ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Save className="w-3.5 h-3.5" />
+                        )}
+                        <span>Guardar Moneda / Tasa (Sin recalcular)</span>
+                      </button>
+                      <p className="text-[10px] text-center text-slate-500 dark:text-slate-400">
+                        Aplica este nuevo tipo de cambio a nuevos productos ingresados sin alterar los precios actuales.
+                      </p>
+                    </div>
                   </div>
                 </div>
               )
@@ -1196,86 +1198,6 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Modal de Confirmación Transaccional: Actualizar precios */}
-      {recalcModalOpen && (
-        <div className="fixed inset-0 z-60 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-neutral-200 space-y-4 animate-in zoom-in-95">
-            <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-200">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="font-bold text-sm sm:text-base text-neutral-900">
-                  ¿Confirmar Actualización de Precios?
-                </h4>
-                <p className="text-xs text-neutral-500 mt-0.5">
-                  Operación masiva sobre el catálogo de productos
-                </p>
-              </div>
-            </div>
-
-            <div className="p-3.5 bg-neutral-50 rounded-xl border border-neutral-200 text-xs text-neutral-700 space-y-2">
-              <p>
-                Se recalcularán los precios de venta y costos de todos los productos activos según la nueva tasa{' '}
-                <strong className="text-[#1E3A5F] font-mono">{parsedNewRate.toFixed(3)}</strong>.
-              </p>
-              
-              <div className="pt-2 border-t border-neutral-200 text-[11px] font-mono space-y-1 text-neutral-600">
-                <div className="flex items-center justify-between">
-                  <span>Tasa actual:</span>
-                  <span className="font-bold">{currentRate.toFixed(3)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Nueva tasa:</span>
-                  <span className="font-bold text-[#1E3A5F]">{parsedNewRate.toFixed(3)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Factor proporcional aplicado:</span>
-                  <span className="font-bold text-amber-700">×{ratio.toFixed(4)}</span>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-neutral-500 leading-normal">
-              Fórmula atómica:{' '}
-              <span className="font-mono bg-neutral-100 px-1 py-0.5 rounded text-neutral-800">
-                Nuevo = Anterior × ({parsedNewRate.toFixed(3)} / {currentRate.toFixed(3)})
-              </span>
-              . Los montos se redondearán a 2 decimales y el evento se registrará en auditoría bajo BULK_PRICE_CURRENCY_UPDATE.
-            </p>
-
-            <div className="flex items-center justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => setRecalcModalOpen(false)}
-                disabled={isRecalculating}
-                className="h-10 px-4 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-semibold transition-all active:scale-98 cursor-pointer disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleExecuteRecalculate}
-                disabled={isRecalculating}
-                className="h-10 px-4 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer shadow-xs disabled:opacity-50"
-              >
-                {isRecalculating ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8B4A0]" />
-                    <span>Actualizando...</span>
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 text-[#E8B4A0]" />
-                    <span>Sí, Actualizar Precios</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };
