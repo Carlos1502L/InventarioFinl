@@ -116,6 +116,7 @@ class EmailService {
         const response = await fetch(process.env.GMAIL_SCRIPT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json; charset=utf-8' },
+          redirect: 'follow',
           body: JSON.stringify({
             to,
             subject,
@@ -130,7 +131,14 @@ class EmailService {
           })
         });
 
-        const data = await response.json();
+        const text = await response.text();
+        let data = {};
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { success: response.ok, raw: text };
+        }
+
         if (data.success || response.ok) {
           console.log(`✅ [EmailService] Respaldo enviado exitosamente vía Google Apps Script a ${to}`);
           return { success: true, mode: 'gas_webhook' };
@@ -306,6 +314,7 @@ class EmailService {
         const response = await fetch(process.env.GMAIL_SCRIPT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json; charset=utf-8' },
+          redirect: 'follow',
           body: JSON.stringify({
             to,
             subject,
@@ -313,7 +322,14 @@ class EmailService {
           })
         });
 
-        const data = await response.json();
+        const text = await response.text();
+        let data = {};
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { success: response.ok, raw: text };
+        }
+
         if (data.success || response.ok) {
           console.log(`✅ [EmailService] Código OTP enviado vía Google Apps Script a ${to}`);
           return { success: true, mode: 'gas_webhook' };
