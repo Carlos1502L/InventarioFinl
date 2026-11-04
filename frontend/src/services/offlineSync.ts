@@ -1,5 +1,6 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { supabase } from '../lib/supabase';
+import { showAppToast } from '../components/ui/ToastNotification';
 
 // =========================================================
 // ESQUEMAS Y TIPOS DE INDEXEDDB (pos_offline_db v2)
@@ -235,6 +236,106 @@ export async function markSaleFailed(localId: number, errorMessage: string): Pro
     }
   } catch (err) {
     console.error(`[OfflineDB] Error marcando venta #${localId} como fallida:`, err);
+  }
+}
+
+/**
+ * Retorna todas las ventas en la cola local de IndexedDB.
+ */
+export async function getAllQueuedSales(): Promise<QueuedSale[]> {
+  try {
+    const db = await getDB();
+    return await db.getAll('sales_queue');
+  } catch (err) {
+    console.error('[OfflineDB] Error obteniendo todas las ventas de la cola:', err);
+    return [];
+  }
+}
+
+/**
+ * RN-HIST-01: Persiste una venta offline rechazada (quiebre de stock) directamente
+ * en el Historial de Ventas (tablas 'sales' y 'sale_items') sin descontar inventario.
+ */
+export async function persistRejectedSaleToRemote(
+  sale: QueuedSale,
+  errorMessage: string
+): Promise<string | null> {
+  const p = sale.payload;
+  const localId = sale.local_id;
+  const rejectedNotes = `[RECHAZADA_STOCK] local-queue-${localId ?? 'na'} | ${errorMessage}`;
+
+  try {
+    // 1. Intentar inserción con status: 'REJECTED_STOCK'
+    let insertRes = await supabase
+      .from('sales')
+      .insert({
+        inventory_id: p.p_inventory_id,
+        seller_id: p.p_seller_id || null,
+        seller_email: p.p_seller_email || 'offline@pos',
+        total_amount: p.p_total_amount,
+        payment_method: p.p_payment_method || 'CASH',
+        customer_name: p.p_customer_name || null,
+        customer_contact: p.p_customer_contact || null,
+        notes: rejectedNotes,
+        status: 'REJECTED_STOCK',
+        created_at: sale.created_at || new Date().toISOString()
+      })
+      .select('id')
+      .single();
+
+    // 2. Fallback sin columna status si no existe en la base de datos remota
+    if (
+      insertRes.error &&
+      insertRes.error.message?.toLowerCase().includes('column') &&
+      insertRes.error.message?.toLowerCase().includes('status')
+    ) {
+      insertRes = await supabase
+        .from('sales')
+        .insert({
+          inventory_id: p.p_inventory_id,
+          seller_id: p.p_seller_id || null,
+          seller_email: p.p_seller_email || 'offline@pos',
+          total_amount: p.p_total_amount,
+          payment_method: p.p_payment_method || 'CASH',
+          customer_name: p.p_customer_name || null,
+          customer_contact: p.p_customer_contact || null,
+          notes: rejectedNotes,
+          created_at: sale.created_at || new Date().toISOString()
+        })
+        .select('id')
+        .single();
+    }
+
+    if (insertRes.error) {
+      console.warn('[OfflineSync] Error insertando venta rechazada en Supabase sales:', insertRes.error);
+      return null;
+    }
+
+    const saleId = insertRes.data?.id;
+
+    // 3. Persistir sale_items asociados para auditoría e inspección en el modal
+    if (saleId && p.p_items && p.p_items.length > 0) {
+      const itemsData = p.p_items.map((it: any) => ({
+        sale_id: saleId,
+        product_id: it.product_id && !String(it.product_id).startsWith('temp-') ? it.product_id : null,
+        product_name: it.product_name || 'Producto',
+        product_code: it.product_code || 'S/C',
+        quantity: it.quantity || 1,
+        unit_price: it.unit_price || 0,
+        cost_price: it.cost_price || 0,
+        subtotal: it.subtotal || 0
+      }));
+
+      const { error: itemsErr } = await supabase.from('sale_items').insert(itemsData);
+      if (itemsErr) {
+        console.warn('[OfflineSync] Error insertando sale_items para venta rechazada:', itemsErr);
+      }
+    }
+
+    return saleId;
+  } catch (err) {
+    console.warn('[OfflineSync] Excepción al persistir venta rechazada en historial:', err);
+    return null;
   }
 }
 
@@ -500,21 +601,50 @@ export async function syncPendingSalesSilently(
           }
 
           console.warn(`[OfflineSync] Venta local #${localId} rechazada por base de datos:`, rpcError.message);
-          await markSaleFailed(localId, rpcError.message || 'Error de procesamiento');
+          
+          // RN-HIST-01: Persistir la venta diferida rechazada en el Historial de Ventas
+          await persistRejectedSaleToRemote(sale, rpcError.message || 'Sin stock disponible');
+          await markSaleFailed(localId, rpcError.message || 'Sin stock disponible');
           failedCount++;
+
+          // Alerta al usuario: Notificación discreta de "Sin Stock Disponible"
+          showAppToast('Sin Stock Disponible: Venta rechazada por falta de unidades.', 'error');
+
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('stockly_sales_data_updated'));
+          }
           continue;
         }
 
         await markSaleSynced(localId, rpcRes);
         syncedCount++;
+
+        // Alerta al usuario: Notificación discreta de sincronización
+        showAppToast('Venta sincronizada correctamente.', 'success');
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('stockly_sales_data_updated'));
+        }
       } catch (err: any) {
         if (isNetworkOrOfflineError(err)) {
           break;
         }
         console.warn(`[OfflineSync] Error inesperado en venta #${localId}:`, err);
-        await markSaleFailed(localId, err?.message || 'Error de sincronización');
+        const errMsg = err?.message || 'Error de sincronización';
+        await persistRejectedSaleToRemote(sale, errMsg);
+        await markSaleFailed(localId, errMsg);
         failedCount++;
+
+        showAppToast('Sin Stock Disponible: Venta rechazada por falta de unidades.', 'error');
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('stockly_sales_data_updated'));
+        }
       }
+    }
+
+    if ((syncedCount > 0 || failedCount > 0) && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('stockly_sales_data_updated'));
     }
 
     if (syncedCount > 0 && onBatchSuccess) {

@@ -146,13 +146,15 @@ export const AppContent: React.FC = () => {
   // RF-5: Motor de Sincronización Automática Integral (Creación, Salidas Masivas y Ventas POS)
   useEffect(() => {
     const handleOnline = () => {
-      syncAllOfflineDataSilently(() => {
+      syncAllOfflineDataSilently((summary) => {
         fetchInventoryData();
-        showAppToast(
-          'Sincronización en segundo plano completada con éxito.',
-          'success',
-          4500
-        );
+        if (summary.syncedProducts > 0 || summary.syncedWithdrawals > 0) {
+          showAppToast(
+            'Sincronización en segundo plano completada con éxito.',
+            'success',
+            4500
+          );
+        }
       });
     };
 

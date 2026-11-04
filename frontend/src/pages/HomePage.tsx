@@ -17,6 +17,7 @@ import { Product, Sale } from '../types/database';
 import { supabase, formatCurrency, formatDate, formatStockDisplay, formatCleanDecimal } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
+import { isSaleRejected } from './SalesHistoryPage';
 
 interface HomePageProps {
   products: Product[];
@@ -518,7 +519,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                           </div>
 
                           <div className="text-right flex-shrink-0">
-                            <span className="text-sm font-normal text-neutral-900 tabular-nums">
+                            <span className={`text-sm font-normal tabular-nums ${isSaleRejected(sale) ? 'text-red-600' : 'text-emerald-600'}`}>
                               {formatCurrency(sale.total_amount, currentInventory?.currency)}
                             </span>
                           </div>

@@ -21,7 +21,22 @@ import {
 import { Sale, SaleItem } from '../types/database';
 import { supabase, formatCurrency, formatDate } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { getAllQueuedSales } from '../services/offlineSync';
 import jsPDF from 'jspdf';
+
+/**
+ * RN-HIST-02: Determina si una venta fue rechazada por falta de stock.
+ * Se evalúa tanto por la columna status como por la marca semántica [RECHAZADA_STOCK].
+ */
+export const isSaleRejected = (
+  sale: { status?: string | null; notes?: string | null } | null | undefined
+): boolean => {
+  if (!sale) return false;
+  return (
+    sale.status === 'REJECTED_STOCK' ||
+    Boolean(sale.notes && sale.notes.includes('[RECHAZADA_STOCK]'))
+  );
+};
 
 interface SalesHistoryPageProps {
   onNavigateToSales?: () => void;
@@ -53,7 +68,57 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setSales(data || []);
+      const remoteSales: Sale[] = data || [];
+
+      // RN-HIST-01: Fusionar ventas diferidas de la cola local de IndexedDB
+      try {
+        const localQueued = await getAllQueuedSales();
+        const relevantFailed = localQueued.filter(
+          (ls) => ls.payload.p_inventory_id === currentInventory.id && ls.status === 'FAILED_STOCK'
+        );
+
+        for (const ls of relevantFailed) {
+          const alreadyPresent = remoteSales.some(
+            (rs) =>
+              (ls.local_id !== undefined && rs.notes?.includes(`local-queue-${ls.local_id}`)) ||
+              (rs.created_at === ls.created_at && Number(rs.total_amount) === Number(ls.payload.p_total_amount))
+          );
+
+          if (!alreadyPresent) {
+            remoteSales.push({
+              id: `offline-rejected-${ls.local_id || Date.now()}`,
+              inventory_id: ls.payload.p_inventory_id,
+              seller_id: ls.payload.p_seller_id || null,
+              seller_email: ls.payload.p_seller_email || 'offline@pos',
+              total_amount: ls.payload.p_total_amount,
+              payment_method: (ls.payload.p_payment_method as any) || 'CASH',
+              customer_name: ls.payload.p_customer_name || null,
+              customer_contact: ls.payload.p_customer_contact || null,
+              notes: `[RECHAZADA_STOCK] ${ls.error_message || 'Sin stock disponible'}`,
+              status: 'REJECTED_STOCK',
+              created_at: ls.created_at,
+              items: (ls.payload.p_items || []).map((it: any, idx: number) => ({
+                id: `local-item-${ls.local_id}-${idx}`,
+                sale_id: `offline-rejected-${ls.local_id}`,
+                product_id: it.product_id,
+                product_name: it.product_name || 'Producto',
+                product_code: it.product_code || 'S/C',
+                quantity: it.quantity,
+                unit_price: it.unit_price,
+                cost_price: it.cost_price || 0,
+                subtotal: it.subtotal,
+                created_at: ls.created_at
+              }))
+            });
+          }
+        }
+
+        remoteSales.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      } catch (mergeErr) {
+        console.warn('[SalesHistory] Error fusionando ventas rechazadas locales:', mergeErr);
+      }
+
+      setSales(remoteSales);
     } catch (err: any) {
       console.error('Error cargando historial de ventas:', err);
     } finally {
@@ -63,6 +128,17 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
 
   useEffect(() => {
     loadSales();
+  }, [loadSales]);
+
+  // Sincronización reactiva en tiempo real al recibirse evento de conciliación
+  useEffect(() => {
+    const handleSalesUpdate = () => {
+      loadSales();
+    };
+    window.addEventListener('stockly_sales_data_updated', handleSalesUpdate);
+    return () => {
+      window.removeEventListener('stockly_sales_data_updated', handleSalesUpdate);
+    };
   }, [loadSales]);
 
   // Inicializar fechas inteligentes
@@ -98,16 +174,24 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
     });
   }, [sales, startDate, endDate, searchTerm]);
 
-  // KPIs
+  // RN-HIST-03: Las ventas rechazadas (rojas) se omiten del cálculo de recaudación y unidades (+0.00)
   const totalRevenue = useMemo(() => {
-    return filteredSales.reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
+    return filteredSales
+      .filter((s) => !isSaleRejected(s))
+      .reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
   }, [filteredSales]);
 
   const totalUnitsSold = useMemo(() => {
-    return filteredSales.reduce((sum, s) => {
-      const itemsCount = s.items?.reduce((iSum, item) => iSum + (item.quantity || 0), 0) || 0;
-      return sum + itemsCount;
-    }, 0);
+    return filteredSales
+      .filter((s) => !isSaleRejected(s))
+      .reduce((sum, s) => {
+        const itemsCount = s.items?.reduce((iSum, item) => iSum + (item.quantity || 0), 0) || 0;
+        return sum + itemsCount;
+      }, 0);
+  }, [filteredSales]);
+
+  const approvedTicketsCount = useMemo(() => {
+    return filteredSales.filter((s) => !isSaleRejected(s)).length;
   }, [filteredSales]);
 
   // Exportar CSV
@@ -176,7 +260,14 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
         doc.text(new Date(s.created_at).toLocaleDateString(), 40, y);
         doc.text((s.customer_name || 'Consumidor Final').slice(0, 24), 80, y);
         doc.text(s.payment_method, 130, y);
+
+        if (isSaleRejected(s)) {
+          doc.setTextColor(220, 38, 38);
+        } else {
+          doc.setTextColor(22, 163, 74);
+        }
         doc.text(formatCurrency(s.total_amount, currency), 170, y);
+        doc.setTextColor(30);
 
         y += 6;
       });
@@ -237,7 +328,7 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
             </div>
 
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-neutral-800/80 text-neutral-300 text-xs font-medium tabular-nums">
-              {filteredSales.length} {filteredSales.length === 1 ? 'ticket' : 'tickets'}
+              {approvedTicketsCount} {approvedTicketsCount === 1 ? 'ticket' : 'tickets'}
             </span>
           </div>
         </header>
@@ -360,7 +451,7 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
                     </div>
 
                     <div className="text-right flex-shrink-0">
-                      <span className="text-sm font-semibold text-neutral-900 tabular-nums">
+                      <span className={`text-sm font-semibold tabular-nums ${isSaleRejected(s) ? 'text-red-600' : 'text-emerald-600'}`}>
                         {formatCurrency(s.total_amount, currentInventory?.currency)}
                       </span>
                     </div>
@@ -426,7 +517,7 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
             <Receipt className="w-3.5 h-3.5 text-[#E8B4A0]" /> Ventas Concretadas
           </div>
           <p className="text-2xl font-bold text-[#1E3A5F] font-mono">
-            {filteredSales.length} <span className="text-xs text-[#616161] font-sans font-normal">tickets</span>
+            {approvedTicketsCount} <span className="text-xs text-[#616161] font-sans font-normal">tickets</span>
           </p>
         </div>
 
@@ -540,7 +631,7 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
                     <td className="p-3.5 text-[#616161] truncate max-w-[160px] font-mono text-[11px]">
                       {s.seller_email}
                     </td>
-                    <td className="p-3.5 text-right font-mono font-bold text-[#1E3A5F]">
+                    <td className={`p-3.5 text-right font-mono font-bold ${isSaleRejected(s) ? 'text-red-600' : 'text-emerald-600'}`}>
                       {formatCurrency(s.total_amount, currentInventory?.currency)}
                     </td>
                     <td className="p-3.5 text-center">
@@ -637,7 +728,7 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
               {/* Total final */}
               <div className="mobile-flat-row flex items-center justify-between p-4 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-mono">
                 <span className="text-xs uppercase tracking-wider text-[#616161] font-bold">TOTAL LIQUIDADO:</span>
-                <span className="text-lg font-bold text-[#1E3A5F]">
+                <span className={`text-lg font-bold ${isSaleRejected(selectedSale) ? 'text-red-600' : 'text-emerald-600'}`}>
                   {formatCurrency(selectedSale.total_amount, currentInventory?.currency)}
                 </span>
               </div>

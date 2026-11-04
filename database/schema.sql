@@ -183,8 +183,11 @@ CREATE TABLE IF NOT EXISTS public.sales (
     customer_name TEXT,
     customer_contact TEXT,
     notes TEXT,
+    status VARCHAR(20) DEFAULT 'COMPLETED',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'COMPLETED';
 
 -- ==============================================================================
 -- 12. TABLA: sale_items (Detalle de Productos Vendidos)

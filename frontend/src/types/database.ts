@@ -187,6 +187,7 @@ export interface Sale {
   customer_name?: string | null;
   customer_contact?: string | null;
   notes?: string | null;
+  status?: 'COMPLETED' | 'REJECTED_STOCK' | string;
   created_at: string;
   items?: SaleItem[];
 }
