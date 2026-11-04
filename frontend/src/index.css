@@ -178,6 +178,52 @@ div:has(> label:empty + span.hidden) {
   scrollbar-color: #E5E7EB transparent;
 }
 
+/* Cápsulas de frecuencia de envío: Centradas, sin recortes de texto y con selector táctil nativo */
+.frequency-pill-container {
+  position: relative !important;
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.frequency-pill-select {
+  width: 100% !important;
+  height: 2.625rem !important;
+  min-height: 2.625rem !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 0.5rem !important;
+  padding-right: 1.5rem !important;
+  line-height: normal !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  text-align-last: center !important;
+  -webkit-text-align-last: center !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  border-radius: 1rem !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+}
+
+.frequency-pill-select::-ms-expand {
+  display: none !important;
+}
+
+.frequency-pill-icon {
+  position: absolute !important;
+  right: 0.625rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 0.875rem !important;
+  height: 0.875rem !important;
+  pointer-events: none !important;
+  z-index: 10 !important;
+}
+
 /* ============================================================================
    ARQUITECTURA VISUAL: VENTANAS FLOTANTES MINIMALISTAS (EXCLUSIVO MÓVIL < 768px)
    Hereda el diseño limpio de los módulos móviles (Stock, Ubicaciones, Historial, Ajustes):
@@ -454,13 +500,15 @@ div:has(> label:empty + span.hidden) {
 
   .frequency-pill-select {
     width: 100% !important;
-    height: 2.75rem !important; /* 44px */
+    height: 2.625rem !important;
+    min-height: 2.625rem !important;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
     padding-left: 0.5rem !important;
     padding-right: 1.5rem !important;
-    line-height: 2.75rem !important;
+    line-height: normal !important;
     font-size: 0.75rem !important;
+    font-weight: 600 !important;
     text-align: center !important;
     text-align-last: center !important;
     -webkit-text-align-last: center !important;
@@ -471,6 +519,10 @@ div:has(> label:empty + span.hidden) {
     cursor: pointer !important;
     box-sizing: border-box !important;
     outline: none !important;
+  }
+
+  .frequency-pill-select::-ms-expand {
+    display: none !important;
   }
 
   .frequency-pill-icon {
