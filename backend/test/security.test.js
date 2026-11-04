@@ -8,6 +8,7 @@ import {
   exportAndSendBackupSchema,
   saveBackupSettingsSchema,
   restoreBackupSchema,
+  recalculatePricesSchema,
   sendVerificationCodeSchema,
   verifyCodeSchema
 } from '../src/schemas/backupSchemas.js';
@@ -182,8 +183,22 @@ test('Zod DTO Security: Backup Schemas', async (t) => {
         exported_at: new Date().toISOString(),
         source_inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
         data: { categories: [], locations: [], products: [], product_locations: [], sales: [] }
+      },
+      currency_conversion: {
+        enabled: true,
+        rate: 3.5,
+        operation: 'DIVIDE',
+        source_currency: 'PEN',
+        target_currency: 'USD'
       }
     };
     assert.equal(restoreBackupSchema.safeParse(valid).success, true);
+  });
+
+  await t.test('recalculatePricesSchema debe validar UUID y tasa de cambio positiva mayor a 0', () => {
+    assert.equal(recalculatePricesSchema.safeParse({ inventory_id: 'not-uuid', new_exchange_rate: 3.75 }).success, false);
+    assert.equal(recalculatePricesSchema.safeParse({ inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', new_exchange_rate: -1 }).success, false);
+    assert.equal(recalculatePricesSchema.safeParse({ inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', new_exchange_rate: 0 }).success, false);
+    assert.equal(recalculatePricesSchema.safeParse({ inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', new_exchange_rate: 3.8, currency: 'USD' }).success, true);
   });
 });

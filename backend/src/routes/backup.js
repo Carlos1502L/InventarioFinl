@@ -7,6 +7,7 @@ import {
   exportAndSendBackupSchema,
   saveBackupSettingsSchema,
   restoreBackupSchema,
+  recalculatePricesSchema,
   sendVerificationCodeSchema,
   verifyCodeSchema
 } from '../schemas/backupSchemas.js';
@@ -485,9 +486,14 @@ router.post(
   verifyTenantAccess({ source: 'body', key: 'inventory_id', requiredRole: 'owner' }),
   async (req, res, next) => {
     try {
-      const { inventory_id, backup_payload } = req.body;
+      const { inventory_id, backup_payload, currency_conversion } = req.body;
 
-      const result = await backupService.restoreInventoryData(inventory_id, backup_payload, req.user.id);
+      const result = await backupService.restoreInventoryData(
+        inventory_id,
+        backup_payload,
+        req.user.id,
+        currency_conversion
+      );
 
       res.json({
         success: true,
@@ -500,6 +506,44 @@ router.post(
         success: false,
         code: 'RESTORE_ERROR',
         message: err.message || 'Error al restaurar los datos del inventario.',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/backup/recalculate-prices
+ * Recalcula masivamente los precios y costos de productos según la nueva tasa de cambio (RF-1.2).
+ * Restricción estricta: Solo el Propietario (Owner) del inventario.
+ */
+router.post(
+  '/recalculate-prices',
+  requireAuth,
+  validate(recalculatePricesSchema, 'body'),
+  verifyTenantAccess({ source: 'body', key: 'inventory_id', requiredRole: 'owner' }),
+  async (req, res, next) => {
+    try {
+      const { inventory_id, new_exchange_rate, currency } = req.body;
+
+      const result = await backupService.recalculateInventoryPrices(
+        inventory_id,
+        new_exchange_rate,
+        req.user.id,
+        currency
+      );
+
+      res.json({
+        success: true,
+        message: 'Precios recalculados exitosamente según el nuevo tipo de cambio.',
+        result
+      });
+    } catch (err) {
+      console.error('❌ Error recalculando precios:', err);
+      return res.status(err.statusCode || 400).json({
+        success: false,
+        code: 'RECALCULATE_PRICES_ERROR',
+        message: err.message || 'Error al recalcular los precios del inventario.',
         timestamp: new Date().toISOString()
       });
     }

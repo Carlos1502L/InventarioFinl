@@ -454,7 +454,7 @@ div:has(> label:empty + span.hidden) {
   }
 
   .mobile-dark-modal input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent),
-  .mobile-dark-modal select:not(.frequency-pill-select),
+  .mobile-dark-modal select:not(.frequency-pill-select):not(.opacity-0),
   .mobile-dark-modal textarea {
     width: 100% !important;
     background-color: #f5f5f5 !important;
@@ -469,6 +469,13 @@ div:has(> label:empty + span.hidden) {
     color: #171717 !important;
     box-shadow: none !important;
     transition: background-color 0.15s ease, border-color 0.15s ease !important;
+  }
+
+  .mobile-dark-modal select.opacity-0 {
+    opacity: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 
   /* Ícono dentro de input/select: posicionado limpiamente dentro de la única casilla */

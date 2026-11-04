@@ -33,6 +33,8 @@ export interface Inventory {
   name: string;
   description: string | null;
   currency: string;
+  exchange_rate?: number;
+  exchange_rate_updated_at?: string | null;
   owner_id: string;
   inventory_type?: InventoryType; // RF-01.1 vs RF-01.2
   yape_phone?: string | null; // RF-06.3

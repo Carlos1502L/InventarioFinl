@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS public.inventories (
     name TEXT NOT NULL,
     description TEXT,
     currency VARCHAR(10) NOT NULL DEFAULT 'PEN',
+    exchange_rate NUMERIC(10, 3) NOT NULL DEFAULT 1.000,
+    exchange_rate_updated_at TIMESTAMPTZ DEFAULT NOW(),
     inventory_type VARCHAR(20) NOT NULL DEFAULT 'BUSINESS' CHECK (inventory_type IN ('PERSONAL', 'BUSINESS')),
     yape_phone TEXT,
     yape_qr_url TEXT,

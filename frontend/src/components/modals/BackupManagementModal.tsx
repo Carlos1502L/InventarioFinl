@@ -658,7 +658,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
     e.target.value = '';
   };
 
-  const handleConfirmRestore = async () => {
+  const handleConfirmRestore = async (conversionOptions?: any) => {
     if (!selectedFile || !currentInventory?.id) return;
 
     setIsRestoring(true);
@@ -675,7 +675,8 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
         },
         body: JSON.stringify({
           inventory_id: currentInventory.id,
-          backup_payload: selectedFile.content
+          backup_payload: selectedFile.content,
+          currency_conversion: conversionOptions
         })
       });
 
@@ -1042,14 +1043,37 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       )}
                     </div>
 
-                    {/* Frecuencia de envío: Cápsulas de selección directa con selector nativo táctil sin cortes */}
+                    {/* Frecuencia de envío: Cápsulas de selección con capa visual centrada y selector nativo superpuesto */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-[#1E3A5F] block">
                         Frecuencia de envío
                       </label>
                       <div className="grid grid-cols-2 gap-2">
                         {/* Campo 1: Predeterminado (Diario, Semanal, Quincenal) */}
-                        <div className="frequency-pill-container">
+                        <div className="relative w-full">
+                          <div
+                            className={`w-full min-h-[44px] px-3.5 py-2 rounded-2xl flex items-center justify-between gap-1.5 transition-all pointer-events-none select-none ${
+                              frequencyOption !== 'custom'
+                                ? 'bg-neutral-100 border border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
+                                : 'bg-neutral-100/70 border border-neutral-200/60 text-neutral-500 font-medium'
+                            }`}
+                          >
+                            <span className="flex-1 text-center text-xs leading-snug truncate">
+                              {frequencyOption === '1'
+                                ? 'Diario (1 día)'
+                                : frequencyOption === '7'
+                                ? 'Semanal (7 días)'
+                                : frequencyOption === '15'
+                                ? 'Quincenal (15 días)'
+                                : 'Predeterminado'}
+                            </span>
+                            <ChevronDown
+                              className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                                frequencyOption !== 'custom' ? 'text-[#1E3A5F]' : 'text-neutral-400'
+                              }`}
+                            />
+                          </div>
+
                           <select
                             value={frequencyOption === 'custom' ? '' : frequencyOption}
                             onChange={(e) => {
@@ -1057,25 +1081,39 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                                 setFrequencyOption(e.target.value as any);
                               }
                             }}
-                            className={`frequency-pill-select transition-all ${
-                              frequencyOption !== 'custom'
-                                ? 'bg-neutral-100 border border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
-                                : 'bg-neutral-100/70 border border-neutral-200/60 text-neutral-500 font-medium'
-                            }`}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 text-base"
                             aria-label="Frecuencia predeterminada"
                           >
-                            <option value="" disabled hidden className="text-neutral-400 bg-white">
+                            <option value="" disabled hidden>
                               Predeterminado
                             </option>
-                            <option value="1" className="text-neutral-900 bg-white">Diario (1 día)</option>
-                            <option value="7" className="text-neutral-900 bg-white">Semanal (7 días)</option>
-                            <option value="15" className="text-neutral-900 bg-white">Quincenal (15 días)</option>
+                            <option value="1">Diario (1 día)</option>
+                            <option value="7">Semanal (7 días)</option>
+                            <option value="15">Quincenal (15 días)</option>
                           </select>
-                          <ChevronDown className={`frequency-pill-icon ${frequencyOption !== 'custom' ? 'text-[#1E3A5F]' : 'text-neutral-400'}`} />
                         </div>
 
                         {/* Campo 2: Personalizado (Abre el scroll wheel / menú nativo para desplazar días) */}
-                        <div className="frequency-pill-container">
+                        <div className="relative w-full">
+                          <div
+                            className={`w-full min-h-[44px] px-3.5 py-2 rounded-2xl flex items-center justify-between gap-1.5 transition-all pointer-events-none select-none ${
+                              frequencyOption === 'custom'
+                                ? 'bg-neutral-100 border border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
+                                : 'bg-neutral-100/70 border border-neutral-200/60 text-neutral-500 font-medium'
+                            }`}
+                          >
+                            <span className="flex-1 text-center text-xs leading-snug truncate">
+                              {frequencyOption === 'custom'
+                                ? `${customDays} ${customDays === 1 ? 'día' : 'días'}`
+                                : 'Personalizado'}
+                            </span>
+                            <ChevronDown
+                              className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                                frequencyOption === 'custom' ? 'text-[#1E3A5F]' : 'text-neutral-400'
+                              }`}
+                            />
+                          </div>
+
                           <select
                             value={frequencyOption === 'custom' ? String(customDays) : ''}
                             onChange={(e) => {
@@ -1085,28 +1123,23 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                                 setFrequencyOption('custom');
                               }
                             }}
-                            className={`frequency-pill-select transition-all ${
-                              frequencyOption === 'custom'
-                                ? 'bg-neutral-100 border border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
-                                : 'bg-neutral-100/70 border border-neutral-200/60 text-neutral-500 font-medium'
-                            }`}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 text-base"
                             aria-label="Días personalizados"
                           >
-                            <option value="" disabled hidden className="text-neutral-400 bg-white">
+                            <option value="" disabled hidden>
                               Personalizado
                             </option>
                             {Array.from({ length: 30 }, (_, i) => i + 1).map((d) => (
-                              <option key={d} value={d} className="text-neutral-900 bg-white">
+                              <option key={d} value={d}>
                                 {d} {d === 1 ? 'día' : 'días'}
                               </option>
                             ))}
-                            <option value="45" className="text-neutral-900 bg-white">45 días</option>
-                            <option value="60" className="text-neutral-900 bg-white">60 días</option>
-                            <option value="90" className="text-neutral-900 bg-white">90 días</option>
-                            <option value="180" className="text-neutral-900 bg-white">180 días</option>
-                            <option value="365" className="text-neutral-900 bg-white">365 días</option>
+                            <option value="45">45 días</option>
+                            <option value="60">60 días</option>
+                            <option value="90">90 días</option>
+                            <option value="180">180 días</option>
+                            <option value="365">365 días</option>
                           </select>
-                          <ChevronDown className={`frequency-pill-icon ${frequencyOption === 'custom' ? 'text-[#1E3A5F]' : 'text-neutral-400'}`} />
                         </div>
                       </div>
                     </div>
@@ -1243,6 +1276,10 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
         fileName={selectedFile?.name || 'backup.json'}
         onConfirm={handleConfirmRestore}
         isLoading={isRestoring}
+        sourceCurrency={selectedFile?.content?.inventory_metadata?.currency || 'PEN'}
+        targetCurrency={currentInventory?.currency || 'PEN'}
+        backupExchangeRate={selectedFile?.content?.inventory_metadata?.exchange_rate}
+        inventoryExchangeRate={currentInventory?.exchange_rate}
       />
     </>
   );

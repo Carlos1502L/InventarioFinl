@@ -1,6 +1,11 @@
 -- ==============================================================================
--- MÓDULO DE RESPALDOS: CONFIGURACIÓN PROGRAMADA Y RESTAURACIÓN ATÓMICA
+-- MÓDULO DE RESPALDOS: CONFIGURACIÓN PROGRAMADA, DIVISAS Y RESTAURACIÓN ATÓMICA
 -- ==============================================================================
+
+-- 0. Columnas de Divisas y Tipo de Cambio en Inventarios (RF-1.1)
+ALTER TABLE public.inventories 
+  ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC(10, 3) NOT NULL DEFAULT 1.000,
+  ADD COLUMN IF NOT EXISTS exchange_rate_updated_at TIMESTAMPTZ DEFAULT NOW();
 
 -- 1. Tabla de Configuración de Respaldos Programados
 CREATE TABLE IF NOT EXISTS public.inventory_backup_settings (
@@ -39,10 +44,11 @@ CREATE POLICY "Owners can upsert their backup settings"
     )
   );
 
--- 2. Función Transaccional de Restauración Atómica de Inventario (ID Remapping & Aislamiento Estricto)
+-- 2. Función Transaccional de Restauración Atómica de Inventario (ID Remapping, Wipe & Restore & Conversión)
 CREATE OR REPLACE FUNCTION public.restore_inventory_backup(
   p_inventory_id UUID,
-  p_backup_payload JSONB
+  p_backup_payload JSONB,
+  p_currency_conversion JSONB DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -71,6 +77,7 @@ DECLARE
   v_mapped_prod_id UUID;
   v_loc_code TEXT;
   v_prod_code TEXT;
+  v_conversion_factor NUMERIC := 1.0;
   
   v_count_cat INT := 0;
   v_count_loc INT := 0;
@@ -114,6 +121,27 @@ BEGIN
   v_product_locations := COALESCE(p_backup_payload->'data'->'product_locations', '[]'::jsonb);
   v_sales := COALESCE(p_backup_payload->'data'->'sales', '[]'::jsonb);
   v_coupons := COALESCE(p_backup_payload->'data'->'coupons', '[]'::jsonb);
+
+  -- Factor de conversión de divisa si fue activado (RF-3.1)
+  IF p_currency_conversion IS NOT NULL 
+     AND (p_currency_conversion->>'enabled')::BOOLEAN = true 
+     AND (p_currency_conversion->>'rate')::NUMERIC > 0 THEN
+    IF p_currency_conversion->>'operation' = 'DIVIDE' THEN
+      v_conversion_factor := 1.0 / (p_currency_conversion->>'rate')::NUMERIC;
+    ELSE
+      v_conversion_factor := (p_currency_conversion->>'rate')::NUMERIC;
+    END IF;
+  END IF;
+
+  -- RF-4.1: Modo Wipe & Restore (Reemplazo Total Limpio)
+  -- Purgar en cascada únicamente los registros asociados al inventario destino
+  DELETE FROM public.sale_items WHERE sale_id IN (SELECT id FROM public.sales WHERE inventory_id = p_inventory_id);
+  DELETE FROM public.sales WHERE inventory_id = p_inventory_id;
+  DELETE FROM public.product_locations WHERE inventory_id = p_inventory_id OR product_id IN (SELECT id FROM public.products WHERE inventory_id = p_inventory_id);
+  DELETE FROM public.products WHERE inventory_id = p_inventory_id;
+  DELETE FROM public.categories WHERE inventory_id = p_inventory_id;
+  DELETE FROM public.locations WHERE inventory_id = p_inventory_id;
+  DELETE FROM public.coupons WHERE inventory_id = p_inventory_id;
 
   -- 3. Tablas temporales en memoria para Remapeo Dinámico de Identificadores (RF-2)
   CREATE TEMPORARY TABLE IF NOT EXISTS _restore_cat_map (
@@ -250,8 +278,8 @@ BEGIN
       COALESCE(NULLIF(TRIM(v_elem->>'name'), ''), 'Producto Restaurado'),
       v_prod_code,
       NULLIF(TRIM(v_elem->>'description'), ''),
-      GREATEST(0.00, COALESCE((v_elem->>'price')::NUMERIC, 0.00)),
-      GREATEST(0.00, COALESCE((v_elem->>'cost_price')::NUMERIC, 0.00)),
+      ROUND(GREATEST(0.00, COALESCE((v_elem->>'price')::NUMERIC, 0.00)) * v_conversion_factor, 2),
+      ROUND(GREATEST(0.00, COALESCE((v_elem->>'cost_price')::NUMERIC, 0.00)) * v_conversion_factor, 2),
       GREATEST(0.00, COALESCE((v_elem->>'markup_percentage')::NUMERIC, 0.00)),
       CASE WHEN v_elem->>'unit_type' = 'BOX' THEN 'BOX' ELSE 'UNIT' END,
       (v_elem->>'units_per_box')::INTEGER,
@@ -347,7 +375,7 @@ BEGIN
       v_new_sale_id,
       p_inventory_id,
       COALESCE(v_elem->>'seller_email', 'backup_restored@system.local'),
-      GREATEST(0.00, COALESCE((v_elem->>'total_amount')::NUMERIC, 0.00)),
+      ROUND(GREATEST(0.00, COALESCE((v_elem->>'total_amount')::NUMERIC, 0.00)) * v_conversion_factor, 2),
       COALESCE(v_elem->>'payment_method', 'OTHER'),
       v_elem->>'customer_name',
       v_elem->>'customer_contact',
@@ -382,9 +410,16 @@ BEGIN
           COALESCE(v_item->>'product_name', 'Producto Restaurado'),
           COALESCE(v_item->>'product_code', 'SKU-RESTORED'),
           GREATEST(1, COALESCE((v_item->>'quantity')::NUMERIC, (v_item->>'quantity_units')::NUMERIC, 1)),
-          GREATEST(0.00, COALESCE((v_item->>'unit_price')::NUMERIC, 0.00)),
-          GREATEST(0.00, COALESCE((v_item->>'cost_price')::NUMERIC, 0.00)),
-          GREATEST(0.00, COALESCE((v_item->>'subtotal')::NUMERIC, (v_item->>'unit_price')::NUMERIC * COALESCE((v_item->>'quantity')::NUMERIC, 1))),
+          ROUND(GREATEST(0.00, COALESCE((v_item->>'unit_price')::NUMERIC, 0.00)) * v_conversion_factor, 2),
+          ROUND(GREATEST(0.00, COALESCE((v_item->>'cost_price')::NUMERIC, 0.00)) * v_conversion_factor, 2),
+          ROUND(GREATEST(0.00, COALESCE((v_item->>'subtotal')::NUMERIC, (v_item->>'unit_price')::NUMERIC * COALESCE((v_item->>'quantity')::NUMERIC, 1))) * v_conversion_factor, 2),
+          COALESCE((v_elem->>'created_at')::TIMESTAMPTZ, NOW())
+        );
+      END LOOP;
+    END IF;
+
+    v_count_sales := v_count_sales + 1;
+  END LOOP;
           COALESCE((v_elem->>'created_at')::TIMESTAMPTZ, NOW())
         );
       END LOOP;
@@ -471,6 +506,93 @@ BEGIN
       'sales', v_count_sales,
       'coupons', v_count_coupons
     )
+  );
+END;
+$$;
+
+-- ==============================================================================
+-- 3. Función Transaccional para Recalcular Precios por Tipo de Cambio (RF-1.2)
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.recalculate_inventory_prices(
+  p_inventory_id UUID,
+  p_new_rate NUMERIC,
+  p_user_id UUID DEFAULT NULL,
+  p_new_currency TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_prev_rate NUMERIC;
+  v_prev_currency TEXT;
+  v_ratio NUMERIC;
+  v_updated_count INT := 0;
+BEGIN
+  -- 1. Obtener la tasa y moneda previas del inventario
+  SELECT exchange_rate, currency 
+  INTO v_prev_rate, v_prev_currency
+  FROM public.inventories
+  WHERE id = p_inventory_id;
+  
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Inventario % no encontrado.', p_inventory_id;
+  END IF;
+
+  v_prev_rate := COALESCE(NULLIF(v_prev_rate, 0), 1.000);
+  p_new_rate := COALESCE(NULLIF(p_new_rate, 0), 1.000);
+
+  -- Factor de conversión: (Nueva Tasa / Tasa Anterior)
+  v_ratio := p_new_rate / v_prev_rate;
+
+  -- 2. Recalcular precios de venta y costos de productos activos en el inventario destino
+  UPDATE public.products
+  SET 
+    price = ROUND(price * v_ratio, 2),
+    cost_price = ROUND(cost_price * v_ratio, 2),
+    updated_at = NOW()
+  WHERE inventory_id = p_inventory_id;
+  
+  GET DIAGNOSTICS v_updated_count = ROW_COUNT;
+
+  -- 3. Actualizar la tasa y moneda en inventories
+  UPDATE public.inventories
+  SET 
+    exchange_rate = p_new_rate,
+    currency = COALESCE(NULLIF(p_new_currency, ''), currency),
+    exchange_rate_updated_at = NOW(),
+    updated_at = NOW()
+  WHERE id = p_inventory_id;
+
+  -- 4. Registrar en audit_logs
+  INSERT INTO public.audit_logs (
+    id,
+    inventory_id,
+    user_id,
+    user_email,
+    action_type,
+    details,
+    created_at
+  )
+  VALUES (
+    gen_random_uuid(),
+    p_inventory_id,
+    p_user_id,
+    'currency_system',
+    'BULK_PRICE_CURRENCY_UPDATE',
+    FORMAT('Ajuste masivo de precios por tipo de cambio de %s a %s (%s). %s productos actualizados.', 
+           ROUND(v_prev_rate, 3), ROUND(p_new_rate, 3), COALESCE(p_new_currency, v_prev_currency), v_updated_count),
+    NOW()
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'updated_products', v_updated_count,
+    'previous_rate', v_prev_rate,
+    'new_rate', p_new_rate,
+    'currency', COALESCE(p_new_currency, v_prev_currency),
+    'ratio', v_ratio
   );
 END;
 $$;

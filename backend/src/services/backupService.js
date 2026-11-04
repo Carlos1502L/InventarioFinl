@@ -84,6 +84,8 @@ export class BackupService {
         name: inv.name,
         inventory_type: inv.inventory_type || 'BUSINESS',
         currency: inv.currency || 'PEN',
+        exchange_rate: Number(inv.exchange_rate) || 1.000,
+        exported_at: new Date().toISOString(),
         settings: {
           description: inv.description,
           payment_instructions: inv.payment_instructions,
@@ -172,7 +174,7 @@ export class BackupService {
    * @param {string} userId - ID del usuario que ejecuta la restauración
    * @returns {Promise<Object>}
    */
-  async restoreInventoryData(inventoryId, backupPayload, userId) {
+  async restoreInventoryData(inventoryId, backupPayload, userId, currencyConversion = null) {
     if (!backupPayload || typeof backupPayload !== 'object') {
       throw new Error('Estructura de respaldo inválida.');
     }
@@ -195,6 +197,27 @@ export class BackupService {
       coupons: 0
     };
 
+    // Factor de conversión de divisa (RF-3.1)
+    let convFactor = 1;
+    if (currencyConversion && currencyConversion.enabled && Number(currencyConversion.rate) > 0) {
+      const rateNum = Number(currencyConversion.rate);
+      if (currencyConversion.operation === 'DIVIDE') {
+        convFactor = 1 / rateNum;
+      } else if (currencyConversion.operation === 'MULTIPLY') {
+        convFactor = rateNum;
+      } else {
+        const src = (currencyConversion.source_currency || '').toUpperCase();
+        const tgt = (currencyConversion.target_currency || '').toUpperCase();
+        if (src === 'PEN' && (tgt === 'USD' || tgt === 'EUR')) {
+          convFactor = 1 / rateNum;
+        } else if ((src === 'USD' || src === 'EUR') && tgt === 'PEN') {
+          convFactor = rateNum;
+        } else {
+          convFactor = 1 / rateNum;
+        }
+      }
+    }
+
     // Diccionarios en memoria para el remapeo dinámico de llaves primarias y foráneas (RF-2)
     const categoryIdMap = new Map();
     const locationIdMap = new Map();
@@ -213,47 +236,62 @@ export class BackupService {
 
     try {
       // =========================================================================
+      // RF-4.1: MODO WIPE & RESTORE (REEMPLAZO TOTAL LIMPIO)
+      // Purgar en cascada únicamente los registros asociados al inventario destino
+      // =========================================================================
+      const { data: targetSales } = await supabaseAdmin
+        .from('sales')
+        .select('id')
+        .eq('inventory_id', inventoryId);
+      const targetSaleIds = (targetSales || []).map((s) => s.id);
+
+      if (targetSaleIds.length > 0) {
+        await supabaseAdmin.from('sale_items').delete().in('sale_id', targetSaleIds);
+        await supabaseAdmin.from('sales').delete().eq('inventory_id', inventoryId);
+      }
+
+      const { data: targetProds } = await supabaseAdmin
+        .from('products')
+        .select('id')
+        .eq('inventory_id', inventoryId);
+      const targetProdIds = (targetProds || []).map((p) => p.id);
+
+      if (targetProdIds.length > 0) {
+        await supabaseAdmin.from('product_locations').delete().in('product_id', targetProdIds);
+      }
+      try {
+        await supabaseAdmin.from('product_locations').delete().eq('inventory_id', inventoryId);
+      } catch (_) {}
+
+      await supabaseAdmin.from('products').delete().eq('inventory_id', inventoryId);
+      await supabaseAdmin.from('categories').delete().eq('inventory_id', inventoryId);
+      await supabaseAdmin.from('locations').delete().eq('inventory_id', inventoryId);
+      await supabaseAdmin.from('coupons').delete().eq('inventory_id', inventoryId);
+
+      // =========================================================================
       // A. CATEGORÍAS (RF-2: Nuevos UUIDs aislados al target_inventory_id)
       // =========================================================================
       if (Array.isArray(data.categories) && data.categories.length > 0) {
-        const { data: existingCats, error: getCatErr } = await supabaseAdmin
-          .from('categories')
-          .select('id, name')
-          .eq('inventory_id', inventoryId);
-
-        if (getCatErr) {
-          throw new Error(`Error consultando categorías existentes: ${getCatErr.message}`);
-        }
-
-        const catByName = new Map((existingCats || []).map((c) => [(c.name || '').trim().toLowerCase(), c.id]));
-
         for (const cat of data.categories) {
           if (!cat || !cat.name || !cat.name.trim()) continue;
-          const normName = cat.name.trim().toLowerCase();
-          let targetCatId = catByName.get(normName);
+          const targetCatId = crypto.randomUUID();
 
-          if (!targetCatId) {
-            targetCatId = crypto.randomUUID();
-            const { error: catErr } = await supabaseAdmin.from('categories').insert({
-              id: targetCatId,
-              inventory_id: inventoryId,
-              name: cat.name.trim(),
-              color: cat.color || '#3B82F6',
-              description: cat.description || null,
-              created_at: cat.created_at || new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
+          const { error: catErr } = await supabaseAdmin.from('categories').insert({
+            id: targetCatId,
+            inventory_id: inventoryId,
+            name: cat.name.trim(),
+            color: cat.color || '#3B82F6',
+            description: cat.description || null,
+            created_at: cat.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
 
-            if (catErr) {
-              throw new Error(`Error al insertar categoría "${cat.name}": ${catErr.message}`);
-            }
-
-            catByName.set(normName, targetCatId);
-            insertedRecords.categories.push(targetCatId);
-            restoredCounts.categories++;
-          } else {
-            restoredCounts.categories++;
+          if (catErr) {
+            throw new Error(`Error al insertar categoría "${cat.name}": ${catErr.message}`);
           }
+
+          insertedRecords.categories.push(targetCatId);
+          restoredCounts.categories++;
 
           if (cat.id) {
             categoryIdMap.set(cat.id, targetCatId);
@@ -265,48 +303,27 @@ export class BackupService {
       // B. UBICACIONES (RF-2: Mapeo independiente y nuevos UUIDs en destino)
       // =========================================================================
       if (Array.isArray(data.locations) && data.locations.length > 0) {
-        const { data: existingLocs, error: getLocErr } = await supabaseAdmin
-          .from('locations')
-          .select('id, name, code')
-          .eq('inventory_id', inventoryId);
-
-        if (getLocErr) {
-          throw new Error(`Error consultando ubicaciones existentes: ${getLocErr.message}`);
-        }
-
-        const locByCode = new Map((existingLocs || []).map((l) => [(l.code || '').trim().toLowerCase(), l.id]));
-        const locByName = new Map((existingLocs || []).map((l) => [(l.name || '').trim().toLowerCase(), l.id]));
-
         for (const loc of data.locations) {
           if (!loc || !loc.name || !loc.name.trim()) continue;
-          const normCode = (loc.code || loc.qr_code || '').trim().toLowerCase();
-          const normName = loc.name.trim().toLowerCase();
-          let targetLocId = (normCode ? locByCode.get(normCode) : null) || locByName.get(normName);
+          const targetLocId = crypto.randomUUID();
+          const safeCode = loc.code || loc.qr_code || `LOC-${targetLocId.substring(0, 6).toUpperCase()}`;
 
-          if (!targetLocId) {
-            targetLocId = crypto.randomUUID();
-            const safeCode = loc.code || loc.qr_code || `LOC-${targetLocId.substring(0, 6).toUpperCase()}`;
-            const { error: locErr } = await supabaseAdmin.from('locations').insert({
-              id: targetLocId,
-              inventory_id: inventoryId,
-              name: loc.name.trim(),
-              code: safeCode,
-              description: loc.description || null,
-              created_at: loc.created_at || new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
+          const { error: locErr } = await supabaseAdmin.from('locations').insert({
+            id: targetLocId,
+            inventory_id: inventoryId,
+            name: loc.name.trim(),
+            code: safeCode,
+            description: loc.description || null,
+            created_at: loc.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
 
-            if (locErr) {
-              throw new Error(`Error insertando ubicación "${loc.name}": ${locErr.message}`);
-            }
-
-            if (normCode) locByCode.set(normCode, targetLocId);
-            locByName.set(normName, targetLocId);
-            insertedRecords.locations.push(targetLocId);
-            restoredCounts.locations++;
-          } else {
-            restoredCounts.locations++;
+          if (locErr) {
+            throw new Error(`Error insertando ubicación "${loc.name}": ${locErr.message}`);
           }
+
+          insertedRecords.locations.push(targetLocId);
+          restoredCounts.locations++;
 
           if (loc.id) {
             locationIdMap.set(loc.id, targetLocId);
@@ -315,41 +332,35 @@ export class BackupService {
       }
 
       // =========================================================================
-      // C. PRODUCTOS (RF-2: Remapeo estricto con nuevos UUIDs al target_inventory_id)
+      // C. PRODUCTOS (RF-2: Remapeo estricto con nuevos UUIDs al target_inventory_id y conversión de divisa)
       // =========================================================================
       if (Array.isArray(data.products) && data.products.length > 0) {
-        const { data: existingProds, error: getProdErr } = await supabaseAdmin
-          .from('products')
-          .select('id, code')
-          .eq('inventory_id', inventoryId);
-
-        if (getProdErr) {
-          throw new Error(`Error consultando productos existentes: ${getProdErr.message}`);
-        }
-
-        const prodByCode = new Map((existingProds || []).map((p) => [(p.code || '').trim().toLowerCase(), p.id]));
-
         for (const prod of data.products) {
           if (!prod) continue;
-          const newProdId = crypto.randomUUID();
+          const targetProdId = crypto.randomUUID();
           let rawCode = (prod.sku || prod.code || '').trim();
           if (!rawCode) {
-            rawCode = `SKU-${newProdId.substring(0, 8).toUpperCase()}`;
+            rawCode = `SKU-${targetProdId.substring(0, 8).toUpperCase()}`;
           }
-          const normCode = rawCode.toLowerCase();
-          let targetProdId = prodByCode.get(normCode);
 
           // Remapeo de llaves foráneas a las nuevas entidades del inventario destino
           const mappedCategoryId = prod.category_id ? (categoryIdMap.get(prod.category_id) || null) : null;
           const mappedLocationId = prod.location_id ? (locationIdMap.get(prod.location_id) || null) : null;
 
+          // Conversión de divisa matemática (RF-3.1)
+          const rawPrice = Math.max(0, Number(prod.price) || 0);
+          const rawCost = Math.max(0, Number(prod.cost_price) || 0);
+          const finalPrice = convFactor !== 1 ? Math.round(rawPrice * convFactor * 100) / 100 : rawPrice;
+          const finalCost = convFactor !== 1 ? Math.round(rawCost * convFactor * 100) / 100 : rawCost;
+
           const productPayload = {
+            id: targetProdId,
             inventory_id: inventoryId,
             name: (prod.name || 'Producto Restaurado').trim(),
             code: rawCode,
             description: prod.description || null,
-            price: Math.max(0, Number(prod.price) || 0),
-            cost_price: Math.max(0, Number(prod.cost_price) || 0),
+            price: finalPrice,
+            cost_price: finalCost,
             markup_percentage: Math.max(0, Number(prod.markup_percentage) || 0),
             unit_type: prod.unit_type === 'BOX' ? 'BOX' : 'UNIT',
             units_per_box: prod.units_per_box ? Number(prod.units_per_box) : null,
@@ -359,40 +370,17 @@ export class BackupService {
             location_id: mappedLocationId,
             images: Array.isArray(prod.images) ? prod.images : [],
             status: prod.is_active === false || prod.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+            created_at: prod.created_at || new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
 
-          if (targetProdId) {
-            // Actualiza el producto existente dentro de ESTE inventario destino únicamente
-            const { error: updErr } = await supabaseAdmin
-              .from('products')
-              .update(productPayload)
-              .eq('id', targetProdId)
-              .eq('inventory_id', inventoryId);
-
-            if (updErr) {
-              throw new Error(`Error actualizando producto "${productPayload.name}": ${updErr.message}`);
-            }
-            restoredCounts.products++;
-          } else {
-            // Crea un producto nuevo con UUID independiente para ESTE inventario destino
-            targetProdId = newProdId;
-            const { error: insErr } = await supabaseAdmin
-              .from('products')
-              .insert({
-                ...productPayload,
-                id: targetProdId,
-                created_at: prod.created_at || new Date().toISOString()
-              });
-
-            if (insErr) {
-              throw new Error(`Error insertando producto "${productPayload.name}": ${insErr.message}`);
-            }
-
-            insertedRecords.products.push(targetProdId);
-            prodByCode.set(normCode, targetProdId);
-            restoredCounts.products++;
+          const { error: insErr } = await supabaseAdmin.from('products').insert(productPayload);
+          if (insErr) {
+            throw new Error(`Error insertando producto "${productPayload.name}": ${insErr.message}`);
           }
+
+          insertedRecords.products.push(targetProdId);
+          restoredCounts.products++;
 
           if (prod.id) {
             productIdMap.set(prod.id, targetProdId);
@@ -434,19 +422,22 @@ export class BackupService {
       }
 
       // =========================================================================
-      // E. VENTAS Y DETALLE (Registros con UUIDs nuevos aislados)
+      // E. VENTAS Y DETALLE (Registros con UUIDs nuevos aislados y conversión)
       // =========================================================================
       if (Array.isArray(data.sales) && data.sales.length > 0) {
         for (const sale of data.sales) {
           if (!sale) continue;
           const targetSaleId = crypto.randomUUID();
+          const rawTotal = Math.max(0, Number(sale.total_amount) || 0);
+          const finalTotal = convFactor !== 1 ? Math.round(rawTotal * convFactor * 100) / 100 : rawTotal;
+
           const { error: saleErr } = await supabaseAdmin
             .from('sales')
             .insert({
               id: targetSaleId,
               inventory_id: inventoryId,
               seller_email: sale.seller_email || 'restored@system.local',
-              total_amount: Math.max(0, Number(sale.total_amount) || 0),
+              total_amount: finalTotal,
               payment_method: sale.payment_method || 'OTHER',
               customer_name: sale.customer_name || null,
               customer_contact: sale.customer_contact || null,
@@ -465,6 +456,14 @@ export class BackupService {
             for (const item of sale.items) {
               const targetProdId = item.product_id ? (productIdMap.get(item.product_id) || null) : null;
               const targetItemId = crypto.randomUUID();
+              const rawUnitPrice = Math.max(0, Number(item.unit_price) || 0);
+              const rawCostPrice = Math.max(0, Number(item.cost_price) || 0);
+              const rawSubtotal = Math.max(0, Number(item.subtotal) || 0);
+
+              const finalUnitPrice = convFactor !== 1 ? Math.round(rawUnitPrice * convFactor * 100) / 100 : rawUnitPrice;
+              const finalCostPrice = convFactor !== 1 ? Math.round(rawCostPrice * convFactor * 100) / 100 : rawCostPrice;
+              const finalSubtotal = convFactor !== 1 ? Math.round(rawSubtotal * convFactor * 100) / 100 : rawSubtotal;
+
               const { error: itemErr } = await supabaseAdmin.from('sale_items').insert({
                 id: targetItemId,
                 sale_id: targetSaleId,
@@ -472,9 +471,9 @@ export class BackupService {
                 product_name: item.product_name || 'Producto Restaurado',
                 product_code: item.product_code || 'SKU-RESTORED',
                 quantity: Math.max(1, Number(item.quantity || item.quantity_units || 1)),
-                unit_price: Math.max(0, Number(item.unit_price) || 0),
-                cost_price: Math.max(0, Number(item.cost_price) || 0),
-                subtotal: Math.max(0, Number(item.subtotal) || 0),
+                unit_price: finalUnitPrice,
+                cost_price: finalCostPrice,
+                subtotal: finalSubtotal,
                 created_at: sale.created_at || new Date().toISOString()
               });
 
@@ -496,19 +495,16 @@ export class BackupService {
           if (!c || !c.code) continue;
           const { error: cErr } = await supabaseAdmin
             .from('coupons')
-            .upsert(
-              {
-                inventory_id: inventoryId,
-                code: c.code.trim().toUpperCase(),
-                discount_type: c.discount_type || 'PERCENTAGE',
-                discount_value: Math.max(0, Number(c.discount_value) || 0),
-                status: c.is_active === false || c.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
-                description: c.description || null,
-                created_at: c.created_at || new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              },
-              { onConflict: 'inventory_id, code' }
-            );
+            .insert({
+              inventory_id: inventoryId,
+              code: c.code.trim().toUpperCase(),
+              discount_type: c.discount_type || 'PERCENTAGE',
+              discount_value: Math.max(0, Number(c.discount_value) || 0),
+              status: c.is_active === false || c.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+              description: c.description || null,
+              created_at: c.created_at || new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
 
           if (cErr) {
             throw new Error(`Error restaurando cupón "${c.code}": ${cErr.message}`);
@@ -525,13 +521,18 @@ export class BackupService {
 
       // Registrar auditoría de la restauración de forma segura
       try {
+        let details = `Copia de seguridad restaurada exitosamente (Wipe & Restore: ${restoredCounts.products} productos, ${restoredCounts.categories} categorías, ${restoredCounts.locations} ubicaciones)`;
+        if (convFactor !== 1) {
+          details += ` [Conversión de divisa aplicada: factor ${convFactor.toFixed(4)}]`;
+        }
+
         await supabaseAdmin.from('audit_logs').insert({
           id: crypto.randomUUID(),
           inventory_id: inventoryId,
           user_id: userId || null,
           user_email: 'backup_system',
           action_type: 'UPDATE',
-          details: `Copia de seguridad restaurada exitosamente (${restoredCounts.products} productos, ${restoredCounts.categories} categorías, ${restoredCounts.locations} ubicaciones)`
+          details
         });
       } catch (auditErr) {
         console.warn('⚠️ Error al registrar auditoría de restore:', auditErr.message);
@@ -539,8 +540,9 @@ export class BackupService {
 
       return {
         success: true,
-        message: 'Copia de seguridad restaurada como copia independiente exitosamente.',
-        restored_counts: restoredCounts
+        message: 'Copia de seguridad restaurada con reemplazo total (Wipe & Restore) exitosamente.',
+        restored_counts: restoredCounts,
+        currency_converted: convFactor !== 1
       };
     } catch (err) {
       console.error('❌ Error durante restoreInventoryData, ejecutando ROLLBACK en target_inventory_id:', err.message);
@@ -578,6 +580,110 @@ export class BackupService {
 
       throw new Error(`Fallo en la restauración: ${err.message}. Se ejecutó rollback preventivo en el inventario.`);
     }
+  }
+
+  /**
+   * Recalcula masivamente los precios de venta y costos de los productos de un inventario
+   * en función de la variación de la tasa de cambio (RF-1.2).
+   *
+   * @param {string} inventoryId - ID del inventario destino
+   * @param {number} newRate - Nueva tasa de cambio operativa
+   * @param {string} userId - ID del usuario que ejecuta la acción
+   * @param {string} [newCurrency] - Nueva moneda si también se actualizó
+   * @returns {Promise<Object>}
+   */
+  async recalculateInventoryPrices(inventoryId, newRate, userId, newCurrency = null) {
+    if (!inventoryId) throw new Error('ID de inventario requerido.');
+    const targetRate = Number(newRate);
+    if (!targetRate || targetRate <= 0) {
+      throw new Error('La tasa de cambio debe ser un número positivo mayor a 0.');
+    }
+
+    const { data: inv, error: invErr } = await supabaseAdmin
+      .from('inventories')
+      .select('id, name, currency, exchange_rate')
+      .eq('id', inventoryId)
+      .single();
+
+    if (invErr || !inv) {
+      throw new Error(`Inventario no encontrado: ${invErr?.message || ''}`);
+    }
+
+    const prevRate = Number(inv.exchange_rate) || 1.000;
+    const ratio = targetRate / prevRate;
+
+    // 1. Recalcular precios de venta y costos de productos activos
+    const { data: prods, error: pErr } = await supabaseAdmin
+      .from('products')
+      .select('id, name, price, cost_price')
+      .eq('inventory_id', inventoryId);
+
+    if (pErr) throw new Error(`Error consultando productos: ${pErr.message}`);
+
+    let updatedCount = 0;
+    if (Array.isArray(prods) && prods.length > 0) {
+      for (const p of prods) {
+        const newPrice = Math.round((Number(p.price) || 0) * ratio * 100) / 100;
+        const newCost = Math.round((Number(p.cost_price) || 0) * ratio * 100) / 100;
+
+        const { error: updErr } = await supabaseAdmin
+          .from('products')
+          .update({
+            price: newPrice,
+            cost_price: newCost,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', p.id)
+          .eq('inventory_id', inventoryId);
+
+        if (!updErr) {
+          updatedCount++;
+        }
+      }
+    }
+
+    // 2. Actualizar inventario con nueva tasa y fecha
+    const invUpdate = {
+      exchange_rate: targetRate,
+      exchange_rate_updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    if (newCurrency && ['PEN', 'USD', 'EUR'].includes(newCurrency)) {
+      invUpdate.currency = newCurrency;
+    }
+
+    const { error: updInvErr } = await supabaseAdmin
+      .from('inventories')
+      .update(invUpdate)
+      .eq('id', inventoryId);
+
+    if (updInvErr) throw new Error(`Error actualizando tasa del inventario: ${updInvErr.message}`);
+
+    const finalCurrency = newCurrency || inv.currency || 'PEN';
+
+    // 3. Registrar en audit_logs
+    try {
+      await supabaseAdmin.from('audit_logs').insert({
+        id: crypto.randomUUID(),
+        inventory_id: inventoryId,
+        user_id: userId || null,
+        user_email: 'currency_system',
+        action_type: 'BULK_PRICE_CURRENCY_UPDATE',
+        details: `Ajuste masivo de precios por tipo de cambio de ${prevRate.toFixed(3)} a ${targetRate.toFixed(3)} (${finalCurrency}). ${updatedCount} productos actualizados.`,
+        created_at: new Date().toISOString()
+      });
+    } catch (auditErr) {
+      console.warn('⚠️ Error al registrar auditoría de recálculo:', auditErr.message);
+    }
+
+    return {
+      success: true,
+      updated_products: updatedCount,
+      previous_rate: prevRate,
+      new_rate: targetRate,
+      currency: finalCurrency,
+      ratio
+    };
   }
 }
 

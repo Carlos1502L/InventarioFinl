@@ -15,7 +15,8 @@ import {
   Sliders,
   Printer,
   Ticket,
-  Database
+  Database,
+  Coins
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../services/supabase';
@@ -24,6 +25,8 @@ import { BatchLocationsPrintModal } from '../components/modals/BatchLocationsPri
 import { CouponsManagementModal } from '../components/modals/CouponsManagementModal';
 import { BackupManagementCard } from '../components/settings/BackupManagementCard';
 import { BackupManagementModal } from '../components/modals/BackupManagementModal';
+import { CurrencyExchangeCard } from '../components/settings/CurrencyExchangeCard';
+import { CurrencyExchangeModal } from '../components/modals/CurrencyExchangeModal';
 
 interface SettingsPageProps {
   onOpenCategories: () => void;
@@ -45,6 +48,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [batchLocationsOpen, setBatchLocationsOpen] = useState(false);
   const [couponsOpen, setCouponsOpen] = useState(false);
   const [backupModalOpen, setBackupModalOpen] = useState(false);
+  const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
 
   const isOwner =
     currentInventory?.role?.toLowerCase() === 'owner' ||
@@ -129,6 +133,26 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   </p>
                   <p className="text-xs text-neutral-400 truncate">
                     Nombre, moneda ({currentInventory?.currency || 'PEN'}) y tipo
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+            </button>
+
+            {/* Moneda y Tipo de Cambio (Móvil) */}
+            <button
+              type="button"
+              onClick={() => setCurrencyModalOpen(true)}
+              className="w-full py-4 flex items-center justify-between gap-3 text-left active:opacity-70 transition-opacity"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <Coins className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-neutral-900 truncate">
+                    Moneda y Tipo de Cambio
+                  </p>
+                  <p className="text-xs text-neutral-400 truncate">
+                    {currentInventory?.currency || 'PEN'} · Tasa: {Number(currentInventory?.exchange_rate || 1).toFixed(3)}
                   </p>
                 </div>
               </div>
@@ -385,6 +409,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       </div>
 
       {/* =========================================================
+          BLOQUE: MONEDA & TIPO DE CAMBIO (RF-1.1 & RF-1.2)
+         ========================================================= */}
+      <CurrencyExchangeCard
+        inventory={currentInventory}
+        onUpdated={refreshInventories}
+      />
+
+      {/* =========================================================
           BLOQUE 2: OPERACIONES COMERCIALES (SÓLO SI ES NEGOCIO)
          ========================================================= */}
       {isBusiness && (
@@ -607,6 +639,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           onClose={() => setCouponsOpen(false)}
         />
       )}
+
+      {/* Modal Móvil de Moneda y Tipo de Cambio */}
+      <CurrencyExchangeModal
+        isOpen={currencyModalOpen}
+        onClose={() => setCurrencyModalOpen(false)}
+        inventory={currentInventory}
+        onUpdated={refreshInventories}
+      />
 
       {/* Modal Móvil de Copias de Seguridad */}
       {isOwner && (

@@ -54,5 +54,18 @@ export const restoreBackupSchema = z.object({
       coupons: z.array(z.any()).optional().default([]),
       audit_logs: z.array(z.any()).optional().default([])
     })
-  })
+  }),
+  currency_conversion: z.object({
+    enabled: z.boolean().default(false),
+    rate: z.number().positive().optional(),
+    operation: z.enum(['DIVIDE', 'MULTIPLY']).optional(),
+    source_currency: z.string().optional(),
+    target_currency: z.string().optional()
+  }).optional()
+});
+
+export const recalculatePricesSchema = z.object({
+  inventory_id: z.string().uuid({ message: 'El ID de inventario debe ser un UUID válido.' }),
+  new_exchange_rate: z.number().positive({ message: 'La nueva tasa de cambio debe ser un número positivo mayor a 0.' }),
+  currency: z.enum(['PEN', 'USD', 'EUR']).optional()
 });
