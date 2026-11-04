@@ -197,12 +197,15 @@ export const HomePage: React.FC<HomePageProps> = ({
     setPeekCardId(null);
   }, [currentInventory?.id]);
 
-  // Construcción de las tarjetas apiladas (Apple Wallet Card Stack)
+  // Construcción de las tarjetas apiladas (Apple Wallet Card Stack) con estilo Glassmorphism
   const walletCards = useMemo(() => {
     const themes = [
-      'bg-neutral-900 border border-neutral-800',
-      'bg-neutral-800 border border-neutral-700/90',
-      'bg-zinc-800 border border-zinc-700/90'
+      // Glassmorphism 1: Frost Ice con borde translúcido y relieve luminoso
+      'bg-white/[0.09] backdrop-blur-2xl border border-white/20 shadow-[0_16px_36px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.35),inset_0_-1px_1px_rgba(0,0,0,0.2)]',
+      // Glassmorphism 2: Frost Cobalt con halo sutil zafiro
+      'bg-sky-500/[0.09] backdrop-blur-2xl border border-sky-300/25 shadow-[0_16px_36px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.35),inset_0_-1px_1px_rgba(0,0,0,0.2)]',
+      // Glassmorphism 3: Frost Emerald con halo sutil esmeralda
+      'bg-emerald-500/[0.09] backdrop-blur-2xl border border-emerald-300/25 shadow-[0_16px_36px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.35),inset_0_-1px_1px_rgba(0,0,0,0.2)]'
     ];
 
     const list = inventories.length > 0 ? inventories : currentInventory ? [currentInventory] : [];
@@ -260,11 +263,15 @@ export const HomePage: React.FC<HomePageProps> = ({
         }}
       >
         
-        {/* CAPA 1: Header Oscuro Principal (Fijo / shrink-0) */}
-        <header className="shrink-0 bg-neutral-950 text-white rounded-b-[2.5rem] z-20 select-none px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-6 transition-all duration-300">
+        {/* CAPA 1: Header Oscuro Principal (Fijo / shrink-0) con Iluminación Ambiental Glassmorphism */}
+        <header className="shrink-0 bg-neutral-950 text-white rounded-b-[2.5rem] z-20 select-none px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-6 transition-all duration-300 relative overflow-hidden">
+          {/* Orbes de luz ambiental de fondo que potencian la refracción del Glassmorphism */}
+          <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full bg-sky-500/20 blur-3xl pointer-events-none" />
+          <div className="absolute top-1/4 -left-12 w-56 h-56 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-8 right-1/4 w-48 h-48 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
           
           {/* Fila superior: Bienvenida + Correo y Acciones mínimas (Cámara y +) */}
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 relative z-10">
             <div className="min-w-0">
               <h1 className="text-lg font-semibold tracking-tight text-white truncate">
                 Hola {displayName}
@@ -340,30 +347,33 @@ export const HomePage: React.FC<HomePageProps> = ({
                   }}
                   className={`absolute inset-0 ${card.tema} rounded-3xl px-5 ${
                     isFront ? 'pt-4 pb-5' : 'pt-2.5 pb-5'
-                  } shadow-2xl select-none transition-all duration-300 ease-out flex flex-col justify-between ${
+                  } shadow-2xl select-none transition-all duration-300 ease-out flex flex-col justify-between overflow-hidden ${
                     isFront
-                      ? 'opacity-100 brightness-100 cursor-default'
+                      ? 'opacity-100 brightness-100 cursor-default ring-1 ring-white/25'
                       : isPeeking
-                        ? 'opacity-95 brightness-95 cursor-pointer ring-1 ring-white/25'
-                        : 'opacity-80 brightness-75 hover:opacity-90 cursor-pointer'
+                        ? 'opacity-95 brightness-100 cursor-pointer ring-1 ring-white/40 shadow-[0_20px_45px_rgba(0,0,0,0.6)]'
+                        : 'opacity-85 brightness-90 hover:opacity-95 cursor-pointer'
                   }`}
                 >
+                  {/* Reflejo especular diagonal característico de cristal pulido (Glass Specular Sheen) */}
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/[0.14] via-transparent to-transparent pointer-events-none" />
+
                   {/* Fila superior de la tarjeta: Punto indicador Online/Offline + Nombre del inventario + Chip de Tipo */}
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3 relative z-10">
                     <div className="flex items-center gap-2 min-w-0">
                       <span
                         title={isOnline ? 'En línea' : 'Sin conexión (Offline)'}
                         className={`w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-300 ${
                           isOnline
                             ? isFront
-                              ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
+                              ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]'
                               : isPeeking
-                                ? 'bg-emerald-400'
-                                : 'bg-emerald-400/70'
-                            : 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)] animate-pulse'
+                                ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
+                                : 'bg-emerald-400/80'
+                            : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)] animate-pulse'
                         }`}
                       />
-                      <span className="text-xs font-semibold text-white truncate tracking-wide">
+                      <span className="text-xs font-semibold text-white truncate tracking-wide drop-shadow-sm">
                         {card.nombre}
                       </span>
                       {!isOnline && (
@@ -374,10 +384,10 @@ export const HomePage: React.FC<HomePageProps> = ({
                     </div>
 
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider flex-shrink-0 ${
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider flex-shrink-0 backdrop-blur-md shadow-xs ${
                         card.tipo === 'PERSONAL'
-                          ? 'bg-sky-400/15 text-sky-300 border border-sky-400/20'
-                          : 'bg-white/10 text-neutral-200 border border-white/10'
+                          ? 'bg-sky-400/20 text-sky-200 border border-sky-400/30'
+                          : 'bg-white/10 text-white/90 border border-white/20'
                       }`}
                     >
                       {card.tipo === 'PERSONAL' ? (
@@ -395,22 +405,22 @@ export const HomePage: React.FC<HomePageProps> = ({
                   </div>
 
                   {/* Valuación de Stock del Depósito */}
-                  <div className="my-auto pt-1">
-                    <span className="text-[11px] text-neutral-400 font-normal tracking-wide block">
+                  <div className="my-auto pt-1 relative z-10">
+                    <span className="text-[11px] text-neutral-300/80 font-normal tracking-wide block">
                       Valuación de Stock
                     </span>
-                    <p className="text-3xl font-semibold tracking-tight text-white tabular-nums mt-0.5">
+                    <p className="text-3xl font-semibold tracking-tight text-white tabular-nums mt-0.5 drop-shadow-sm">
                       {formatCurrency(card.valuacion, card.currency)}
                     </p>
                   </div>
 
                   {/* Pie de Tarjeta: Alerta de Stock Bajo y Total de SKUs / Existencias */}
-                  <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-3">
+                  <div className="pt-3 border-t border-white/[0.14] flex items-center justify-between gap-3 relative z-10">
                     <div>
-                      <span className="text-[11px] text-neutral-400 block mb-1">
+                      <span className="text-[11px] text-neutral-300/80 block mb-1">
                         Stock Bajo / Alerta
                       </span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-semibold tracking-wider uppercase">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 backdrop-blur-md text-amber-300 border border-amber-400/30 text-[10px] font-semibold tracking-wider uppercase shadow-xs">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                         {card.alertaCount} {card.alertaCount === 1 ? 'ÍTEM' : 'ÍTEMS'}
                       </span>
@@ -418,16 +428,16 @@ export const HomePage: React.FC<HomePageProps> = ({
 
                     <div className="text-right space-y-0.5">
                       <p className="text-xs text-neutral-300">
-                        <span className="font-semibold text-white tabular-nums">
+                        <span className="font-semibold text-white tabular-nums drop-shadow-sm">
                           {card.skusCount.toString().padStart(4, '0')}
                         </span>{' '}
-                        <span className="text-neutral-400">Referencias activas</span>
+                        <span className="text-neutral-300/80">Referencias activas</span>
                       </p>
                       <p className="text-xs text-neutral-300">
-                        <span className="font-semibold text-white tabular-nums">
+                        <span className="font-semibold text-white tabular-nums drop-shadow-sm">
                           {formatCleanDecimal(card.totalUnits, 2)}
                         </span>{' '}
-                        <span className="text-neutral-400">Existencias físicas</span>
+                        <span className="text-neutral-300/80">Existencias físicas</span>
                       </p>
                     </div>
                   </div>
