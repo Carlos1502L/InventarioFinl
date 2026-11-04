@@ -1,5 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { supabase } from '../lib/supabase';
+import { supabase, formatCleanDecimal } from '../lib/supabase';
 import { showAppToast } from '../components/ui/ToastNotification';
 
 // =========================================================
@@ -253,6 +253,42 @@ export async function getAllQueuedSales(): Promise<QueuedSale[]> {
 }
 
 /**
+ * Sanitiza y formatea el mensaje de quiebre de stock según la unidad de medida:
+ * - Si es tipo caja (BOX): entero si no tiene decimales, y máximo 2 decimales si tiene fracción (ej: "Disponible: 1, Solicitado: 0.5")
+ * - Si es tipo unidad (UNIT): estrictamente números enteros (ej: "Disponible: 0, Solicitado: 1")
+ */
+export function formatStockShortageNotes(notes: string | null | undefined, items?: any[]): string {
+  if (!notes) return '';
+
+  let isBox = false;
+  if (items && items.length > 0) {
+    isBox = items.some(
+      (it) => it.unit_type === 'BOX' || (it.product_name && it.product_name.toLowerCase().includes('caja'))
+    );
+  }
+
+  return notes.replace(
+    /(Disponible:\s*)(\d+(?:\.\d+)?)([^\d,]*)(,\s*(?:Solicitado|Requerido):\s*)(\d+(?:\.\d+)?)/gi,
+    (_match, p1, dispVal, p3, p4, solVal) => {
+      const numDisp = Number(dispVal);
+      const numSol = Number(solVal);
+      const hasFractions = numDisp % 1 !== 0 || numSol % 1 !== 0;
+      const treatAsBox = isBox || hasFractions;
+
+      const formattedDisp = treatAsBox
+        ? formatCleanDecimal(numDisp, 2)
+        : Math.round(numDisp).toString();
+
+      const formattedSol = treatAsBox
+        ? formatCleanDecimal(numSol, 2)
+        : Math.round(numSol).toString();
+
+      return `${p1}${formattedDisp}${p3}${p4}${formattedSol}`;
+    }
+  );
+}
+
+/**
  * RN-HIST-01: Persiste una venta offline rechazada (quiebre de stock) directamente
  * en el Historial de Ventas (tablas 'sales' y 'sale_items') sin descontar inventario.
  */
@@ -262,7 +298,8 @@ export async function persistRejectedSaleToRemote(
 ): Promise<string | null> {
   const p = sale.payload;
   const localId = sale.local_id;
-  const rejectedNotes = `[RECHAZADA_STOCK] local-queue-${localId ?? 'na'} | ${errorMessage}`;
+  const formattedReason = formatStockShortageNotes(errorMessage, p.p_items);
+  const rejectedNotes = `[RECHAZADA_STOCK] local-queue-${localId ?? 'na'} | ${formattedReason}`;
 
   try {
     // 1. Intentar inserción con status: 'REJECTED_STOCK'
@@ -602,9 +639,11 @@ export async function syncPendingSalesSilently(
 
           console.warn(`[OfflineSync] Venta local #${localId} rechazada por base de datos:`, rpcError.message);
           
+          const formattedErr = formatStockShortageNotes(rpcError.message || 'Sin stock disponible', sale.payload.p_items);
+
           // RN-HIST-01: Persistir la venta diferida rechazada en el Historial de Ventas
-          await persistRejectedSaleToRemote(sale, rpcError.message || 'Sin stock disponible');
-          await markSaleFailed(localId, rpcError.message || 'Sin stock disponible');
+          await persistRejectedSaleToRemote(sale, formattedErr);
+          await markSaleFailed(localId, formattedErr);
           failedCount++;
 
           // Alerta al usuario: Notificación discreta de "Sin Stock Disponible"
@@ -630,7 +669,7 @@ export async function syncPendingSalesSilently(
           break;
         }
         console.warn(`[OfflineSync] Error inesperado en venta #${localId}:`, err);
-        const errMsg = err?.message || 'Error de sincronización';
+        const errMsg = formatStockShortageNotes(err?.message || 'Error de sincronización', sale.payload.p_items);
         await persistRejectedSaleToRemote(sale, errMsg);
         await markSaleFailed(localId, errMsg);
         failedCount++;

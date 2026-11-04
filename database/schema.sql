@@ -633,6 +633,9 @@ DECLARE
     v_remaining_deduct NUMERIC(12, 4);
     v_effective_seller_id UUID;
     v_effective_seller_email TEXT;
+    v_unit_type VARCHAR(10);
+    v_disp_str TEXT;
+    v_sol_str TEXT;
 BEGIN
     IF NOT public.has_inventory_access(p_inventory_id) THEN
         RAISE EXCEPTION 'No tienes permiso para operar en este inventario.';
@@ -653,7 +656,7 @@ BEGIN
         subtotal NUMERIC(12, 2)
     )
     LOOP
-        SELECT stock, name INTO v_current_stock, v_product_name
+        SELECT stock, name, COALESCE(unit_type, 'UNIT') INTO v_current_stock, v_product_name, v_unit_type
         FROM public.products
         WHERE id = v_item.product_id AND inventory_id = p_inventory_id
         FOR UPDATE;
@@ -663,8 +666,16 @@ BEGIN
         END IF;
 
         IF (v_current_stock + 0.0002) < v_item.quantity THEN
+            IF v_unit_type = 'BOX' THEN
+                v_disp_str := to_char(ROUND(v_current_stock, 2), 'FM999999990.##');
+                v_sol_str := to_char(ROUND(v_item.quantity, 2), 'FM999999990.##');
+            ELSE
+                v_disp_str := ROUND(v_current_stock, 0)::BIGINT::TEXT;
+                v_sol_str := ROUND(v_item.quantity, 0)::BIGINT::TEXT;
+            END IF;
+
             RAISE EXCEPTION 'Stock insuficiente para "%". Disponible: %, Solicitado: %.', 
-                v_product_name, v_current_stock, v_item.quantity;
+                v_product_name, v_disp_str, v_sol_str;
         END IF;
     END LOOP;
 

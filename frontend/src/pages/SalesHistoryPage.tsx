@@ -21,7 +21,7 @@ import {
 import { Sale, SaleItem } from '../types/database';
 import { supabase, formatCurrency, formatDate } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { getAllQueuedSales } from '../services/offlineSync';
+import { getAllQueuedSales, formatStockShortageNotes } from '../services/offlineSync';
 import jsPDF from 'jspdf';
 
 /**
@@ -94,7 +94,7 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
               payment_method: (ls.payload.p_payment_method as any) || 'CASH',
               customer_name: ls.payload.p_customer_name || null,
               customer_contact: ls.payload.p_customer_contact || null,
-              notes: `[RECHAZADA_STOCK] ${ls.error_message || 'Sin stock disponible'}`,
+              notes: `[RECHAZADA_STOCK] ${formatStockShortageNotes(ls.error_message || 'Sin stock disponible', ls.payload.p_items)}`,
               status: 'REJECTED_STOCK',
               created_at: ls.created_at,
               items: (ls.payload.p_items || []).map((it: any, idx: number) => ({
@@ -205,7 +205,7 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
         `"${(s.customer_name || 'Consumidor Final').replace(/"/g, '""')}"`,
         `"${s.payment_method}"`,
         Number(s.total_amount).toFixed(2),
-        `"${(s.notes || '').replace(/"/g, '""')}"`
+        `"${formatStockShortageNotes(s.notes || '', s.items).replace(/"/g, '""')}"`
       ]);
 
       const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -692,7 +692,9 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
                 {selectedSale.notes && (
                   <div className="col-span-2 pt-2 border-t border-[#E5E7EB]">
                     <span className="text-[10px] text-[#616161] block uppercase">Notas / Cupón:</span>
-                    <span className="text-[#1E3A5F]">{selectedSale.notes}</span>
+                    <span className="text-[#1E3A5F]">
+                      {formatStockShortageNotes(selectedSale.notes, selectedSale.items)}
+                    </span>
                   </div>
                 )}
               </div>
