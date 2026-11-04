@@ -29,7 +29,19 @@ const rawUrl = import.meta.env.VITE_SUPABASE_URL || 'https://tu-proyecto.supabas
 const supabaseUrl = resolveLocalNetworkUrl(rawUrl);
 const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || 'tu-anon-key-placeholder').trim();
 
-export const API_BASE_URL = resolveLocalNetworkUrl(import.meta.env.VITE_API_URL || 'http://localhost:4000');
+const rawApiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:4000').trim().replace(/\/+$/, '');
+const cleanApiBase = rawApiUrl.replace(/\/api\/?$/i, '');
+export const API_BASE_URL = resolveLocalNetworkUrl(cleanApiBase);
+
+/**
+ * Genera la URL normalizada hacia la API del backend, garantizando que nunca se duplique '/api'.
+ */
+export const getApiUrl = (path: string): string => {
+  const cleanBase = API_BASE_URL.replace(/\/+$/, '').replace(/\/api\/?$/i, '');
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const normalizedPath = cleanPath.replace(/^\/api\/?/i, '/');
+  return `${cleanBase}/api${normalizedPath}`;
+};
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl &&

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Users, UserPlus, Mail, Shield, Trash2, CheckCircle2, Clock, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { supabase, API_BASE_URL, formatDate } from '../../services/supabase';
+import { supabase, getApiUrl, formatDate } from '../../services/supabase';
 import { InventoryInvitation } from '../../types/database';
 
 interface CollaboratorsModalProps {
@@ -139,7 +139,7 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
 
       if (token) {
         try {
-          const resp = await fetch(`${API_BASE_URL}/api/collaborators/invite`, {
+          const resp = await fetch(getApiUrl('/collaborators/invite'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

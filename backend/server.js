@@ -108,6 +108,14 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Middleware de normalización para mitigar URLs con prefijo duplicado (/api/api/* -> /api/*)
+app.use((req, res, next) => {
+  if (req.url.startsWith('/api/api/')) {
+    req.url = req.url.replace(/^\/api\/api\//, '/api/');
+  }
+  next();
+});
+
 // Aplicar limitador global a la API
 app.use('/api/', globalApiLimiter);
 

@@ -14,7 +14,7 @@ import {
   RefreshCw,
   FileJson
 } from 'lucide-react';
-import { supabase, API_BASE_URL } from '../../services/supabase';
+import { supabase, getApiUrl } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { showAppToast } from '../ui';
 import { BackupRestoreModal } from './BackupRestoreModal';
@@ -69,7 +69,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
         const token = session?.access_token;
         if (!token) return;
 
-        const res = await fetch(`${API_BASE_URL}/api/backup/settings/${currentInventory.id}`, {
+        const res = await fetch(getApiUrl(`/backup/settings/${currentInventory.id}`), {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -124,7 +124,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
       const token = session?.access_token;
       if (!token) throw new Error('No hay sesión activa.');
 
-      const res = await fetch(`${API_BASE_URL}/api/backup/export-and-send`, {
+      const res = await fetch(getApiUrl('/backup/export-and-send'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -180,7 +180,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
       const token = session?.access_token;
       if (!token) throw new Error('No hay sesión activa.');
 
-      const res = await fetch(`${API_BASE_URL}/api/backup/settings`, {
+      const res = await fetch(getApiUrl('/backup/settings'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -262,7 +262,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
       const token = session?.access_token;
       if (!token) throw new Error('No hay sesión activa.');
 
-      const res = await fetch(`${API_BASE_URL}/api/backup/restore`, {
+      const res = await fetch(getApiUrl('/backup/restore'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
