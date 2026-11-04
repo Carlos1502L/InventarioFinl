@@ -795,9 +795,9 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <div className="flex items-center gap-2 w-full min-w-0">
+                    <div className="relative flex-1 min-w-0">
+                      <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0 z-10" />
                       <input
                         type="email"
                         value={manualEmail}
@@ -808,7 +808,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                         placeholder="propietario@ejemplo.com"
                         disabled={isExporting || isEmailVerified}
                         readOnly={isEmailVerified}
-                        className={`w-full h-11 rounded-xl pl-10 pr-3.5 text-xs focus:outline-none transition-all ${
+                        className={`w-full h-11 rounded-xl pl-11 pr-3.5 text-xs truncate focus:outline-none transition-all ${
                           isEmailVerified
                             ? 'bg-neutral-100 text-neutral-600 border border-neutral-300 cursor-not-allowed font-medium'
                             : 'bg-neutral-100 text-[#1E3A5F] border border-transparent focus:ring-1 focus:ring-[#1E3A5F]'
@@ -821,7 +821,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                         type="button"
                         onClick={handleSendOtp}
                         disabled={isSendingOtp || isExporting || !manualEmail.trim()}
-                        className="h-11 px-3.5 rounded-xl border border-[#1E3A5F] bg-white hover:bg-[#1E3A5F]/5 text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer disabled:opacity-50 whitespace-nowrap shadow-xs"
+                        className="h-11 px-3.5 rounded-xl border border-[#1E3A5F] bg-white hover:bg-[#1E3A5F]/5 text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0 shadow-xs"
                       >
                         {isSendingOtp ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1E3A5F]" />
@@ -968,9 +968,9 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <div className="relative flex-1">
-                          <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <div className="flex items-center gap-2 w-full min-w-0">
+                        <div className="relative flex-1 min-w-0">
+                          <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0 z-10" />
                           <input
                             type="email"
                             value={scheduledEmail}
@@ -981,7 +981,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                             placeholder="propietario@empresa.com"
                             disabled={isScheduledEmailVerified}
                             readOnly={isScheduledEmailVerified}
-                            className={`w-full h-11 rounded-xl pl-10 pr-3.5 text-xs focus:outline-none transition-all ${
+                            className={`w-full h-11 rounded-xl pl-11 pr-3.5 text-xs truncate focus:outline-none transition-all ${
                               isScheduledEmailVerified
                                 ? 'bg-neutral-100 text-neutral-600 border border-neutral-300 cursor-not-allowed font-medium'
                                 : 'bg-neutral-100 text-[#1E3A5F] border border-transparent focus:ring-1 focus:ring-[#1E3A5F]'
@@ -994,7 +994,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                             type="button"
                             onClick={handleSendScheduledOtp}
                             disabled={isSendingScheduledOtp || !scheduledEmail.trim()}
-                            className="h-11 px-3.5 rounded-xl border border-[#1E3A5F] bg-white hover:bg-[#1E3A5F]/5 text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer disabled:opacity-50 whitespace-nowrap shadow-xs"
+                            className="h-11 px-3.5 rounded-xl border border-[#1E3A5F] bg-white hover:bg-[#1E3A5F]/5 text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0 shadow-xs"
                           >
                             {isSendingScheduledOtp ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1E3A5F]" />

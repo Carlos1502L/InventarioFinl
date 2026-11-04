@@ -506,8 +506,18 @@ div:has(> label:empty + span.hidden) {
   }
 
   .mobile-dark-modal div.relative:has(> svg) > input:not([type="checkbox"]):not([type="radio"]),
+  .mobile-dark-modal input[type="email"],
+  .mobile-dark-modal input.truncate,
   .mobile-dark-modal div.relative:not(.frequency-pill-container):has(> svg) > select {
-    padding-left: 2.5rem !important;
+    padding-left: 2.75rem !important;
+    padding-right: 0.875rem !important;
+    text-overflow: ellipsis !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+  }
+
+  .mobile-dark-modal input[type="email"]:focus {
+    text-overflow: clip !important;
   }
 
   /* Cápsulas de frecuencia de envío: Centradas, sin recortes de texto y con selector táctil nativo */
