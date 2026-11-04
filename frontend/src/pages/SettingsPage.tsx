@@ -15,8 +15,7 @@ import {
   Sliders,
   Printer,
   Ticket,
-  Database,
-  Coins
+  Database
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../services/supabase';
@@ -25,8 +24,6 @@ import { BatchLocationsPrintModal } from '../components/modals/BatchLocationsPri
 import { CouponsManagementModal } from '../components/modals/CouponsManagementModal';
 import { BackupManagementCard } from '../components/settings/BackupManagementCard';
 import { BackupManagementModal } from '../components/modals/BackupManagementModal';
-import { CurrencyExchangeCard } from '../components/settings/CurrencyExchangeCard';
-import { CurrencyExchangeModal } from '../components/modals/CurrencyExchangeModal';
 
 interface SettingsPageProps {
   onOpenCategories: () => void;
@@ -48,7 +45,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [batchLocationsOpen, setBatchLocationsOpen] = useState(false);
   const [couponsOpen, setCouponsOpen] = useState(false);
   const [backupModalOpen, setBackupModalOpen] = useState(false);
-  const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
 
   const isOwner =
     currentInventory?.role?.toLowerCase() === 'owner' ||
@@ -129,30 +125,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <Sliders className="w-4 h-4 text-neutral-500 flex-shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-neutral-900 truncate">
-                    Editar Información
+                    {isOwner ? 'Editar Información' : 'Información de Inventario'}
                   </p>
                   <p className="text-xs text-neutral-400 truncate">
-                    Nombre, moneda ({currentInventory?.currency || 'PEN'}) y tipo
-                  </p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-            </button>
-
-            {/* Moneda y Tipo de Cambio (Móvil) */}
-            <button
-              type="button"
-              onClick={() => setCurrencyModalOpen(true)}
-              className="w-full py-4 flex items-center justify-between gap-3 text-left active:opacity-70 transition-opacity"
-            >
-              <div className="flex items-center gap-3.5 min-w-0">
-                <Coins className="w-4 h-4 text-neutral-500 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-neutral-900 truncate">
-                    Moneda y Tipo de Cambio
-                  </p>
-                  <p className="text-xs text-neutral-400 truncate">
-                    {currentInventory?.currency || 'PEN'} · Tasa: {Number(currentInventory?.exchange_rate || 1).toFixed(3)}
+                    {isOwner
+                      ? `Nombre, moneda (${currentInventory?.currency || 'PEN'}), tasa y tipo`
+                      : `Moneda (${currentInventory?.currency || 'PEN'}), tasa y detalles del depósito`}
                   </p>
                 </div>
               </div>
@@ -380,11 +358,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               className="px-4 py-2 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs uppercase tracking-wider rounded-full transition-all active:scale-95 flex items-center gap-1.5 font-mono shadow-xs"
             >
               <Sliders className="w-3.5 h-3.5 text-[#1E3A5F]" />
-              <span>Editar Información</span>
+              <span>{isOwner ? 'Editar Información' : 'Información de Inventario'}</span>
             </button>
             <button
               onClick={onOpenInventorySelector}
-              className="px-4 py-2 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-full shadow-xs transition-all active:scale-95 font-medium"
+              className="px-4 py-2 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-full shadow-xs transition-all active:scale-95 font-medium cursor-pointer"
             >
               Cambiar
             </button>
@@ -392,29 +370,25 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
 
         {/* Metadatos en Fila */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-[#E5E7EB] text-xs font-mono text-[#616161]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-[#E5E7EB] text-xs font-mono text-[#616161]">
           <div>
             <span className="text-[10px] uppercase block">Moneda de Manifiesto:</span>
-            <span className="text-[#1E3A5F] font-medium">{currentInventory?.currency || 'USD'}</span>
+            <span className="text-[#1E3A5F] font-medium">{currentInventory?.currency || 'PEN'}</span>
+          </div>
+          <div>
+            <span className="text-[10px] uppercase block">Tasa Operativa:</span>
+            <span className="text-[#1E3A5F] font-medium font-mono">{Number(currentInventory?.exchange_rate || 1.000).toFixed(3)}</span>
           </div>
           <div>
             <span className="text-[10px] uppercase block">Nivel de Acceso:</span>
             <span className="text-[#1E3A5F] font-medium uppercase">{currentInventory?.role || 'owner'}</span>
           </div>
-          <div className="col-span-2 sm:col-span-1">
+          <div>
             <span className="text-[10px] uppercase block">Fecha de Alta:</span>
             <span className="text-[#1E3A5F]">{formatDate(currentInventory?.created_at)}</span>
           </div>
         </div>
       </div>
-
-      {/* =========================================================
-          BLOQUE: MONEDA & TIPO DE CAMBIO (RF-1.1 & RF-1.2)
-         ========================================================= */}
-      <CurrencyExchangeCard
-        inventory={currentInventory}
-        onUpdated={refreshInventories}
-      />
 
       {/* =========================================================
           BLOQUE 2: OPERACIONES COMERCIALES (SÓLO SI ES NEGOCIO)
@@ -639,14 +613,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           onClose={() => setCouponsOpen(false)}
         />
       )}
-
-      {/* Modal Móvil de Moneda y Tipo de Cambio */}
-      <CurrencyExchangeModal
-        isOpen={currencyModalOpen}
-        onClose={() => setCurrencyModalOpen(false)}
-        inventory={currentInventory}
-        onUpdated={refreshInventories}
-      />
 
       {/* Modal Móvil de Copias de Seguridad */}
       {isOwner && (
