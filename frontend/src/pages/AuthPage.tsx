@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, ArrowRight, Loader2, CheckCircle2, ShieldCheck, Sparkles, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { MobileAuthScreen } from '../components/auth/MobileAuthScreen';
 
 export const AuthPage: React.FC = () => {
   const { signIn, signUp } = useAuth();
@@ -57,9 +58,16 @@ export const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-[#F8F9FA] flex flex-col items-center justify-center p-4 sm:p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] overflow-y-auto overscroll-y-contain selection:bg-[#1E3A5F] selection:text-white">
-      {/* Split-Card Container con Altura Fija y Consistente en Ambos Modos */}
-      <div className="w-full max-w-md md:max-w-4xl bg-white border border-[#E5E7EB] rounded-2xl shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-[620px] my-auto">
+    <>
+      {/* Vista Móvil: Splash cinético con fusión tipográfica e implosión/explosión al login */}
+      <div className="block md:hidden w-full min-h-[100dvh]">
+        <MobileAuthScreen />
+      </div>
+
+      {/* Vista Desktop: Split-Card Editorial */}
+      <div className="hidden md:flex min-h-[100dvh] w-full bg-[#F8F9FA] flex-col items-center justify-center p-4 sm:p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] overflow-y-auto overscroll-y-contain selection:bg-[#1E3A5F] selection:text-white">
+        {/* Split-Card Container con Altura Fija y Consistente en Ambos Modos */}
+        <div className="w-full max-w-4xl bg-white border border-[#E5E7EB] rounded-2xl shadow-sm overflow-hidden grid grid-cols-2 min-h-[620px] my-auto">
         
         {/* =========================================================
             PANEL IZQUIERDO: MARCA & EDITORIAL (AZUL MARINO #1E3A5F)
@@ -413,6 +421,7 @@ export const AuthPage: React.FC = () => {
         </div>
       </div>
     </div>
+  </>
   );
 };
 
