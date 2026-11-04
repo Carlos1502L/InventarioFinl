@@ -55,7 +55,7 @@ class EmailService {
       timeStyle: 'short'
     });
 
-    const subject = `📦 Copia de Seguridad - ${inventoryName} - ${formattedDate}`;
+    const subject = `Copia de Seguridad - ${inventoryName} - ${formattedDate}`;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -76,8 +76,8 @@ class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>📦 Copia de Seguridad</h1>
-              <p>${inventoryName} &bull; ${formattedDate}</p>
+              <h1>Copia de Seguridad</h1>
+              <p>${inventoryName} - ${formattedDate}</p>
             </div>
             <div class="body">
               <p>Estimado/a Propietario/a,</p>
@@ -85,21 +85,21 @@ class EmailService {
                 Le informamos que se ha generado exitosamente la copia de seguridad correspondiente a su inventario <strong>${inventoryName}</strong>.
               </p>
               <p>
-                Adjunto a este correo encontrará el archivo oficial con la totalidad de los datos estructurados en formato JSON:
+                Adjunto a este correo encontrara el archivo oficial con la totalidad de los datos estructurados en formato JSON:
               </p>
               <div class="file-box">
-                📎 ${filename}
+                Archivo adjunto: <strong>${filename}</strong>
               </div>
               <p style="font-size: 12px; color: #64748b; margin-top: 20px;">
-                Conserve este archivo en un lugar seguro. Podrá utilizarlo para restaurar su información en cualquier momento desde el módulo de Ajustes del sistema.
+                Conserve este archivo en un lugar seguro. Podra utilizarlo para restaurar su informacion en cualquier momento desde el modulo de Ajustes del sistema.
               </p>
               <p style="margin-top: 28px; font-size: 13px; color: #475569;">
                 Atentamente,<br>
-                <strong>Sistema de Gestión Stockly</strong>
+                <strong>Sistema de Gestion Stockly</strong>
               </p>
             </div>
             <div class="footer">
-              Este es un mensaje automático del sistema de inventario. No responda a este correo.
+              Este es un mensaje automatico del sistema de inventario. No responda a este correo.
             </div>
           </div>
         </body>
@@ -115,7 +115,7 @@ class EmailService {
       try {
         const response = await fetch(process.env.GMAIL_SCRIPT_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
           body: JSON.stringify({
             to,
             subject,
@@ -246,7 +246,7 @@ class EmailService {
    * @returns {Promise<{ success: boolean, messageId?: string, mode: string }>}
    */
   async sendOtpEmail({ to, code, inventoryName = 'Inventario' }) {
-    const subject = `🔐 Código de Verificación para Respaldo: ${code} - Stockly`;
+    const subject = `Codigo de Verificacion: ${code} - Stockly`;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -268,30 +268,30 @@ class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🔐 Verificación de Respaldo</h1>
-              <p>${inventoryName} &bull; Autorización de Envío Seguro</p>
+              <h1>Codigo de Verificacion</h1>
+              <p>${inventoryName} - Autorizacion de Seguridad</p>
             </div>
             <div class="body">
               <p>Estimado/a Propietario/a,</p>
               <p>
-                Ha solicitado enviar una copia de seguridad del inventario <strong>${inventoryName}</strong> a esta dirección de correo.
+                Ha solicitado autorizar este correo para la gestion de copias de seguridad del inventario <strong>${inventoryName}</strong>.
               </p>
               <p>
-                Para confirmar su identidad y autorizar la entrega del archivo, introduzca el siguiente código de validación de 6 dígitos:
+                Su codigo de validacion es:
               </p>
               <div class="code-box">
                 <div class="code-digits">${code}</div>
               </div>
               <p style="font-size: 12px; color: #64748b; margin-top: 16px;">
-                ⏱️ Este código es confidencial y vence en <strong>10 minutos</strong>. Si no reconoció esta solicitud, puede desestimar este mensaje de forma segura.
+                Este codigo es confidencial y vence en <strong>10 minutos</strong>. Si no realizo esta solicitud, puede desestimar este mensaje de forma segura.
               </p>
               <p style="margin-top: 24px; font-size: 13px; color: #475569;">
                 Atentamente,<br>
-                <strong>Sistema de Gestión Stockly</strong>
+                <strong>Sistema de Gestion Stockly</strong>
               </p>
             </div>
             <div class="footer">
-              Este es un mensaje automático de seguridad. No responda a este correo.
+              Este es un mensaje automatico de seguridad. No responda a este correo.
             </div>
           </div>
         </body>
@@ -305,7 +305,7 @@ class EmailService {
       try {
         const response = await fetch(process.env.GMAIL_SCRIPT_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
           body: JSON.stringify({
             to,
             subject,

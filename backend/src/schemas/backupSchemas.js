@@ -32,7 +32,8 @@ export const saveBackupSettingsSchema = z.object({
   execution_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)(:([0-5]\d))?$/, {
     message: 'El formato de hora debe ser HH:MM (24 horas).'
   }).default('02:00:00'),
-  timezone: z.string().default('America/Lima')
+  timezone: z.string().default('America/Lima'),
+  verification_token: z.string().min(10).optional()
 });
 
 export const restoreBackupSchema = z.object({

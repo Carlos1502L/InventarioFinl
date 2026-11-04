@@ -337,8 +337,39 @@ router.post(
   verifyTenantAccess({ source: 'body', key: 'inventory_id', requiredRole: 'owner' }),
   async (req, res, next) => {
     try {
-      const { inventory_id, target_email, is_scheduled, interval_days, execution_time, timezone } = req.body;
+      const { inventory_id, target_email, is_scheduled, interval_days, execution_time, timezone, verification_token } = req.body;
       const cleanEmail = target_email.trim().toLowerCase();
+
+      // Validación de seguridad OTP si la programación está activa
+      if (is_scheduled) {
+        const { data: existing } = await supabaseAdmin
+          .from('inventory_backup_settings')
+          .select('target_email, is_scheduled')
+          .eq('inventory_id', inventory_id)
+          .maybeSingle();
+
+        const emailChanged = !existing || existing.target_email?.toLowerCase() !== cleanEmail;
+        const wasNotScheduled = !existing || !existing.is_scheduled;
+
+        if (emailChanged || wasNotScheduled) {
+          if (!verification_token) {
+            return res.status(403).json({
+              success: false,
+              code: 'OTP_VERIFICATION_REQUIRED',
+              message: 'Se requiere validar el correo de destino mediante código OTP antes de activar la programación.'
+            });
+          }
+
+          const tokenCheck = otpService.verifyToken(inventory_id, cleanEmail, verification_token);
+          if (!tokenCheck.valid) {
+            return res.status(403).json({
+              success: false,
+              code: 'INVALID_OTP_TOKEN',
+              message: tokenCheck.error || 'Token de verificación inválido o expirado para el correo de destino.'
+            });
+          }
+        }
+      }
 
       // Formatear execution_time asegurando formato HH:MM:SS
       const formattedTime = execution_time.length === 5 ? `${execution_time}:00` : execution_time;
