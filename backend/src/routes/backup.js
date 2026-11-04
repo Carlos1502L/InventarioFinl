@@ -190,9 +190,19 @@ router.post(
     res.setTimeout(180000);
 
     try {
-      const { inventory_id } = req.body;
+      const { inventory_id, verification_token } = req.body;
       const cleanEmail = (req.body.email || req.body.target_email || '').trim().toLowerCase();
       const invName = req.inventory?.name || 'Inventario';
+
+      // Validación estricta del token de verificación OTP (RF-4)
+      const tokenCheck = otpService.verifyToken(inventory_id, cleanEmail, verification_token);
+      if (!tokenCheck.valid) {
+        return res.status(403).json({
+          success: false,
+          code: 'OTP_VERIFICATION_REQUIRED',
+          message: tokenCheck.error || 'Se requiere validación previa del correo mediante código OTP.'
+        });
+      }
 
       // 1. Extraer los datos relacionales completos (100% SELECT paralelo - RF-1 y RF-3)
       const payload = await backupService.exportInventoryData(inventory_id);

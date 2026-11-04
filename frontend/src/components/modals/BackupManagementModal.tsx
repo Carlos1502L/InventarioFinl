@@ -12,7 +12,9 @@ import {
   AlertTriangle,
   Mail,
   FileJson,
-  ShieldCheck
+  ShieldCheck,
+  KeyRound,
+  Edit2
 } from 'lucide-react';
 import { supabase, getApiUrl } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -41,6 +43,15 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // Estados OTP Bloque Manual
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [verificationToken, setVerificationToken] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+
   // Estados Bloque Programado
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledEmail, setScheduledEmail] = useState('');
@@ -55,6 +66,14 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
   const [selectedFile, setSelectedFile] = useState<{ name: string; content: any } | null>(null);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+
+  // Cooldown timer para reenvío de OTP
+  useEffect(() => {
+    if (otpCooldown > 0) {
+      const timer = setTimeout(() => setOtpCooldown((prev) => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpCooldown]);
 
   // Precargar correo con el del usuario logueado
   useEffect(() => {
@@ -116,6 +135,103 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
   // --------------------------------------------------------------------------
   // HANDLERS
   // --------------------------------------------------------------------------
+  const handleSendOtp = async () => {
+    if (!currentInventory?.id) return;
+    const target = manualEmail.trim();
+
+    if (!target || !target.includes('@')) {
+      showAppToast('Por favor, ingresa un correo electrónico válido.', 'warning');
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No hay sesión activa.');
+
+      const res = await fetch(getApiUrl('/backup/send-verification-code'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          inventory_id: currentInventory.id,
+          email: target
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Error al enviar el código de verificación.');
+      }
+
+      setOtpSent(true);
+      setOtpCooldown(60);
+      showAppToast(`Código de verificación enviado a ${target}`, 'success', 5000);
+    } catch (err: any) {
+      console.error('Error enviando OTP:', err);
+      showAppToast(err.message || 'No se pudo enviar el código OTP.', 'error');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!currentInventory?.id) return;
+    const target = manualEmail.trim();
+    const code = otpCode.trim();
+
+    if (code.length !== 6 || !/^\d{6}$/.test(code)) {
+      showAppToast('El código debe contener exactamente 6 dígitos numéricos.', 'warning');
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No hay sesión activa.');
+
+      const res = await fetch(getApiUrl('/backup/verify-code'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          inventory_id: currentInventory.id,
+          email: target,
+          code
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Código incorrecto o expirado.');
+      }
+
+      setVerificationToken(data.verification_token);
+      setIsEmailVerified(true);
+      setOtpSent(false);
+      setOtpCode('');
+      showAppToast('✓ Correo verificado exitosamente. Ahora puedes generar el respaldo.', 'success', 4000);
+    } catch (err: any) {
+      console.error('Error verificando OTP:', err);
+      showAppToast(err.message || 'Error al validar el código.', 'error');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const handleResetVerification = () => {
+    setIsEmailVerified(false);
+    setVerificationToken('');
+    setOtpSent(false);
+    setOtpCode('');
+  };
+
   const triggerBrowserDownload = (payload: any) => {
     if (!payload || !currentInventory) return;
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -168,19 +284,19 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
     }
   };
 
-  // Generar y despachar por correo exclusivamente (RF-2 y RF-3)
+  // Generar y despachar por correo exclusivamente (RF-2, RF-3 y RF-4 con OTP)
   const handleExportAndSend = async () => {
     if (!currentInventory?.id) return;
     const target = manualEmail.trim();
 
-    if (!target || !target.includes('@')) {
-      showAppToast('Por favor, ingresa un correo electrónico válido.', 'warning');
+    if (!isEmailVerified || !verificationToken) {
+      showAppToast('Debes verificar tu correo con el código OTP antes de enviar el respaldo.', 'warning');
       return;
     }
 
     setIsExporting(true);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos
+    const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 segundos
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -196,7 +312,8 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
         signal: controller.signal,
         body: JSON.stringify({
           inventory_id: currentInventory.id,
-          email: target
+          email: target,
+          verification_token: verificationToken
         })
       });
 
@@ -217,7 +334,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
     } catch (err: any) {
       clearTimeout(timeoutId);
       if (err.name === 'AbortError') {
-        showAppToast('La solicitud tardó más de 1 minuto. Verifica si el correo llegó a tu bandeja.', 'warning', 8000);
+        showAppToast('La solicitud tardó más de 90 segundos. Verifica si el correo llegó a tu bandeja.', 'warning', 8000);
       } else {
         console.error('Error exportando backup:', err);
         showAppToast(err.message || 'No se pudo generar el respaldo.', 'error');
@@ -426,33 +543,148 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
               </div>
             )}
 
-            {/* PESTAÑA 1: MANUAL */}
+            {/* PESTAÑA 1: MANUAL (con Verificación OTP y RF-2) */}
             {activeTab === 'manual' && (
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#1E3A5F] block">
-                    Correo electrónico destinatario
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      type="email"
-                      value={manualEmail}
-                      onChange={(e) => setManualEmail(e.target.value)}
-                      placeholder="propietario@ejemplo.com"
-                      disabled={isExporting}
-                      className="w-full h-11 bg-neutral-100 rounded-xl pl-10 pr-3.5 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] transition-all"
-                    />
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-[#1E3A5F] block">
+                      Correo electrónico destinatario
+                    </label>
+                    {isEmailVerified && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-medium">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Verificado
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleResetVerification}
+                          className="text-[10px] text-[#1E3A5F] underline font-medium cursor-pointer"
+                        >
+                          Cambiar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="email"
+                        value={manualEmail}
+                        onChange={(e) => {
+                          setManualEmail(e.target.value);
+                          if (isEmailVerified) handleResetVerification();
+                        }}
+                        placeholder="propietario@ejemplo.com"
+                        disabled={isExporting || isEmailVerified}
+                        readOnly={isEmailVerified}
+                        className={`w-full h-11 rounded-xl pl-10 pr-3.5 text-xs focus:outline-none transition-all ${
+                          isEmailVerified
+                            ? 'bg-neutral-100 text-neutral-600 border border-neutral-300 cursor-not-allowed font-medium'
+                            : 'bg-neutral-100 text-[#1E3A5F] border border-transparent focus:ring-1 focus:ring-[#1E3A5F]'
+                        }`}
+                      />
+                    </div>
+
+                    {!isEmailVerified && (
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={isSendingOtp || isExporting || !manualEmail.trim()}
+                        className="w-full h-10 px-3 rounded-xl border border-[#1E3A5F] bg-white hover:bg-[#1E3A5F]/5 text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer disabled:opacity-50 shadow-xs"
+                      >
+                        {isSendingOtp ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1E3A5F]" />
+                            <span>Enviando código...</span>
+                          </>
+                        ) : (
+                          <>
+                            <KeyRound className="w-3.5 h-3.5 text-[#1E3A5F]" />
+                            <span>{otpSent ? 'Reenviar Código de Validación' : 'Validar Correo con Código OTP'}</span>
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
+
+                {/* Formulario OTP emergente cuando otpSent es true y aún no está verificado */}
+                {otpSent && !isEmailVerified && (
+                  <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2.5 animate-in fade-in">
+                    <div className="flex items-start gap-2">
+                      <KeyRound className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                      <div className="text-[11px] text-blue-900 leading-snug">
+                        <p className="font-semibold">Código enviado a {manualEmail}</p>
+                        <p className="text-blue-700">Ingresa los 6 dígitos. Válido por 10 min.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="000000"
+                        className="w-28 h-10 text-center font-mono text-base font-bold tracking-widest bg-white border border-blue-300 focus:border-[#1E3A5F] rounded-xl text-[#1E3A5F] focus:outline-none"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={handleVerifyOtp}
+                        disabled={isVerifyingOtp || otpCode.trim().length !== 6}
+                        className="flex-1 h-10 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-1 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                      >
+                        {isVerifyingOtp ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Validando...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Verificar</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="text-[10px] text-neutral-500 pt-0.5">
+                      {otpCooldown > 0 ? (
+                        <span>Reenviar en {otpCooldown}s</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSendOtp}
+                          disabled={isSendingOtp}
+                          className="text-blue-700 hover:underline cursor-pointer font-medium"
+                        >
+                          ¿No te llegó el código? Reenviar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2 pt-1">
                   {/* Botón 1: Generar y Enviar por Correo */}
                   <button
                     type="button"
                     onClick={handleExportAndSend}
-                    disabled={isExporting || isDownloading || !manualEmail.trim()}
-                    className="mobile-primary-btn w-full min-h-[44px] px-4 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-98 shadow-xs disabled:opacity-50 cursor-pointer"
+                    disabled={!isEmailVerified || isExporting || isDownloading}
+                    className={`mobile-primary-btn w-full min-h-[44px] px-4 rounded-xl text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-98 shadow-xs cursor-pointer ${
+                      isEmailVerified
+                        ? 'bg-[#1E3A5F] hover:bg-[#152a45]'
+                        : 'bg-neutral-300 text-neutral-500 cursor-not-allowed opacity-60'
+                    }`}
+                    title={
+                      !isEmailVerified
+                        ? 'Debes verificar tu correo mediante código OTP antes de despachar el respaldo.'
+                        : 'Generar y despachar respaldo por correo'
+                    }
                   >
                     {isExporting ? (
                       <>

@@ -12,7 +12,9 @@ import {
   Mail,
   ShieldCheck,
   RefreshCw,
-  FileJson
+  FileJson,
+  KeyRound,
+  Edit2
 } from 'lucide-react';
 import { supabase, getApiUrl } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -36,6 +38,15 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // Estados OTP Bloque A
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [verificationToken, setVerificationToken] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+
   // Estados Bloque B: Programado
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledEmail, setScheduledEmail] = useState('');
@@ -51,6 +62,14 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
   const [selectedFile, setSelectedFile] = useState<{ name: string; content: any } | null>(null);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+
+  // Cooldown timer para reenvío de OTP
+  useEffect(() => {
+    if (otpCooldown > 0) {
+      const timer = setTimeout(() => setOtpCooldown((prev) => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpCooldown]);
 
   // Precargar correos iniciales con el usuario autenticado
   useEffect(() => {
@@ -109,8 +128,105 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
   }, [currentInventory?.id]);
 
   // --------------------------------------------------------------------------
-  // HANDLERS BLOQUE A: Manual
+  // HANDLERS BLOQUE A: Manual & OTP
   // --------------------------------------------------------------------------
+  const handleSendOtp = async () => {
+    if (!currentInventory?.id) return;
+    const target = manualEmail.trim();
+
+    if (!target || !target.includes('@')) {
+      showAppToast('Por favor, ingresa un correo electrónico válido.', 'warning');
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No hay sesión activa.');
+
+      const res = await fetch(getApiUrl('/backup/send-verification-code'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          inventory_id: currentInventory.id,
+          email: target
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Error al enviar el código de verificación.');
+      }
+
+      setOtpSent(true);
+      setOtpCooldown(60);
+      showAppToast(`Código de verificación enviado a ${target}`, 'success', 5000);
+    } catch (err: any) {
+      console.error('Error enviando OTP:', err);
+      showAppToast(err.message || 'No se pudo enviar el código OTP.', 'error');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!currentInventory?.id) return;
+    const target = manualEmail.trim();
+    const code = otpCode.trim();
+
+    if (code.length !== 6 || !/^\d{6}$/.test(code)) {
+      showAppToast('El código debe contener exactamente 6 dígitos numéricos.', 'warning');
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No hay sesión activa.');
+
+      const res = await fetch(getApiUrl('/backup/verify-code'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          inventory_id: currentInventory.id,
+          email: target,
+          code
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Código incorrecto o expirado.');
+      }
+
+      setVerificationToken(data.verification_token);
+      setIsEmailVerified(true);
+      setOtpSent(false);
+      setOtpCode('');
+      showAppToast('✓ Correo verificado exitosamente. Ahora puedes generar el respaldo.', 'success', 4000);
+    } catch (err: any) {
+      console.error('Error verificando OTP:', err);
+      showAppToast(err.message || 'Error al validar el código.', 'error');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const handleResetVerification = () => {
+    setIsEmailVerified(false);
+    setVerificationToken('');
+    setOtpSent(false);
+    setOtpCode('');
+  };
+
   const triggerBrowserDownload = (payload: any) => {
     if (!payload || !currentInventory) return;
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -163,19 +279,19 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
     }
   };
 
-  // Generar y despachar por correo exclusivamente (RF-2 y RF-3)
+  // Generar y despachar por correo exclusivamente (RF-2, RF-3 y RF-4 con OTP)
   const handleExportAndSend = async () => {
     if (!currentInventory?.id) return;
     const target = manualEmail.trim();
 
-    if (!target || !target.includes('@')) {
-      showAppToast('Por favor, ingresa un correo electrónico válido.', 'warning');
+    if (!isEmailVerified || !verificationToken) {
+      showAppToast('Debes verificar tu correo con el código OTP antes de enviar el respaldo.', 'warning');
       return;
     }
 
     setIsExporting(true);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos
+    const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 segundos
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -191,7 +307,8 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
         signal: controller.signal,
         body: JSON.stringify({
           inventory_id: currentInventory.id,
-          email: target
+          email: target,
+          verification_token: verificationToken
         })
       });
 
@@ -212,7 +329,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
     } catch (err: any) {
       clearTimeout(timeoutId);
       if (err.name === 'AbortError') {
-        showAppToast('La solicitud tardó más de 1 minuto. Verifica si el correo llegó a tu bandeja.', 'warning', 8000);
+        showAppToast('La solicitud tardó más de 90 segundos. Verifica si el correo llegó a tu bandeja.', 'warning', 8000);
       } else {
         console.error('Error en exportAndSend:', err);
         showAppToast(err.message || 'Error al generar la copia de seguridad.', 'error');
@@ -392,7 +509,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
         <div className="divide-y divide-[#E5E7EB]">
 
           {/* =================================================================
-              BLOQUE A: Respaldo Manual Inmediato
+              BLOQUE A: Respaldo Manual Inmediato (con Verificación OTP y RF-2)
              ================================================================= */}
           <div className="p-5 sm:p-6 space-y-4">
             <div className="flex items-center gap-2">
@@ -404,36 +521,158 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                   Respaldo Manual Inmediato
                 </h3>
                 <p className="text-xs text-[#616161]">
-                  Exporta todos los datos relacionales en formato JSON y despáchalos al correo destino.
+                  Exporta todos los datos relacionales en formato JSON y despáchalos al correo destino tras validación OTP.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-              <div className="sm:col-span-7 space-y-1.5">
-                <label className="text-xs font-semibold text-[#1E3A5F] block">
-                  Correo electrónico destinatario
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type="email"
-                    value={manualEmail}
-                    onChange={(e) => setManualEmail(e.target.value)}
-                    placeholder="propietario@ejemplo.com"
-                    disabled={isExporting}
-                    className="w-full h-11 bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl pl-10 pr-3.5 text-xs text-[#1E3A5F] focus:outline-none transition-all shadow-xs"
-                  />
+            <div className="space-y-3">
+              {/* Input y Estado de Verificación */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-[#1E3A5F] block">
+                    Correo electrónico destinatario
+                  </label>
+                  {isEmailVerified && (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Correo verificado
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleResetVerification}
+                        className="text-[11px] text-[#1E3A5F] hover:underline cursor-pointer flex items-center gap-1 font-medium"
+                      >
+                        <Edit2 className="w-3 h-3" /> Cambiar correo
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                  <div className={!isEmailVerified ? 'sm:col-span-8' : 'sm:col-span-12'}>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="email"
+                        value={manualEmail}
+                        onChange={(e) => {
+                          setManualEmail(e.target.value);
+                          if (isEmailVerified) handleResetVerification();
+                        }}
+                        placeholder="propietario@ejemplo.com"
+                        disabled={isExporting || isEmailVerified}
+                        readOnly={isEmailVerified}
+                        className={`w-full h-11 border rounded-xl pl-10 pr-3.5 text-xs focus:outline-none transition-all shadow-xs ${
+                          isEmailVerified
+                            ? 'bg-neutral-100 text-neutral-600 border-neutral-300 cursor-not-allowed font-medium'
+                            : 'bg-white text-[#1E3A5F] border-[#E5E7EB] focus:border-[#1E3A5F]'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {!isEmailVerified && (
+                    <div className="sm:col-span-4">
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={isSendingOtp || isExporting || !manualEmail.trim()}
+                        className="w-full h-11 px-3 rounded-xl border border-[#1E3A5F] bg-white hover:bg-[#1E3A5F]/5 text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer disabled:opacity-50 whitespace-nowrap shadow-xs"
+                      >
+                        {isSendingOtp ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1E3A5F]" />
+                            <span>Enviando código...</span>
+                          </>
+                        ) : (
+                          <>
+                            <KeyRound className="w-3.5 h-3.5 text-[#1E3A5F]" />
+                            <span>{otpSent ? 'Reenviar Código' : 'Validar con OTP'}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="sm:col-span-5 flex items-center gap-2">
+              {/* Formulario OTP emergente cuando otpSent es true y no está verificado aún */}
+              {otpSent && !isEmailVerified && (
+                <div className="p-4 bg-blue-50/60 border border-blue-200 rounded-xl space-y-3 animate-in fade-in">
+                  <div className="flex items-start gap-2.5">
+                    <KeyRound className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                    <div className="text-xs text-blue-900 leading-relaxed">
+                      <p className="font-semibold">Código de validación enviado a {manualEmail}</p>
+                      <p className="text-blue-700 text-[11px]">
+                        Ingresa el código numérico de 6 dígitos recibido. Válido por 10 minutos.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="000000"
+                      className="w-full sm:w-44 h-11 text-center font-mono text-base font-bold tracking-widest bg-white border border-blue-300 focus:border-[#1E3A5F] rounded-xl text-[#1E3A5F] focus:outline-none shadow-xs"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={isVerifyingOtp || otpCode.trim().length !== 6}
+                      className="w-full sm:w-auto h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs disabled:opacity-50 cursor-pointer"
+                    >
+                      {isVerifyingOtp ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Verificando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Verificar Código</span>
+                        </>
+                      )}
+                    </button>
+
+                    {otpCooldown > 0 ? (
+                      <span className="text-[11px] font-mono text-neutral-500 whitespace-nowrap pl-2">
+                        Reenviar en {otpCooldown}s
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={isSendingOtp}
+                        className="text-[11px] text-blue-700 hover:underline cursor-pointer font-medium pl-2"
+                      >
+                        Reenviar nuevo código
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Botones de Acción: Generar y Enviar vs Descargar Local */}
+              <div className="flex items-center gap-3 pt-2">
                 <button
                   type="button"
                   onClick={handleExportAndSend}
-                  disabled={isExporting || isDownloading || !manualEmail.trim()}
-                  className="flex-1 h-11 px-4 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs disabled:opacity-50 cursor-pointer"
-                  title="Generar y despachar respaldo por correo"
+                  disabled={!isEmailVerified || isExporting || isDownloading}
+                  className={`flex-1 h-11 px-4 rounded-xl text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer ${
+                    isEmailVerified
+                      ? 'bg-[#1E3A5F] hover:bg-[#152a45]'
+                      : 'bg-neutral-300 text-neutral-500 cursor-not-allowed opacity-60'
+                  }`}
+                  title={
+                    !isEmailVerified
+                      ? 'Debes verificar tu correo mediante código OTP antes de despachar el respaldo.'
+                      : 'Generar y despachar respaldo por correo'
+                  }
                 >
                   {isExporting ? (
                     <>
@@ -443,7 +682,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                   ) : (
                     <>
                       <Send className="w-3.5 h-3.5 text-[#E8B4A0]" />
-                      <span>Generar y Enviar</span>
+                      <span>Generar y Enviar por Correo</span>
                     </>
                   )}
                 </button>
@@ -452,13 +691,19 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                   type="button"
                   onClick={handleDownloadDirectly}
                   disabled={isExporting || isDownloading}
-                  className="h-11 px-3 rounded-xl border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] text-xs flex items-center justify-center transition-all active:scale-95 shrink-0 cursor-pointer disabled:opacity-50"
-                  title="Descargar copia JSON directa en tu navegador (sin enviar correos)"
+                  className="h-11 px-4 rounded-xl border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-95 shrink-0 cursor-pointer disabled:opacity-50"
+                  title="Descargar copia JSON directa en tu navegador (sin enviar correos ni requerir OTP)"
                 >
                   {isDownloading ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
+                      <span>Descargando...</span>
+                    </>
                   ) : (
-                    <Download className="w-4 h-4" />
+                    <>
+                      <Download className="w-4 h-4 text-[#1E3A5F]" />
+                      <span className="hidden sm:inline">Descargar Copia Local (.json)</span>
+                    </>
                   )}
                 </button>
               </div>

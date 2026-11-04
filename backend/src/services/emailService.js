@@ -64,46 +64,42 @@ class EmailService {
           <meta charset="utf-8">
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; padding: 24px; margin: 0; }
-            .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-            .header { background-color: #1e3a5f; color: #ffffff; padding: 28px 32px; }
-            .header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
-            .header p { margin: 6px 0 0 0; font-size: 13px; opacity: 0.85; }
-            .body { padding: 32px; }
-            .card { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin-bottom: 24px; }
-            .card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; margin-bottom: 12px; }
-            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-            .stat { font-size: 13px; color: #334155; }
-            .stat strong { color: #0f172a; }
-            .footer { padding: 20px 32px; background-color: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b; text-align: center; }
-            .badge { display: inline-block; background-color: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+            .container { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04); }
+            .header { background-color: #1e3a5f; color: #ffffff; padding: 22px 28px; }
+            .header h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+            .header p { margin: 4px 0 0 0; font-size: 12px; opacity: 0.9; }
+            .body { padding: 28px; font-size: 14px; line-height: 1.6; color: #334155; }
+            .file-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin: 18px 0; font-size: 13px; color: #1e293b; font-family: ui-monospace, monospace; }
+            .footer { padding: 16px 28px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>📦 Respaldo de Inventario</h1>
+              <h1>📦 Copia de Seguridad</h1>
               <p>${inventoryName} &bull; ${formattedDate}</p>
             </div>
             <div class="body">
-              <p>Hola,</p>
-              <p>Adjunto a este correo encontrarás el archivo oficial de copia de seguridad (<strong>${filename}</strong>) generado para tu inventario.</p>
-              
-              <div class="card">
-                <div class="card-title">Resumen de Contenido Respaldado</div>
-                <div class="grid">
-                  <div class="stat">📦 Productos: <strong>${summary.products ?? 'N/A'}</strong></div>
-                  <div class="stat">📍 Ubicaciones: <strong>${summary.locations ?? 'N/A'}</strong></div>
-                  <div class="stat">🏷️ Categorías: <strong>${summary.categories ?? 'N/A'}</strong></div>
-                  <div class="stat">💰 Ventas Históricas: <strong>${summary.sales ?? 'N/A'}</strong></div>
-                </div>
+              <p>Estimado/a Propietario/a,</p>
+              <p>
+                Le informamos que se ha generado exitosamente la copia de seguridad correspondiente a su inventario <strong>${inventoryName}</strong>.
+              </p>
+              <p>
+                Adjunto a este correo encontrará el archivo oficial con la totalidad de los datos estructurados en formato JSON:
+              </p>
+              <div class="file-box">
+                📎 ${filename}
               </div>
-
-              <p style="font-size: 13px; color: #64748b; line-height: 1.5;">
-                <strong>Nota de Seguridad:</strong> Este archivo <code>.json</code> contiene la estructura completa de tu inventario. Guárdalo en un lugar seguro. Puedes restaurarlo en cualquier momento desde el módulo de <em>Ajustes &gt; Copias de Seguridad</em> de la aplicación.
+              <p style="font-size: 12px; color: #64748b; margin-top: 20px;">
+                Conserve este archivo en un lugar seguro. Podrá utilizarlo para restaurar su información en cualquier momento desde el módulo de Ajustes del sistema.
+              </p>
+              <p style="margin-top: 28px; font-size: 13px; color: #475569;">
+                Atentamente,<br>
+                <strong>Sistema de Gestión Stockly</strong>
               </p>
             </div>
             <div class="footer">
-              Enviado automáticamente por el Sistema de Gestión de Inventario Stockly.
+              Este es un mensaje automático del sistema de inventario. No responda a este correo.
             </div>
           </div>
         </body>
@@ -250,7 +246,7 @@ class EmailService {
    * @returns {Promise<{ success: boolean, messageId?: string, mode: string }>}
    */
   async sendOtpEmail({ to, code, inventoryName = 'Inventario' }) {
-    const subject = `🔐 Tu código de verificación para respaldo - Stockly (${code})`;
+    const subject = `🔐 Código de Verificación para Respaldo: ${code} - Stockly`;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -259,44 +255,43 @@ class EmailService {
           <meta charset="utf-8">
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; padding: 24px; margin: 0; }
-            .container { max-width: 520px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-            .header { background-color: #1e3a5f; color: #ffffff; padding: 24px 28px; text-align: center; }
-            .header h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
-            .header p { margin: 4px 0 0 0; font-size: 12px; opacity: 0.85; }
-            .body { padding: 32px 28px; text-align: center; }
-            .otp-box { background-color: #f1f5f9; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 18px 24px; margin: 24px 0; display: inline-block; }
-            .otp-code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #1e3a5f; margin: 0; }
-            .instructions { font-size: 13px; color: #475569; line-height: 1.6; margin: 0 0 16px 0; }
-            .security-note { font-size: 11px; color: #94a3b8; line-height: 1.5; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 16px; }
-            .footer { padding: 16px 28px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b; text-align: center; }
+            .container { max-width: 520px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04); }
+            .header { background-color: #1e3a5f; color: #ffffff; padding: 22px 28px; }
+            .header h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+            .header p { margin: 4px 0 0 0; font-size: 12px; opacity: 0.9; }
+            .body { padding: 28px; font-size: 14px; line-height: 1.6; color: #334155; }
+            .code-box { background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 18px; margin: 20px 0; text-align: center; }
+            .code-digits { font-family: ui-monospace, monospace; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #1e3a5f; margin: 0; }
+            .footer { padding: 16px 28px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>🔐 Verificación de Correo Destino</h1>
-              <p>${inventoryName} &bull; Seguridad de Copias de Seguridad</p>
+              <h1>🔐 Verificación de Respaldo</h1>
+              <p>${inventoryName} &bull; Autorización de Envío Seguro</p>
             </div>
             <div class="body">
-              <p class="instructions">
-                Has solicitado autorizar este correo para recibir la copia de seguridad de tu inventario.
-                Ingresa el siguiente código de 6 dígitos en la aplicación para verificar tu cuenta:
+              <p>Estimado/a Propietario/a,</p>
+              <p>
+                Ha solicitado enviar una copia de seguridad del inventario <strong>${inventoryName}</strong> a esta dirección de correo.
               </p>
-
-              <div class="otp-box">
-                <div class="otp-code">${code}</div>
+              <p>
+                Para confirmar su identidad y autorizar la entrega del archivo, introduzca el siguiente código de validación de 6 dígitos:
+              </p>
+              <div class="code-box">
+                <div class="code-digits">${code}</div>
               </div>
-
-              <p style="font-size: 12px; color: #64748b; margin: 0;">
-                ⏱️ Este código es válido por <strong>10 minutos</strong>.
+              <p style="font-size: 12px; color: #64748b; margin-top: 16px;">
+                ⏱️ Este código es confidencial y vence en <strong>10 minutos</strong>. Si no reconoció esta solicitud, puede desestimar este mensaje de forma segura.
               </p>
-
-              <p class="security-note">
-                Por motivos de seguridad, nunca compartas este código con nadie. Si no realizaste esta solicitud desde tu panel de inventario, puedes ignorar este mensaje de forma segura.
+              <p style="margin-top: 24px; font-size: 13px; color: #475569;">
+                Atentamente,<br>
+                <strong>Sistema de Gestión Stockly</strong>
               </p>
             </div>
             <div class="footer">
-              Enviado automáticamente por el Sistema de Gestión de Inventario Stockly.
+              Este es un mensaje automático de seguridad. No responda a este correo.
             </div>
           </div>
         </body>

@@ -79,13 +79,20 @@ test('Zod DTO Security: Backup Schemas', async (t) => {
     assert.equal(exportBackupSchema.safeParse({ inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' }).success, true);
   });
 
-  await t.test('exportAndSendBackupSchema debe validar UUID y correo', () => {
-    const invalid = { inventory_id: 'not-uuid', target_email: 'not-an-email' };
+  await t.test('exportAndSendBackupSchema debe validar UUID, correo y verification_token', () => {
+    const invalidWithoutToken = {
+      inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      target_email: 'propietario@empresa.com'
+    };
+    assert.equal(exportAndSendBackupSchema.safeParse(invalidWithoutToken).success, false);
+
+    const invalid = { inventory_id: 'not-uuid', target_email: 'not-an-email', verification_token: '123' };
     assert.equal(exportAndSendBackupSchema.safeParse(invalid).success, false);
 
     const valid = {
       inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-      target_email: 'propietario@empresa.com'
+      target_email: 'propietario@empresa.com',
+      verification_token: 'valid.token.signature.123456789'
     };
     assert.equal(exportAndSendBackupSchema.safeParse(valid).success, true);
   });
