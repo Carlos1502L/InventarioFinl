@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+export const exportBackupSchema = z.object({
+  inventory_id: z.string().uuid({ message: 'El ID de inventario debe ser un UUID válido.' })
+});
+
 export const exportAndSendBackupSchema = z.object({
   inventory_id: z.string().uuid({ message: 'El ID de inventario debe ser un UUID válido.' }),
   target_email: z.string().email({ message: 'Debe proporcionar un correo electrónico de destino válido.' }).max(255)

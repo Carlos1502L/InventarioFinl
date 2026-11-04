@@ -108,6 +108,8 @@ class EmailService {
 
     const buffer = Buffer.isBuffer(jsonContent) ? jsonContent : Buffer.from(jsonContent, 'utf-8');
 
+    let sendError = null;
+
     // Opción 1: Resend API si existe RESEND_API_KEY
     if (process.env.RESEND_API_KEY) {
       try {
@@ -137,9 +139,11 @@ class EmailService {
           return { success: true, messageId: data.id, mode: 'resend' };
         } else {
           console.error('❌ [EmailService] Error en Resend API:', data);
+          sendError = data.message || 'Error en Resend API';
         }
       } catch (err) {
         console.error('❌ [EmailService] Error de red enviando con Resend:', err);
+        sendError = err.message;
       }
     }
 
@@ -164,19 +168,25 @@ class EmailService {
         return { success: true, messageId: info.messageId, mode: 'smtp' };
       } catch (smtpErr) {
         console.error('❌ [EmailService] Error enviando correo vía SMTP:', smtpErr);
+        sendError = smtpErr.message;
       }
     }
 
-    // Opción 3: Modo fallback / simulado de desarrollo
-    console.log(`ℹ️ [EmailService:SIMULADO] Correo preparado para: ${to}`);
-    console.log(`ℹ️ [EmailService:SIMULADO] Asunto: ${subject}`);
-    console.log(`ℹ️ [EmailService:SIMULADO] Archivo adjunto: ${filename} (${buffer.length} bytes)`);
+    // Si falló con proveedor configurado
+    if (sendError) {
+      return {
+        success: false,
+        mode: 'error',
+        error: `Error al enviar correo: ${sendError}`
+      };
+    }
 
+    // Si no hay proveedor configurado en .env
+    console.warn(`⚠️ [EmailService] No hay credenciales de correo (RESEND_API_KEY ni SMTP) configuradas en el servidor.`);
     return {
-      success: true,
-      messageId: `simulated-${Date.now()}`,
-      mode: 'simulated',
-      note: 'El correo fue simulado con éxito ya que no hay credenciales SMTP/Resend en este entorno.'
+      success: false,
+      mode: 'unconfigured',
+      error: 'El servidor no tiene configurado un servicio de correo saliente (falta RESEND_API_KEY o SMTP en las variables de entorno de Render).'
     };
   }
 }

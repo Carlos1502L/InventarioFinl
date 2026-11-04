@@ -4,6 +4,7 @@ import { createAuditLogSchema } from '../src/schemas/auditSchemas.js';
 import { inviteCollaboratorSchema } from '../src/schemas/collaboratorSchemas.js';
 import { reportQuerySchema } from '../src/schemas/reportSchemas.js';
 import {
+  exportBackupSchema,
   exportAndSendBackupSchema,
   saveBackupSettingsSchema,
   restoreBackupSchema
@@ -70,6 +71,11 @@ test('Zod DTO Security: reportQuerySchema', async (t) => {
 });
 
 test('Zod DTO Security: Backup Schemas', async (t) => {
+  await t.test('exportBackupSchema debe validar UUID únicamente para descarga directa', () => {
+    assert.equal(exportBackupSchema.safeParse({ inventory_id: 'not-uuid' }).success, false);
+    assert.equal(exportBackupSchema.safeParse({ inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' }).success, true);
+  });
+
   await t.test('exportAndSendBackupSchema debe validar UUID y correo', () => {
     const invalid = { inventory_id: 'not-uuid', target_email: 'not-an-email' };
     assert.equal(exportAndSendBackupSchema.safeParse(invalid).success, false);

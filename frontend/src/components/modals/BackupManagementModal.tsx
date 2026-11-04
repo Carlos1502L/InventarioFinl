@@ -38,6 +38,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
   // Estados Bloque Manual
   const [manualEmail, setManualEmail] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Estados Bloque Programado
   const [isScheduled, setIsScheduled] = useState(false);
@@ -114,7 +115,60 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
   // --------------------------------------------------------------------------
   // HANDLERS
   // --------------------------------------------------------------------------
-  const handleExportAndSend = async (downloadDirectly = false) => {
+  const triggerBrowserDownload = (payload: any) => {
+    if (!payload || !currentInventory) return;
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const safeInvName = (currentInventory.name || 'inventario').toLowerCase().replace(/[^a-z0-9]/g, '_');
+    a.href = url;
+    a.download = `backup_${safeInvName}_${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Solo descarga directa (sin enviar ningún correo)
+  const handleDownloadDirectly = async () => {
+    if (!currentInventory?.id) return;
+    setIsDownloading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No hay sesión activa.');
+
+      const res = await fetch(getApiUrl('/backup/export'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          inventory_id: currentInventory.id
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Error al exportar la copia de seguridad.');
+      }
+
+      if (data.payload) {
+        triggerBrowserDownload(data.payload);
+        showAppToast('Copia de seguridad descargada exitosamente.', 'success', 4000);
+      }
+    } catch (err: any) {
+      console.error('Error descargando backup:', err);
+      showAppToast(err.message || 'No se pudo descargar el respaldo.', 'error');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Generar y enviar por correo
+  const handleExportAndSend = async () => {
     if (!currentInventory?.id) return;
     const target = manualEmail.trim();
     if (!target || !target.includes('@')) {
@@ -145,20 +199,15 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
         throw new Error(data.message || 'Error al exportar y enviar el respaldo.');
       }
 
-      showAppToast(`Respaldo generado y enviado a ${target}`, 'success', 5000);
-
-      if (downloadDirectly && data.payload) {
-        const blob = new Blob([JSON.stringify(data.payload, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        const safeInvName = (currentInventory.name || 'inventario').toLowerCase().replace(/[^a-z0-9]/g, '_');
-        a.href = url;
-        a.download = `backup_${safeInvName}_${dateStr}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+      if (data.emailSent) {
+        showAppToast(`Respaldo generado y enviado a ${target}`, 'success', 5000);
+      } else {
+        // Si no hay proveedor SMTP configurado en el servidor, informar y descargar localmente
+        const notice = data.emailResult?.error || 'Servicio de correo saliente no configurado en el servidor.';
+        showAppToast(`Respaldo generado. Aviso: ${notice}`, 'warning', 7000);
+        if (data.payload) {
+          triggerBrowserDownload(data.payload);
+        }
       }
     } catch (err: any) {
       console.error('Error exportando backup:', err);
@@ -390,8 +439,8 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                 <div className="space-y-2 pt-1">
                   <button
                     type="button"
-                    onClick={() => handleExportAndSend(false)}
-                    disabled={isExporting}
+                    onClick={handleExportAndSend}
+                    disabled={isExporting || isDownloading}
                     className="mobile-primary-btn w-full min-h-[44px] px-4 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-98 shadow-xs disabled:opacity-50 cursor-pointer"
                   >
                     {isExporting ? (
@@ -409,12 +458,21 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => handleExportAndSend(true)}
-                    disabled={isExporting}
+                    onClick={handleDownloadDirectly}
+                    disabled={isExporting || isDownloading}
                     className="w-full min-h-[44px] px-4 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer disabled:opacity-50"
                   >
-                    <Download className="w-4 h-4 text-neutral-600" />
-                    <span>Descargar archivo .json directo</span>
+                    {isDownloading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-neutral-600" />
+                        <span>Descargando copia...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 text-neutral-600" />
+                        <span>Descargar archivo .json directo</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

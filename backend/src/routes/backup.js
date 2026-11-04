@@ -3,6 +3,7 @@ import { supabaseAdmin } from '../config/supabase.js';
 import { requireAuth, verifyTenantAccess } from '../middlewares/auth.js';
 import { validate } from '../middlewares/validate.js';
 import {
+  exportBackupSchema,
   exportAndSendBackupSchema,
   saveBackupSettingsSchema,
   restoreBackupSchema
@@ -12,6 +13,65 @@ import { emailService } from '../services/emailService.js';
 import { calculateNextRunDate } from '../services/backupScheduler.js';
 
 const router = express.Router();
+
+/**
+ * POST /api/backup/export
+ * Genera y descarga el archivo .json localmente en el cliente sin enviar ningún correo electrónico.
+ * Restricción estricta: Solo el Propietario (Owner) del inventario.
+ */
+router.post(
+  '/export',
+  requireAuth,
+  validate(exportBackupSchema, 'body'),
+  verifyTenantAccess({ source: 'body', key: 'inventory_id', requiredRole: 'owner' }),
+  async (req, res, next) => {
+    try {
+      const { inventory_id } = req.body;
+      const invName = req.inventory?.name || 'Inventario';
+
+      // 1. Extraer los datos relacionales completos
+      const payload = await backupService.exportInventoryData(inventory_id);
+
+      const safeName = invName.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const filename = `backup_${safeName}_${dateStr}.json`;
+
+      // 2. Registrar auditoría con esquema correcto (no bloqueante)
+      try {
+        await supabaseAdmin.from('audit_logs').insert({
+          inventory_id,
+          user_id: req.user?.id || null,
+          user_email: req.user?.email || 'propietario',
+          action_type: 'CREATE',
+          details: `Copia de seguridad descargada directamente (${filename})`,
+          metadata: {
+            filename,
+            products_count: payload.data.products?.length || 0,
+            sales_count: payload.data.sales?.length || 0,
+            download_only: true
+          }
+        });
+      } catch (auditErr) {
+        console.warn('⚠️ [export] No se pudo registrar auditoría:', auditErr.message);
+      }
+
+      return res.json({
+        success: true,
+        message: 'Copia de seguridad exportada exitosamente.',
+        filename,
+        payload
+      });
+    } catch (err) {
+      console.error('❌ [export] Error fatal exportando respaldo:', err);
+      return res.status(500).json({
+        success: false,
+        code: 'BACKUP_EXPORT_ERROR',
+        message: err.message || 'Error al exportar la copia de seguridad.',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+);
 
 /**
  * POST /api/backup/export-and-send
@@ -83,9 +143,10 @@ router.post(
 
       return res.json({
         success: true,
+        emailSent: Boolean(emailResult.success),
         message: emailResult.success
           ? `Respaldo generado y enviado exitosamente a ${cleanEmail}.`
-          : `Respaldo generado exitosamente (${filename}). ${emailResult.error ? `Aviso de correo: ${emailResult.error}` : ''}`,
+          : `Respaldo generado (${filename}). Aviso: ${emailResult.error || 'No se pudo enviar el correo'}`,
         filename,
         payload, // Se retorna para permitir descarga local inmediata en navegador
         emailResult
