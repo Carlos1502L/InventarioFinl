@@ -14,7 +14,8 @@ import {
   RefreshCw,
   FileJson,
   KeyRound,
-  Edit2
+  Edit2,
+  ChevronDown
 } from 'lucide-react';
 import { supabase, getApiUrl } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -1027,43 +1028,66 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                     )}
                   </div>
 
-                  {/* Selector de Frecuencia con Select y Menú Desplazable de Días al mismo nivel */}
+                  {/* Selector de Frecuencia con Selectores visualmente perfectos con overlay táctil nativo */}
                   <div className="sm:col-span-6 space-y-1.5">
                     <label className="text-xs font-semibold text-[#1E3A5F] block">
                       Frecuencia de Envío
                     </label>
                     <div className="grid grid-cols-2 gap-2">
-                      {/* Campo 1: Select predeterminado con texto centrado */}
-                      <div className="relative">
-                        <select
-                          value={frequencyOption === 'custom' ? '' : frequencyOption}
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              setFrequencyOption(e.target.value as any);
-                            }
-                          }}
-                          className={`w-full h-11 px-3 pr-7 rounded-xl text-xs font-semibold border appearance-none transition-all cursor-pointer text-center [text-align-last:center] ${
-                            frequencyOption !== 'custom'
-                              ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-xs'
-                              : 'bg-white text-neutral-700 border-[#E5E7EB]'
-                          }`}
-                        >
-                          <option value="" disabled className="text-neutral-400 bg-white">
-                            Predeterminado
-                          </option>
-                          <option value="1" className="bg-white text-neutral-800">Diario (1 día)</option>
-                          <option value="7" className="bg-white text-neutral-800">Semanal (7 días)</option>
-                          <option value="15" className="bg-white text-neutral-800">Quincenal (15 días)</option>
-                        </select>
-                        <div className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs ${
-                          frequencyOption !== 'custom' ? 'text-white' : 'text-neutral-500'
-                        }`}>
-                          ▾
+                      {/* Campo 1: Predeterminado (Diario, Semanal, Quincenal) */}
+                      <div
+                        className={`relative w-full h-11 px-3 rounded-xl border flex items-center justify-between transition-all shadow-xs cursor-pointer ${
+                          frequencyOption !== 'custom'
+                            ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
+                            : 'bg-white text-neutral-700 border-[#E5E7EB]'
+                        }`}
+                      >
+                        <div className="flex-1 text-center truncate pr-1">
+                          <span className="text-xs font-semibold leading-normal">
+                            {frequencyOption === '1'
+                              ? 'Diario (1 día)'
+                              : frequencyOption === '15'
+                              ? 'Quincenal (15 días)'
+                              : 'Semanal (7 días)'}
+                          </span>
                         </div>
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                            frequencyOption !== 'custom' ? 'text-white' : 'text-neutral-500'
+                          }`}
+                        />
+                        <select
+                          value={frequencyOption === 'custom' ? '7' : frequencyOption}
+                          onChange={(e) => setFrequencyOption(e.target.value as any)}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          aria-label="Frecuencia predeterminada"
+                        >
+                          <option value="1">Diario (1 día)</option>
+                          <option value="7">Semanal (7 días)</option>
+                          <option value="15">Quincenal (15 días)</option>
+                        </select>
                       </div>
 
-                      {/* Campo 2: Menú desplazable para días personalizados (rueda/picker nativo como hora) */}
-                      <div className="relative">
+                      {/* Campo 2: Personalizado (Abre el scroll wheel nativo al pulsar) */}
+                      <div
+                        className={`relative w-full h-11 px-3 rounded-xl border flex items-center justify-between transition-all shadow-xs cursor-pointer ${
+                          frequencyOption === 'custom'
+                            ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
+                            : 'bg-white text-neutral-700 border-[#E5E7EB]'
+                        }`}
+                      >
+                        <div className="flex-1 text-center truncate pr-1">
+                          <span className="text-xs font-semibold leading-normal">
+                            {frequencyOption === 'custom'
+                              ? `${customDays} ${customDays === 1 ? 'día' : 'días'}`
+                              : 'Personalizado'}
+                          </span>
+                        </div>
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                            frequencyOption === 'custom' ? 'text-white' : 'text-neutral-500'
+                          }`}
+                        />
                         <select
                           value={frequencyOption === 'custom' ? String(customDays) : ''}
                           onChange={(e) => {
@@ -1073,31 +1097,21 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                               setFrequencyOption('custom');
                             }
                           }}
-                          className={`w-full h-11 px-3 pr-7 rounded-xl text-xs font-semibold border appearance-none transition-all cursor-pointer text-center [text-align-last:center] ${
-                            frequencyOption === 'custom'
-                              ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-xs'
-                              : 'bg-white text-neutral-700 border-[#E5E7EB]'
-                          }`}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          aria-label="Días personalizados"
                         >
-                          <option value="" disabled={frequencyOption === 'custom'} className="text-neutral-400 bg-white">
-                            Personalizado
-                          </option>
+                          <option value="" disabled>Personalizado</option>
                           {Array.from({ length: 30 }, (_, i) => i + 1).map((d) => (
-                            <option key={d} value={d} className="bg-white text-neutral-800">
+                            <option key={d} value={d}>
                               {d} {d === 1 ? 'día' : 'días'}
                             </option>
                           ))}
-                          <option value="45" className="bg-white text-neutral-800">45 días</option>
-                          <option value="60" className="bg-white text-neutral-800">60 días</option>
-                          <option value="90" className="bg-white text-neutral-800">90 días</option>
-                          <option value="180" className="bg-white text-neutral-800">180 días</option>
-                          <option value="365" className="bg-white text-neutral-800">365 días</option>
+                          <option value="45">45 días</option>
+                          <option value="60">60 días</option>
+                          <option value="90">90 días</option>
+                          <option value="180">180 días</option>
+                          <option value="365">365 días</option>
                         </select>
-                        <div className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs ${
-                          frequencyOption === 'custom' ? 'text-white' : 'text-neutral-500'
-                        }`}>
-                          ▾
-                        </div>
                       </div>
                     </div>
                   </div>
