@@ -4,9 +4,24 @@ export const exportBackupSchema = z.object({
   inventory_id: z.string().uuid({ message: 'El ID de inventario debe ser un UUID válido.' })
 });
 
+export const sendVerificationCodeSchema = z.object({
+  inventory_id: z.string().uuid({ message: 'El ID de inventario debe ser un UUID válido.' }),
+  email: z.string().email({ message: 'Debe proporcionar un correo electrónico válido.' }).max(255)
+});
+
+export const verifyCodeSchema = z.object({
+  inventory_id: z.string().uuid({ message: 'El ID de inventario debe ser un UUID válido.' }),
+  email: z.string().email({ message: 'Debe proporcionar un correo electrónico válido.' }).max(255),
+  code: z.string().regex(/^\d{6}$/, { message: 'El código de verificación debe contener exactamente 6 dígitos numéricos.' })
+});
+
 export const exportAndSendBackupSchema = z.object({
   inventory_id: z.string().uuid({ message: 'El ID de inventario debe ser un UUID válido.' }),
-  target_email: z.string().email({ message: 'Debe proporcionar un correo electrónico de destino válido.' }).max(255)
+  email: z.string().email({ message: 'Debe proporcionar un correo electrónico válido.' }).max(255).optional(),
+  target_email: z.string().email({ message: 'Debe proporcionar un correo electrónico de destino válido.' }).max(255).optional(),
+  verification_token: z.string().optional()
+}).refine((data) => data.email || data.target_email, {
+  message: 'Debe proporcionar el correo electrónico de destino (email o target_email).'
 });
 
 export const saveBackupSettingsSchema = z.object({

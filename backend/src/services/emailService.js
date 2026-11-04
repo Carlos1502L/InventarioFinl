@@ -193,6 +193,139 @@ class EmailService {
       error: 'El servidor no tiene configurado un servicio de correo saliente (falta RESEND_API_KEY o SMTP en las variables de entorno de Render).'
     };
   }
+
+  /**
+   * Envía el código de verificación OTP de 6 dígitos al correo destino.
+   *
+   * @param {Object} options
+   * @param {string} options.to - Correo destinatario
+   * @param {string} options.code - Código de 6 dígitos
+   * @param {string} options.inventoryName - Nombre del inventario
+   * @returns {Promise<{ success: boolean, messageId?: string, mode: string }>}
+   */
+  async sendOtpEmail({ to, code, inventoryName = 'Inventario' }) {
+    const subject = `🔐 Tu código de verificación para respaldo - Stockly (${code})`;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; padding: 24px; margin: 0; }
+            .container { max-width: 520px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+            .header { background-color: #1e3a5f; color: #ffffff; padding: 24px 28px; text-align: center; }
+            .header h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+            .header p { margin: 4px 0 0 0; font-size: 12px; opacity: 0.85; }
+            .body { padding: 32px 28px; text-align: center; }
+            .otp-box { background-color: #f1f5f9; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 18px 24px; margin: 24px 0; display: inline-block; }
+            .otp-code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #1e3a5f; margin: 0; }
+            .instructions { font-size: 13px; color: #475569; line-height: 1.6; margin: 0 0 16px 0; }
+            .security-note { font-size: 11px; color: #94a3b8; line-height: 1.5; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 16px; }
+            .footer { padding: 16px 28px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔐 Verificación de Correo Destino</h1>
+              <p>${inventoryName} &bull; Seguridad de Copias de Seguridad</p>
+            </div>
+            <div class="body">
+              <p class="instructions">
+                Has solicitado autorizar este correo para recibir la copia de seguridad de tu inventario.
+                Ingresa el siguiente código de 6 dígitos en la aplicación para verificar tu cuenta:
+              </p>
+
+              <div class="otp-box">
+                <div class="otp-code">${code}</div>
+              </div>
+
+              <p style="font-size: 12px; color: #64748b; margin: 0;">
+                ⏱️ Este código es válido por <strong>10 minutos</strong>.
+              </p>
+
+              <p class="security-note">
+                Por motivos de seguridad, nunca compartas este código con nadie. Si no realizaste esta solicitud desde tu panel de inventario, puedes ignorar este mensaje de forma segura.
+              </p>
+            </div>
+            <div class="footer">
+              Enviado automáticamente por el Sistema de Gestión de Inventario Stockly.
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    let sendError = null;
+
+    // Opción 1: Resend si existe
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.RESEND_API_KEY}`
+          },
+          body: JSON.stringify({
+            from: process.env.EMAIL_FROM || 'Stockly Seguridad <onboarding@resend.dev>',
+            to: [to],
+            subject,
+            html: htmlContent
+          })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          console.log(`✅ [EmailService] Código OTP enviado vía Resend a ${to} (ID: ${data.id})`);
+          return { success: true, messageId: data.id, mode: 'resend' };
+        } else {
+          console.error('❌ [EmailService] Error en Resend API enviando OTP:', data);
+          sendError = data.message || 'Error en Resend API';
+        }
+      } catch (err) {
+        console.error('❌ [EmailService] Error de red enviando OTP con Resend:', err);
+        sendError = err.message;
+      }
+    }
+
+    // Opción 2: Nodemailer SMTP
+    if (!this.transporter) {
+      this.initTransporter();
+    }
+
+    if (this.transporter) {
+      try {
+        const info = await this.transporter.sendMail({
+          from: process.env.EMAIL_FROM || '"Stockly Inventario" <no-reply@inventariocoop.com>',
+          to,
+          subject,
+          html: htmlContent
+        });
+
+        console.log(`✅ [EmailService] Código OTP enviado vía SMTP a ${to} (ID: ${info.messageId})`);
+        return { success: true, messageId: info.messageId, mode: 'smtp' };
+      } catch (smtpErr) {
+        console.error('❌ [EmailService] Error enviando OTP vía SMTP:', smtpErr);
+        sendError = smtpErr.message;
+      }
+    }
+
+    if (sendError) {
+      return {
+        success: false,
+        mode: 'error',
+        error: `Error al despachar el código OTP: ${sendError}`
+      };
+    }
+
+    return {
+      success: false,
+      mode: 'unconfigured',
+      error: 'El servidor no tiene configurado un servicio de correo saliente (falta RESEND_API_KEY o SMTP en Render).'
+    };
+  }
 }
 
 export const emailService = new EmailService();

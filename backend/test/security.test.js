@@ -7,8 +7,11 @@ import {
   exportBackupSchema,
   exportAndSendBackupSchema,
   saveBackupSettingsSchema,
-  restoreBackupSchema
+  restoreBackupSchema,
+  sendVerificationCodeSchema,
+  verifyCodeSchema
 } from '../src/schemas/backupSchemas.js';
+import { otpService } from '../src/services/otpService.js';
 
 test('Zod DTO Security: createAuditLogSchema', async (t) => {
   await t.test('debe rechazar un inventory_id que no sea UUID', () => {
@@ -105,6 +108,52 @@ test('Zod DTO Security: Backup Schemas', async (t) => {
     };
     const parsed = saveBackupSettingsSchema.safeParse(valid);
     assert.equal(parsed.success, true);
+  });
+
+  await t.test('sendVerificationCodeSchema y verifyCodeSchema deben validar correo y código de 6 dígitos', () => {
+    assert.equal(sendVerificationCodeSchema.safeParse({ inventory_id: 'bad', email: 'bad' }).success, false);
+    assert.equal(sendVerificationCodeSchema.safeParse({
+      inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      email: 'owner@test.com'
+    }).success, true);
+
+    assert.equal(verifyCodeSchema.safeParse({
+      inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      email: 'owner@test.com',
+      code: '12345' // Menos de 6 dígitos
+    }).success, false);
+
+    assert.equal(verifyCodeSchema.safeParse({
+      inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      email: 'owner@test.com',
+      code: '123456'
+    }).success, true);
+  });
+
+  await t.test('otpService debe generar, validar código y firmar token seguro', () => {
+    const invId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+    const email = 'propietario@empresa.com';
+    const code = otpService.generateOtp(invId, email);
+
+    assert.equal(typeof code, 'string');
+    assert.equal(code.length, 6);
+
+    // Verificación errónea
+    const badVerify = otpService.verifyOtp(invId, email, '000000');
+    assert.equal(badVerify.success, false);
+
+    // Verificación correcta
+    const goodVerify = otpService.verifyOtp(invId, email, code);
+    assert.equal(goodVerify.success, true);
+    assert.equal(typeof goodVerify.verification_token, 'string');
+
+    // Validación del token generado
+    const tokenCheck = otpService.verifyToken(invId, email, goodVerify.verification_token);
+    assert.equal(tokenCheck.valid, true);
+
+    // Validación con otro correo debe fallar
+    const wrongEmailCheck = otpService.verifyToken(invId, 'otro@empresa.com', goodVerify.verification_token);
+    assert.equal(wrongEmailCheck.valid, false);
   });
 
   await t.test('restoreBackupSchema debe exigir versión 1.0 estricta y data válida', () => {
