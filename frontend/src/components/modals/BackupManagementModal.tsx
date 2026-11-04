@@ -1037,7 +1037,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       )}
                     </div>
 
-                    {/* Frecuencia de envío: Selectores visualmente perfectos con overlay táctil nativo */}
+                    {/* Frecuencia de envío: Cápsulas suaves y centradas idénticas al diseño nativo */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-[#1E3A5F] block">
                         Frecuencia de envío
@@ -1045,14 +1045,14 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       <div className="grid grid-cols-2 gap-2">
                         {/* Campo 1: Predeterminado (Diario, Semanal, Quincenal) */}
                         <div
-                          className={`relative w-full h-10 px-3 rounded-xl border flex items-center justify-between transition-all shadow-xs cursor-pointer ${
+                          className={`relative w-full h-11 px-3 rounded-2xl border flex items-center justify-between transition-all cursor-pointer ${
                             frequencyOption !== 'custom'
-                              ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
-                              : 'bg-neutral-100 text-neutral-700 border-neutral-200'
+                              ? 'bg-neutral-100 border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
+                              : 'bg-neutral-100/70 border-transparent text-neutral-500 font-medium'
                           }`}
                         >
                           <div className="flex-1 text-center truncate pr-1">
-                            <span className="text-xs font-semibold leading-normal">
+                            <span className="text-xs leading-normal">
                               {frequencyOption === '1'
                                 ? 'Diario (1 día)'
                                 : frequencyOption === '15'
@@ -1060,11 +1060,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                                 : 'Semanal (7 días)'}
                             </span>
                           </div>
-                          <ChevronDown
-                            className={`w-3.5 h-3.5 shrink-0 transition-colors ${
-                              frequencyOption !== 'custom' ? 'text-white' : 'text-neutral-500'
-                            }`}
-                          />
+                          <ChevronDown className="w-3.5 h-3.5 text-neutral-400 shrink-0 pointer-events-none" />
                           <select
                             value={frequencyOption === 'custom' ? '7' : frequencyOption}
                             onChange={(e) => setFrequencyOption(e.target.value as any)}
@@ -1077,26 +1073,22 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                           </select>
                         </div>
 
-                        {/* Campo 2: Personalizado (Abre el scroll wheel nativo para desplazar días) */}
+                        {/* Campo 2: Personalizado (Abre el scroll wheel nativo al pulsar) */}
                         <div
-                          className={`relative w-full h-10 px-3 rounded-xl border flex items-center justify-between transition-all shadow-xs cursor-pointer ${
+                          className={`relative w-full h-11 px-3 rounded-2xl border flex items-center justify-between transition-all cursor-pointer ${
                             frequencyOption === 'custom'
-                              ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
-                              : 'bg-neutral-100 text-neutral-700 border-neutral-200'
+                              ? 'bg-neutral-100 border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
+                              : 'bg-neutral-100/70 border-transparent text-neutral-500 font-medium'
                           }`}
                         >
                           <div className="flex-1 text-center truncate pr-1">
-                            <span className="text-xs font-semibold leading-normal">
+                            <span className="text-xs leading-normal">
                               {frequencyOption === 'custom'
                                 ? `${customDays} ${customDays === 1 ? 'día' : 'días'}`
                                 : 'Personalizado'}
                             </span>
                           </div>
-                          <ChevronDown
-                            className={`w-3.5 h-3.5 shrink-0 transition-colors ${
-                              frequencyOption === 'custom' ? 'text-white' : 'text-neutral-500'
-                            }`}
-                          />
+                          <ChevronDown className="w-3.5 h-3.5 text-neutral-400 shrink-0 pointer-events-none" />
                           <select
                             value={frequencyOption === 'custom' ? String(customDays) : ''}
                             onChange={(e) => {
@@ -1125,18 +1117,20 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Hora de Envío: Solo campo de hora centrado y limpio */}
+                    {/* Hora de Envío: Compacto, centrado y sin desbordes */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-[#1E3A5F] flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-[#E8B4A0]" />
                         Hora de envío (24h)
                       </label>
-                      <input
-                        type="time"
-                        value={executionTime || '02:00'}
-                        onChange={(e) => setExecutionTime(e.target.value || '02:00')}
-                        className="w-full h-10 px-3 bg-neutral-100 rounded-xl text-xs font-mono font-bold text-[#1E3A5F] border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] text-center [text-align-last:center]"
-                      />
+                      <div className="flex items-center">
+                        <input
+                          type="time"
+                          value={executionTime || '02:00'}
+                          onChange={(e) => setExecutionTime(e.target.value || '02:00')}
+                          className="w-28 max-w-[120px] h-9 px-2.5 bg-neutral-100 rounded-xl text-xs font-mono font-bold text-[#1E3A5F] border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] text-center shrink-0 shadow-2xs"
+                        />
+                      </div>
                     </div>
 
                     {/* Próximo envío badge */}
