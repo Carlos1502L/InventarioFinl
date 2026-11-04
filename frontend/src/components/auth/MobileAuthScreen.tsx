@@ -21,7 +21,7 @@ interface LetterItem {
   delay: number;
 }
 
-// Coordenadas asimétricas fuera de pantalla con tiempos extendidos para mayor presencia visual
+// Coordenadas asimétricas para el ensamblaje cinético de la palabra STOCKLY
 const LETTERS: LetterItem[] = [
   { char: 'S', initialX: -140, initialY: -100, rotate: -25, delay: 0.00 },
   { char: 'T', initialX: 0,    initialY: -140, rotate: 12,  delay: 0.08 },
@@ -43,7 +43,6 @@ export function MobileAuthScreen() {
   const [fullName, setFullName] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isResetPassword, setIsResetPassword] = useState(false);
@@ -94,25 +93,6 @@ export function MobileAuthScreen() {
     }
   };
 
-  // Manejador Google OAuth
-  const handleGoogleSignIn = async () => {
-    try {
-      setErrorMsg(null);
-      setGoogleLoading(true);
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      console.error('Error con Google OAuth:', err);
-      setErrorMsg(err.message || 'No se pudo conectar con Google.');
-      setGoogleLoading(false);
-    }
-  };
-
   // Manejador de Recuperación de Contraseña
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,35 +118,51 @@ export function MobileAuthScreen() {
   };
 
   return (
-    <div className="relative min-h-[100dvh] w-full bg-[#F8F9FA] text-[#1E3A5F] flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto overscroll-y-contain select-none pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] font-sans">
-      
-      {/* Acentos geométricos de fondo suaves idénticos al estilo editorial */}
-      <div className="fixed top-[-80px] right-[-80px] w-72 h-72 rounded-full bg-[#E8B4A0]/15 blur-3xl pointer-events-none" />
-      <div className="fixed bottom-[-80px] left-[-80px] w-80 h-80 rounded-full bg-[#1E3A5F]/5 blur-3xl pointer-events-none" />
+    <motion.div
+      animate={{
+        backgroundColor: stage === 'LOGIN_READY' ? '#F8F9FA' : '#000000',
+      }}
+      transition={{ duration: 0.55, ease: 'easeInOut' }}
+      className="relative min-h-[100dvh] w-full text-[#1E3A5F] flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto overscroll-y-contain select-none pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] font-sans"
+    >
+      {/* Acentos geométricos del estilo móvil que aparecen sutilmente al terminar la animación */}
+      <AnimatePresence>
+        {stage === 'LOGIN_READY' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6 }}
+            className="pointer-events-none"
+          >
+            <div className="fixed top-[-80px] right-[-80px] w-72 h-72 rounded-full bg-[#E8B4A0]/15 blur-3xl pointer-events-none" />
+            <div className="fixed bottom-[-80px] left-[-80px] w-80 h-80 rounded-full bg-[#1E3A5F]/5 blur-3xl pointer-events-none" />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* =========================================================
-          FASE 1 Y 2: LOGOTIPO CINÉTICO ANIMADO Y EXPANSIÓN
+          FASE 1 Y 2: ANIMACIÓN CINÉTICA (LETRAS BLANCAS SOBRE FONDO NEGRO)
          ========================================================= */}
       {stage !== 'LOGIN_READY' && (
         <div className="relative z-20 flex items-center justify-center my-auto min-h-[60vh]">
           
-          {/* Destello de onda expansiva en color Nude editorial (#E8B4A0) */}
+          {/* Destello blanco de la onda expansiva en la explosión */}
           {stage === 'EXPLODING' && (
             <motion.div
-              initial={{ scale: 0, opacity: 0.85 }}
-              animate={{ scale: 4.2, opacity: 0 }}
+              initial={{ scale: 0, opacity: 0.95 }}
+              animate={{ scale: 4.5, opacity: 0 }}
               transition={{ duration: 0.55, ease: 'easeOut' }}
-              className="absolute w-32 h-32 rounded-full bg-[#E8B4A0] blur-2xl pointer-events-none"
+              className="absolute w-32 h-32 rounded-full bg-white blur-2xl pointer-events-none"
             />
           )}
 
-          {/* Letras convergentes con tipografía Mono corporativa Stockly */}
+          {/* Letras blancas convergentes sobre fondo negro */}
           <motion.div
-            className="flex text-4xl sm:text-5xl font-mono font-bold tracking-[0.2em] text-[#1E3A5F] select-none"
+            className="flex text-4xl sm:text-5xl font-mono font-bold tracking-[0.2em] text-white select-none"
             animate={
               stage === 'EXPLODING'
                 ? {
-                    scale: [1, 0.88, 2.3],
+                    scale: [1, 0.88, 2.4],
                     opacity: [1, 1, 0],
                     filter: ['blur(0px)', 'blur(0px)', 'blur(10px)'],
                   }
@@ -197,15 +193,15 @@ export function MobileAuthScreen() {
                 transition={{
                   duration: 1.05,
                   delay: item.delay,
-                  ease: [0.16, 1, 0.3, 1], // Desaceleración suave y elegante
+                  ease: [0.16, 1, 0.3, 1],
                 }}
                 onAnimationComplete={() => {
-                  // Pausa táctica cuando la última letra encaja en su posición
+                  // Pausa táctica con las letras en blanco centradas
                   if (index === LETTERS.length - 1 && stage === 'CONVERGING') {
                     setTimeout(() => setStage('EXPLODING'), 450);
                   }
                 }}
-                className="inline-block text-[#1E3A5F] drop-shadow-[0_4px_16px_rgba(30,58,95,0.18)]"
+                className="inline-block text-white drop-shadow-[0_0_24px_rgba(255,255,255,0.45)]"
               >
                 {item.char}
               </motion.span>
@@ -215,8 +211,8 @@ export function MobileAuthScreen() {
       )}
 
       {/* =========================================================
-          FASE 3: TARJETA DE LOGIN MÓVIL REVELADA TRAS LA EXPANSIÓN
-          Adopta 100% el diseño, fuentes, colores y bordes de la versión móvil
+          FASE 3: CARGA DEL LOGIN MÓVIL (LIMPIO, MINIMALISTA Y EXACTO)
+          Adopta el diseño y estilo de la aplicación móvil de Stockly
          ========================================================= */}
       <AnimatePresence>
         {stage === 'LOGIN_READY' && (
@@ -224,10 +220,10 @@ export function MobileAuthScreen() {
             initial={{ scale: 0.88, opacity: 0, y: 16 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-30 w-full max-w-md bg-white border border-[#E5E7EB] rounded-2xl shadow-sm p-6 sm:p-8 flex flex-col justify-between my-auto"
+            className="relative z-30 w-full max-w-sm sm:max-w-md bg-white border border-[#E5E7EB] rounded-2xl shadow-sm p-6 sm:p-8 flex flex-col justify-between my-auto"
           >
-            {/* Encabezado: Logo corporativo e identificador móvil */}
-            <div className="flex items-center justify-center gap-2 mb-3 flex-shrink-0">
+            {/* Encabezado: Logo e identificador Stockly */}
+            <div className="flex items-center justify-center gap-2 mb-3.5 flex-shrink-0">
               <div className="w-8 h-8 rounded-lg bg-white border border-[#E5E7EB] overflow-hidden flex items-center justify-center shadow-xs">
                 <img
                   src="/logo.png"
@@ -242,7 +238,7 @@ export function MobileAuthScreen() {
               </span>
             </div>
 
-            {/* Selector con Píldora Deslizante Fluida en Azul Marino #1E3A5F */}
+            {/* Selector de modo con cápsula deslizante */}
             <div className="relative p-1 bg-[#F8F9FA] border border-[#E5E7EB] rounded-full mb-3.5 select-none overflow-hidden flex-shrink-0">
               <div
                 className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-[#1E3A5F] shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
@@ -483,49 +479,10 @@ export function MobileAuthScreen() {
                 </div>
               </form>
             )}
-
-            {/* Separador Editorial */}
-            <div className="my-3.5 flex items-center justify-between">
-              <span className="h-[1px] w-full bg-[#E5E7EB]" />
-              <span className="px-3 text-[10px] font-mono uppercase tracking-wider text-[#616161]">O</span>
-              <span className="h-[1px] w-full bg-[#E5E7EB]" />
-            </div>
-
-            {/* Botón Continuar con Google con estilo limpio de la versión móvil */}
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              className="w-full min-h-[42px] flex items-center justify-center gap-2.5 rounded-full border border-[#E5E7EB] bg-white hover:bg-[#F8F9FA] py-2.5 text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F] active:scale-[0.98] transition-all cursor-pointer shadow-xs disabled:opacity-50"
-            >
-              {googleLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
-              ) : (
-                <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#EA4335"
-                    d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.4l3.7 2.9C6.5 7.4 9 5 12 5z"
-                  />
-                  <path
-                    fill="#4285F4"
-                    d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.6 14.7c-.2-.7-.4-1.5-.4-2.3 0-.8.2-1.6.4-2.3L1.9 7.2C.7 9.6 0 12.2 0 15s.7 5.4 1.9 7.8l3.7-2.9z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 16.4C3.7 20.2 7.5 23 12 23z"
-                  />
-                </svg>
-              )}
-              <span>CONTINUAR CON GOOGLE</span>
-            </button>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
 
