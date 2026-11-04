@@ -20,70 +20,127 @@ export class BackupService {
       throw new Error(`No se pudo obtener el inventario ${inventoryId}: ${invErr?.message || 'No encontrado'}`);
     }
 
-    // 2. Extraer Categorías
-    const { data: categories = [] } = await supabaseAdmin
-      .from('categories')
-      .select('id, name, created_at')
-      .eq('inventory_id', inventoryId);
+    // 2. Extraer Categorías con salvaguarda
+    let categories = [];
+    try {
+      const { data: catData, error: catErr } = await supabaseAdmin
+        .from('categories')
+        .select('*')
+        .eq('inventory_id', inventoryId);
+      if (!catErr && Array.isArray(catData)) {
+        categories = catData;
+      }
+    } catch (e) {
+      console.warn('⚠️ Error al consultar categorías:', e.message);
+    }
 
-    // 3. Extraer Ubicaciones
-    const { data: locations = [] } = await supabaseAdmin
-      .from('locations')
-      .select('id, name, code, description, qr_code, created_at')
-      .eq('inventory_id', inventoryId);
+    // 3. Extraer Ubicaciones con salvaguarda
+    let locations = [];
+    try {
+      const { data: locData, error: locErr } = await supabaseAdmin
+        .from('locations')
+        .select('*')
+        .eq('inventory_id', inventoryId);
+      if (!locErr && Array.isArray(locData)) {
+        locations = locData;
+      }
+    } catch (e) {
+      console.warn('⚠️ Error al consultar ubicaciones:', e.message);
+    }
 
-    // 4. Extraer Productos
-    const { data: products = [] } = await supabaseAdmin
-      .from('products')
-      .select('*')
-      .eq('inventory_id', inventoryId);
+    // 4. Extraer Productos con salvaguarda
+    let products = [];
+    try {
+      const { data: prodData, error: prodErr } = await supabaseAdmin
+        .from('products')
+        .select('*')
+        .eq('inventory_id', inventoryId);
+      if (!prodErr && Array.isArray(prodData)) {
+        products = prodData;
+      }
+    } catch (e) {
+      console.warn('⚠️ Error al consultar productos:', e.message);
+    }
 
-    // 5. Extraer Relación Stock-Ubicación (product_locations)
-    const { data: productLocations = [] } = await supabaseAdmin
-      .from('product_locations')
-      .select('*')
-      .eq('inventory_id', inventoryId);
+    // 5. Extraer product_locations con salvaguarda
+    let productLocations = [];
+    try {
+      const { data: plData, error: plErr } = await supabaseAdmin
+        .from('product_locations')
+        .select('*')
+        .eq('inventory_id', inventoryId);
+      if (!plErr && Array.isArray(plData)) {
+        productLocations = plData;
+      }
+    } catch (e) {
+      console.warn('⚠️ Error al consultar product_locations:', e.message);
+    }
 
-    // 6. Extraer Ventas con sus Items
-    const { data: rawSales = [] } = await supabaseAdmin
-      .from('sales')
-      .select(`
-        id,
-        seller_id,
-        seller_email,
-        total_amount,
-        payment_method,
-        customer_name,
-        customer_contact,
-        notes,
-        created_at,
-        sale_items (
-          id,
-          product_id,
-          product_name,
-          product_code,
-          quantity,
-          unit_price,
-          cost_price,
-          subtotal
-        )
-      `)
-      .eq('inventory_id', inventoryId)
-      .order('created_at', { ascending: false });
+    // 6. Extraer Ventas con sus items con salvaguarda robusta
+    let rawSales = [];
+    try {
+      const { data: sData, error: sErr } = await supabaseAdmin
+        .from('sales')
+        .select('*')
+        .eq('inventory_id', inventoryId)
+        .order('created_at', { ascending: false });
 
-    // 7. Extraer Cupones
-    const { data: coupons = [] } = await supabaseAdmin
-      .from('coupons')
-      .select('*')
-      .eq('inventory_id', inventoryId);
+      if (!sErr && Array.isArray(sData) && sData.length > 0) {
+        const saleIds = sData.map((s) => s.id);
+        let itemsBySale = {};
+        try {
+          const { data: itemsData, error: itemsErr } = await supabaseAdmin
+            .from('sale_items')
+            .select('*')
+            .in('sale_id', saleIds);
+          if (!itemsErr && Array.isArray(itemsData)) {
+            for (const item of itemsData) {
+              if (!itemsBySale[item.sale_id]) itemsBySale[item.sale_id] = [];
+              itemsBySale[item.sale_id].push(item);
+            }
+          }
+        } catch (itemErr) {
+          console.warn('⚠️ Error al consultar sale_items:', itemErr.message);
+        }
 
-    // 8. Extraer Logs de Auditoría
-    const { data: auditLogs = [] } = await supabaseAdmin
-      .from('audit_logs')
-      .select('*')
-      .eq('inventory_id', inventoryId)
-      .order('created_at', { ascending: false })
-      .limit(500);
+        rawSales = sData.map((s) => ({
+          ...s,
+          sale_items: itemsBySale[s.id] || []
+        }));
+      }
+    } catch (e) {
+      console.warn('⚠️ Error al consultar ventas:', e.message);
+    }
+
+    // 7. Extraer Cupones con salvaguarda
+    let coupons = [];
+    try {
+      const { data: cpData, error: cpErr } = await supabaseAdmin
+        .from('coupons')
+        .select('*')
+        .eq('inventory_id', inventoryId);
+      if (!cpErr && Array.isArray(cpData)) {
+        coupons = cpData;
+      }
+    } catch (e) {
+      console.warn('⚠️ Error al consultar cupones:', e.message);
+    }
+
+    // 8. Extraer Logs de Auditoría con salvaguarda
+    let auditLogs = [];
+    try {
+      const { data: alData, error: alErr } = await supabaseAdmin
+        .from('audit_logs')
+        .select('*')
+        .eq('inventory_id', inventoryId)
+        .order('created_at', { ascending: false })
+        .limit(500);
+      if (!alErr && Array.isArray(alData)) {
+        auditLogs = alData;
+      }
+    } catch (e) {
+      console.warn('⚠️ Error al consultar audit_logs:', e.message);
+    }
 
     // Estructurar según especificación estricta de backup_schema.json v1.0
     const backupPayload = {
@@ -102,13 +159,13 @@ export class BackupService {
         }
       },
       data: {
-        categories: categories.map((c) => ({
+        categories: (categories || []).map((c) => ({
           id: c.id,
           name: c.name,
           parent_id: null,
           created_at: c.created_at
         })),
-        locations: locations.map((l) => ({
+        locations: (locations || []).map((l) => ({
           id: l.id,
           name: l.name,
           code: l.code,
@@ -116,7 +173,7 @@ export class BackupService {
           qr_code: l.qr_code || l.code,
           created_at: l.created_at
         })),
-        products: products.map((p) => ({
+        products: (products || []).map((p) => ({
           id: p.id,
           name: p.name,
           sku: p.code,
@@ -134,13 +191,13 @@ export class BackupService {
           created_at: p.created_at
         })),
         variants: [],
-        product_locations: productLocations.map((pl) => ({
+        product_locations: (productLocations || []).map((pl) => ({
           product_id: pl.product_id,
           location_id: pl.location_id,
           quantity_units: Number(pl.quantity) || 0,
           quantity_boxes: 0
         })),
-        sales: rawSales.map((s) => ({
+        sales: (rawSales || []).map((s) => ({
           id: s.id,
           sale_code: s.id.substring(0, 8).toUpperCase(),
           customer_name: s.customer_name,
@@ -149,7 +206,7 @@ export class BackupService {
           total_amount: Number(s.total_amount) || 0,
           notes: s.notes,
           created_at: s.created_at,
-          items: (s.sale_items || []).map((si) => ({
+          items: ((s.sale_items || [])).map((si) => ({
             product_id: si.product_id,
             product_name: si.product_name,
             product_code: si.product_code,

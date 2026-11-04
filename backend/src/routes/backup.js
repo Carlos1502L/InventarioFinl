@@ -37,45 +37,67 @@ router.post(
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const filename = `backup_${safeName}_${dateStr}.json`;
 
-      // 2. Enviar por correo con archivo adjunto
-      const emailResult = await emailService.sendBackupEmail({
-        to: cleanEmail,
-        inventoryName: invName,
-        jsonContent,
-        filename,
-        summary: {
-          products: payload.data.products?.length || 0,
-          locations: payload.data.locations?.length || 0,
-          categories: payload.data.categories?.length || 0,
-          sales: payload.data.sales?.length || 0
-        }
-      });
-
-      // 3. Registrar auditoría
-      await supabaseAdmin.from('audit_logs').insert({
-        inventory_id,
-        user_id: req.user.id,
-        user_email: req.user.email,
-        action: 'BACKUP_EXPORTED_AND_SENT',
-        entity_type: 'BACKUP',
-        metadata: {
-          target_email: cleanEmail,
+      // 2. Enviar por correo con archivo adjunto (no bloqueante para la descarga)
+      let emailResult = { success: false, mode: 'unknown' };
+      try {
+        emailResult = await emailService.sendBackupEmail({
+          to: cleanEmail,
+          inventoryName: invName,
+          jsonContent,
           filename,
-          products_count: payload.data.products?.length || 0,
-          sales_count: payload.data.sales?.length || 0,
-          email_mode: emailResult.mode
-        }
-      });
+          summary: {
+            products: payload.data.products?.length || 0,
+            locations: payload.data.locations?.length || 0,
+            categories: payload.data.categories?.length || 0,
+            sales: payload.data.sales?.length || 0
+          }
+        });
+      } catch (mailErr) {
+        console.error('❌ [export-and-send] Error enviando correo:', mailErr);
+        emailResult = {
+          success: false,
+          error: mailErr.message,
+          mode: 'error'
+        };
+      }
 
-      res.json({
+      // 3. Registrar auditoría con esquema correcto (no bloqueante)
+      try {
+        await supabaseAdmin.from('audit_logs').insert({
+          inventory_id,
+          user_id: req.user?.id || null,
+          user_email: req.user?.email || cleanEmail,
+          action_type: 'CREATE',
+          details: `Copia de seguridad exportada (${filename}) para ${cleanEmail}`,
+          metadata: {
+            target_email: cleanEmail,
+            filename,
+            products_count: payload.data.products?.length || 0,
+            sales_count: payload.data.sales?.length || 0,
+            email_mode: emailResult?.mode || 'none'
+          }
+        });
+      } catch (auditErr) {
+        console.warn('⚠️ [export-and-send] No se pudo registrar auditoría:', auditErr.message);
+      }
+
+      return res.json({
         success: true,
-        message: `Respaldo generado y enviado exitosamente a ${cleanEmail}.`,
+        message: emailResult.success
+          ? `Respaldo generado y enviado exitosamente a ${cleanEmail}.`
+          : `Respaldo generado exitosamente (${filename}). ${emailResult.error ? `Aviso de correo: ${emailResult.error}` : ''}`,
         filename,
-        payload, // Se retorna también para permitir descarga local inmediata si el cliente lo desea
+        payload, // Se retorna para permitir descarga local inmediata en navegador
         emailResult
       });
     } catch (err) {
-      next(err);
+      console.error('❌ [export-and-send] Error fatal exportando respaldo:', err);
+      return res.status(500).json({
+        success: false,
+        code: 'BACKUP_EXPORT_ERROR',
+        message: err.message || 'Error al exportar la copia de seguridad.',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 );
@@ -117,7 +139,13 @@ router.get(
         }
       });
     } catch (err) {
-      next(err);
+      console.error('❌ Error restaurando backup:', err);
+      return res.status(err.statusCode || 400).json({
+        success: false,
+        code: 'RESTORE_ERROR',
+        message: err.message || 'Error al restaurar los datos del inventario.',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 );
@@ -163,24 +191,36 @@ router.post(
         .single();
 
       if (error) {
+        if (error.code === '42P01') {
+          return res.status(400).json({
+            success: false,
+            code: 'TABLE_NOT_FOUND',
+            message: 'La tabla inventory_backup_settings no existe en la base de datos. Por favor ejecuta el script backup_module.sql en Supabase.',
+            timestamp: new Date().toISOString()
+          });
+        }
         throw error;
       }
 
-      // Registrar auditoría
-      await supabaseAdmin.from('audit_logs').insert({
-        inventory_id,
-        user_id: req.user.id,
-        user_email: req.user.email,
-        action: 'BACKUP_SETTINGS_UPDATED',
-        entity_type: 'BACKUP',
-        metadata: {
-          is_scheduled,
-          interval_days,
-          execution_time: formattedTime,
-          next_run_at: nextRunAt,
-          target_email: cleanEmail
-        }
-      });
+      // Registrar auditoría con esquema correcto (no bloqueante)
+      try {
+        await supabaseAdmin.from('audit_logs').insert({
+          inventory_id,
+          user_id: req.user?.id || null,
+          user_email: req.user?.email || cleanEmail,
+          action_type: 'UPDATE',
+          details: `Configuración de respaldos programados actualizada (${cleanEmail})`,
+          metadata: {
+            is_scheduled,
+            interval_days,
+            execution_time: formattedTime,
+            next_run_at: nextRunAt,
+            target_email: cleanEmail
+          }
+        });
+      } catch (auditErr) {
+        console.warn('⚠️ No se pudo registrar auditoría de settings:', auditErr.message);
+      }
 
       res.json({
         success: true,
@@ -188,7 +228,13 @@ router.post(
         settings: data
       });
     } catch (err) {
-      next(err);
+      console.error('❌ Error restaurando backup:', err);
+      return res.status(err.statusCode || 400).json({
+        success: false,
+        code: 'RESTORE_ERROR',
+        message: err.message || 'Error al restaurar los datos del inventario.',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 );
@@ -215,7 +261,13 @@ router.post(
         result
       });
     } catch (err) {
-      next(err);
+      console.error('❌ Error restaurando backup:', err);
+      return res.status(err.statusCode || 400).json({
+        success: false,
+        code: 'RESTORE_ERROR',
+        message: err.message || 'Error al restaurar los datos del inventario.',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 );
