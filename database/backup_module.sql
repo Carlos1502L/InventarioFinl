@@ -420,13 +420,6 @@ BEGIN
 
     v_count_sales := v_count_sales + 1;
   END LOOP;
-          COALESCE((v_elem->>'created_at')::TIMESTAMPTZ, NOW())
-        );
-      END LOOP;
-    END IF;
-
-    v_count_sales := v_count_sales + 1;
-  END LOOP;
 
   -- 9. Cupones
   FOR v_elem IN SELECT * FROM jsonb_array_elements(v_coupons)
