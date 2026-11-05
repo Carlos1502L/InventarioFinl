@@ -250,13 +250,21 @@ export const AppContent: React.FC = () => {
   // 1. Pantalla de Carga Inicial
   if (authLoading) {
     return (
-      <main id="main-content" className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center space-y-4 font-mono text-[#1E3A5F]">
-        <div className="w-12 h-12 rounded-2xl bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center shadow-md animate-pulse">
-          <Layers className="w-6 h-6 stroke-[1.5]" />
+      <main id="main-content" className="min-h-screen bg-black md:bg-[#F8F9FA] flex flex-col items-center justify-center font-mono">
+        {/* Móvil: Splash nativo oscuro mínimo y centrado sin elementos web (evita flash blanco) */}
+        <div className="flex md:hidden flex-col items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-white/80" />
         </div>
-        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#616161]">
-          <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
-          <span>INICIANDO INVENTARIO...</span>
+
+        {/* Desktop: Indicador editorial de carga */}
+        <div className="hidden md:flex flex-col items-center justify-center space-y-4 text-[#1E3A5F]">
+          <div className="w-12 h-12 rounded-2xl bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center shadow-md animate-pulse">
+            <Layers className="w-6 h-6 stroke-[1.5]" />
+          </div>
+          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#616161]">
+            <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
+            <span>INICIANDO INVENTARIO...</span>
+          </div>
         </div>
       </main>
     );

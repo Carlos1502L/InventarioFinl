@@ -292,7 +292,7 @@ export function MobileAuthScreen() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="nombre@ejemplo.com"
                       required
-                      className="w-full bg-neutral-50 border border-neutral-200/80 focus:border-neutral-950 focus:bg-white rounded-2xl pl-10 pr-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all font-sans"
+                      className="w-full bg-neutral-50 border border-neutral-200/80 focus:border-neutral-950 focus:bg-white rounded-2xl pl-10 pr-4 py-3 text-base text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all font-sans"
                     />
                     <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3.5" />
                   </div>
@@ -346,7 +346,7 @@ export function MobileAuthScreen() {
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="Ej. Carlos Gómez"
                         required={isRegister}
-                        className="w-full bg-neutral-50 border border-neutral-200/80 focus:border-neutral-950 focus:bg-white rounded-2xl pl-10 pr-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all font-sans"
+                        className="w-full bg-neutral-50 border border-neutral-200/80 focus:border-neutral-950 focus:bg-white rounded-2xl pl-10 pr-4 py-3 text-base text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all font-sans"
                       />
                       <User className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3.5" />
                     </div>
@@ -365,7 +365,7 @@ export function MobileAuthScreen() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="nombre@ejemplo.com"
                       required
-                      className="w-full bg-neutral-50 border border-neutral-200/80 focus:border-neutral-950 focus:bg-white rounded-2xl pl-10 pr-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all font-sans"
+                      className="w-full bg-neutral-50 border border-neutral-200/80 focus:border-neutral-950 focus:bg-white rounded-2xl pl-10 pr-4 py-3 text-base text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all font-sans"
                     />
                     <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3.5" />
                   </div>
@@ -398,7 +398,7 @@ export function MobileAuthScreen() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       required
-                      className="w-full bg-neutral-50 border border-neutral-200/80 focus:border-neutral-950 focus:bg-white rounded-2xl pl-10 pr-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all font-sans"
+                      className="w-full bg-neutral-50 border border-neutral-200/80 focus:border-neutral-950 focus:bg-white rounded-2xl pl-10 pr-4 py-3 text-base text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all font-sans"
                     />
                     <Lock className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3.5" />
                   </div>
