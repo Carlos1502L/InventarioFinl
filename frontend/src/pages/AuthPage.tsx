@@ -58,7 +58,7 @@ export const AuthPage: React.FC = () => {
   };
 
   return (
-    <>
+    <main id="main-content" className="w-full min-h-[100dvh]">
       {/* Vista Móvil: Splash cinético con fusión tipográfica e implosión/explosión al login */}
       <div className="block md:hidden w-full min-h-[100dvh]">
         <MobileAuthScreen />
@@ -148,7 +148,7 @@ export const AuthPage: React.FC = () => {
                   setSuccessMsg(null);
                 }}
                 className={`py-2 rounded-full transition-colors duration-200 text-center ${
-                  !isRegister ? 'text-white' : 'text-[#616161] hover:text-[#1E3A5F]'
+                  !isRegister ? 'text-white' : 'text-neutral-700 hover:text-[#1E3A5F] font-bold'
                 }`}
               >
                 INICIAR SESIÓN
@@ -161,7 +161,7 @@ export const AuthPage: React.FC = () => {
                   setSuccessMsg(null);
                 }}
                 className={`py-2 rounded-full transition-colors duration-200 text-center ${
-                  isRegister ? 'text-white' : 'text-[#616161] hover:text-[#1E3A5F]'
+                  isRegister ? 'text-white' : 'text-neutral-700 hover:text-[#1E3A5F] font-bold'
                 }`}
               >
                 REGISTRARME
@@ -421,7 +421,7 @@ export const AuthPage: React.FC = () => {
         </div>
       </div>
     </div>
-  </>
+  </main>
   );
 };
 

@@ -11,6 +11,15 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 450,
+    modulePreload: {
+      filter(filename) {
+        // Exclude vendor-qr and on-demand heavy modules from entry modulepreload (REQ-05)
+        if (/vendor-qr|qrcode|html5-qrcode/i.test(filename)) {
+          return false;
+        }
+        return true;
+      }
+    },
     rollupOptions: {
       output: {
         manualChunks: {

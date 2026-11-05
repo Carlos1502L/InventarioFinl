@@ -8,7 +8,7 @@ import { useIsDesktop } from './hooks/useDevice';
 import { BottomNav, TabType } from './components/layout/BottomNav';
 import { PendingInvitationsBanner } from './components/ui/PendingInvitationsBanner';
 import { AuthPage } from './pages/AuthPage';
-import { HomePage } from './pages/HomePage';
+const HomePage = React.lazy(() => import('./pages/HomePage'));
 import type { LocationSubTab } from './pages/LocationsPage';
 
 // Layout Desktop condicional (cargado solo en viewport de escritorio)
@@ -250,7 +250,7 @@ export const AppContent: React.FC = () => {
   // 1. Pantalla de Carga Inicial
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center space-y-4 font-mono text-[#1E3A5F]">
+      <main id="main-content" className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center space-y-4 font-mono text-[#1E3A5F]">
         <div className="w-12 h-12 rounded-2xl bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center shadow-md animate-pulse">
           <Layers className="w-6 h-6 stroke-[1.5]" />
         </div>
@@ -258,7 +258,7 @@ export const AppContent: React.FC = () => {
           <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
           <span>INICIANDO INVENTARIO...</span>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -304,7 +304,7 @@ export const AppContent: React.FC = () => {
       )}
 
       {/* Contenedor Principal Responsive con offset para el Sidebar en Desktop y safe area en móvil */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto px-0 pt-0 md:px-6 md:pt-5 lg:pl-[266px] pb-0 md:pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-12 max-md:h-full max-md:overflow-hidden md:overflow-visible">
+      <main id="main-content" className="flex-1 max-w-[1600px] w-full mx-auto px-0 pt-0 md:px-6 md:pt-5 lg:pl-[266px] pb-0 md:pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-12 max-md:h-full max-md:overflow-hidden md:overflow-visible">
         {/* Banner de Invitaciones Pendientes */}
         <div className="px-4 md:px-0">
           <PendingInvitationsBanner />
@@ -341,21 +341,23 @@ export const AppContent: React.FC = () => {
         
         {/* VISTA 1: HOME (DASHBOARD PRINCIPAL) */}
         {activeTab === 'home' && (
-          <HomePage
-            products={products}
-            onNavigateToStock={() => setActiveTab('inventory')}
-            onNavigateToSales={() => setActiveTab('sales')}
-            onNavigateToHistory={() => setActiveTab('sales-history')}
-            onSelectProduct={(p: Product) => {
-              setSelectedProduct(p);
-              setProductDetailOpen(true);
-            }}
-            onQuickScan={() => setQuickScanOpen(true)}
-            onOpenCreateModal={() => {
-              setProductToEdit(null);
-              setProductFormOpen(true);
-            }}
-          />
+          <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[#616161] flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" /><span>CARGANDO RESUMEN...</span></div>}>
+            <HomePage
+              products={products}
+              onNavigateToStock={() => setActiveTab('inventory')}
+              onNavigateToSales={() => setActiveTab('sales')}
+              onNavigateToHistory={() => setActiveTab('sales-history')}
+              onSelectProduct={(p: Product) => {
+                setSelectedProduct(p);
+                setProductDetailOpen(true);
+              }}
+              onQuickScan={() => setQuickScanOpen(true)}
+              onOpenCreateModal={() => {
+                setProductToEdit(null);
+                setProductFormOpen(true);
+              }}
+            />
+          </Suspense>
         )}
 
         {/* VISTA 2: STOCK (CATÁLOGO DE EXISTENCIAS & RECURSOS) */}

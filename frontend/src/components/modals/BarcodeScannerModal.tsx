@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { X, Camera, RefreshCw, AlertCircle, Volume2, CheckCircle2 } from 'lucide-react';
 
 interface BarcodeScannerModalProps {
@@ -26,7 +25,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
   const [recentScansCount, setRecentScansCount] = useState<number>(0);
   const lastScanRef = useRef<{ code: string; time: number } | null>(null);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<any>(null);
   const elementId = 'interactive-barcode-scanner';
 
   // Sonido de feedback al escanear exitosamente (Web Audio API)
@@ -79,6 +78,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
         retries++;
       }
 
+      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
       const html5QrCode = new Html5Qrcode(elementId, {
         formatsToSupport: [
           Html5QrcodeSupportedFormats.QR_CODE,
@@ -195,7 +195,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
     }
 
     // Inicializar cámaras disponibles
-    Html5Qrcode.getCameras()
+    import('html5-qrcode').then(({ Html5Qrcode }) => Html5Qrcode.getCameras())
       .then((devices) => {
         if (devices && devices.length > 0) {
           setCameras(devices);

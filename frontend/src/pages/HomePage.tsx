@@ -17,7 +17,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Product, Sale } from '../types/database';
 import { supabase, formatCurrency, formatDate, formatStockDisplay, formatCleanDecimal } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
+const BarcodeScannerModal = React.lazy(() => import('../components/modals/BarcodeScannerModal').then(m => ({ default: m.BarcodeScannerModal })));
 import { isSaleRejected } from '../lib/supabase';
 
 interface HomePageProps {
@@ -282,13 +282,15 @@ export const HomePage: React.FC<HomePageProps> = ({
         </Suspense>
 
         {homeScannerOpen && (
-          <BarcodeScannerModal
-            isOpen={homeScannerOpen}
+          <Suspense fallback={null}>
+            <BarcodeScannerModal
+              isOpen={homeScannerOpen}
             onClose={() => setHomeScannerOpen(false)}
             onScanSuccess={handleHomeQuickConsult}
             title="Consulta Rápida de Producto"
             instructions="Escanea el código de barras o QR para consultar precio y disponibilidad."
-          />
+            />
+          </Suspense>
         )}
 
         <AnimatePresence>
@@ -738,13 +740,15 @@ export const HomePage: React.FC<HomePageProps> = ({
 
       {/* Escáner de Consulta Rápida (Exclusivo Home Mobile) */}
       {homeScannerOpen && (
-        <BarcodeScannerModal
-        isOpen={homeScannerOpen}
+        <Suspense fallback={null}>
+          <BarcodeScannerModal
+          isOpen={homeScannerOpen}
         onClose={() => setHomeScannerOpen(false)}
         onScanSuccess={handleHomeQuickConsult}
         title="Consulta Rápida de Producto"
         instructions="Escanea el código de barras o QR para consultar precio y disponibilidad."
-      />
+        />
+        </Suspense>
       )}
 
       {/* Modal / Tarjeta Flotante de Resultado de Consulta Rápida */}

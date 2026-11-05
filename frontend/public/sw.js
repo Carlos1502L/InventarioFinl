@@ -64,6 +64,7 @@ self.addEventListener('fetch', (event) => {
   if (!event.request.url.startsWith(self.location.origin)) return;
 
   const url = new URL(event.request.url);
+  if (url.pathname === '/sw.js') return;
 
   // RN-SEC-04: Excluir inmediatamente cualquier endpoint transaccional o API
   if (isSensitiveRequest(url)) {
