@@ -1002,3 +1002,5 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
     </>
   );
 };
+
+export default InventoryPage;

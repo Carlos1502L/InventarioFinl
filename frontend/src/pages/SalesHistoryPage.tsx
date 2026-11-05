@@ -28,15 +28,8 @@ import jsPDF from 'jspdf';
  * RN-HIST-02: Determina si una venta fue rechazada por falta de stock.
  * Se evalúa tanto por la columna status como por la marca semántica [RECHAZADA_STOCK].
  */
-export const isSaleRejected = (
-  sale: { status?: string | null; notes?: string | null } | null | undefined
-): boolean => {
-  if (!sale) return false;
-  return (
-    sale.status === 'REJECTED_STOCK' ||
-    Boolean(sale.notes && sale.notes.includes('[RECHAZADA_STOCK]'))
-  );
-};
+import { isSaleRejected } from '../lib/supabase';
+export { isSaleRejected };
 
 interface SalesHistoryPageProps {
   onNavigateToSales?: () => void;
@@ -741,3 +734,5 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
     </>
   );
 };
+
+export default SalesHistoryPage;

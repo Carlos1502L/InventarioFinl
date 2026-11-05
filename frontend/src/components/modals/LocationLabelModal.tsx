@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import QRCode from 'qrcode';
-import jsPDF from 'jspdf';
 import { X, Printer, Download, QrCode as QrIcon, CheckCircle2 } from 'lucide-react';
 import { Location } from '../../types/database';
 import { useAuth } from '../../context/AuthContext';
@@ -201,6 +200,7 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
   const handleDownloadClientPDF = async () => {
     try {
       setIsExporting(true);
+      const { default: jsPDF } = await import('jspdf');
       const doc = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',

@@ -314,3 +314,13 @@ export function getProductLocationBadgeLabel(product: {
   }
   return `${locs.length} UBICACIONES${pending > 0.0001 ? ' (+PENDIENTE)' : ''}`;
 }
+
+export const isSaleRejected = (
+  sale: { status?: string | null; notes?: string | null } | null | undefined
+): boolean => {
+  if (!sale) return false;
+  return (
+    sale.status === 'REJECTED_STOCK' ||
+    Boolean(sale.notes && sale.notes.includes('[RECHAZADA_STOCK]'))
+  );
+};

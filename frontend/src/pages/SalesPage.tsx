@@ -1878,3 +1878,5 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
     </>
   );
 };
+
+export default SalesPage;

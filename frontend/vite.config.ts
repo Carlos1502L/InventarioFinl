@@ -9,6 +9,21 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 450,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-motion': ['framer-motion'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-idb': ['idb'],
+          'vendor-icons': ['lucide-react'],
+          'vendor-qr': ['html5-qrcode', 'qrcode']
+        }
+      }
+    }
+  },
   server: {
     host: '0.0.0.0',
     port: 3000,

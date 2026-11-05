@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
-import jsPDF from 'jspdf';
 import {
   X,
   Printer,
@@ -328,6 +327,7 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
     setProgressMsg('Generando documento PDF de ubicaciones...');
 
     try {
+      const { default: jsPDF } = await import('jspdf');
       const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',

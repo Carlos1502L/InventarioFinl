@@ -279,3 +279,5 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
     </div>
   );
 };
+
+export default AnalyticsPage;

@@ -2782,3 +2782,5 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
     </>
   );
 };
+
+export default LocationsPage;
