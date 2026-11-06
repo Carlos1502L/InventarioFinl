@@ -513,8 +513,16 @@ div:has(> label:empty + span.hidden) {
   }
 
   .mobile-dark-modal div.relative:has(> svg) > input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent),
-  .mobile-dark-modal div.relative:not(.frequency-pill-container):has(> svg) > select {
-    padding-left: 2.5rem !important;
+  .mobile-dark-modal div.relative:has(svg) > input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent),
+  .mobile-dark-modal div.relative:not(.frequency-pill-container):has(> svg) > select,
+  .mobile-dark-modal div.relative:not(.frequency-pill-container):has(svg) > select,
+  .mobile-dark-modal input.modal-password-input {
+    padding-left: 3rem !important;
+  }
+
+  .mobile-dark-modal div.relative:has(button) > input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent),
+  .mobile-dark-modal input.modal-password-input {
+    padding-right: 3rem !important;
   }
 
   .mobile-dark-modal input.truncate {

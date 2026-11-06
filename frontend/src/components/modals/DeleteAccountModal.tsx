@@ -163,11 +163,11 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
             </label>
             <div className="relative w-full">
               {/* Candado en extremo izquierdo centrado verticalmente con pointer-events-none */}
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400 z-10">
                 <Lock className="w-4 h-4 shrink-0" />
               </div>
 
-              {/* Input con pl-11, h-12, rounded-2xl, bg neutro y border-0 box-border */}
+              {/* Input con clase modal-password-input, paddingLeft forzado de 3rem (48px) para despeje total del icono */}
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
@@ -182,12 +182,13 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
                     handleConfirmDelete();
                   }
                 }}
-                className="w-full h-12 pl-11 pr-11 bg-zinc-100 dark:bg-zinc-800 text-neutral-900 dark:text-zinc-100 placeholder:text-zinc-400 rounded-2xl border-0 box-border focus:outline-none focus:ring-2 focus:ring-zinc-950 dark:focus:ring-white transition-all text-xs font-mono"
+                className="modal-password-input w-full h-12 !pl-12 !pr-12 pl-12 pr-12 bg-zinc-100 dark:bg-zinc-800 text-neutral-900 dark:text-zinc-100 placeholder:text-zinc-400 rounded-2xl border-0 box-border focus:outline-none focus:ring-2 focus:ring-zinc-950 dark:focus:ring-white transition-all text-sm font-sans"
+                style={{ paddingLeft: '3rem', paddingRight: '3rem' }}
                 autoComplete="current-password"
               />
 
               {/* Botón de visibilidad de contraseña centrado verticalmente en extremo derecho */}
-              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center">
+              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center z-10">
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
