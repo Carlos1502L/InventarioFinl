@@ -344,7 +344,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await fetchPendingInvitations(initialUser.email);
         }
       } else {
-        setInventories([]);
+        setInventories(null);
       }
 
       // Solo se apaga aquí una única vez en el ciclo de vida del arranque
@@ -354,7 +354,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }).catch((err) => {
       console.error('Error verificando sesión inicial:', err);
       if (isMounted) {
-        setInventories([]);
+        setInventories(null);
         setIsInitialAuthCheck(false);
         setIsInitialLoading(false);
         setLoading(false);
@@ -371,7 +371,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(newUser);
 
       if (event === 'SIGNED_OUT' || !newSession) {
-        setInventories([]);
+        setInventories(null);
         setCurrentInventory(null);
         setNeedsInventorySelection(false);
         setPendingInvitations([]);
@@ -406,6 +406,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (!error && data.user) {
+      try {
+        // Al ingresar a cuenta existente, marcar onboarding como completado y limpiar bandera de nuevo registro
+        localStorage.setItem(`onboarding_completed_${data.user.id}`, 'true');
+        localStorage.removeItem(`is_new_registration_${data.user.id}`);
+      } catch (e) {
+        console.warn(e);
+      }
       await fetchInventories(data.user);
       if (data.user.email) {
         await fetchPendingInvitations(data.user.email);
@@ -424,6 +431,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     });
+    if (!error && data?.user) {
+      try {
+        // Únicamente si la cuenta se registra por primera vez
+        localStorage.setItem(`is_new_registration_${data.user.id}`, 'true');
+        localStorage.removeItem(`onboarding_completed_${data.user.id}`);
+      } catch (e) {
+        console.warn(e);
+      }
+    }
     return { error };
   };
 
@@ -433,7 +449,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     await supabase.auth.signOut();
     setCurrentInventory(null);
-    setInventories([]);
+    setInventories(null);
     setPendingInvitations([]);
   };
 

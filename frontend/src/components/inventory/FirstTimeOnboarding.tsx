@@ -102,9 +102,10 @@ export function FirstTimeOnboarding({ defaultInventoryId, onComplete }: FirstTim
         });
       }
 
-      // Marcar onboarding como completado en almacenamiento local
+      // Marcar onboarding como completado en almacenamiento local y limpiar bandera de nuevo registro
       try {
         localStorage.setItem(`onboarding_completed_${user.id}`, 'true');
+        localStorage.removeItem(`is_new_registration_${user.id}`);
         if (activeInv?.id) {
           localStorage.setItem(`active_inventory_${user.id}`, activeInv.id);
         }
