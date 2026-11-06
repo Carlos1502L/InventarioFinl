@@ -518,7 +518,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
       if (remaining.length > 0) {
         selectInventory(remaining[0]);
       } else {
-        await supabase.rpc('initialize_user_inventory');
+        selectInventory(null);
       }
 
       await refreshInventories();

@@ -1,3 +1,4 @@
+import { Skeleton } from '../../components/ui/Skeleton';
 import React from 'react';
 import {
   Camera,
@@ -209,8 +210,16 @@ export const HomeDesktopView: React.FC<HomeDesktopViewProps> = ({
 
               <div className="divide-y divide-[#E5E7EB] font-mono text-xs">
                 {loadingSales ? (
-                  <div className="py-8 text-center text-[#616161] uppercase text-xs">
-                    CARGANDO MANIFIESTO DE TRANSACCIONES...
+                  <div className="p-4 space-y-3">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="flex items-center justify-between py-2">
+                        <div className="space-y-1.5">
+                          <Skeleton className="w-36 h-4" />
+                          <Skeleton className="w-24 h-3" />
+                        </div>
+                        <Skeleton className="w-16 h-5" />
+                      </div>
+                    ))}
                   </div>
                 ) : recentSales.length === 0 ? (
                   <div className="py-8 text-center text-[#616161] uppercase text-xs">

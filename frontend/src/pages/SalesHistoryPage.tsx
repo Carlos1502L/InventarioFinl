@@ -23,6 +23,7 @@ import { supabase, formatCurrency, formatDate } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { getAllQueuedSales, formatStockShortageNotes } from '../services/offlineSync';
 import jsPDF from 'jspdf';
+import { SalesHistorySkeleton } from '../components/ui/Skeleton';
 
 /**
  * RN-HIST-02: Determina si una venta fue rechazada por falta de stock.
@@ -404,9 +405,9 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
           {/* SUB-CAPA 2B: Contenedor de Datos con Scroll Aislado */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 divide-y divide-neutral-100 pb-28">
             {loading ? (
-              <p className="py-10 text-center text-xs text-neutral-400">
-                Cargando transacciones...
-              </p>
+              <div className="py-4">
+                <SalesHistorySkeleton />
+              </div>
             ) : filteredSales.length === 0 ? (
               <p className="py-10 text-center text-xs text-neutral-400">
                 No se encontraron ventas en este periodo.
@@ -576,9 +577,8 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
       {/* 4. Tabla de Ventas */}
       <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
         {loading ? (
-          <div className="py-16 text-center text-xs text-[#616161] font-mono">
-            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-[#1E3A5F]" />
-            Cargando historial de transacciones...
+          <div className="p-6">
+            <SalesHistorySkeleton />
           </div>
         ) : filteredSales.length === 0 ? (
           <div className="py-16 text-center text-xs text-[#616161] space-y-1 font-mono">

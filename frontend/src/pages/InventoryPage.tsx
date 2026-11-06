@@ -28,6 +28,7 @@ import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import { RestockProductModal } from '../components/modals/RestockProductModal';
 import { BulkWithdrawModal } from '../components/modals/BulkWithdrawModal';
 import { MinimalDropdown } from '../components/ui/MinimalDropdown';
+import { ProductTableSkeleton } from '../components/ui/Skeleton';
 import { LocationSubTab } from './LocationsPage';
 
 interface InventoryPageProps {
@@ -315,7 +316,9 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
           {/* SUB-CAPA 2B: Contenedor de Datos con Scroll Aislado */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 divide-y divide-neutral-100 pb-28">
-            {filteredProducts.length === 0 ? (
+            {loading && products.length === 0 ? (
+              <ProductTableSkeleton />
+            ) : filteredProducts.length === 0 ? (
               <p className="py-12 text-center text-xs text-neutral-400">
                 No se encontraron productos en el catálogo.
               </p>
@@ -671,7 +674,9 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
       {/* =========================================================
           3. PRODUCT MATRIX // LIST (EDITORIAL GALLERY)
          ========================================================= */}
-      {filteredProducts.length === 0 ? (
+      {loading && products.length === 0 ? (
+        <ProductTableSkeleton />
+      ) : filteredProducts.length === 0 ? (
         <div className="border border-[#E5E7EB] bg-white rounded-2xl p-12 text-center space-y-4 shadow-sm">
           <div className="w-12 h-12 border border-[#E5E7EB] rounded-full mx-auto flex items-center justify-center">
             <Package className="w-6 h-6 stroke-[1.2] text-[#616161]" />

@@ -590,6 +590,40 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <span>Cerrar Sesión</span>
           </button>
         </div>
+
+        {/* Pie Legal y Enlaces a Términos y Privacidad (RF-LEGAL-001) */}
+        <div className="pt-4 pb-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#616161] font-mono border-t border-[#E5E7EB]">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#1E3A5F]">STOCKLY</span>
+            <span>·</span>
+            <span>v2.4.0</span>
+          </div>
+          <div className="flex items-center gap-4 text-xs">
+            <a
+              href="/terms"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, '', '/terms');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="text-[#1E3A5F] hover:underline font-medium"
+            >
+              Términos de Servicio
+            </a>
+            <span>·</span>
+            <a
+              href="/privacy"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, '', '/privacy');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="text-[#1E3A5F] hover:underline font-medium"
+            >
+              Política de Privacidad
+            </a>
+          </div>
+        </div>
       </div>
       </div>
 

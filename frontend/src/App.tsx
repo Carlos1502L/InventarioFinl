@@ -23,6 +23,9 @@ const SalesHistoryPage = React.lazy(() => import('./pages/SalesHistoryPage'));
 const ReportsPage = React.lazy(() => import('./pages/ReportsPage'));
 const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
+const TermsPage = React.lazy(() => import('./pages/TermsPage'));
+const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage'));
+const EmptyInventoryState = React.lazy(() => import('./components/inventory/EmptyInventoryState'));
 
 // Modales Especializados lazy (descargados bajo demanda solo al abrirse)
 const ProductFormModal = React.lazy(() => import('./components/modals/ProductFormModal').then(m => ({ default: m.ProductFormModal })));
@@ -41,8 +44,21 @@ import { syncAllOfflineDataSilently } from './services/offlineSync';
 import { Loader2, Layers, Plus, Sparkles } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
-  const { user, loading: authLoading, currentInventory, refreshInventories } = useAuth();
+  const { user, loading: authLoading, currentInventory, refreshInventories, inventories } = useAuth();
   const isDesktop = useIsDesktop();
+
+  // Control de Rutas Estáticas Públicas (RF-LEGAL-001)
+  const [currentPath, setCurrentPath] = useState(() =>
+    typeof window !== 'undefined' ? window.location.pathname : '/'
+  );
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Regla lógica: Funcionalidades comerciales solo activas si es NEGOCIO
   const isBusiness = currentInventory?.inventory_type !== 'PERSONAL';
@@ -247,6 +263,29 @@ export const AppContent: React.FC = () => {
     }
   };
 
+  // 0. Rutas Estáticas Públicas sin Requerir Sesión (RF-LEGAL-001)
+  if (currentPath === '/terms') {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center font-mono text-xs text-[#616161]">CARGANDO TÉRMINOS...</div>}>
+        <TermsPage onBack={() => {
+          window.history.pushState({}, '', '/');
+          setCurrentPath('/');
+        }} />
+      </Suspense>
+    );
+  }
+
+  if (currentPath === '/privacy') {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center font-mono text-xs text-[#616161]">CARGANDO PRIVACIDAD...</div>}>
+        <PrivacyPage onBack={() => {
+          window.history.pushState({}, '', '/');
+          setCurrentPath('/');
+        }} />
+      </Suspense>
+    );
+  }
+
   // 1. Pantalla de Carga Inicial
   if (authLoading) {
     return (
@@ -273,6 +312,16 @@ export const AppContent: React.FC = () => {
   // 2. Pantalla de Autenticación si no hay sesión
   if (!user) {
     return <AuthPage />;
+  }
+
+  // RF-INV-043: Manejo de Estado Cero por Eliminación Total de Inventarios
+  // Bloquear vistas operativas (catálogo, POS, movimientos) y mostrar pantalla obligatoria de bienvenida
+  if (inventories.length === 0) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center font-mono text-xs text-[#616161]">INICIALIZANDO ESPACIO...</div>}>
+        <EmptyInventoryState onInventoryCreated={fetchInventoryData} />
+      </Suspense>
+    );
   }
 
   return (

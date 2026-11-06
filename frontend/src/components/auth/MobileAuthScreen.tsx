@@ -37,7 +37,10 @@ export function MobileAuthScreen() {
   const [stage, setStage] = useState<'CONVERGING' | 'EXPLODING' | 'LOGIN_READY'>('CONVERGING');
 
   const { signIn, signUp } = useAuth();
-  const [isRegister, setIsRegister] = useState(false);
+  const [isRegister, setIsRegister] = useState(() =>
+    typeof window !== 'undefined' && window.location.pathname === '/register'
+  );
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -66,6 +69,11 @@ export function MobileAuthScreen() {
 
     if (isRegister && !fullName.trim()) {
       setErrorMsg('Por favor introduce tu nombre completo.');
+      return;
+    }
+
+    if (isRegister && !termsAccepted) {
+      setErrorMsg('Debes aceptar los Términos de Servicio y la Política de Privacidad para crear tu cuenta.');
       return;
     }
 
@@ -404,30 +412,73 @@ export function MobileAuthScreen() {
                   </div>
                 </div>
 
-                {/* Opciones Adicionales */}
-                <div className="flex items-center justify-between pt-0.5">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <div
-                      onClick={() => setRememberMe(!rememberMe)}
-                      className={`w-4 h-4 rounded-md border transition-colors flex items-center justify-center ${
-                        rememberMe
-                          ? 'bg-neutral-950 border-neutral-950 text-white'
-                          : 'border-neutral-300 bg-white'
-                      }`}
-                    >
-                      {rememberMe && <Check className="w-3 h-3 stroke-[2.5]" />}
-                    </div>
-                    <span className="text-xs text-neutral-700 font-medium">
-                      {isRegister ? 'Acepto las condiciones de uso' : 'Recordar mi sesión'}
-                    </span>
-                  </label>
-                </div>
+                {/* Opciones Adicionales / Checkbox de Términos (RF-LEGAL-001) */}
+                {isRegister ? (
+                  <div className="pt-1">
+                    <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                      <div
+                        onClick={() => setTermsAccepted(!termsAccepted)}
+                        className={`w-4 h-4 mt-0.5 rounded-md border transition-colors flex items-center justify-center shrink-0 ${
+                          termsAccepted
+                            ? 'bg-neutral-950 border-neutral-950 text-white'
+                            : 'border-neutral-300 bg-white'
+                        }`}
+                      >
+                        {termsAccepted && <Check className="w-3 h-3 stroke-[2.5]" />}
+                      </div>
+                      <span className="text-xs text-neutral-600 leading-tight">
+                        He leído y acepto los{' '}
+                        <a
+                          href="/terms"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            window.history.pushState({}, '', '/terms');
+                            window.dispatchEvent(new PopStateEvent('popstate'));
+                          }}
+                          className="text-neutral-950 font-semibold underline underline-offset-2"
+                        >
+                          Términos de Servicio
+                        </a>{' '}
+                        y la{' '}
+                        <a
+                          href="/privacy"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            window.history.pushState({}, '', '/privacy');
+                            window.dispatchEvent(new PopStateEvent('popstate'));
+                          }}
+                          className="text-neutral-950 font-semibold underline underline-offset-2"
+                        >
+                          Política de Privacidad
+                        </a>.
+                      </span>
+                    </label>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between pt-0.5">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <div
+                        onClick={() => setRememberMe(!rememberMe)}
+                        className={`w-4 h-4 rounded-md border transition-colors flex items-center justify-center ${
+                          rememberMe
+                            ? 'bg-neutral-950 border-neutral-950 text-white'
+                            : 'border-neutral-300 bg-white'
+                        }`}
+                      >
+                        {rememberMe && <Check className="w-3 h-3 stroke-[2.5]" />}
+                      </div>
+                      <span className="text-xs text-neutral-700 font-medium">
+                        Recordar mi sesión
+                      </span>
+                    </label>
+                  </div>
+                )}
 
                 {/* Botón Principal Negro Minimalista */}
                 <div className="pt-2">
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || (isRegister && !termsAccepted)}
                     className="w-full py-3.5 bg-neutral-950 hover:bg-neutral-900 text-white text-sm font-semibold rounded-2xl transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                   >
                     {loading ? (

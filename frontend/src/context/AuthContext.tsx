@@ -12,7 +12,7 @@ interface AuthContextType {
   currentInventory: Inventory | null;
   needsInventorySelection: boolean;
   pendingInvitations: InventoryInvitation[];
-  selectInventory: (inventory: Inventory) => void;
+  selectInventory: (inventory: Inventory | null) => void;
   refreshInventories: () => Promise<void>;
   setNeedsInventorySelection: (show: boolean) => void;
   acceptInvitation: (invitationId: string, inventoryId: string, role: string) => Promise<void>;
@@ -175,15 +175,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
 
-      // Si aún no tiene ningún inventario, ejecutar auto-inicialización inmediata
-      if (invList.length === 0) {
-        const autoInv = await autoInitializeInventory(currentUser);
-        if (autoInv) {
-          invList = [autoInv];
-        }
-      }
-
+      // RF-INV-043: Actualizar el estado global con la lista real (vacía si el usuario eliminó todos los inventarios)
       setInventories(invList);
+
+      if (invList.length === 0) {
+        setCurrentInventory(null);
+        setNeedsInventorySelection(false);
+        localStorage.removeItem(`active_inventory_${currentUser.id}`);
+        return;
+      }
 
       // RNF-02: Persistencia del inventario seleccionado
       // Al cambiar de pestaña o bloquear el teléfono, NO volver a preguntar si ya había uno seleccionado
@@ -214,11 +214,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const selectInventory = (inventory: Inventory) => {
+  const selectInventory = (inventory: Inventory | null) => {
     setCurrentInventory(inventory);
     setNeedsInventorySelection(false);
     if (user) {
-      localStorage.setItem(`active_inventory_${user.id}`, inventory.id);
+      if (inventory) {
+        localStorage.setItem(`active_inventory_${user.id}`, inventory.id);
+      } else {
+        localStorage.removeItem(`active_inventory_${user.id}`);
+      }
     }
   };
 

@@ -19,6 +19,7 @@ import { supabase, formatCurrency, formatDate, formatStockDisplay, formatCleanDe
 import { useAuth } from '../context/AuthContext';
 const BarcodeScannerModal = React.lazy(() => import('../components/modals/BarcodeScannerModal').then(m => ({ default: m.BarcodeScannerModal })));
 import { isSaleRejected } from '../lib/supabase';
+import { InventoryCardsSkeleton } from '../components/ui/Skeleton';
 
 interface HomePageProps {
   products: Product[];
@@ -257,7 +258,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   if (isDesktop) {
     return (
-      <>
+      <div className="hidden md:block">
         <Suspense
           fallback={
             <div className="p-8 text-center text-xs font-mono text-[#616161]">
@@ -383,7 +384,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
-      </>
+      </div>
     );
   }
 
@@ -394,7 +395,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           Visible únicamente en dispositivos móviles (< 768px / md:hidden)
          ========================================================= */}
       <div
-        className="fixed inset-0 h-[100dvh] max-h-[100dvh] w-full flex flex-col overflow-hidden bg-white text-neutral-900"
+        className="block md:hidden fixed inset-0 h-[100dvh] max-h-[100dvh] w-full flex flex-col overflow-hidden bg-white text-neutral-900"
         onClick={() => {
           if (peekCardId) setPeekCardId(null);
         }}
@@ -446,7 +447,10 @@ export const HomePage: React.FC<HomePageProps> = ({
               hasMultipleCards ? 'mt-12' : 'mt-6'
             } transition-all duration-300`}
           >
-            {visibleStackCards.map((card, stackIndex) => {
+            {visibleStackCards.length === 0 ? (
+              <InventoryCardsSkeleton />
+            ) : (
+              visibleStackCards.map((card, stackIndex) => {
               const isFront = stackIndex === 0;
               const isPeeking = !isFront && peekCardId === card.id;
 
@@ -580,7 +584,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         </header>
 
@@ -613,8 +617,19 @@ export const HomePage: React.FC<HomePageProps> = ({
                 {/* SUB-CAPA 2B: Contenedor de Datos con Scroll Aislado */}
                 <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 divide-y divide-neutral-100 pb-28">
                   {loadingSales ? (
-                    <div className="py-10 text-center text-xs text-neutral-400">
-                      Cargando transacciones...
+                    <div className="py-2 space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="py-3 flex items-center justify-between gap-3 animate-pulse">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-800 shrink-0" />
+                            <div className="space-y-1.5 min-w-0 flex-1">
+                              <div className="w-32 h-4 rounded bg-neutral-200 dark:bg-neutral-800" />
+                              <div className="w-20 h-3 rounded bg-neutral-100 dark:bg-neutral-850" />
+                            </div>
+                          </div>
+                          <div className="w-16 h-5 rounded bg-neutral-200 dark:bg-neutral-800 shrink-0" />
+                        </div>
+                      ))}
                     </div>
                   ) : recentSales.length === 0 ? (
                     <div className="py-10 text-center text-xs text-neutral-400">
