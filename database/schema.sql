@@ -489,12 +489,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- Trigger automático al crearse un usuario en Supabase Auth
+-- Trigger automático al crearse un usuario en Supabase Auth (Crea solo el perfil; el inventario se crea en onboarding)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
-DECLARE
-    new_inv_id UUID;
-    cat_gen_id UUID;
 BEGIN
     INSERT INTO public.profiles (id, email, full_name, avatar_url)
     VALUES (
@@ -504,25 +501,6 @@ BEGIN
         NEW.raw_user_meta_data->>'avatar_url'
     )
     ON CONFLICT (id) DO NOTHING;
-
-    INSERT INTO public.inventories (name, description, currency, inventory_type, owner_id)
-    VALUES ('Mi Inventario Principal', 'Inventario generado automáticamente', 'PEN', 'BUSINESS', NEW.id)
-    RETURNING id INTO new_inv_id;
-
-    INSERT INTO public.inventory_users (inventory_id, user_id, role)
-    VALUES (new_inv_id, NEW.id, 'owner')
-    ON CONFLICT (inventory_id, user_id) DO NOTHING;
-
-    INSERT INTO public.locations (inventory_id, name, code, description) VALUES
-        (new_inv_id, 'Almacén Central', 'LOC-ALM-001', 'Área física principal de almacenamiento'),
-        (new_inv_id, 'Estante A', 'LOC-EST-A01', 'Estantería de fácil acceso');
-
-    INSERT INTO public.categories (inventory_id, name, color, description)
-    VALUES (new_inv_id, 'General', '#3B82F6', 'Categoría general')
-    RETURNING id INTO cat_gen_id;
-
-    INSERT INTO public.subcategories (inventory_id, category_id, name)
-    VALUES (new_inv_id, cat_gen_id, 'Suministros');
 
     RETURN NEW;
 END;

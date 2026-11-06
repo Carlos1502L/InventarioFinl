@@ -161,9 +161,9 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
             <label className="text-xs font-semibold text-[#1E3A5F] block">
               Ingresa tu contraseña para autorizar
             </label>
-            <div className="relative flex items-center">
-              <div className="absolute left-3.5 pointer-events-none text-[#616161]">
-                <Lock className="w-4 h-4" />
+            <div className="relative flex items-center w-full">
+              <div className="absolute left-3.5 pointer-events-none text-[#616161] flex items-center justify-center">
+                <Lock className="w-4 h-4 shrink-0" />
               </div>
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -172,25 +172,24 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
                   setPassword(e.target.value);
                   if (errorMsg) setErrorMsg(null);
                 }}
-                placeholder="Contraseña actual de la cuenta"
+                placeholder="Contraseña actual"
                 disabled={isDeleting}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && password.trim() && !isDeleting) {
                     handleConfirmDelete();
                   }
                 }}
-                className="w-full h-11 pl-10 pr-10 bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] focus:bg-white rounded-xl text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all"
+                className="w-full h-11 pl-11 pr-11 bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] focus:bg-white rounded-xl text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
                 autoComplete="current-password"
-                autoFocus
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 tabIndex={-1}
                 disabled={isDeleting}
-                className="absolute right-3 text-[#616161] hover:text-[#1E3A5F] transition-colors cursor-pointer"
+                className="absolute right-3.5 text-[#616161] hover:text-[#1E3A5F] transition-colors cursor-pointer flex items-center justify-center"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? <EyeOff className="w-4 h-4 shrink-0" /> : <Eye className="w-4 h-4 shrink-0" />}
               </button>
             </div>
             <p className="text-[11px] text-[#616161] font-light">
@@ -207,33 +206,33 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
           )}
         </div>
 
-        {/* Pie de Acciones */}
-        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-[#E5E7EB] bg-[#F8F9FA]/50 shrink-0">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isDeleting}
-            className="px-4 py-2.5 rounded-xl border border-[#E5E7EB] hover:bg-[#F8F9FA] text-[#1E3A5F] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
-          >
-            Cancelar
-          </button>
+        {/* Pie de Acciones: Botón Eliminar cuenta ocupando todo el ancho, y abajo Cancelar */}
+        <div className="flex flex-col gap-2.5 px-5 py-4 border-t border-[#E5E7EB] bg-[#F8F9FA]/50 shrink-0">
           <button
             type="button"
             onClick={handleConfirmDelete}
             disabled={!password.trim() || isDeleting}
-            className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed text-white text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 shadow-xs cursor-pointer active:scale-95"
+            className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed text-white text-xs font-semibold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98"
           >
             {isDeleting ? (
               <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Eliminando...</span>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Eliminando cuenta...</span>
               </>
             ) : (
               <>
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Confirmar Eliminación</span>
+                <Trash2 className="w-4 h-4" />
+                <span>Eliminar cuenta</span>
               </>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={isDeleting}
+            className="w-full py-2.5 rounded-xl border border-[#E5E7EB] hover:bg-white text-[#616161] hover:text-[#1E3A5F] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50 text-center"
+          >
+            Cancelar
           </button>
         </div>
       </div>

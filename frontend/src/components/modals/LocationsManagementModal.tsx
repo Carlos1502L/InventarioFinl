@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, MapPin, Plus, Printer, Trash2, QrCode, Loader2, Sparkles } from 'lucide-react';
+import { X, MapPin, Plus, Trash2, QrCode, Loader2, Sparkles } from 'lucide-react';
 import { Location } from '../../types/database';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -19,6 +19,7 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
   onRefresh
 }) => {
   const { currentInventory } = useAuth();
+  const [activeTab, setActiveTab] = useState<'create' | 'existing'>('create');
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
@@ -70,7 +71,10 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
       setDescription('');
       onRefresh();
 
-      // Abrir inmediatamente la etiqueta para imprimir o descargar
+      // Cambiar a la pestaña de existentes tras la creación
+      setActiveTab('existing');
+
+      // Abrir inmediatamente la etiqueta para imprimir o descargar si se desea
       if (newLoc) {
         setSelectedLocationForLabel(newLoc);
       }
@@ -100,155 +104,217 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-        <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
+        <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] font-sans">
+          
           {/* Cabecera */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff]">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center shrink-0">
                 <MapPin className="w-5 h-5 text-[#1E3A5F]" />
               </div>
               <div>
-                <h3 className="font-bold text-[#1E3A5F] text-base uppercase tracking-tight">Ubicaciones Físicas</h3>
-                <p className="text-[11px] text-[#616161]">Depósitos, estantes y etiquetas QR imprimibles</p>
+                <h3 className="font-bold text-[#1E3A5F] text-base uppercase tracking-tight">
+                  Ubicaciones Físicas
+                </h3>
+                <p className="text-[11px] text-[#616161]">
+                  Depósitos, estantes y etiquetas QR imprimibles
+                </p>
               </div>
             </div>
             <button
+              type="button"
               onClick={onClose}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Contenido con scroll */}
-          <div className="p-6 overflow-y-auto space-y-6 font-mono">
+          {/* Barra de Pestañas Superior: "Crear Ubicaciones" | "Ubicaciones existentes" */}
+          <div className="flex border-b border-[#E5E7EB] bg-[#F8F9FA]/80 px-6 shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('create')}
+              className={`py-3 px-4 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'create'
+                  ? 'border-[#1E3A5F] text-[#1E3A5F] bg-white'
+                  : 'border-transparent text-[#616161] hover:text-[#1E3A5F]'
+              }`}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Crear Ubicaciones</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('existing')}
+              className={`py-3 px-4 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'existing'
+                  ? 'border-[#1E3A5F] text-[#1E3A5F] bg-white'
+                  : 'border-transparent text-[#616161] hover:text-[#1E3A5F]'
+              }`}
+            >
+              <span>Ubicaciones existentes</span>
+              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] font-mono font-bold">
+                {locations.length}
+              </span>
+            </button>
+          </div>
+
+          {/* Contenido según Pestaña Activa */}
+          <div className="p-6 overflow-y-auto space-y-4">
             {errorMsg && (
               <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
                 {errorMsg}
               </div>
             )}
 
-            {/* Formulario Nueva Ubicación */}
-            <form onSubmit={handleCreateLocation} className="mobile-flat-section p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
-                <Plus className="w-4 h-4 text-amber-500 dark:text-amber-400" /> Nueva Ubicación
-              </span>
+            {/* PESTAÑA 1: FORMULARIO CREAR UBICACIONES */}
+            {activeTab === 'create' && (
+              <form onSubmit={handleCreateLocation} className="space-y-4 animate-in fade-in">
+                <div className="p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3.5">
+                  <span className="text-xs font-bold text-[#1E3A5F] uppercase tracking-wider flex items-center gap-1.5">
+                    <Plus className="w-4 h-4 text-[#E8B4A0]" /> Datos de la Nueva Ubicación
+                  </span>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] text-slate-600 dark:text-slate-400 mb-1">
-                    Nombre del Espacio <span className="text-amber-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={e => {
-                      setName(e.target.value);
-                      if (!code) setCode(generateUniqueCode(e.target.value));
-                    }}
-                    placeholder="Ej: Estante B - Pasillo 3"
-                    required
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  />
-                </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                        Nombre del Espacio <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={e => {
+                          setName(e.target.value);
+                          if (!code) setCode(generateUniqueCode(e.target.value));
+                        }}
+                        placeholder="Ej: Estante B - Pasillo 3"
+                        required
+                        className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                      />
+                    </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[11px] text-slate-600 dark:text-slate-400">Código / QR</label>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-semibold text-[#1E3A5F]">Código / QR</label>
+                        <button
+                          type="button"
+                          onClick={() => setCode(generateUniqueCode(name || 'LOC'))}
+                          className="text-[10px] text-[#1E3A5F] hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                        >
+                          <Sparkles className="w-2.5 h-2.5 text-[#E8B4A0]" /> Auto-generar
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={code}
+                        onChange={e => setCode(e.target.value.toUpperCase())}
+                        placeholder="Ej: LOC-EST-001"
+                        className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs font-mono text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all uppercase box-border"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                      Descripción / Referencia
+                    </label>
+                    <input
+                      type="text"
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      placeholder="Ej: Segundo piso junto a la puerta principal..."
+                      className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-2">
                     <button
-                      type="button"
-                      onClick={() => setCode(generateUniqueCode(name || 'LOC'))}
-                      className="text-[10px] text-amber-600 dark:text-amber-400 hover:text-amber-500 flex items-center gap-1"
+                      type="submit"
+                      disabled={isSubmitting || !name.trim()}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                     >
-                      <Sparkles className="w-2.5 h-2.5" /> Auto-generar
+                      {isSubmitting ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8B4A0]" />
+                      ) : (
+                        <Plus className="w-3.5 h-3.5" />
+                      )}
+                      <span>Crear Ubicación</span>
                     </button>
                   </div>
-                  <input
-                    type="text"
-                    value={code}
-                    onChange={e => setCode(e.target.value.toUpperCase())}
-                    placeholder="Ej: LOC-EST-001"
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500 uppercase"
-                  />
+                </div>
+              </form>
+            )}
+
+            {/* PESTAÑA 2: UBICACIONES EXISTENTES (RECUADRO CON SCROLL CONTENIDO) */}
+            {activeTab === 'existing' && (
+              <div className="space-y-3 animate-in fade-in">
+                <div className="flex items-center justify-between text-xs text-[#616161]">
+                  <span className="font-semibold text-[#1E3A5F]">
+                    Espacios Físicos Registrados ({locations.length})
+                  </span>
+                  <span className="text-[10px] font-mono">
+                    Haz clic en "Etiqueta" para exportar rótulo físico
+                  </span>
+                </div>
+
+                {/* Recuadro contenedor con scroll para evitar scroll infinito */}
+                <div className="max-h-[380px] overflow-y-auto space-y-2.5 border border-[#E5E7EB] rounded-2xl bg-[#F8F9FA]/40 p-3 overscroll-contain">
+                  {locations.length === 0 ? (
+                    <div className="text-center py-10 text-xs text-[#616161] space-y-2">
+                      <p>No hay ubicaciones creadas aún.</p>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('create')}
+                        className="text-xs text-[#1E3A5F] underline font-semibold cursor-pointer"
+                      >
+                        Crear la primera ubicación
+                      </button>
+                    </div>
+                  ) : (
+                    locations.map(loc => (
+                      <div
+                        key={loc.id}
+                        className="p-3.5 bg-white rounded-xl border border-[#E5E7EB] flex items-center justify-between group hover:border-[#1E3A5F]/40 transition-colors shadow-2xs"
+                      >
+                        <div className="space-y-0.5 min-w-0 pr-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="text-xs font-bold text-[#1E3A5F] truncate">{loc.name}</h4>
+                            <span className="font-mono text-[10px] px-2 py-0.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-md text-[#1E3A5F] font-semibold">
+                              {loc.code}
+                            </span>
+                          </div>
+                          {loc.description && (
+                            <p className="text-[11px] text-[#616161] truncate">{loc.description}</p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedLocationForLabel(loc)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#F8F9FA] hover:bg-[#1E3A5F]/10 text-[#1E3A5F] rounded-lg text-xs font-semibold border border-[#E5E7EB] transition-all active:scale-95 cursor-pointer"
+                            title="Imprimir o exportar etiqueta de tarjeta de crédito"
+                          >
+                            <QrCode className="w-3.5 h-3.5 text-[#1E3A5F]" />
+                            <span className="hidden sm:inline">Etiqueta</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLocation(loc.id)}
+                            className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                            title="Eliminar ubicación"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
-
-              <div>
-                <label className="block text-[11px] text-slate-600 dark:text-slate-400 mb-1">Descripción / Referencia</label>
-                <input
-                  type="text"
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                  placeholder="Ej: Segundo piso junto a la puerta principal..."
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                />
-              </div>
-
-              <div className="flex justify-end pt-1">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-amber-600/20 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                  Crear y Generar Etiqueta QR
-                </button>
-              </div>
-            </form>
-
-            {/* Lista de Ubicaciones Existentes */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
-                  Ubicaciones Registradas ({locations.length})
-                </span>
-                <span className="text-[10px] text-slate-400">
-                  Haz clic en el icono de etiqueta para imprimir (85.6 × 53.9 mm)
-                </span>
-              </div>
-
-              {locations.length === 0 ? (
-                <p className="text-xs text-slate-400 text-center py-4">No hay ubicaciones creadas aún.</p>
-              ) : (
-                locations.map(loc => (
-                  <div
-                    key={loc.id}
-                    className="mobile-flat-row p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">{loc.name}</h4>
-                        <span className="font-mono text-[10px] px-2 py-0.5 bg-slate-200/70 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-amber-700 dark:text-amber-300 font-semibold">
-                          {loc.code}
-                        </span>
-                      </div>
-                      {loc.description && (
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{loc.description}</p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => setSelectedLocationForLabel(loc)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 dark:bg-blue-600/10 hover:bg-blue-100 dark:hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-semibold border border-blue-200 dark:border-blue-500/20 transition-all active:scale-95"
-                        title="Imprimir o exportar etiqueta de tarjeta de crédito"
-                      >
-                        <QrCode className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Etiqueta</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleDeleteLocation(loc.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition-colors"
-                        title="Eliminar ubicación"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>
