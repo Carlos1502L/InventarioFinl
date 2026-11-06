@@ -514,7 +514,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
         if (deleteErr) throw deleteErr;
       }
 
-      const remaining = inventories.filter(i => i.id !== inventory.id);
+      const remaining = (inventories || []).filter(i => i.id !== inventory.id);
       if (remaining.length > 0) {
         selectInventory(remaining[0]);
       } else {

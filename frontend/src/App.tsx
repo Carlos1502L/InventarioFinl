@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './lib/supabase';
 import { Product, Category, Subcategory, Location } from './types/database';
@@ -25,7 +25,7 @@ const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 const TermsPage = React.lazy(() => import('./pages/TermsPage'));
 const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage'));
-const EmptyInventoryState = React.lazy(() => import('./components/inventory/EmptyInventoryState'));
+const FirstTimeOnboarding = React.lazy(() => import('./components/inventory/FirstTimeOnboarding'));
 
 // Modales Especializados lazy (descargados bajo demanda solo al abrirse)
 const ProductFormModal = React.lazy(() => import('./components/modals/ProductFormModal').then(m => ({ default: m.ProductFormModal })));
@@ -44,7 +44,7 @@ import { syncAllOfflineDataSilently } from './services/offlineSync';
 import { Loader2, Layers, Plus, Sparkles } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
-  const { user, loading: authLoading, currentInventory, refreshInventories, inventories } = useAuth();
+  const { user, loading: authLoading, isInitialLoading, currentInventory, refreshInventories, inventories } = useAuth();
   const isDesktop = useIsDesktop();
 
   // Control de Rutas Estáticas Públicas (RF-LEGAL-001)
@@ -78,7 +78,6 @@ export const AppContent: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [dataLoading, setDataLoading] = useState(false);
 
   // Estados de Modales
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -109,12 +108,41 @@ export const AppContent: React.FC = () => {
   const [scannedRestockProduct, setScannedRestockProduct] = useState<Product | null>(null);
   const [stockSearchFilter, setStockSearchFilter] = useState<string>('');
 
-  // Cargar datos del inventario seleccionado
-  const fetchInventoryData = useCallback(async () => {
-    if (!currentInventory) return;
-    try {
-      setDataLoading(true);
+  // RNF-PERF-FEEDBACK-004: Aislamiento de Concurrencia y Skeleton Debounced (250ms)
+  const [dataLoading, setDataLoading] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Cargar datos del inventario seleccionado cancelando peticiones previas en vuelo
+  const fetchInventoryData = useCallback(async () => {
+    if (!currentInventory) {
+      setProducts([]);
+      setCategories([]);
+      setSubcategories([]);
+      setLocations([]);
+      return;
+    }
+
+    // 1. Cancelar petición anterior en vuelo al cambiar de almacén
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
+    // 2. Limpiar inmediatamente el estado previo para evitar mezclar datos
+    setProducts([]);
+    setCategories([]);
+    setSubcategories([]);
+    setLocations([]);
+    setDataLoading(true);
+
+    // 3. Temporizador Debounce: Solo activar Skeleton si tarda más de 250ms
+    const skeletonTimer = setTimeout(() => {
+      setShowSkeleton(true);
+    }, 250);
+
+    try {
       const [prodsRes, catsRes, subRes, locsRes] = await Promise.all([
         supabase
           .from('products')
@@ -125,26 +153,32 @@ export const AppContent: React.FC = () => {
             locations (id, name, code)
           `)
           .eq('inventory_id', currentInventory.id)
-          .order('created_at', { ascending: false }),
+          .order('created_at', { ascending: false })
+          .abortSignal(signal),
 
         supabase
           .from('categories')
           .select('*')
           .eq('inventory_id', currentInventory.id)
-          .order('name', { ascending: true }),
+          .order('name', { ascending: true })
+          .abortSignal(signal),
 
         supabase
           .from('subcategories')
           .select('*')
           .eq('inventory_id', currentInventory.id)
-          .order('name', { ascending: true }),
+          .order('name', { ascending: true })
+          .abortSignal(signal),
 
         supabase
           .from('locations')
           .select('*')
           .eq('inventory_id', currentInventory.id)
           .order('name', { ascending: true })
+          .abortSignal(signal)
       ]);
+
+      if (signal.aborted) return;
 
       if (prodsRes.error) throw prodsRes.error;
       if (catsRes.error) throw catsRes.error;
@@ -156,8 +190,12 @@ export const AppContent: React.FC = () => {
       setSubcategories(subRes.data || []);
       setLocations(locsRes.data || []);
     } catch (err: any) {
-      console.error('Error fetching inventory data:', err);
+      if (err.name !== 'AbortError') {
+        console.error('Error fetching inventory data:', err);
+      }
     } finally {
+      clearTimeout(skeletonTimer);
+      setShowSkeleton(false);
       setDataLoading(false);
     }
   }, [currentInventory]);
@@ -286,8 +324,8 @@ export const AppContent: React.FC = () => {
     );
   }
 
-  // 1. Pantalla de Carga Inicial
-  if (authLoading) {
+  // 1. Pantalla de Carga Inicial / Hidratación (RF-INV-044: evita parpadeo de onboarding)
+  if (authLoading || (user && (isInitialLoading || inventories === null))) {
     return (
       <main id="main-content" className="min-h-screen bg-black md:bg-[#F8F9FA] flex flex-col items-center justify-center font-mono">
         {/* Móvil: Splash nativo oscuro mínimo y centrado sin elementos web (evita flash blanco) */}
@@ -314,12 +352,12 @@ export const AppContent: React.FC = () => {
     return <AuthPage />;
   }
 
-  // RF-INV-043: Manejo de Estado Cero por Eliminación Total de Inventarios
-  // Bloquear vistas operativas (catálogo, POS, movimientos) y mostrar pantalla obligatoria de bienvenida
-  if (inventories.length === 0) {
+  // RF-INV-044: Onboarding Exclusivo para Primer Inicio
+  // SOLO si ya terminó de validar formalmente y verdaderamente no tiene ningún inventario:
+  if (inventories !== null && inventories.length === 0) {
     return (
-      <Suspense fallback={<div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center font-mono text-xs text-[#616161]">INICIALIZANDO ESPACIO...</div>}>
-        <EmptyInventoryState onInventoryCreated={fetchInventoryData} />
+      <Suspense fallback={<div className="min-h-screen bg-black" />}>
+        <FirstTimeOnboarding onComplete={fetchInventoryData} />
       </Suspense>
     );
   }
@@ -436,7 +474,7 @@ export const AppContent: React.FC = () => {
             onOpenLocationsModule={(sub?: LocationSubTab, prod?: Product | null) => openLocationsWorkspace(sub || 'assign', prod || null)}
             onRefresh={fetchInventoryData}
             onBulkWithdrawn={handleBulkWithdrawn}
-            loading={dataLoading}
+            loading={showSkeleton}
             initialSearchTerm={stockSearchFilter}
             onClearInitialSearch={() => setStockSearchFilter('')}
           />

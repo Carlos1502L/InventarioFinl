@@ -10,6 +10,7 @@ import labelsRouter from './src/routes/labels.js';
 import auditRouter from './src/routes/audit.js';
 import collaboratorsRouter from './src/routes/collaborators.js';
 import backupRouter from './src/routes/backup.js';
+import usersRouter from './src/routes/users.js';
 import { initBackupScheduler } from './src/services/backupScheduler.js';
 
 dotenv.config();
@@ -125,6 +126,7 @@ app.use('/api/labels', heavyResourceLimiter, labelsRouter);
 app.use('/api/backup', heavyResourceLimiter, backupRouter);
 app.use('/api/audit', auditRouter);
 app.use('/api/collaborators', collaboratorsRouter);
+app.use('/api/users', usersRouter);
 
 // ============================================================================
 // 4. MANEJADOR 404 ESTANDARIZADO

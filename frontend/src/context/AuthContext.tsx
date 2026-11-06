@@ -8,7 +8,8 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  inventories: Inventory[];
+  isInitialLoading: boolean;
+  inventories: Inventory[] | null;
   currentInventory: Inventory | null;
   needsInventorySelection: boolean;
   pendingInvitations: InventoryInvitation[];
@@ -29,9 +30,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   
   // Multi-Tenancy State
-  const [inventories, setInventories] = useState<Inventory[]>([]);
+  const [inventories, setInventories] = useState<Inventory[] | null>(null);
   const [currentInventory, setCurrentInventory] = useState<Inventory | null>(null);
   const [needsInventorySelection, setNeedsInventorySelection] = useState<boolean>(false);
   const [pendingInvitations, setPendingInvitations] = useState<InventoryInvitation[]>([]);
@@ -119,6 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Cargar inventarios asociados al usuario (dueño o colaborador)
   const fetchInventories = useCallback(async (currentUser: User) => {
     try {
+      setIsInitialLoading(true);
       // 1. Inventarios donde es colaborador o dueño vía inventory_users
       const { data: memberInvs } = await supabase
         .from('inventory_users')
@@ -211,6 +214,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err) {
       console.error('Error cargando inventarios:', err);
+    } finally {
+      setIsInitialLoading(false);
     }
   }, []);
 
@@ -310,32 +315,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // 1. Obtener sesión activa inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchInventories(session.user);
+        await fetchInventories(session.user);
         if (session.user.email) {
-          fetchPendingInvitations(session.user.email);
+          await fetchPendingInvitations(session.user.email);
         }
+      } else {
+        setInventories([]);
+        setIsInitialLoading(false);
       }
       setLoading(false);
     });
 
     // 2. Suscribirse a cambios de estado de autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchInventories(session.user);
+        await fetchInventories(session.user);
         if (session.user.email) {
-          fetchPendingInvitations(session.user.email);
+          await fetchPendingInvitations(session.user.email);
         }
       } else {
         setInventories([]);
         setCurrentInventory(null);
         setNeedsInventorySelection(false);
         setPendingInvitations([]);
+        setIsInitialLoading(false);
       }
       setLoading(false);
     });
@@ -386,6 +395,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session,
         profile,
         loading,
+        isInitialLoading,
         inventories,
         currentInventory,
         needsInventorySelection,

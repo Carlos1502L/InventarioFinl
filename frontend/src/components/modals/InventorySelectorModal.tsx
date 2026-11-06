@@ -130,7 +130,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
 
           {!isCreatingNew ? (
             <>
-              {inventories.map((inv) => {
+              {(inventories || []).map((inv) => {
                 const isSelected = currentInventory?.id === inv.id;
                 const isOwner = inv.is_owner || inv.role === 'owner';
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, ShieldCheck, Lock, CheckCircle2, Cpu, Database, Trash2, Eye } from 'lucide-react';
+import { ChevronLeft, ShieldCheck, CheckCircle2, Cpu, Database, Lock } from 'lucide-react';
 
 interface LegalPageProps {
   onBack?: () => void;
@@ -9,188 +9,147 @@ export const PrivacyPage: React.FC<LegalPageProps> = ({ onBack }) => {
   const handleBack = () => {
     if (onBack) {
       onBack();
-    } else if (window.history.length > 1) {
+    } else if (typeof window !== 'undefined' && window.history.length > 1) {
       window.history.back();
     } else {
-      window.location.href = '/';
+      window.location.replace('/');
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1E3A5F] font-sans selection:bg-[#1E3A5F] selection:text-white">
-      {/* Barra Superior de Navegación */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E5E7EB] transition-colors">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleBack}
-              className="w-9 h-9 rounded-full bg-[#F8F9FA] hover:bg-[#EAEFF5] border border-[#CBD5E1] flex items-center justify-center text-[#1E3A5F] transition-all cursor-pointer active:scale-95"
-              title="Volver"
-              aria-label="Volver"
-            >
-              <ArrowLeft className="w-4 h-4 stroke-[2]" />
-            </button>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#1E3A5F] text-white flex items-center justify-center font-mono font-bold text-sm">
-                S
-              </div>
-              <span className="font-bold text-base tracking-tight text-[#1E3A5F]">
-                Stockly
-              </span>
-            </div>
-          </div>
-          <span className="text-[11px] font-mono uppercase tracking-wider text-[#616161] bg-[#F1F5F9] px-3 py-1 rounded-full border border-[#E2E8F0]">
-            RF-LEGAL-001 // Privacidad
-          </span>
+    <div className="fixed inset-0 z-50 bg-black text-zinc-100 flex flex-col h-[100dvh] overflow-hidden selection:bg-white selection:text-black font-sans">
+      {/* Header fijo móvil con botón de retorno explícito */}
+      <header className="flex items-center justify-between px-5 py-4 border-b border-zinc-900 bg-black/90 backdrop-blur-md sticky top-0 z-10 shrink-0 select-none">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="p-2 -ml-2 text-zinc-400 hover:text-white active:scale-95 transition-transform flex items-center gap-1.5 text-sm cursor-pointer"
+        >
+          <ChevronLeft className="w-5 h-5 stroke-[2]" />
+          <span>Atrás</span>
+        </button>
+        <span className="font-semibold text-sm text-zinc-200 tracking-tight">
+          Política de Privacidad
+        </span>
+        <div className="w-14 text-right">
+          <span className="text-[10px] font-mono text-zinc-500 uppercase">v2.4</span>
         </div>
       </header>
 
-      {/* Contenido Editorial */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14 space-y-10">
-        {/* Cabecera del Documento */}
-        <div className="border-b border-[#E2E8F0] pb-8 space-y-3">
-          <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[#E8B4A0] font-semibold">
-            <ShieldCheck className="w-4 h-4 text-[#1E3A5F]" />
-            <span>Política de Privacidad y Protección de Datos</span>
+      {/* Contenedor scrolleable táctil nativo */}
+      <div
+        className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 space-y-6 text-sm text-zinc-300 leading-relaxed overscroll-contain pb-[max(2.5rem,env(safe-area-inset-bottom))]"
+        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+      >
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* Cabecera */}
+          <div className="border-b border-zinc-900 pb-5 space-y-2">
+            <span className="text-[11px] font-mono uppercase tracking-widest text-zinc-500 font-semibold block">
+              RF-LEGAL-001 / RF-LEGAL-002 · Privacidad
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+              Política de Privacidad y Datos
+            </h1>
+            <p className="text-xs text-zinc-400 font-light">
+              Garantizamos la confidencialidad absoluta de tu información comercial y el control total de tus datos.
+            </p>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#1E3A5F] leading-tight">
-            Política de Privacidad y Tratamiento de Información
-          </h1>
-          <p className="text-sm text-[#616161] leading-relaxed max-w-2xl font-normal">
-            En Stockly nos comprometemos con la máxima transparencia respecto a qué datos recopilamos, cómo los procesamos mediante tecnologías modernas y cómo garantizamos tu control total sobre ellos.
-          </p>
-        </div>
 
-        {/* 1. Responsable del Tratamiento */}
-        <section className="space-y-3 bg-white p-6 sm:p-8 rounded-2xl border border-[#E2E8F0] shadow-sm">
-          <h2 className="text-lg font-bold text-[#1E3A5F] flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-md bg-[#1E3A5F] text-white text-xs flex items-center justify-center font-mono">1</span>
-            Responsable del Tratamiento
-          </h2>
-          <p className="text-sm text-[#475569] leading-relaxed">
-            Stockly actúa como responsable del tratamiento de los datos de cuenta y como encargado tecnológico del tratamiento de los datos comerciales e inventarios introducidos por sus usuarios registrados.
-          </p>
-        </section>
+          {/* 1. Responsable */}
+          <section className="p-5 sm:p-6 rounded-2xl bg-zinc-950 border border-zinc-900 space-y-2.5">
+            <h2 className="text-sm font-semibold text-white uppercase tracking-wider font-mono">
+              01 // Responsable y Encargado del Tratamiento
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 font-light leading-relaxed">
+              Stockly opera como encargado técnico de la custodia de inventarios y datos de negocio introducidos por los usuarios en la PWA, respetando el aislamiento estricto de cada cuenta mediante políticas RLS en PostgreSQL.
+            </p>
+          </section>
 
-        {/* 2. Datos Recopilados */}
-        <section className="space-y-4 bg-white p-6 sm:p-8 rounded-2xl border border-[#E2E8F0] shadow-sm">
-          <h2 className="text-lg font-bold text-[#1E3A5F] flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-md bg-[#1E3A5F] text-white text-xs flex items-center justify-center font-mono">2</span>
-            Categorías de Datos Recopilados
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-            <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
-              <span className="text-xs font-bold text-[#1E3A5F] uppercase tracking-wider block">Identificación y Perfil</span>
-              <p className="text-xs text-[#64748B] leading-relaxed">
-                Correo electrónico institucional o personal, nombre o razón comercial y roles de acceso asignados (dueño o colaborador).
-              </p>
+          {/* 2. Categorías de Datos */}
+          <section className="p-5 sm:p-6 rounded-2xl bg-zinc-950 border border-zinc-900 space-y-3.5">
+            <h2 className="text-sm font-semibold text-white uppercase tracking-wider font-mono">
+              02 // Datos Tratados
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
+              <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1">
+                <strong className="text-zinc-100 block">Cuenta y Perfil</strong>
+                <p className="text-zinc-400 font-light text-xs">Correo de autenticación, nombre y roles asignados.</p>
+              </div>
+              <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1">
+                <strong className="text-zinc-100 block">Catálogo y Stock</strong>
+                <p className="text-zinc-400 font-light text-xs">Productos, existencias, códigos, categorías y ubicaciones.</p>
+              </div>
+              <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1">
+                <strong className="text-zinc-100 block">Ventas y Precios</strong>
+                <p className="text-zinc-400 font-light text-xs">Historial transaccional, comprobantes, montos y métodos de pago.</p>
+              </div>
+              <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1">
+                <strong className="text-zinc-100 block">Caché Local Offline</strong>
+                <p className="text-zinc-400 font-light text-xs">IndexedDB y Service Workers para continuidad sin conexión.</p>
+              </div>
             </div>
-            <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
-              <span className="text-xs font-bold text-[#1E3A5F] uppercase tracking-wider block">Catálogo y Existencias</span>
-              <p className="text-xs text-[#64748B] leading-relaxed">
-                Productos, categorías, subcategorías, códigos de referencia o barras, ubicaciones en depósito y cantidades en existencias.
-              </p>
+          </section>
+
+          {/* 3. Inteligencia Artificial */}
+          <section className="p-5 sm:p-6 rounded-2xl bg-zinc-950 border border-zinc-900 space-y-3">
+            <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-amber-400 bg-amber-950/40 px-2.5 py-0.5 rounded-md w-fit border border-amber-900/60 font-semibold">
+              <Cpu className="w-3.5 h-3.5 text-amber-400" />
+              <span>Modelos de Inferencia</span>
             </div>
-            <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
-              <span className="text-xs font-bold text-[#1E3A5F] uppercase tracking-wider block">Ventas y Precios</span>
-              <p className="text-xs text-[#64748B] leading-relaxed">
-                Precios de costo, precios de venta al público, historial de transacciones, métodos de liquidación e historial de caja.
-              </p>
+            <h2 className="text-sm font-semibold text-white uppercase tracking-wider font-mono">
+              03 // Tratamiento de Imágenes & IA
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 font-light leading-relaxed">
+              El análisis multimodal de imágenes para escaneo de códigos y rótulos se ejecuta de forma estrictamente efímera. Las imágenes no se conservan tras la extracción y nunca son utilizadas para entrenar modelos públicos de terceros.
+            </p>
+          </section>
+
+          {/* 4. Subencargados y No Venta */}
+          <section className="p-5 sm:p-6 rounded-2xl bg-zinc-950 border border-zinc-900 space-y-3">
+            <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-emerald-400 bg-emerald-950/40 px-2.5 py-0.5 rounded-md w-fit border border-emerald-900/60 font-semibold">
+              <Lock className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Privacidad Garantizada</span>
             </div>
-            <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
-              <span className="text-xs font-bold text-[#1E3A5F] uppercase tracking-wider block">Almacenamiento Local (PWA)</span>
-              <p className="text-xs text-[#64748B] leading-relaxed">
-                Bases de datos técnicas en el navegador vía IndexedDB y Service Workers que permiten registrar ventas y salidas en modo offline sin conexión a internet.
-              </p>
+            <h2 className="text-sm font-semibold text-white uppercase tracking-wider font-mono">
+              04 // Subencargados e Integridad Comercial
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 font-light leading-relaxed">
+              La infraestructura opera sobre Supabase (PostgreSQL en AWS) y Vercel con comunicaciones cifradas en tránsito (TLS/HTTPS).
+            </p>
+            <div className="p-3.5 bg-emerald-950/30 border border-emerald-900/60 rounded-xl text-xs text-emerald-300 font-semibold leading-relaxed">
+              DECLARACIÓN EXPRESA: Tus datos de ventas, catálogo, clientes y márgenes comerciales NUNCA son comercializados, vendidos ni transferidos a terceros para fines publicitarios.
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* 3. Tratamiento de Imágenes e Inteligencia Artificial */}
-        <section className="space-y-4 bg-white p-6 sm:p-8 rounded-2xl border border-[#E2E8F0] shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-amber-800 bg-amber-50 px-3 py-1 rounded-lg w-fit border border-amber-200">
-            <Cpu className="w-3.5 h-3.5 text-amber-600" />
-            <span>Procesamiento de Imágenes & IA</span>
-          </div>
-          <h2 className="text-lg font-bold text-[#1E3A5F] flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-md bg-[#1E3A5F] text-white text-xs flex items-center justify-center font-mono">3</span>
-            Tratamiento de Imágenes y Modelos de Inteligencia Artificial
-          </h2>
-          <p className="text-sm text-[#475569] leading-relaxed">
-            Cuando utilizas herramientas de escaneo o reconocimiento asistido por visión artificial:
-          </p>
-          <ul className="space-y-2.5 text-sm text-[#475569]">
-            <li className="flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-              <span><strong>Finalidad Restringida y Efímera:</strong> Las imágenes cargadas o capturadas por la cámara se procesan en memoria con el fin exclusivo de extraer códigos de barra, texto de etiquetas o especificaciones del producto. Una vez extraído el texto o código, el archivo volátil es descartado.</span>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-              <span><strong>Sin Cesión de Propiedad Intelectual:</strong> El envío de imágenes para su lectura no otorga a Stockly ni a ningún proveedor de IA derechos de autor, licencias ni propiedad sobre las fotografías o marcas de tus productos.</span>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-              <span><strong>Sin Entrenamiento de Modelos Públicos:</strong> Los datos y fotografías de tu negocio no son utilizados para alimentar, entrenar o calibrar modelos de IA de terceros para acceso público.</span>
-            </li>
-          </ul>
-        </section>
+          {/* 5. Supresión de Cuenta */}
+          <section className="p-5 sm:p-6 rounded-2xl bg-zinc-950 border border-zinc-900 space-y-3">
+            <h2 className="text-sm font-semibold text-white uppercase tracking-wider font-mono">
+              05 // Derecho de Supresión Total (RF-AUTH-006)
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 font-light leading-relaxed">
+              El usuario puede ejercer en cualquier momento la eliminación definitiva de su cuenta desde Ajustes &gt; Zona de Peligro. La confirmación desencadena la purga permanente de los datos en el servidor y la limpieza total de bases locales en el navegador.
+            </p>
+          </section>
 
-        {/* 4. Subencargados y No Venta de Información */}
-        <section className="space-y-4 bg-white p-6 sm:p-8 rounded-2xl border border-[#E2E8F0] shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-emerald-800 bg-emerald-50 px-3 py-1 rounded-lg w-fit border border-emerald-200">
-            <Lock className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Compromiso de Privacidad Absoluta</span>
-          </div>
-          <h2 className="text-lg font-bold text-[#1E3A5F] flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-md bg-[#1E3A5F] text-white text-xs flex items-center justify-center font-mono">4</span>
-            Transferencia a Terceros y No Comercialización
-          </h2>
-          <p className="text-sm text-[#475569] leading-relaxed">
-            La información únicamente transita y se aloja en proveedores de infraestructura tecnológica debidamente certificados:
-          </p>
-          <ul className="space-y-2 text-sm text-[#475569] list-disc list-inside">
-            <li><strong>Supabase / AWS:</strong> Almacenamiento seguro en PostgreSQL, autenticación y backups cifrados.</li>
-            <li><strong>Vercel:</strong> Entrega de la interfaz estática optimizada para PWA bajo cifrado HTTPS.</li>
-            <li><strong>APIs de Visión / IA Segura:</strong> Procesamiento efímero de imágenes vía conexiones SSL encriptadas.</li>
-          </ul>
-          <div className="p-4 bg-[#F0FDF4] border border-emerald-300 rounded-xl text-xs text-emerald-900 leading-relaxed font-semibold">
-            PROHIBICIÓN TOTAL DE VENTA DE DATOS: Bajo ninguna circunstancia Stockly vende, renta, comercializa, transfiere ni comparte datos comerciales, de clientes, ventas o inventarios con agencias de publicidad, corredores de datos («data brokers») ni plataformas de monetización publicitaria.
-          </div>
-        </section>
-
-        {/* 5. Derechos ARCO y Supresión Definitiva (RF-AUTH-006) */}
-        <section className="space-y-4 bg-white p-6 sm:p-8 rounded-2xl border border-[#E2E8F0] shadow-sm">
-          <h2 className="text-lg font-bold text-[#1E3A5F] flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-md bg-[#1E3A5F] text-white text-xs flex items-center justify-center font-mono">5</span>
-            Derechos ARCO y Supresión de Cuenta (RF-AUTH-006)
-          </h2>
-          <p className="text-sm text-[#475569] leading-relaxed">
-            Como usuario y titular de los datos, cuentas con pleno derecho para:
-          </p>
-          <div className="space-y-2.5 text-sm text-[#475569]">
-            <p><strong>• Acceso y Rectificación:</strong> Consultar y editar en tiempo real toda la información de tu perfil, inventarios y colaboradores desde el sistema.</p>
-            <p><strong>• Cancelación y Oposición:</strong> Revocar accesos a colaboradores o transferir la propiedad de tus depósitos.</p>
-            <p><strong>• Supresión Total e Irreversible (RF-AUTH-006):</strong> Eliminar tu cuenta y todos los depósitos asociados mediante el botón de eliminación de cuenta en la sección de Configuración. Tras confirmar con la clave de seguridad requerida, la totalidad de tus datos se purgan física y lógicamente de la base de datos sin copias retenidas.</p>
-          </div>
-        </section>
-
-        {/* Footer y Enlace de Retorno */}
-        <div className="pt-6 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#616161]">
-          <p>© 2026 Stockly. Todos los derechos reservados.</p>
-          <div className="flex items-center gap-4">
-            <a href="/terms" className="text-[#1E3A5F] hover:underline font-medium">
-              Términos de Servicio
-            </a>
-            <span>·</span>
-            <button
-              onClick={handleBack}
-              className="text-[#1E3A5F] hover:underline font-medium cursor-pointer"
-            >
-              Volver al sistema
-            </button>
+          {/* Footer interno */}
+          <div className="pt-6 border-t border-zinc-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500 font-mono">
+            <span>© 2026 Stockly · Todos los derechos reservados.</span>
+            <div className="flex items-center gap-3">
+              <a href="/terms" className="text-zinc-300 hover:text-white underline underline-offset-2">
+                Ver Términos de Servicio
+              </a>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={handleBack}
+                className="text-zinc-300 hover:text-white underline underline-offset-2 cursor-pointer"
+              >
+                Volver a la App
+              </button>
+            </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 };

@@ -214,7 +214,7 @@ export const HomePage: React.FC<HomePageProps> = ({
       'bg-emerald-500/[0.09] backdrop-blur-2xl border border-emerald-300/25 shadow-[0_16px_36px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.35),inset_0_-1px_1px_rgba(0,0,0,0.2)]'
     ];
 
-    const list = inventories.length > 0 ? inventories : currentInventory ? [currentInventory] : [];
+    const list = inventories && inventories.length > 0 ? inventories : currentInventory ? [currentInventory] : [];
     const mapped = list.map((inv, idx) => {
       const isActive = inv.id === currentInventory?.id;
       const summary = isActive

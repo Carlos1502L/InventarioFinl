@@ -15,10 +15,13 @@ import {
   Sliders,
   Printer,
   Ticket,
-  Database
+  Database,
+  AlertTriangle,
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { formatDate } from '../services/supabase';
+import { formatDate, getApiUrl, supabase } from '../services/supabase';
 import { EditInventoryModal } from '../components/modals/EditInventoryModal';
 import { BatchLocationsPrintModal } from '../components/modals/BatchLocationsPrintModal';
 import { CouponsManagementModal } from '../components/modals/CouponsManagementModal';
@@ -45,6 +48,60 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [batchLocationsOpen, setBatchLocationsOpen] = useState(false);
   const [couponsOpen, setCouponsOpen] = useState(false);
   const [backupModalOpen, setBackupModalOpen] = useState(false);
+  const [deleteAccountModalOpen, setDeleteAccountModalOpen] = useState(false);
+  const [confirmDeleteInput, setConfirmDeleteInput] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleAccountDeletion = async () => {
+    if (confirmDeleteInput !== 'ELIMINAR') return;
+    setIsDeletingAccount(true);
+    setDeleteError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const res = await fetch(getApiUrl('/users/me'), {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Error al eliminar la cuenta');
+      }
+
+      // Purga completa de almacenamiento local y bases de datos IndexedDB
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (e) {
+        console.warn('Error clearing storage:', e);
+      }
+
+      if (typeof window !== 'undefined' && window.indexedDB && window.indexedDB.databases) {
+        try {
+          const dbs = await window.indexedDB.databases();
+          for (const db of dbs) {
+            if (db.name) {
+              window.indexedDB.deleteDatabase(db.name);
+            }
+          }
+        } catch (e) {
+          console.warn('Error purging IndexedDB:', e);
+        }
+      }
+
+      window.location.replace('/login');
+    } catch (err: any) {
+      console.error('Error al eliminar la cuenta:', err);
+      setDeleteError(err.message || 'Error al procesar la eliminación');
+      setIsDeletingAccount(false);
+    }
+  };
 
   const isOwner =
     currentInventory?.role?.toLowerCase() === 'owner' ||
@@ -288,6 +345,58 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               <LogOut className="w-4 h-4 text-neutral-600" />
               <span>Cerrar Sesión</span>
             </button>
+          </div>
+
+          {/* Zona de Peligro Móvil (RF-AUTH-006) */}
+          <div className="pt-8 border-t border-neutral-100 mt-6 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+              <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-red-600">
+                Zona de Peligro
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmDeleteInput('');
+                setDeleteError(null);
+                setDeleteAccountModalOpen(true);
+              }}
+              className="w-full py-3.5 px-4 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs flex items-center justify-center gap-2 border border-red-200/60 active:scale-[0.99] transition-colors"
+            >
+              <Trash2 className="w-4 h-4 text-red-600" />
+              <span>Eliminar cuenta definitivamente</span>
+            </button>
+          </div>
+
+          {/* Pie Legal Móvil (RF-LEGAL-001) */}
+          <div className="pt-6 pb-2 flex flex-col items-center gap-2 text-xs text-neutral-400 font-mono">
+            <div className="flex items-center gap-3">
+              <a
+                href="/terms"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.history.pushState({}, '', '/terms');
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }}
+                className="text-neutral-500 hover:text-neutral-800 underline"
+              >
+                Términos de Servicio
+              </a>
+              <span>·</span>
+              <a
+                href="/privacy"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.history.pushState({}, '', '/privacy');
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }}
+                className="text-neutral-500 hover:text-neutral-800 underline"
+              >
+                Privacidad
+              </a>
+            </div>
+            <span className="text-[10px]">STOCKLY v2.4.0</span>
           </div>
         </section>
       </div>
@@ -591,6 +700,38 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           </button>
         </div>
 
+        {/* =========================================================
+            05 // ZONA DE PELIGRO: ELIMINACIÓN DE CUENTA (RF-AUTH-006)
+           ========================================================= */}
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center gap-2 px-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+            <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-red-600">
+              05 // ZONA DE PELIGRO (ELIMINACIÓN DEFINITIVA)
+            </h3>
+          </div>
+
+          <div className="p-4 sm:p-5 bg-red-50/60 border border-red-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-red-950">Eliminar cuenta de usuario</h4>
+              <p className="text-xs text-red-800/80 font-light leading-relaxed">
+                Borra permanentemente tu cuenta, todos tus depósitos/inventarios propios, catálogo, ventas y datos locales almacenados. Esta acción es destructiva e irreversible.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmDeleteInput('');
+                setDeleteError(null);
+                setDeleteAccountModalOpen(true);
+              }}
+              className="shrink-0 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer"
+            >
+              Eliminar cuenta
+            </button>
+          </div>
+        </div>
+
         {/* Pie Legal y Enlaces a Términos y Privacidad (RF-LEGAL-001) */}
         <div className="pt-4 pb-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#616161] font-mono border-t border-[#E5E7EB]">
           <div className="flex items-center gap-2">
@@ -658,6 +799,83 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             if (onRefreshInventoryData) onRefreshInventoryData();
           }}
         />
+      )}
+
+      {/* Modal de Confirmación de Eliminación Definitiva (RF-AUTH-006) */}
+      {deleteAccountModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div
+            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-red-200 text-neutral-900 space-y-4 animate-in fade-in zoom-in-95 duration-150"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-account-title"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 id="delete-account-title" className="text-base font-bold text-red-950">
+                  Eliminar Cuenta Definitivamente
+                </h3>
+                <p className="text-xs text-neutral-500 font-mono">
+                  ACCIÓN DESTRUCTIVA E IRREVERSIBLE
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-red-50/80 border border-red-200/70 rounded-xl text-xs text-red-900 space-y-2 leading-relaxed">
+              <p>
+                Esta acción eliminará de forma irreversible tu cuenta de usuario, tus inventarios propios, catálogo de productos, historial de movimientos, ventas y todas las cachés locales.
+              </p>
+              <p className="font-semibold text-red-950">
+                Para confirmar la eliminación permanente, escribe <span className="font-mono bg-red-200/70 px-1 py-0.5 rounded text-red-900 font-bold">ELIMINAR</span> a continuación:
+              </p>
+            </div>
+
+            <div>
+              <input
+                type="text"
+                value={confirmDeleteInput}
+                onChange={(e) => setConfirmDeleteInput(e.target.value)}
+                placeholder="Escribe ELIMINAR"
+                autoCapitalize="characters"
+                disabled={isDeletingAccount}
+                className="w-full px-3 py-2.5 border border-neutral-300 rounded-xl font-mono text-center tracking-widest uppercase text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-neutral-50"
+              />
+            </div>
+
+            {deleteError && (
+              <div className="p-2.5 rounded-lg bg-red-100 text-red-700 text-xs text-center font-medium">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isDeletingAccount) {
+                    setDeleteAccountModalOpen(false);
+                  }
+                }}
+                disabled={isDeletingAccount}
+                className="px-4 py-2.5 rounded-xl border border-neutral-200 hover:bg-neutral-100 text-neutral-700 text-xs font-semibold uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleAccountDeletion}
+                disabled={confirmDeleteInput !== 'ELIMINAR' || isDeletingAccount}
+                className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:bg-neutral-300 disabled:cursor-not-allowed text-white text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 shadow-xs cursor-pointer active:scale-95"
+              >
+                {isDeletingAccount && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Confirmar Eliminación</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
