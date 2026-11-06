@@ -486,19 +486,81 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
         if (updateError) throw updateError;
 
+        // Calcular diferenciales específicos para la trazabilidad y auditoría
+        const nameChanged = (productToEdit.name || '').trim() !== payload.name.trim();
+        const prevCategory = categories.find(c => c.id === productToEdit.category_id)?.name 
+          || (productToEdit.categories as any)?.name 
+          || (productToEdit.category_id ? 'Categoría anterior' : null);
+        const newCategory = categories.find(c => c.id === categoryId)?.name || (categoryId ? 'Nueva categoría' : null);
+        const categoryChanged = (productToEdit.category_id || '') !== (categoryId || '');
+
+        const prevSubcategory = subcategories.find(s => s.id === productToEdit.subcategory_id)?.name 
+          || (productToEdit.subcategories as any)?.name 
+          || null;
+        const newSubcategory = subcategories.find(s => s.id === subcategoryId)?.name || null;
+        const subcategoryChanged = (productToEdit.subcategory_id || '') !== (subcategoryId || '');
+
+        const priceChanged = Number(productToEdit.price) !== Number(parsedPrice);
+        const stockChanged = Number(productToEdit.stock) !== Number(consolidatedStock);
+        const codeChanged = (productToEdit.code || '').trim() !== payload.code.trim();
+        const unitChanged = productToEdit.unit_type !== unitType || (unitType === 'BOX' && Number(productToEdit.units_per_box) !== Number(parsedUpb));
+
+        const diffSummary: string[] = [];
+
+        if (nameChanged) {
+          diffSummary.push(`Renombró '${productToEdit.name}' por '${payload.name}'`);
+        }
+        if (categoryChanged) {
+          if (prevCategory && newCategory) {
+            diffSummary.push(`Cambió categoría de '${prevCategory}' a '${newCategory}'`);
+          } else if (newCategory) {
+            diffSummary.push(`Asignó categoría '${newCategory}'`);
+          } else {
+            diffSummary.push(`Quitó categoría '${prevCategory}'`);
+          }
+        }
+        if (subcategoryChanged && newSubcategory) {
+          diffSummary.push(`Asignó subcategoría '${newSubcategory}'`);
+        }
+        if (priceChanged) {
+          diffSummary.push(`Actualizó precio a S/ ${parsedPrice} (Antes: S/ ${productToEdit.price})`);
+        }
+        if (stockChanged) {
+          const diff = Number(consolidatedStock) - Number(productToEdit.stock);
+          const sign = diff > 0 ? `+${diff}` : `${diff}`;
+          diffSummary.push(`Ajustó stock: ${sign} (${productToEdit.stock} -> ${consolidatedStock})`);
+        }
+        if (codeChanged) {
+          diffSummary.push(`Modificó código/SKU a '${payload.code}'`);
+        }
+        if (unitChanged) {
+          diffSummary.push(`Cambió unidad a ${unitType === 'BOX' ? `Caja (${parsedUpb} und)` : 'Unidad'}`);
+        }
+
+        const detailsText = diffSummary.length > 0
+          ? diffSummary.join(' • ')
+          : `Actualización de ficha técnica por ${user.email}`;
+
         await logAuditAction({
           inventoryId: currentInventory.id,
           productId: productToEdit.id,
           productName: payload.name,
           actionType: 'UPDATE',
-          details: `Producto actualizado por ${user.email}. Unidad: ${unitType}${unitType === 'BOX' ? ` (1 caja = ${parsedUpb} und)` : ''}, Precio: ${parsedPrice}, Stock: ${formattedStockLabel}`,
+          details: detailsText,
           metadata: {
+            previous_name: productToEdit.name,
+            new_name: payload.name,
+            previous_category: prevCategory,
+            new_category: newCategory,
+            previous_subcategory: prevSubcategory,
+            new_subcategory: newSubcategory,
             previous_price: productToEdit.price,
             new_price: parsedPrice,
             previous_stock: productToEdit.stock,
             new_stock: consolidatedStock,
             unit_type: unitType,
-            units_per_box: unitType === 'BOX' ? parsedUpb : null
+            units_per_box: unitType === 'BOX' ? parsedUpb : null,
+            diff_summary: diffSummary
           }
         });
 

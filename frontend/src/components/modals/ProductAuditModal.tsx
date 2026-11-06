@@ -53,7 +53,11 @@ function formatUserAlias(email?: string | null, userId?: string | null): string 
 /**
  * Traduce y resume el diferencial (Diff) exacto de la acción en formato editorial
  */
-function formatActionDiff(log: AuditLog): {
+function formatActionDiff(
+  log: AuditLog,
+  allLogs: AuditLog[] = [],
+  index = 0
+): {
   headline: string;
   badgeText: string;
   badgeColor: string;
@@ -63,17 +67,90 @@ function formatActionDiff(log: AuditLog): {
 
   switch (log.action_type) {
     case 'UPDATE': {
-      // Caso 1: Renombre de producto
-      if (meta.previous_name && meta.new_name && meta.previous_name !== meta.new_name) {
+      // 1. Si viene diff_summary en metadata
+      if (Array.isArray(meta.diff_summary) && meta.diff_summary.length > 0) {
+        const headline = meta.diff_summary.join(' • ');
+        const hasRename = !!meta.previous_name && meta.previous_name !== meta.new_name;
+        const hasCategory = !!meta.previous_category || !!meta.new_category;
+        const badgeText = hasRename ? 'Renombre' : hasCategory ? 'Categoría' : 'Edición';
+        const badgeColor = hasRename
+          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
+          : hasCategory
+          ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+          : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700';
         return {
-          headline: `Renombró '${meta.previous_name}' por '${meta.new_name}'`,
+          headline,
+          badgeText,
+          badgeColor,
+          icon: <Edit3 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+        };
+      }
+
+      // 2. Si details ya contiene un resumen de cambios (contiene • o Renombró)
+      if (log.details && (log.details.includes('Renombró') || log.details.includes('Cambió categoría') || log.details.includes(' • '))) {
+        const isRename = log.details.includes('Renombró');
+        return {
+          headline: log.details,
+          badgeText: isRename ? 'Renombre' : 'Edición',
+          badgeColor: isRename
+            ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
+            : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700',
+          icon: <Edit3 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+        };
+      }
+
+      // 3. Si vienen previous_name y new_name en metadata
+      if (meta.previous_name && meta.new_name && meta.previous_name !== meta.new_name) {
+        let headline = `Renombró '${meta.previous_name}' por '${meta.new_name}'`;
+        if (meta.new_category) {
+          headline += ` • Categoría: '${meta.new_category}'`;
+        }
+        return {
+          headline,
           badgeText: 'Renombre',
           badgeColor: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
           icon: <Edit3 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
         };
       }
-      // Caso 2: Cambio de stock por ajuste directo
-      if (meta.previous_stock !== undefined && meta.new_stock !== undefined && meta.previous_stock !== meta.new_stock) {
+
+      // 4. Si cambió categoría en metadata
+      if (meta.previous_category || meta.new_category) {
+        const headline = meta.previous_category && meta.new_category
+          ? `Cambió categoría: de '${meta.previous_category}' a '${meta.new_category}'`
+          : `Asignó categoría '${meta.new_category || meta.previous_category}'`;
+        return {
+          headline,
+          badgeText: 'Categoría',
+          badgeColor: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+          icon: <Edit3 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+        };
+      }
+
+      // 5. Inferencia retrospectiva para logs legados (comparando con el evento anterior de este producto)
+      if (allLogs && index < allLogs.length - 1) {
+        const olderLog = allLogs.slice(index + 1).find(l => l.product_id === log.product_id && l.product_name);
+        if (olderLog && olderLog.product_name && olderLog.product_name.trim() !== (log.product_name || '').trim()) {
+          return {
+            headline: `Renombró '${olderLog.product_name}' por '${log.product_name}'`,
+            badgeText: 'Renombre',
+            badgeColor: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+            icon: <Edit3 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+          };
+        }
+      }
+
+      // 6. Cambio de precio
+      if (meta.previous_price !== undefined && meta.new_price !== undefined && Number(meta.previous_price) !== Number(meta.new_price)) {
+        return {
+          headline: `Actualización de precio: de S/ ${meta.previous_price} a S/ ${meta.new_price}`,
+          badgeText: 'Precio',
+          badgeColor: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+          icon: <Edit3 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+        };
+      }
+
+      // 7. Cambio de stock por ajuste directo
+      if (meta.previous_stock !== undefined && meta.new_stock !== undefined && Number(meta.previous_stock) !== Number(meta.new_stock)) {
         const diff = Number(meta.new_stock) - Number(meta.previous_stock);
         const diffLabel = diff > 0 ? `+${diff}` : `${diff}`;
         return {
@@ -83,94 +160,18 @@ function formatActionDiff(log: AuditLog): {
           icon: <ArrowRightLeft className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 shrink-0" />
         };
       }
-      // Caso 3: Cambio de precio
-      if (meta.previous_price !== undefined && meta.new_price !== undefined && meta.previous_price !== meta.new_price) {
-        return {
-          headline: `Actualización de precio: de S/ ${meta.previous_price} a S/ ${meta.new_price}`,
-          badgeText: 'Precio',
-          badgeColor: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-          icon: <Edit3 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-        };
+
+      // 8. Sanitización de texto legado
+      let headline = log.details || 'Ficha técnica actualizada';
+      if (headline.includes('Producto actualizado por')) {
+        headline = 'Actualización de ficha técnica y parámetros del producto';
       }
+
       return {
-        headline: log.details || 'Ficha técnica actualizada',
+        headline,
         badgeText: 'Edición',
         badgeColor: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700',
         icon: <Edit3 className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400 shrink-0" />
-      };
-    }
-
-    case 'WITHDRAW': {
-      const qty = meta.withdrawn_quantity || (log.details.match(/-?(\d+(\.\d+)?)/)?.[1] ?? 1);
-      const unit = meta.unit_type === 'BOX' ? 'cajas' : 'unidades';
-      const reason = meta.reason
-        ? ` (Motivo: ${meta.reason})`
-        : log.details.includes('motivo:')
-        ? ` (Motivo: ${log.details.split('motivo:')[1]?.trim().replace(/["\.]/g, '')})`
-        : '';
-      return {
-        headline: `Descuento por merma: ${qty} ${unit}${reason}`,
-        badgeText: 'Merma / Baja',
-        badgeColor: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800',
-        icon: <TrendingDown className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
-      };
-    }
-
-    case 'SALE': {
-      const qty = meta.quantity || 1;
-      const unit = meta.unit_type === 'BOX' ? 'cajas' : 'unidad';
-      const ticket =
-        meta.ticket_number ||
-        meta.receipt_number ||
-        (meta.sale_id ? String(meta.sale_id).slice(-4) : 'POS');
-      return {
-        headline: `Venta registrada: -${qty} ${unit} (Ticket #${ticket})`,
-        badgeText: 'Venta',
-        badgeColor: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-        icon: <ShoppingCart className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-      };
-    }
-
-    case 'MOVE': {
-      const qty = meta.quantity_moved || 1;
-      const unit = meta.unit_type === 'BOX' ? 'cajas' : 'unidades';
-      const fromLoc = meta.from_location_name || 'Origen';
-      const toLoc = meta.to_location_name || 'Destino';
-      const reason = meta.reason ? ` (Motivo: ${meta.reason})` : '';
-      return {
-        headline: `Traslado: ${qty} ${unit} de '${fromLoc}' a '${toLoc}'${reason}`,
-        badgeText: 'Traslado',
-        badgeColor: 'bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300 border-violet-200 dark:border-violet-800',
-        icon: <ArrowRightLeft className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
-      };
-    }
-
-    case 'RESTOCK': {
-      const qty = meta.quantity || meta.added_quantity || 1;
-      const unit = meta.unit_type === 'BOX' ? 'cajas' : 'unidades';
-      return {
-        headline: `Ingreso de stock: +${qty} ${unit}`,
-        badgeText: 'Reabastecimiento',
-        badgeColor: 'bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 border-teal-200 dark:border-teal-800',
-        icon: <ArrowUpRight className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
-      };
-    }
-
-    case 'CREATE': {
-      return {
-        headline: `Alta de producto en catálogo (Stock inicial: ${meta.initial_stock ?? 0})`,
-        badgeText: 'Creación',
-        badgeColor: 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-        icon: <PlusCircle className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-      };
-    }
-
-    case 'DELETE': {
-      return {
-        headline: log.details || 'Mercancía dada de baja o eliminada del inventario',
-        badgeText: 'Baja Total',
-        badgeColor: 'bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border-red-200 dark:border-red-800',
-        icon: <Trash2 className="w-3.5 h-3.5 text-red-600 dark:text-red-400 shrink-0" />
       };
     }
 
@@ -517,8 +518,8 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
                 </div>
               </div>
             ) : (
-              auditLogs.map(log => {
-                const diff = formatActionDiff(log);
+              auditLogs.map((log, index) => {
+                const diff = formatActionDiff(log, auditLogs, index);
                 const userAlias = formatUserAlias(log.user_email, log.user_id);
 
                 return (
