@@ -156,7 +156,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
             </p>
           </div>
 
-          {/* Formulario de Contraseña */}
+          {/* Formulario de Contraseña (RF-UI-AUTH-007) */}
           <div className="space-y-1.5 pt-1">
             <label className="text-xs font-semibold text-[#1E3A5F] block">
               Ingresa tu contraseña para autorizar
@@ -179,7 +179,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
                     handleConfirmDelete();
                   }
                 }}
-                className="w-full h-11 pl-11 pr-11 bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] focus:bg-white rounded-xl text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                className="w-full h-11 pl-10 pr-10 bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] focus:bg-white rounded-2xl text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
                 autoComplete="current-password"
               />
               <button
@@ -187,7 +187,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
                 onClick={() => setShowPassword(!showPassword)}
                 tabIndex={-1}
                 disabled={isDeleting}
-                className="absolute right-3.5 text-[#616161] hover:text-[#1E3A5F] transition-colors cursor-pointer flex items-center justify-center"
+                className="absolute right-3.5 text-[#616161] hover:text-[#1E3A5F] transition-colors cursor-pointer flex items-center justify-center p-1"
               >
                 {showPassword ? <EyeOff className="w-4 h-4 shrink-0" /> : <Eye className="w-4 h-4 shrink-0" />}
               </button>

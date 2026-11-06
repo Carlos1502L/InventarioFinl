@@ -130,31 +130,38 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
             </button>
           </div>
 
-          {/* Barra de Pestañas Superior: "Crear Ubicaciones" | "Ubicaciones existentes" */}
-          <div className="flex border-b border-[#E5E7EB] bg-[#F8F9FA]/80 px-6 shrink-0">
+          {/* Barra de Pestañas Tipo Píldora (RF-UI-TABS-008 & RNF-UX-CONSISTENCY-005) */}
+          <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#E5E7EB] bg-white shrink-0 overflow-x-auto">
             <button
               type="button"
               onClick={() => setActiveTab('create')}
-              className={`py-3 px-4 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`inline-flex items-center justify-center gap-1.5 px-4 py-2 min-h-[38px] rounded-full text-xs font-medium transition-all duration-200 active:scale-95 cursor-pointer whitespace-nowrap ${
                 activeTab === 'create'
-                  ? 'border-[#1E3A5F] text-[#1E3A5F] bg-white'
-                  : 'border-transparent text-[#616161] hover:text-[#1E3A5F]'
+                  ? 'mobile-tab-active bg-black text-white dark:bg-white dark:text-black shadow-xs'
+                  : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200/70 dark:hover:bg-zinc-700'
               }`}
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Crear Ubicaciones</span>
+              <span>Crear ubicación</span>
             </button>
+
             <button
               type="button"
               onClick={() => setActiveTab('existing')}
-              className={`py-3 px-4 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`inline-flex items-center justify-center gap-2 px-4 py-2 min-h-[38px] rounded-full text-xs font-medium transition-all duration-200 active:scale-95 cursor-pointer whitespace-nowrap ${
                 activeTab === 'existing'
-                  ? 'border-[#1E3A5F] text-[#1E3A5F] bg-white'
-                  : 'border-transparent text-[#616161] hover:text-[#1E3A5F]'
+                  ? 'mobile-tab-active bg-black text-white dark:bg-white dark:text-black shadow-xs'
+                  : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200/70 dark:hover:bg-zinc-700'
               }`}
             >
-              <span>Ubicaciones existentes</span>
-              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] font-mono font-bold">
+              <span>Existentes</span>
+              <span
+                className={`text-[10px] font-mono font-semibold rounded-full px-2 py-0.5 transition-colors duration-200 ${
+                  activeTab === 'existing'
+                    ? 'bg-zinc-800 text-zinc-200 dark:bg-zinc-200 dark:text-zinc-800'
+                    : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300'
+                }`}
+              >
                 {locations.length}
               </span>
             </button>
