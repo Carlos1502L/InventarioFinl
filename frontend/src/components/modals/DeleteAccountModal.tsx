@@ -116,7 +116,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in fade-in">
-      <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col font-sans animate-in zoom-in-95 duration-150">
+      <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-md max-h-[85dvh] overflow-hidden shadow-2xl flex flex-col font-sans animate-in zoom-in-95 duration-150">
         
         {/* Cabecera Limpia */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E7EB] bg-[#ffffff] shrink-0">
@@ -156,15 +156,18 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
             </p>
           </div>
 
-          {/* Formulario de Contraseña (RF-UI-AUTH-007) */}
+          {/* Formulario de Contraseña (RF-UI-AUTH-009) */}
           <div className="space-y-1.5 pt-1">
             <label className="text-xs font-semibold text-[#1E3A5F] block">
               Ingresa tu contraseña para autorizar
             </label>
-            <div className="relative flex items-center w-full">
-              <div className="absolute left-3.5 pointer-events-none text-[#616161] flex items-center justify-center">
+            <div className="relative w-full">
+              {/* Candado en extremo izquierdo centrado verticalmente con pointer-events-none */}
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
                 <Lock className="w-4 h-4 shrink-0" />
               </div>
+
+              {/* Input con pl-11, h-12, rounded-2xl, bg neutro y border-0 box-border */}
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
@@ -179,18 +182,22 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
                     handleConfirmDelete();
                   }
                 }}
-                className="w-full h-11 pl-10 pr-10 bg-[#F8F9FA] border border-[#E5E7EB] focus:border-[#1E3A5F] focus:bg-white rounded-2xl text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                className="w-full h-12 pl-11 pr-11 bg-zinc-100 dark:bg-zinc-800 text-neutral-900 dark:text-zinc-100 placeholder:text-zinc-400 rounded-2xl border-0 box-border focus:outline-none focus:ring-2 focus:ring-zinc-950 dark:focus:ring-white transition-all text-xs font-mono"
                 autoComplete="current-password"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-                disabled={isDeleting}
-                className="absolute right-3.5 text-[#616161] hover:text-[#1E3A5F] transition-colors cursor-pointer flex items-center justify-center p-1"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4 shrink-0" /> : <Eye className="w-4 h-4 shrink-0" />}
-              </button>
+
+              {/* Botón de visibilidad de contraseña centrado verticalmente en extremo derecho */}
+              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                  disabled={isDeleting}
+                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors cursor-pointer p-1"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4 shrink-0" /> : <Eye className="w-4 h-4 shrink-0" />}
+                </button>
+              </div>
             </div>
             <p className="text-[11px] text-[#616161] font-light">
               Por tu seguridad, solicitamos tu contraseña para verificar la titularidad antes de procesar la baja.
@@ -206,13 +213,13 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
           )}
         </div>
 
-        {/* Pie de Acciones: Botón Eliminar cuenta ocupando todo el ancho, y abajo Cancelar */}
-        <div className="flex flex-col gap-2.5 px-5 py-4 border-t border-[#E5E7EB] bg-[#F8F9FA]/50 shrink-0">
+        {/* Pie de Acciones: Acción Principal y Cancelar Plano (RF-UI-ACTION-010 & RNF-UX-HIERARCHY-006) */}
+        <div className="flex flex-col items-center gap-2 px-5 py-4 border-t border-[#E5E7EB] bg-[#F8F9FA]/50 shrink-0">
           <button
             type="button"
             onClick={handleConfirmDelete}
             disabled={!password.trim() || isDeleting}
-            className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed text-white text-xs font-semibold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98"
+            className="w-full h-12 rounded-full bg-rose-600 hover:bg-rose-700 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed text-white text-xs font-semibold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98"
           >
             {isDeleting ? (
               <>
@@ -230,7 +237,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
             type="button"
             onClick={handleClose}
             disabled={isDeleting}
-            className="w-full py-2.5 rounded-xl border border-[#E5E7EB] hover:bg-white text-[#616161] hover:text-[#1E3A5F] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50 text-center"
+            className="w-full py-2.5 border-0 bg-transparent shadow-none font-normal text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 active:opacity-70 transition-opacity cursor-pointer disabled:opacity-50 text-center"
           >
             Cancelar
           </button>

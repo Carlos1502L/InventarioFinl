@@ -104,7 +104,7 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-        <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] font-sans">
+        <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[85dvh] font-sans">
           
           {/* Cabecera */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] shrink-0">
