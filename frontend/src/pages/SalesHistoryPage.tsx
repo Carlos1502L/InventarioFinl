@@ -21,6 +21,7 @@ import {
 import { Sale, SaleItem } from '../types/database';
 import { supabase, formatCurrency, formatDate } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { matchesAnyField, normalizeText } from '../utils/searchUtils';
 import { getAllQueuedSales, formatStockShortageNotes } from '../services/offlineSync';
 import jsPDF from 'jspdf';
 import { SalesHistorySkeleton } from '../components/ui/Skeleton';
@@ -155,13 +156,12 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
       if (startDate && saleDate < startDate) return false;
       if (endDate && saleDate > endDate) return false;
 
-      if (searchTerm.trim()) {
-        const term = searchTerm.toLowerCase().trim();
-        const matchId = sale.id.toLowerCase().includes(term);
-        const matchCustomer = (sale.customer_name || '').toLowerCase().includes(term);
-        const matchSeller = sale.seller_email.toLowerCase().includes(term);
-        const matchPayment = sale.payment_method.toLowerCase().includes(term);
-        return matchId || matchCustomer || matchSeller || matchPayment;
+      const normTerm = normalizeText(searchTerm);
+      if (normTerm) {
+        return matchesAnyField(
+          [sale.id, sale.customer_name, sale.seller_email, sale.payment_method],
+          normTerm
+        );
       }
 
       return true;

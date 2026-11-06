@@ -23,6 +23,7 @@ import { Product, AuditLog } from '../../types/database';
 import { supabase, formatDate } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
+import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
 
 interface ProductAuditModalProps {
   isOpen: boolean;
@@ -260,17 +261,12 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
     };
   }, [isOpen, currentInventory, selectedProduct]);
 
-  // Sugerencias de productos coincidentes mientras se tipea
+  // Sugerencias de productos coincidentes mientras se tipea (RF-SEARCH-016: Tolerancia a acentos)
   const matchingProducts = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase().trim();
+    const norm = normalizeText(searchQuery);
+    if (!norm) return [];
     return products
-      .filter(p => {
-        const matchesName = p.name.toLowerCase().includes(q);
-        const matchesCode = (p.code || '').toLowerCase().includes(q);
-        const matchesSku = (p.sku || '').toLowerCase().includes(q);
-        return matchesName || matchesCode || matchesSku;
-      })
+      .filter(p => matchesAnyField([p.name, p.code, p.sku], norm))
       .slice(0, 5);
   }, [searchQuery, products]);
 

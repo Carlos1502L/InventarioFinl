@@ -13,6 +13,7 @@ import {
 import { Category, Subcategory } from '../../types/database';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
 import { MinimalDropdown } from '../ui/MinimalDropdown';
 
 interface CategoriesManagementModalProps {
@@ -145,25 +146,20 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
     }
   };
 
-  // Filtrado reactivo en tiempo real para la pestaña 'Existentes'
+  // Filtrado reactivo en tiempo real para la pestaña 'Existentes' (RF-SEARCH-016: Tolerancia a acentos)
   const filteredCategories = useMemo(() => {
     if (filterType === 'subcategories') return [];
+    const norm = normalizeText(searchQuery);
     return categories.filter((c) => {
-      const matchesSearch =
-        !searchQuery.trim() ||
-        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchesSearch;
+      return !norm || matchesAnyField([c.name, c.description], norm);
     });
   }, [categories, filterType, searchQuery]);
 
   const filteredSubcategories = useMemo(() => {
     if (filterType === 'categories') return [];
+    const norm = normalizeText(searchQuery);
     return subcategories.filter((s) => {
-      const matchesSearch =
-        !searchQuery.trim() ||
-        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (s.description && s.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesSearch = !norm || matchesAnyField([s.name, s.description], norm);
       const matchesParent =
         parentCategoryFilter === 'all' || s.category_id === parentCategoryFilter;
       return matchesSearch && matchesParent;

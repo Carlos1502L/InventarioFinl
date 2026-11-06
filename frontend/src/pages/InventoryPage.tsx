@@ -32,6 +32,7 @@ import { ProductAuditModal } from '../components/modals/ProductAuditModal';
 import { MinimalDropdown } from '../components/ui/MinimalDropdown';
 import { ProductTableSkeleton } from '../components/ui/Skeleton';
 import { LocationSubTab } from './LocationsPage';
+import { matchesAnyField, normalizeText } from '../utils/searchUtils';
 
 interface InventoryPageProps {
   products: Product[];
@@ -121,15 +122,16 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
     setCurrentPage(1);
   };
 
-  // Filtrado reactivo
+  // Filtrado reactivo (RF-SEARCH-016: Tolerancia estricta a diacríticos y acentos)
   const filteredProducts = useMemo(() => {
+    const normTerm = normalizeText(searchTerm);
     return products.filter((prod) => {
-      const term = searchTerm.toLowerCase().trim();
       const matchSearch =
-        !term ||
-        prod.name.toLowerCase().includes(term) ||
-        prod.code.toLowerCase().includes(term) ||
-        (prod.description && prod.description.toLowerCase().includes(term));
+        !normTerm ||
+        matchesAnyField(
+          [prod.name, prod.code, (prod as any).sku, prod.description],
+          normTerm
+        );
 
       const matchCategory =
         selectedCategory === 'ALL' || prod.category_id === selectedCategory;

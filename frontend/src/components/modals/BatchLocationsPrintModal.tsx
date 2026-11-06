@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import QRCode from 'qrcode';
 import {
   X,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { Location } from '../../types/database';
+import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
 import { useAuth } from '../../context/AuthContext';
 import { escapeHtml } from '../../utils/security';
 
@@ -64,10 +65,11 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
     }
   };
 
-  const filteredLocations = locations.filter(loc => {
-    const q = searchTerm.toLowerCase();
-    return loc.name.toLowerCase().includes(q) || loc.code.toLowerCase().includes(q);
-  });
+  const filteredLocations = useMemo(() => {
+    const norm = normalizeText(searchTerm);
+    if (!norm) return locations;
+    return locations.filter(loc => matchesAnyField([loc.name, loc.code], norm));
+  }, [locations, searchTerm]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
