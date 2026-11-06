@@ -449,28 +449,18 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
 
             {/* Cápsula de Producto Activo Seleccionado */}
             {selectedProduct && (
-              <div className="flex items-center justify-between px-3.5 py-2 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/80 text-xs">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-lg bg-[#1E3A5F]/10 dark:bg-white/10 text-[#1E3A5F] dark:text-zinc-200 flex items-center justify-center shrink-0">
-                    <Package className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-                      {selectedProduct.name}
-                    </p>
-                    <p className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
-                      REF: {selectedProduct.code || selectedProduct.sku || 'N/A'} • Stock: {selectedProduct.stock} {selectedProduct.unit_type === 'BOX' ? 'cajas' : 'und'}
-                    </p>
-                  </div>
+              <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/80 text-xs">
+                <div className="w-7 h-7 rounded-lg bg-[#1E3A5F]/10 dark:bg-white/10 text-[#1E3A5F] dark:text-zinc-200 flex items-center justify-center shrink-0">
+                  <Package className="w-3.5 h-3.5" />
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleClearSelection}
-                  className="text-[11px] font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 px-2 py-1 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-zinc-700 transition-colors ml-2 shrink-0"
-                >
-                  Cambiar
-                </button>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                    {selectedProduct.name}
+                  </p>
+                  <p className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+                    REF: {selectedProduct.code || selectedProduct.sku || 'N/A'} • Stock: {selectedProduct.stock} {selectedProduct.unit_type === 'BOX' ? 'cajas' : 'und'}
+                  </p>
+                </div>
               </div>
             )}
           </div>
