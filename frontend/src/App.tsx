@@ -66,6 +66,32 @@ export const AppContent: React.FC = () => {
   // Estado de Navegación: Inicialmente en "home" (Dashboard Principal)
   const [activeTab, setActiveTab] = useState<TabType>('home');
 
+  // Al iniciar sesión siempre debe iniciar en "home" como primera vista obligatoria
+  const prevUserRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (user && prevUserRef.current !== user.id) {
+      setActiveTab('home');
+      if (typeof window !== 'undefined' && window.location.pathname !== '/' && window.location.pathname !== '/terms' && window.location.pathname !== '/privacy') {
+        window.history.replaceState({}, '', '/');
+        setCurrentPath('/');
+      }
+      prevUserRef.current = user.id;
+    } else if (!user) {
+      prevUserRef.current = null;
+      setActiveTab('home');
+    }
+  }, [user]);
+
+  // Al cambiar de inventario activo, asegurar el regreso a la vista principal "home"
+  const prevInventoryTabRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (currentInventory && prevInventoryTabRef.current !== currentInventory.id) {
+      prevInventoryTabRef.current = currentInventory.id;
+      setActiveTab('home');
+    }
+  }, [currentInventory]);
+
   // Redirigir a Home si el tipo de inventario no permite ventas ni historial comercial
   useEffect(() => {
     if (!isBusiness && (activeTab === 'sales' || activeTab === 'sales-history')) {
@@ -389,6 +415,7 @@ export const AppContent: React.FC = () => {
                 console.warn(e);
               }
             }
+            setActiveTab('home');
             fetchInventoryData();
           }}
         />
