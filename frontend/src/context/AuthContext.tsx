@@ -9,6 +9,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   isInitialLoading: boolean;
+  isInitialAuthCheck: boolean;
   inventories: Inventory[] | null;
   currentInventory: Inventory | null;
   needsInventorySelection: boolean;
@@ -29,6 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [isInitialAuthCheck, setIsInitialAuthCheck] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true);
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   
@@ -121,7 +123,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Cargar inventarios asociados al usuario (dueño o colaborador)
   const fetchInventories = useCallback(async (currentUser: User) => {
     try {
-      setIsInitialLoading(true);
       // 1. Inventarios donde es colaborador o dueño vía inventory_users
       const { data: memberInvs } = await supabase
         .from('inventory_users')
@@ -194,19 +195,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const savedInv = invList.find((i) => i.id === savedInvId);
 
       if (invList.length === 1) {
-        // Solo un inventario disponible
-        setCurrentInventory(invList[0]);
+        // Solo un inventario disponible: preservar identidad si no ha cambiado
+        setCurrentInventory((prev) => {
+          const next = invList[0];
+          if (prev && prev.id === next.id) {
+            return JSON.stringify(prev) !== JSON.stringify(next) ? next : prev;
+          }
+          return next;
+        });
         setNeedsInventorySelection(false);
         localStorage.setItem(`active_inventory_${currentUser.id}`, invList[0].id);
       } else if (invList.length > 1) {
         if (savedInv) {
-          // Ya tenía un inventario seleccionado previamente: persistir sin modal
-          setCurrentInventory(savedInv);
+          // Ya tenía un inventario seleccionado previamente: persistir sin modal ni re-render innecesario
+          setCurrentInventory((prev) => {
+            if (prev && prev.id === savedInv.id) {
+              return JSON.stringify(prev) !== JSON.stringify(savedInv) ? savedInv : prev;
+            }
+            return savedInv;
+          });
           setNeedsInventorySelection(false);
         } else {
-          // Primera vez con múltiples inventarios: preguntar
-          setCurrentInventory(invList[0]);
-          setNeedsInventorySelection(true);
+          // Primera vez con múltiples inventarios: preguntar solo si no había selección previa
+          setCurrentInventory((prev) => {
+            if (prev && invList.some((i) => i.id === prev.id)) {
+              return prev;
+            }
+            setNeedsInventorySelection(true);
+            return invList[0];
+          });
         }
       } else {
         setCurrentInventory(null);
@@ -214,8 +231,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err) {
       console.error('Error cargando inventarios:', err);
-    } finally {
-      setIsInitialLoading(false);
     }
   }, []);
 
@@ -314,42 +329,76 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   useEffect(() => {
-    // 1. Obtener sesión activa inicial
+    let isMounted = true;
+
+    // 1. Lectura de sesión inicial en almacenamiento (Arranque en frío)
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!isMounted) return;
       setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchInventories(session.user);
-        if (session.user.email) {
-          await fetchPendingInvitations(session.user.email);
+      const initialUser = session?.user ?? null;
+      setUser(initialUser);
+
+      if (initialUser) {
+        await fetchInventories(initialUser);
+        if (initialUser.email) {
+          await fetchPendingInvitations(initialUser.email);
         }
       } else {
         setInventories([]);
-        setIsInitialLoading(false);
       }
+
+      // Solo se apaga aquí una única vez en el ciclo de vida del arranque
+      setIsInitialAuthCheck(false);
+      setIsInitialLoading(false);
       setLoading(false);
+    }).catch((err) => {
+      console.error('Error verificando sesión inicial:', err);
+      if (isMounted) {
+        setInventories([]);
+        setIsInitialAuthCheck(false);
+        setIsInitialLoading(false);
+        setLoading(false);
+      }
     });
 
-    // 2. Suscribirse a cambios de estado de autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchInventories(session.user);
-        if (session.user.email) {
-          await fetchPendingInvitations(session.user.email);
-        }
-      } else {
+    // 2. Suscripción a cambios de auth (Segundo plano silencioso)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      if (!isMounted) return;
+
+      // CRÍTICO: NUNCA activar loaders ni setIsInitialAuthCheck(true) aquí
+      setSession(newSession);
+      const newUser = newSession?.user ?? null;
+      setUser(newUser);
+
+      if (event === 'SIGNED_OUT' || !newSession) {
         setInventories([]);
         setCurrentInventory(null);
         setNeedsInventorySelection(false);
         setPendingInvitations([]);
-        setIsInitialLoading(false);
+        return;
       }
-      setLoading(false);
+
+      // TOKEN_REFRESHED, USER_UPDATED o reconexiones de red: silencioso en segundo plano
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        return;
+      }
+
+      // Si es un inicio de sesión genuino y no se tenían inventarios en memoria:
+      if (event === 'SIGNED_IN' && newUser) {
+        setInventories((prevInvs) => {
+          if (!prevInvs || prevInvs.length === 0) {
+            fetchInventories(newUser);
+            if (newUser.email) {
+              fetchPendingInvitations(newUser.email);
+            }
+          }
+          return prevInvs;
+        });
+      }
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, [fetchInventories, fetchPendingInvitations]);
@@ -396,6 +445,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile,
         loading,
         isInitialLoading,
+        isInitialAuthCheck,
         inventories,
         currentInventory,
         needsInventorySelection,

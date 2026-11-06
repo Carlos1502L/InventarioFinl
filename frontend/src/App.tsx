@@ -44,7 +44,7 @@ import { syncAllOfflineDataSilently } from './services/offlineSync';
 import { Loader2, Layers, Plus, Sparkles } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
-  const { user, loading: authLoading, isInitialLoading, currentInventory, refreshInventories, inventories } = useAuth();
+  const { user, isInitialAuthCheck, currentInventory, refreshInventories, inventories } = useAuth();
   const isDesktop = useIsDesktop();
 
   // Control de Rutas Estáticas Públicas (RF-LEGAL-001)
@@ -112,6 +112,7 @@ export const AppContent: React.FC = () => {
   const [dataLoading, setDataLoading] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const prevInventoryIdRef = useRef<string | null>(null);
 
   // Cargar datos del inventario seleccionado cancelando peticiones previas en vuelo
   const fetchInventoryData = useCallback(async () => {
@@ -130,16 +131,23 @@ export const AppContent: React.FC = () => {
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
-    // 2. Limpiar inmediatamente el estado previo para evitar mezclar datos
-    setProducts([]);
-    setCategories([]);
-    setSubcategories([]);
-    setLocations([]);
-    setDataLoading(true);
+    // 2. Solo limpiar el estado previo si realmente cambiamos de almacén
+    // Esto previene que modales abiertos pierdan opciones de categorías/ubicaciones durante revalidaciones silenciosas
+    const isDifferentInventory = prevInventoryIdRef.current !== currentInventory.id;
+    if (isDifferentInventory) {
+      prevInventoryIdRef.current = currentInventory.id;
+      setProducts([]);
+      setCategories([]);
+      setSubcategories([]);
+      setLocations([]);
+      setDataLoading(true);
+    }
 
-    // 3. Temporizador Debounce: Solo activar Skeleton si tarda más de 250ms
+    // 3. Temporizador Debounce: Solo activar Skeleton si cambia de almacén y tarda más de 250ms
     const skeletonTimer = setTimeout(() => {
-      setShowSkeleton(true);
+      if (isDifferentInventory) {
+        setShowSkeleton(true);
+      }
     }, 250);
 
     try {
@@ -324,8 +332,8 @@ export const AppContent: React.FC = () => {
     );
   }
 
-  // 1. Pantalla de Carga Inicial / Hidratación (RF-INV-044: evita parpadeo de onboarding)
-  if (authLoading || (user && (isInitialLoading || inventories === null))) {
+  // 1. Pantalla de Carga Inicial (Solo durante el arranque inicial en frío absoluto)
+  if (isInitialAuthCheck) {
     return (
       <main id="main-content" className="min-h-screen bg-black md:bg-[#F8F9FA] flex flex-col items-center justify-center font-mono">
         {/* Móvil: Splash nativo oscuro mínimo y centrado sin elementos web (evita flash blanco) */}
