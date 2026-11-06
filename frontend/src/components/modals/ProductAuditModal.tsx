@@ -216,9 +216,14 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
     }
   }, [isOpen, initialProductId, products]);
 
-  // Carga de historial cuando cambia el producto seleccionado o se abre el modal
+  // Carga de historial SOLO cuando hay un producto seleccionado (sin pre-carga global)
   useEffect(() => {
-    if (!isOpen || !currentInventory) return;
+    if (!isOpen || !currentInventory || !selectedProduct) {
+      setAuditLogs([]);
+      setLoading(false);
+      setShowDebouncedLoading(false);
+      return;
+    }
 
     let isMounted = true;
     setLoading(true);
@@ -228,16 +233,13 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
       if (isMounted) setShowDebouncedLoading(true);
     }, 200);
 
-    let query = supabase
+    const query = supabase
       .from('audit_logs')
       .select('*')
       .eq('inventory_id', currentInventory.id)
+      .eq('product_id', selectedProduct.id)
       .order('created_at', { ascending: false })
       .limit(50);
-
-    if (selectedProduct) {
-      query = query.eq('product_id', selectedProduct.id);
-    }
 
     query.then(({ data, error }) => {
       clearTimeout(debounceTimer);
@@ -283,6 +285,7 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
     setSelectedProduct(null);
     setSearchQuery('');
     setIsSearchingInput(false);
+    setAuditLogs([]);
   };
 
   // Manejo de lectura exitosa desde la cámara
@@ -347,7 +350,7 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">
                   {selectedProduct
                     ? 'Kardex de movimientos del producto seleccionado'
-                    : 'Historial global de operaciones en stock'}
+                    : 'Consulta de trazabilidad por producto'}
                 </p>
               </div>
             </div>
@@ -372,10 +375,17 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
                   type="text"
                   value={searchQuery}
                   onChange={e => {
-                    setSearchQuery(e.target.value);
+                    const val = e.target.value;
+                    setSearchQuery(val);
                     setIsSearchingInput(true);
-                    if (!e.target.value.trim() && selectedProduct) {
+                    if (!val.trim()) {
                       setSelectedProduct(null);
+                      setAuditLogs([]);
+                    }
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && matchingProducts.length > 0) {
+                      handleSelectProduct(matchingProducts[0]);
                     }
                   }}
                   onFocus={() => setIsSearchingInput(true)}
@@ -462,7 +472,7 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
                   onClick={handleClearSelection}
                   className="text-[11px] font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 px-2 py-1 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-zinc-700 transition-colors ml-2 shrink-0"
                 >
-                  Ver todos
+                  Cambiar
                 </button>
               </div>
             )}
@@ -477,19 +487,34 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
                   Consultando Kardex...
                 </span>
               </div>
-            ) : auditLogs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-zinc-400 dark:text-zinc-500 space-y-2 text-center">
-                <div className="w-12 h-12 rounded-full border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-300 dark:text-zinc-600">
-                  <History className="w-6 h-6 stroke-[1.25]" />
+            ) : !selectedProduct ? (
+              <div className="flex flex-col items-center justify-center py-14 px-4 text-center space-y-3">
+                <div className="w-14 h-14 rounded-3xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 border border-zinc-200/60 dark:border-zinc-700/60 shadow-xs">
+                  <Search className="w-6 h-6 stroke-[1.5]" />
                 </div>
-                <p className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                  {selectedProduct
-                    ? 'No hay registros de movimientos para este producto.'
-                    : 'No hay eventos de auditoría registrados en este inventario.'}
-                </p>
-                <p className="text-[11px] text-zinc-400 max-w-xs">
-                  Las ventas, traslados, mermas y reabastecimientos se reflejarán automáticamente aquí.
-                </p>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                    Consulta de Trazabilidad
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs leading-relaxed">
+                    Escribe el nombre o SKU en la barra de búsqueda, o usa la cámara para escanear el código de barras y auditar su historial.
+                  </p>
+                </div>
+              </div>
+            ) : auditLogs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-14 px-4 text-center space-y-3">
+                <div className="w-14 h-14 rounded-3xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 border border-zinc-200/60 dark:border-zinc-700/60">
+                  <History className="w-6 h-6 stroke-[1.5]" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                    Sin movimientos registrados
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs leading-relaxed">
+                    No se encontraron eventos ni movimientos registrados para{' '}
+                    <strong className="text-zinc-700 dark:text-zinc-300 font-semibold">{selectedProduct.name}</strong>.
+                  </p>
+                </div>
               </div>
             ) : (
               auditLogs.map(log => {
@@ -544,7 +569,7 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
           {/* Pie del Modal con contador de eventos */}
           <div className="px-6 py-3 border-t border-[#E5E7EB] dark:border-zinc-800 bg-[#F8F9FA]/80 dark:bg-zinc-900/80 flex items-center justify-between text-xs font-mono text-zinc-500 dark:text-zinc-400 shrink-0">
             <span>
-              {auditLogs.length} {auditLogs.length === 1 ? 'registro' : 'registros'} indexados
+              {selectedProduct ? `${auditLogs.length} ${auditLogs.length === 1 ? 'registro' : 'registros'} indexados` : 'Esperando selección'}
             </span>
             <button
               type="button"
