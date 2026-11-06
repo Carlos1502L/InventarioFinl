@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   GitBranch,
-  PackageMinus
+  PackageMinus,
+  History
 } from 'lucide-react';
 import { Product, Category, Subcategory, Location } from '../types/database';
 import {
@@ -27,6 +28,7 @@ import { useAuth } from '../context/AuthContext';
 import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import { RestockProductModal } from '../components/modals/RestockProductModal';
 import { BulkWithdrawModal } from '../components/modals/BulkWithdrawModal';
+import { ProductAuditModal } from '../components/modals/ProductAuditModal';
 import { MinimalDropdown } from '../components/ui/MinimalDropdown';
 import { ProductTableSkeleton } from '../components/ui/Skeleton';
 import { LocationSubTab } from './LocationsPage';
@@ -64,6 +66,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
   // Modal de Salida Masiva (Multi-Withdraw)
   const [bulkWithdrawOpen, setBulkWithdrawOpen] = useState(false);
+  // Modal de Auditoría y Trazabilidad (RF-AUDIT-015)
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
 
   // Filtros y Búsqueda
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '');
@@ -192,6 +196,15 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </h1>
 
             <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setAuditModalOpen(true)}
+                aria-label="Auditoría y Trazabilidad"
+                title="Historial de Auditoría"
+                className="w-10 h-10 rounded-full border border-neutral-700/80 bg-neutral-900/60 hover:bg-neutral-800 text-neutral-200 flex items-center justify-center transition-colors active:scale-95"
+              >
+                <History className="w-4 h-4 stroke-[1.75]" />
+              </button>
               <button
                 type="button"
                 onClick={() => setBulkWithdrawOpen(true)}
@@ -417,6 +430,17 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setAuditModalOpen(true)}
+            aria-label="Auditoría y Trazabilidad"
+            title="Historial de Auditoría"
+            className="min-h-[44px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm"
+          >
+            <History className="w-4 h-4 stroke-[1.5]" />
+            <span className="hidden sm:inline">AUDITORÍA</span>
+          </button>
+
           <button
             onClick={onRefresh}
             className="min-h-[44px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-colors active:bg-[#F8F9FA] shadow-sm"
@@ -1003,6 +1027,13 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             onRefresh();
           }
         }}
+      />
+
+      {/* Modal de Auditoría Rápida & Kardex Centralizado (RF-AUDIT-015) */}
+      <ProductAuditModal
+        isOpen={auditModalOpen}
+        onClose={() => setAuditModalOpen(false)}
+        products={products}
       />
     </>
   );

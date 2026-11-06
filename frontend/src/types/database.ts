@@ -121,6 +121,7 @@ export interface Product {
   inventory_id: string;
   name: string;
   code: string;
+  sku?: string;
   description: string | null;
   price: number; // Precio de Venta Final o Precio Base Personal
   cost_price?: number; // RF-01.2: Precio de Costo
