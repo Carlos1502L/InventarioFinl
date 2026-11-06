@@ -15,7 +15,10 @@ import {
   Sliders,
   Printer,
   Ticket,
-  Database
+  Database,
+  AlertTriangle,
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../services/supabase';
@@ -24,30 +27,35 @@ import { BatchLocationsPrintModal } from '../components/modals/BatchLocationsPri
 import { CouponsManagementModal } from '../components/modals/CouponsManagementModal';
 import { BackupManagementCard } from '../components/settings/BackupManagementCard';
 import { BackupManagementModal } from '../components/modals/BackupManagementModal';
+import { DeleteAccountModal } from '../components/modals/DeleteAccountModal';
 
 interface SettingsPageProps {
   onOpenCategories: () => void;
   onOpenLocations: () => void;
   onOpenCollaborators: () => void;
   onOpenInventorySelector: () => void;
+  onRefreshInventoryData?: () => void;
 }
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({
   onOpenCategories,
   onOpenLocations,
   onOpenCollaborators,
-  onOpenInventorySelector
+  onOpenInventorySelector,
+  onRefreshInventoryData
 }) => {
   const { currentInventory, user, profile, signOut, refreshInventories } = useAuth();
   const [editInventoryMode, setEditInventoryMode] = useState<'info' | 'payments' | null>(null);
   const [batchLocationsOpen, setBatchLocationsOpen] = useState(false);
   const [couponsOpen, setCouponsOpen] = useState(false);
   const [backupModalOpen, setBackupModalOpen] = useState(false);
+  const [deleteAccountModalOpen, setDeleteAccountModalOpen] = useState(false);
 
   const isOwner =
-    currentInventory?.role === 'owner' ||
+    currentInventory?.role?.toLowerCase() === 'owner' ||
     currentInventory?.is_owner === true ||
-    currentInventory?.owner_id === user?.id;
+    (Boolean(user?.id) && Boolean(currentInventory?.owner_id) && currentInventory?.owner_id === user?.id) ||
+    !currentInventory?.role;
 
   const isBusiness = currentInventory?.inventory_type !== 'PERSONAL';
 
@@ -122,10 +130,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <Sliders className="w-4 h-4 text-neutral-500 flex-shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-neutral-900 truncate">
-                    Editar Información
+                    {isOwner ? 'Editar Información' : 'Información de Inventario'}
                   </p>
                   <p className="text-xs text-neutral-400 truncate">
-                    Nombre, moneda ({currentInventory?.currency || 'PEN'}) y tipo
+                    {isOwner
+                      ? `Nombre, moneda (${currentInventory?.currency || 'PEN'}), tasa y tipo`
+                      : `Moneda (${currentInventory?.currency || 'PEN'}), tasa y detalles del depósito`}
                   </p>
                 </div>
               </div>
@@ -271,6 +281,26 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
               </button>
             )}
+
+            {/* Eliminar Cuenta */}
+            <button
+              type="button"
+              onClick={() => setDeleteAccountModalOpen(true)}
+              className="w-full py-4 flex items-center justify-between gap-3 text-left active:opacity-70 transition-opacity"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <Trash2 className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-neutral-900 truncate">
+                    Eliminar Cuenta
+                  </p>
+                  <p className="text-xs text-neutral-400 truncate">
+                    Baja permanente y purga de información
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+            </button>
           </div>
 
           {/* Botón de cerrar sesión en tono sobrio al final de la lista */}
@@ -283,6 +313,38 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               <LogOut className="w-4 h-4 text-neutral-600" />
               <span>Cerrar Sesión</span>
             </button>
+          </div>
+
+          
+
+          {/* Pie Legal Móvil (RF-LEGAL-001) */}
+          <div className="pt-6 pb-2 flex flex-col items-center gap-2 text-xs text-neutral-400 font-mono">
+            <div className="flex items-center gap-3">
+              <a
+                href="/terms"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.history.pushState({}, '', '/terms');
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }}
+                className="text-neutral-500 hover:text-neutral-800 underline"
+              >
+                Términos de Servicio
+              </a>
+              <span>·</span>
+              <a
+                href="/privacy"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.history.pushState({}, '', '/privacy');
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }}
+                className="text-neutral-500 hover:text-neutral-800 underline"
+              >
+                Privacidad
+              </a>
+            </div>
+            <span className="text-[10px]">STOCKLY v2.4.0</span>
           </div>
         </section>
       </div>
@@ -353,11 +415,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               className="px-4 py-2 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs uppercase tracking-wider rounded-full transition-all active:scale-95 flex items-center gap-1.5 font-mono shadow-xs"
             >
               <Sliders className="w-3.5 h-3.5 text-[#1E3A5F]" />
-              <span>Editar Información</span>
+              <span>{isOwner ? 'Editar Información' : 'Información de Inventario'}</span>
             </button>
             <button
               onClick={onOpenInventorySelector}
-              className="px-4 py-2 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-full shadow-xs transition-all active:scale-95 font-medium"
+              className="px-4 py-2 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-full shadow-xs transition-all active:scale-95 font-medium cursor-pointer"
             >
               Cambiar
             </button>
@@ -365,16 +427,20 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
 
         {/* Metadatos en Fila */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-[#E5E7EB] text-xs font-mono text-[#616161]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-[#E5E7EB] text-xs font-mono text-[#616161]">
           <div>
             <span className="text-[10px] uppercase block">Moneda de Manifiesto:</span>
-            <span className="text-[#1E3A5F] font-medium">{currentInventory?.currency || 'USD'}</span>
+            <span className="text-[#1E3A5F] font-medium">{currentInventory?.currency || 'PEN'}</span>
+          </div>
+          <div>
+            <span className="text-[10px] uppercase block">Tasa Operativa:</span>
+            <span className="text-[#1E3A5F] font-medium font-mono">{Number(currentInventory?.exchange_rate || 1.000).toFixed(3)}</span>
           </div>
           <div>
             <span className="text-[10px] uppercase block">Nivel de Acceso:</span>
             <span className="text-[#1E3A5F] font-medium uppercase">{currentInventory?.role || 'owner'}</span>
           </div>
-          <div className="col-span-2 sm:col-span-1">
+          <div>
             <span className="text-[10px] uppercase block">Fecha de Alta:</span>
             <span className="text-[#1E3A5F]">{formatDate(currentInventory?.created_at)}</span>
           </div>
@@ -541,6 +607,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <BackupManagementCard
               onRestoreCompleted={() => {
                 refreshInventories();
+                if (onRefreshInventoryData) onRefreshInventoryData();
               }}
             />
           </div>
@@ -580,8 +647,77 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <span>Cerrar Sesión</span>
           </button>
         </div>
+
+        {/* =========================================================
+            05 // ZONA DE PELIGRO: ELIMINAR CUENTA
+           ========================================================= */}
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center gap-2 px-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#1E3A5F]">
+              05 // ZONA DE PELIGRO
+            </h3>
+          </div>
+
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs divide-y divide-[#E5E7EB]">
+            <button
+              type="button"
+              onClick={() => setDeleteAccountModalOpen(true)}
+              className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-rose-50/30 transition-colors text-left group cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-rose-600 flex items-center justify-center group-hover:border-rose-300 transition-colors">
+                  <Trash2 className="w-5 h-5 text-rose-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-[#1E3A5F] group-hover:text-rose-600 transition-colors uppercase">
+                    Eliminar Cuenta
+                  </h4>
+                  <p className="text-xs text-[#616161] font-light">
+                    Cierre definitivo de cuenta, baja de depósitos propios y purga irreversible de datos
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#616161] group-hover:text-rose-600 transition-colors" />
+            </button>
+          </div>
+        </div>
+
+        {/* Pie Legal y Enlaces a Términos y Privacidad (RF-LEGAL-001) */}
+        <div className="pt-4 pb-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#616161] font-mono border-t border-[#E5E7EB]">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#1E3A5F]">STOCKLY</span>
+            <span>·</span>
+            <span>v2.4.0</span>
+          </div>
+          <div className="flex items-center gap-4 text-xs">
+            <a
+              href="/terms"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, '', '/terms');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="text-[#1E3A5F] hover:underline font-medium"
+            >
+              Términos de Servicio
+            </a>
+            <span>·</span>
+            <a
+              href="/privacy"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, '', '/privacy');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="text-[#1E3A5F] hover:underline font-medium"
+            >
+              Política de Privacidad
+            </a>
+          </div>
+        </div>
       </div>
-      </div>
+    </div>
 
       {/* Modales vinculados */}
       <EditInventoryModal
@@ -611,9 +747,18 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           onClose={() => setBackupModalOpen(false)}
           onRestoreCompleted={() => {
             refreshInventories();
+            if (onRefreshInventoryData) onRefreshInventoryData();
           }}
         />
       )}
+
+      {/* Modal de Confirmación de Eliminación Definitiva */}
+      <DeleteAccountModal
+        isOpen={deleteAccountModalOpen}
+        onClose={() => setDeleteAccountModalOpen(false)}
+      />
     </>
   );
 };
+
+export default SettingsPage;

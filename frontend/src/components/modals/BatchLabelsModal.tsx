@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import QRCode from 'qrcode';
 import { X, Printer, CheckSquare, Square, Search, Tag, Loader2 } from 'lucide-react';
 import { Product } from '../../types/database';
+import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
 import { formatCurrency } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { escapeHtml } from '../../utils/security';
@@ -27,12 +28,12 @@ export const BatchLabelsModal: React.FC<BatchLabelsModalProps> = ({
   const [qrCache, setQrCache] = useState<Record<string, string>>({});
   const [isGeneratingQRs, setIsGeneratingQRs] = useState(false);
 
-  // Filtrar productos para la lista de selección
-  const filteredProducts = products.filter(p => {
-    if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
-    return p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term);
-  });
+  // Filtrar productos para la lista de selección (RF-SEARCH-016: Tolerancia a acentos)
+  const filteredProducts = useMemo(() => {
+    const norm = normalizeText(searchTerm);
+    if (!norm) return products;
+    return products.filter(p => matchesAnyField([p.name, p.code, (p as any).sku], norm));
+  }, [products, searchTerm]);
 
   // Alternar selección de un producto individual
   const toggleSelect = (id: string) => {

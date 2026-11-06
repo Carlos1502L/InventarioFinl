@@ -12,9 +12,12 @@ import {
   Mail,
   ShieldCheck,
   RefreshCw,
-  FileJson
+  FileJson,
+  KeyRound,
+  Edit2,
+  ChevronDown
 } from 'lucide-react';
-import { supabase, API_BASE_URL } from '../../services/supabase';
+import { supabase, getApiUrl } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { showAppToast } from '../ui';
 import { BackupRestoreModal } from './BackupRestoreModal';
@@ -34,6 +37,16 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
   // Estados Bloque A: Manual
   const [manualEmail, setManualEmail] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // Estados OTP Bloque A
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [verificationToken, setVerificationToken] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
 
   // Estados Bloque B: Programado
   const [isScheduled, setIsScheduled] = useState(false);
@@ -46,10 +59,87 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(false);
 
+  // Estados OTP Bloque B: Programado
+  const [isScheduledEmailVerified, setIsScheduledEmailVerified] = useState(false);
+  const [scheduledVerificationToken, setScheduledVerificationToken] = useState('');
+  const [scheduledOtpSent, setScheduledOtpSent] = useState(false);
+  const [scheduledOtpCode, setScheduledOtpCode] = useState('');
+  const [isSendingScheduledOtp, setIsSendingScheduledOtp] = useState(false);
+  const [isVerifyingScheduledOtp, setIsVerifyingScheduledOtp] = useState(false);
+  const [scheduledOtpCooldown, setScheduledOtpCooldown] = useState(0);
+  const [savedScheduledEmail, setSavedScheduledEmail] = useState('');
+
   // Estados Bloque C: Restauración
   const [selectedFile, setSelectedFile] = useState<{ name: string; content: any } | null>(null);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+
+  // Cooldown timer para reenvío de OTP manual
+  useEffect(() => {
+    if (otpCooldown > 0) {
+      const timer = setTimeout(() => setOtpCooldown((prev) => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpCooldown]);
+
+  // Cooldown timer para reenvío de OTP programado
+  useEffect(() => {
+    if (scheduledOtpCooldown > 0) {
+      const timer = setTimeout(() => setScheduledOtpCooldown((prev) => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [scheduledOtpCooldown]);
+
+  // Si el correo programado coincide con el manual ya verificado, hereda la verificación
+  useEffect(() => {
+    if (
+      scheduledEmail &&
+      manualEmail &&
+      scheduledEmail.trim().toLowerCase() === manualEmail.trim().toLowerCase() &&
+      isEmailVerified &&
+      verificationToken
+    ) {
+      setIsScheduledEmailVerified(true);
+      setScheduledVerificationToken(verificationToken);
+    }
+  }, [scheduledEmail, manualEmail, isEmailVerified, verificationToken]);
+
+  // Sincronización de correo verificado entre vistas (móvil y web) y sesiones
+  useEffect(() => {
+    if (!currentInventory?.id) return;
+
+    // 1. Cargar de localStorage si existe verificación previa para este inventario
+    try {
+      const stored = localStorage.getItem(`stockly_verified_backup_${currentInventory.id}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.email && parsed?.token) {
+          setManualEmail(parsed.email);
+          setIsEmailVerified(true);
+          setVerificationToken(parsed.token);
+          setScheduledEmail(parsed.email);
+          setIsScheduledEmailVerified(true);
+          setScheduledVerificationToken(parsed.token);
+        }
+      }
+    } catch (e) {}
+
+    // 2. Escuchar evento de sincronización en tiempo real
+    const handleSync = (e: any) => {
+      const detail = e.detail;
+      if (detail?.email && detail?.token) {
+        setManualEmail(detail.email);
+        setIsEmailVerified(true);
+        setVerificationToken(detail.token);
+        setScheduledEmail(detail.email);
+        setIsScheduledEmailVerified(true);
+        setScheduledVerificationToken(detail.token);
+      }
+    };
+
+    window.addEventListener('stockly_backup_verified', handleSync);
+    return () => window.removeEventListener('stockly_backup_verified', handleSync);
+  }, [currentInventory?.id]);
 
   // Precargar correos iniciales con el usuario autenticado
   useEffect(() => {
@@ -59,7 +149,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
     }
   }, [user]);
 
-  // Cargar configuración existente de inventory_backup_settings
+  // Cargar configuración existente de inventory_backup_settings y sincronizar estado verificado de backend
   useEffect(() => {
     const fetchSettings = async () => {
       if (!currentInventory?.id) return;
@@ -69,7 +159,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
         const token = session?.access_token;
         if (!token) return;
 
-        const res = await fetch(`${API_BASE_URL}/api/backup/settings/${currentInventory.id}`, {
+        const res = await fetch(getApiUrl(`/backup/settings/${currentInventory.id}`), {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -77,10 +167,33 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
 
         if (res.ok) {
           const json = await res.json();
+
+          // Sincronizar correo verificado desde el backend
+          if (json.verified_email && json.verification_token) {
+            setManualEmail(json.verified_email);
+            setIsEmailVerified(true);
+            setVerificationToken(json.verification_token);
+            setScheduledEmail(json.verified_email);
+            setIsScheduledEmailVerified(true);
+            setScheduledVerificationToken(json.verification_token);
+            try {
+              localStorage.setItem(
+                `stockly_verified_backup_${currentInventory.id}`,
+                JSON.stringify({ email: json.verified_email, token: json.verification_token })
+              );
+            } catch (e) {}
+          }
+
           if (json.settings) {
             const s = json.settings;
             setIsScheduled(Boolean(s.is_scheduled));
-            if (s.target_email) setScheduledEmail(s.target_email);
+            if (s.target_email) {
+              setScheduledEmail(s.target_email);
+              if (s.is_scheduled) {
+                setSavedScheduledEmail(s.target_email);
+                setIsScheduledEmailVerified(true);
+              }
+            }
             
             const days = String(s.interval_days || 7);
             if (['1', '7', '15'].includes(days)) {
@@ -108,23 +221,24 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
   }, [currentInventory?.id]);
 
   // --------------------------------------------------------------------------
-  // HANDLERS BLOQUE A: Manual
+  // HANDLERS BLOQUE A: Manual & OTP
   // --------------------------------------------------------------------------
-  const handleExportAndSend = async (downloadDirectly = false) => {
+  const handleSendOtp = async () => {
     if (!currentInventory?.id) return;
     const target = manualEmail.trim();
+
     if (!target || !target.includes('@')) {
       showAppToast('Por favor, ingresa un correo electrónico válido.', 'warning');
       return;
     }
 
-    setIsExporting(true);
+    setIsSendingOtp(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) throw new Error('No hay sesión activa.');
 
-      const res = await fetch(`${API_BASE_URL}/api/backup/export-and-send`, {
+      const res = await fetch(getApiUrl('/backup/send-verification-code'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,43 +246,324 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
         },
         body: JSON.stringify({
           inventory_id: currentInventory.id,
-          target_email: target
+          email: target
         })
       });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Error al enviar el código de verificación.');
+      }
+
+      setOtpSent(true);
+      setOtpCooldown(60);
+      showAppToast(`Código de verificación enviado a ${target}`, 'success', 5000);
+    } catch (err: any) {
+      console.error('Error enviando OTP:', err);
+      showAppToast(err.message || 'No se pudo enviar el código OTP.', 'error');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!currentInventory?.id) return;
+    const target = manualEmail.trim();
+    const code = otpCode.trim();
+
+    if (code.length !== 6 || !/^\d{6}$/.test(code)) {
+      showAppToast('El código debe contener exactamente 6 dígitos numéricos.', 'warning');
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No hay sesión activa.');
+
+      const res = await fetch(getApiUrl('/backup/verify-code'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          inventory_id: currentInventory.id,
+          email: target,
+          code
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Código incorrecto o expirado.');
+      }
+
+      setVerificationToken(data.verification_token);
+      setIsEmailVerified(true);
+      setOtpSent(false);
+      setOtpCode('');
+      try {
+        localStorage.setItem(
+          `stockly_verified_backup_${currentInventory.id}`,
+          JSON.stringify({ email: target, token: data.verification_token })
+        );
+        window.dispatchEvent(
+          new CustomEvent('stockly_backup_verified', {
+            detail: { email: target, token: data.verification_token }
+          })
+        );
+      } catch (e) {}
+      showAppToast('✓ Correo verificado exitosamente. Ahora puedes generar el respaldo.', 'success', 4000);
+    } catch (err: any) {
+      console.error('Error verificando OTP:', err);
+      showAppToast(err.message || 'Error al validar el código.', 'error');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const handleResetVerification = () => {
+    setIsEmailVerified(false);
+    setVerificationToken('');
+    setOtpSent(false);
+    setOtpCode('');
+  };
+
+  const triggerBrowserDownload = (payload: any) => {
+    if (!payload || !currentInventory) return;
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const safeInvName = (currentInventory.name || 'inventario').toLowerCase().replace(/[^a-z0-9]/g, '_');
+    a.href = url;
+    a.download = `backup_${safeInvName}_${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Solo descarga directa (sin enviar ningún correo) - RF-2
+  const handleDownloadDirectly = async () => {
+    if (!currentInventory?.id) return;
+    setIsDownloading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No hay sesión activa.');
+
+      const res = await fetch(getApiUrl('/backup/export'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          inventory_id: currentInventory.id
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Error al exportar la copia de seguridad.');
+      }
+
+      if (data.payload) {
+        triggerBrowserDownload(data.payload);
+        showAppToast('Copia de seguridad descargada exitosamente.', 'success', 4000);
+      }
+    } catch (err: any) {
+      console.error('Error descargando backup:', err);
+      showAppToast(err.message || 'No se pudo descargar el respaldo.', 'error');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Generar y despachar por correo exclusivamente (RF-2, RF-3 y RF-4 con OTP)
+  const handleExportAndSend = async () => {
+    if (!currentInventory?.id) return;
+    const target = manualEmail.trim();
+
+    if (!isEmailVerified || !verificationToken) {
+      showAppToast('Debes verificar tu correo con el código OTP antes de enviar el respaldo.', 'warning');
+      return;
+    }
+
+    setIsExporting(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 segundos
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No hay sesión activa.');
+
+      const res = await fetch(getApiUrl('/backup/export-and-send'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          inventory_id: currentInventory.id,
+          email: target,
+          verification_token: verificationToken
+        })
+      });
+
+      clearTimeout(timeoutId);
 
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.message || 'Error al exportar y enviar el respaldo.');
       }
 
-      showAppToast(`Respaldo generado y enviado a ${target}`, 'success', 5000);
-
-      // Descarga opcional directa
-      if (downloadDirectly && data.payload) {
-        const blob = new Blob([JSON.stringify(data.payload, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = data.filename || `backup_${currentInventory.name}_${Date.now()}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+      if (data.emailSent) {
+        showAppToast(`Copia de seguridad generada y enviada exitosamente a ${target}`, 'success', 6000);
+      } else {
+        const notice = data.emailResult?.error || data.message || 'No se pudo enviar el correo.';
+        showAppToast(`Aviso: ${notice}`, 'warning', 7000);
       }
+      // REGLA ESTRICTA RF-2: Jamás invocar triggerBrowserDownload aquí
     } catch (err: any) {
-      console.error('Error en exportAndSend:', err);
-      showAppToast(err.message || 'Error al generar la copia de seguridad.', 'error');
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        showAppToast('La solicitud tardó más de 90 segundos. Verifica si el correo llegó a tu bandeja.', 'warning', 8000);
+      } else {
+        console.error('Error en exportAndSend:', err);
+        showAppToast(err.message || 'Error al generar la copia de seguridad.', 'error');
+      }
     } finally {
       setIsExporting(false);
     }
   };
 
   // --------------------------------------------------------------------------
-  // HANDLERS BLOQUE B: Programado
+  // HANDLERS BLOQUE B: Programado & OTP
   // --------------------------------------------------------------------------
+  const handleSendScheduledOtp = async () => {
+    if (!currentInventory?.id) return;
+    const target = scheduledEmail.trim();
+
+    if (!target || !target.includes('@')) {
+      showAppToast('Ingresa un correo electrónico válido.', 'warning');
+      return;
+    }
+
+    setIsSendingScheduledOtp(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No hay sesión activa.');
+
+      const res = await fetch(getApiUrl('/backup/send-verification-code'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          inventory_id: currentInventory.id,
+          email: target
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Error al enviar el código de verificación.');
+      }
+
+      setScheduledOtpSent(true);
+      setScheduledOtpCooldown(60);
+      showAppToast(`Código de verificación enviado a ${target}`, 'success', 5000);
+    } catch (err: any) {
+      console.error('Error enviando OTP programado:', err);
+      showAppToast(err.message || 'No se pudo enviar el código OTP.', 'error');
+    } finally {
+      setIsSendingScheduledOtp(false);
+    }
+  };
+
+  const handleVerifyScheduledOtp = async () => {
+    if (!currentInventory?.id) return;
+    const target = scheduledEmail.trim();
+    const code = scheduledOtpCode.trim();
+
+    if (code.length !== 6 || !/^\d{6}$/.test(code)) {
+      showAppToast('El código debe contener exactamente 6 dígitos.', 'warning');
+      return;
+    }
+
+    setIsVerifyingScheduledOtp(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No hay sesión activa.');
+
+      const res = await fetch(getApiUrl('/backup/verify-code'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          inventory_id: currentInventory.id,
+          email: target,
+          code
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Código incorrecto o expirado.');
+      }
+
+      setScheduledVerificationToken(data.verification_token);
+      setIsScheduledEmailVerified(true);
+      setScheduledOtpSent(false);
+      setScheduledOtpCode('');
+      try {
+        localStorage.setItem(
+          `stockly_verified_backup_${currentInventory.id}`,
+          JSON.stringify({ email: target, token: data.verification_token })
+        );
+        window.dispatchEvent(
+          new CustomEvent('stockly_backup_verified', {
+            detail: { email: target, token: data.verification_token }
+          })
+        );
+      } catch (e) {}
+      showAppToast('Correo verificado exitosamente.', 'success', 4000);
+    } catch (err: any) {
+      console.error('Error verificando OTP programado:', err);
+      showAppToast(err.message || 'Error al validar el código.', 'error');
+    } finally {
+      setIsVerifyingScheduledOtp(false);
+    }
+  };
+
+  const handleResetScheduledVerification = () => {
+    setIsScheduledEmailVerified(false);
+    setScheduledVerificationToken('');
+    setScheduledOtpSent(false);
+    setScheduledOtpCode('');
+  };
+
   const handleSaveSchedule = async () => {
     if (!currentInventory?.id) return;
     const target = scheduledEmail.trim();
     if (isScheduled && (!target || !target.includes('@'))) {
       showAppToast('Debes especificar un correo de destino válido para activar la programación.', 'warning');
+      return;
+    }
+
+    if (isScheduled && !isScheduledEmailVerified) {
+      showAppToast('Debes validar el correo de destino con el código OTP antes de activar la programación.', 'warning');
       return;
     }
 
@@ -180,7 +575,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
       const token = session?.access_token;
       if (!token) throw new Error('No hay sesión activa.');
 
-      const res = await fetch(`${API_BASE_URL}/api/backup/settings`, {
+      const res = await fetch(getApiUrl('/backup/settings'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -192,7 +587,8 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
           is_scheduled: isScheduled,
           interval_days: intervalDays,
           execution_time: executionTime.length === 5 ? `${executionTime}:00` : executionTime,
-          timezone: 'America/Lima'
+          timezone: 'America/Lima',
+          verification_token: scheduledVerificationToken || undefined
         })
       });
 
@@ -203,6 +599,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
 
       if (data.settings) {
         setNextRunAt(data.settings.next_run_at || null);
+        setSavedScheduledEmail(data.settings.target_email || target);
       }
 
       showAppToast(
@@ -253,7 +650,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
     e.target.value = '';
   };
 
-  const handleConfirmRestore = async () => {
+  const handleConfirmRestore = async (conversionOptions?: any) => {
     if (!selectedFile || !currentInventory?.id) return;
 
     setIsRestoring(true);
@@ -262,7 +659,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
       const token = session?.access_token;
       if (!token) throw new Error('No hay sesión activa.');
 
-      const res = await fetch(`${API_BASE_URL}/api/backup/restore`, {
+      const res = await fetch(getApiUrl('/backup/restore'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -270,7 +667,8 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
         },
         body: JSON.stringify({
           inventory_id: currentInventory.id,
-          backup_payload: selectedFile.content
+          backup_payload: selectedFile.content,
+          currency_conversion: conversionOptions
         })
       });
 
@@ -281,7 +679,15 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
 
       setRestoreModalOpen(false);
       setSelectedFile(null);
-      showAppToast('¡Copia de seguridad restaurada exitosamente!', 'success', 6000);
+      const counts = data.result?.restored_counts || {};
+      const prodsCount = counts.products ?? 0;
+      const locsCount = counts.locations ?? 0;
+      showAppToast(`Restauración exitosa: se cargaron ${prodsCount} productos y ${locsCount} ubicaciones.`, 'success', 7000);
+
+      // Despachar evento global para que la app recargue todos los productos, categorías y ubicaciones
+      window.dispatchEvent(new CustomEvent('stockly_inventory_data_updated', {
+        detail: { inventoryId: currentInventory.id, counts }
+      }));
 
       if (onRestoreCompleted) {
         onRestoreCompleted();
@@ -331,7 +737,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
         <div className="divide-y divide-[#E5E7EB]">
 
           {/* =================================================================
-              BLOQUE A: Respaldo Manual Inmediato
+              BLOQUE A: Respaldo Manual Inmediato (con Verificación OTP y RF-2)
              ================================================================= */}
           <div className="p-5 sm:p-6 space-y-4">
             <div className="flex items-center gap-2">
@@ -343,41 +749,133 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                   Respaldo Manual Inmediato
                 </h3>
                 <p className="text-xs text-[#616161]">
-                  Exporta todos los datos relacionales en formato JSON y despáchalos al correo destino.
+                  Exporta todos los datos relacionales en formato JSON y despáchalos al correo destino tras validación OTP.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-              <div className="sm:col-span-7 space-y-1.5">
-                <label className="text-xs font-semibold text-[#1E3A5F] block">
-                  Correo electrónico destinatario
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type="email"
-                    value={manualEmail}
-                    onChange={(e) => setManualEmail(e.target.value)}
-                    placeholder="propietario@ejemplo.com"
-                    disabled={isExporting}
-                    className="w-full h-11 bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl pl-10 pr-3.5 text-xs text-[#1E3A5F] focus:outline-none transition-all shadow-xs"
-                  />
+            <div className="space-y-2">
+              {/* Input y Estado de Verificación */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <label className="text-xs font-semibold text-[#1E3A5F] truncate min-w-0 shrink">
+                    Correo de destino
+                  </label>
+                  {isEmailVerified && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shrink-0">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Verificado
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleResetVerification}
+                        className="text-[11px] text-neutral-400 hover:text-neutral-700 cursor-pointer underline font-medium shrink-0"
+                      >
+                        Cambiar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 w-full min-w-0">
+                  <div className="flex-1 min-w-0 h-11 bg-neutral-100 rounded-xl px-3.5 flex items-center gap-2.5 border border-transparent focus-within:ring-1 focus-within:ring-[#1E3A5F]">
+                    <Mail className="w-4 h-4 text-[#616161] shrink-0 pointer-events-none" />
+                    <input
+                      type="text"
+                      inputMode="email"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      value={manualEmail}
+                      onChange={(e) => {
+                        setManualEmail(e.target.value);
+                        if (isEmailVerified) handleResetVerification();
+                      }}
+                      placeholder="propietario@ejemplo.com"
+                      disabled={isExporting || isEmailVerified}
+                      readOnly={isEmailVerified}
+                      className={`w-full flex-1 min-w-0 bg-transparent text-xs font-medium focus:outline-none truncate border-none p-0 shadow-none ${
+                        isEmailVerified
+                          ? 'text-neutral-600 cursor-not-allowed'
+                          : 'text-[#1E3A5F]'
+                      }`}
+                    />
+                  </div>
+
+                  {!isEmailVerified && (
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={isSendingOtp || isExporting || !manualEmail.trim()}
+                      className="h-11 px-3.5 rounded-xl border border-[#1E3A5F] bg-white hover:bg-[#1E3A5F]/5 text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0 shadow-xs"
+                    >
+                      {isSendingOtp ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1E3A5F]" />
+                      ) : (
+                        <KeyRound className="w-3.5 h-3.5 text-[#1E3A5F]" />
+                      )}
+                      <span>{otpSent ? 'Reenviar' : 'Validar'}</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
-              <div className="sm:col-span-5 flex items-center gap-2">
+              {/* Formulario OTP minimalista en línea */}
+              {otpSent && !isEmailVerified && (
+                <div className="flex items-center gap-2 pt-0.5 animate-in fade-in">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="Código 6 dígitos"
+                    className="w-36 h-9 px-3 text-center font-mono text-xs font-bold tracking-widest bg-white border border-[#1E3A5F]/30 focus:border-[#1E3A5F] rounded-lg text-[#1E3A5F] focus:outline-none shadow-2xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    disabled={isVerifyingOtp || otpCode.trim().length !== 6}
+                    className="h-9 px-3.5 rounded-lg bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-2xs"
+                  >
+                    {isVerifyingOtp ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3 text-[#E8B4A0]" />}
+                    <span>Verificar</span>
+                  </button>
+                  <span className="text-[11px] text-neutral-400 pl-1">
+                    {otpCooldown > 0 ? `${otpCooldown}s` : (
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={isSendingOtp}
+                        className="text-[#1E3A5F] underline hover:text-black cursor-pointer font-medium"
+                      >
+                        Reenviar
+                      </button>
+                    )}
+                  </span>
+                </div>
+              )}
+
+              {/* Botones de Acción: Generar y Enviar vs Descargar Local */}
+              <div className="flex items-center gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => handleExportAndSend(false)}
-                  disabled={isExporting}
-                  className="flex-1 h-11 px-4 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs disabled:opacity-50 cursor-pointer"
-                  title="Generar y despachar respaldo por correo"
+                  onClick={handleExportAndSend}
+                  disabled={!isEmailVerified || isExporting || isDownloading}
+                  className={`flex-1 h-11 px-4 rounded-xl text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer ${
+                    isEmailVerified
+                      ? 'bg-[#1E3A5F] hover:bg-[#152a45]'
+                      : 'bg-neutral-300 text-neutral-500 cursor-not-allowed opacity-60'
+                  }`}
+                  title={
+                    !isEmailVerified
+                      ? 'Debes verificar tu correo mediante código OTP antes de despachar el respaldo.'
+                      : 'Generar y Enviar'
+                  }
                 >
                   {isExporting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
-                      <span>Generando...</span>
+                      <span>Generando y enviando...</span>
                     </>
                   ) : (
                     <>
@@ -389,12 +887,22 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => handleExportAndSend(true)}
-                  disabled={isExporting}
-                  className="h-11 px-3 rounded-xl border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] text-xs flex items-center justify-center transition-all active:scale-95 shrink-0"
-                  title="Descargar copia JSON directa en tu navegador"
+                  onClick={handleDownloadDirectly}
+                  disabled={isExporting || isDownloading}
+                  className="h-11 px-4 rounded-xl border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-95 shrink-0 cursor-pointer disabled:opacity-50"
+                  title="Descargar copia local (.json)"
                 >
-                  <Download className="w-4 h-4" />
+                  {isDownloading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
+                      <span>Descargando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 text-[#1E3A5F]" />
+                      <span>Descargar Backup</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -435,91 +943,234 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
               <div className="space-y-4 pt-2 border-t border-[#E5E7EB]/80 animate-in fade-in">
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                   
-                  {/* Correo Fijo de Destino */}
+                  {/* Correo Fijo de Destino con Validación Minimalista */}
                   <div className="sm:col-span-6 space-y-1.5">
-                    <label className="text-xs font-semibold text-[#1E3A5F] block">
-                      Correo fijo de destino
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input
-                        type="email"
-                        value={scheduledEmail}
-                        onChange={(e) => setScheduledEmail(e.target.value)}
-                        placeholder="propietario@empresa.com"
-                        className="w-full h-11 bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl pl-10 pr-3.5 text-xs text-[#1E3A5F] focus:outline-none transition-all shadow-xs"
-                      />
+                    <div className="flex items-center justify-between gap-2 min-w-0">
+                      <label className="text-xs font-semibold text-[#1E3A5F] truncate min-w-0 shrink">
+                        Correo de destino
+                      </label>
+                      {isScheduledEmailVerified && (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shrink-0">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Verificado
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleResetScheduledVerification}
+                            className="text-[11px] text-neutral-400 hover:text-neutral-700 cursor-pointer underline font-medium shrink-0"
+                          >
+                            Cambiar
+                          </button>
+                        </div>
+                      )}
                     </div>
+
+                    <div className="flex items-center gap-2 w-full min-w-0">
+                      <div className="flex-1 min-w-0 h-11 bg-neutral-100 rounded-xl px-3.5 flex items-center gap-2.5 border border-transparent focus-within:ring-1 focus-within:ring-[#1E3A5F]">
+                        <Mail className="w-4 h-4 text-[#616161] shrink-0 pointer-events-none" />
+                        <input
+                          type="text"
+                          inputMode="email"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck="false"
+                          value={scheduledEmail}
+                          onChange={(e) => {
+                            setScheduledEmail(e.target.value);
+                            if (isScheduledEmailVerified) handleResetScheduledVerification();
+                          }}
+                          placeholder="propietario@empresa.com"
+                          disabled={isScheduledEmailVerified}
+                          readOnly={isScheduledEmailVerified}
+                          className={`w-full flex-1 min-w-0 bg-transparent text-xs font-medium focus:outline-none truncate border-none p-0 shadow-none ${
+                            isScheduledEmailVerified
+                              ? 'text-neutral-600 cursor-not-allowed'
+                              : 'text-[#1E3A5F]'
+                          }`}
+                        />
+                      </div>
+
+                      {!isScheduledEmailVerified && (
+                        <button
+                          type="button"
+                          onClick={handleSendScheduledOtp}
+                          disabled={isSendingScheduledOtp || !scheduledEmail.trim()}
+                          className="h-11 px-3.5 rounded-xl border border-[#1E3A5F] bg-white hover:bg-[#1E3A5F]/5 text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0 shadow-xs"
+                        >
+                          {isSendingScheduledOtp ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1E3A5F]" />
+                          ) : (
+                            <KeyRound className="w-3.5 h-3.5 text-[#1E3A5F]" />
+                          )}
+                          <span>{scheduledOtpSent ? 'Reenviar' : 'Validar'}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {scheduledOtpSent && !isScheduledEmailVerified && (
+                      <div className="flex items-center gap-2 pt-0.5 animate-in fade-in">
+                        <input
+                          type="text"
+                          maxLength={6}
+                          value={scheduledOtpCode}
+                          onChange={(e) => setScheduledOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          placeholder="Código 6 dígitos"
+                          className="w-36 h-9 px-3 text-center font-mono text-xs font-bold tracking-widest bg-white border border-[#1E3A5F]/30 focus:border-[#1E3A5F] rounded-lg text-[#1E3A5F] focus:outline-none shadow-2xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyScheduledOtp}
+                          disabled={isVerifyingScheduledOtp || scheduledOtpCode.trim().length !== 6}
+                          className="h-9 px-3.5 rounded-lg bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-2xs"
+                        >
+                          {isVerifyingScheduledOtp ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3 text-[#E8B4A0]" />}
+                          <span>Verificar</span>
+                        </button>
+                        <span className="text-[11px] text-neutral-400 pl-1">
+                          {scheduledOtpCooldown > 0 ? `${scheduledOtpCooldown}s` : (
+                            <button
+                              type="button"
+                              onClick={handleSendScheduledOtp}
+                              disabled={isSendingScheduledOtp}
+                              className="text-[#1E3A5F] underline hover:text-black cursor-pointer font-medium"
+                            >
+                              Reenviar
+                            </button>
+                          )}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Selector de Frecuencia */}
+                  {/* Selector de Frecuencia con Cápsulas de selección con capa visual centrada y selector nativo superpuesto */}
                   <div className="sm:col-span-6 space-y-1.5">
                     <label className="text-xs font-semibold text-[#1E3A5F] block">
                       Frecuencia de Envío
                     </label>
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {[
-                        { label: 'Diario', value: '1' },
-                        { label: 'Semanal', value: '7' },
-                        { label: 'Quincenal', value: '15' },
-                        { label: 'Personalizado', value: 'custom' }
-                      ].map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setFrequencyOption(opt.value as any)}
-                          className={`h-11 px-1 rounded-xl text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center border ${
-                            frequencyOption === opt.value
-                              ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] font-bold shadow-xs'
-                              : 'bg-white text-[#1E3A5F] border-[#E5E7EB] hover:bg-[#F8F9FA]'
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Campo 1: Predeterminado (Diario, Semanal, Quincenal) */}
+                      <div className="relative w-full">
+                        <div
+                          className={`w-full min-h-[44px] px-3.5 py-2 rounded-2xl flex items-center justify-between gap-1.5 transition-all pointer-events-none select-none ${
+                            frequencyOption !== 'custom'
+                              ? 'bg-neutral-100 border border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
+                              : 'bg-neutral-50 border border-neutral-200/60 text-neutral-500 font-medium'
                           }`}
                         >
-                          {opt.label}
-                        </button>
-                      ))}
+                          <span className="flex-1 text-center text-xs leading-snug truncate">
+                            {frequencyOption === '1'
+                              ? 'Diario (1 día)'
+                              : frequencyOption === '7'
+                              ? 'Semanal (7 días)'
+                              : frequencyOption === '15'
+                              ? 'Quincenal (15 días)'
+                              : 'Predeterminado'}
+                          </span>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                              frequencyOption !== 'custom' ? 'text-[#1E3A5F]' : 'text-neutral-400'
+                            }`}
+                          />
+                        </div>
+
+                        <select
+                          value={frequencyOption === 'custom' ? '' : frequencyOption}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setFrequencyOption(e.target.value as any);
+                            }
+                          }}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 text-base"
+                          aria-label="Frecuencia predeterminada"
+                        >
+                          <option value="" disabled hidden>
+                            Predeterminado
+                          </option>
+                          <option value="1">Diario (1 día)</option>
+                          <option value="7">Semanal (7 días)</option>
+                          <option value="15">Quincenal (15 días)</option>
+                        </select>
+                      </div>
+
+                      {/* Campo 2: Personalizado (Abre el scroll wheel / menú nativo para desplazar días) */}
+                      <div className="relative w-full">
+                        <div
+                          className={`w-full min-h-[44px] px-3.5 py-2 rounded-2xl flex items-center justify-between gap-1.5 transition-all pointer-events-none select-none ${
+                            frequencyOption === 'custom'
+                              ? 'bg-neutral-100 border border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
+                              : 'bg-neutral-50 border border-neutral-200/60 text-neutral-500 font-medium'
+                          }`}
+                        >
+                          <span className="flex-1 text-center text-xs leading-snug truncate">
+                            {frequencyOption === 'custom'
+                              ? `${customDays} ${customDays === 1 ? 'día' : 'días'}`
+                              : 'Personalizado'}
+                          </span>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                              frequencyOption === 'custom' ? 'text-[#1E3A5F]' : 'text-neutral-400'
+                            }`}
+                          />
+                        </div>
+
+                        <select
+                          value={frequencyOption === 'custom' ? String(customDays) : ''}
+                          onChange={(e) => {
+                            const days = parseInt(e.target.value, 10);
+                            if (!isNaN(days) && days >= 1) {
+                              setCustomDays(days);
+                              setFrequencyOption('custom');
+                            }
+                          }}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 text-base"
+                          aria-label="Días personalizados"
+                        >
+                          <option value="" disabled hidden>
+                            Personalizado
+                          </option>
+                          {Array.from({ length: 30 }, (_, i) => i + 1).map((d) => (
+                            <option key={d} value={d}>
+                              {d} {d === 1 ? 'día' : 'días'}
+                            </option>
+                          ))}
+                          <option value="45">45 días</option>
+                          <option value="60">60 días</option>
+                          <option value="90">90 días</option>
+                          <option value="180">180 días</option>
+                          <option value="365">365 días</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                  {/* Input de días si es personalizado */}
-                  {frequencyOption === 'custom' && (
-                    <div className="sm:col-span-4 space-y-1.5">
-                      <label className="text-xs font-semibold text-[#1E3A5F] block">
-                        Cada cuántos días (mín. 1)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="365"
-                        value={customDays}
-                        onChange={(e) => setCustomDays(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                        className="w-full h-11 px-3.5 bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl text-xs font-mono text-[#1E3A5F] focus:outline-none"
-                      />
-                    </div>
-                  )}
-
-                  {/* Hora de Ejecución */}
-                  <div className={`${frequencyOption === 'custom' ? 'sm:col-span-4' : 'sm:col-span-6'} space-y-1.5`}>
-                    <label className="text-xs font-semibold text-[#1E3A5F] flex items-center gap-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                  {/* Hora de Envío: Centrado visualmente junto al recuadro de hora */}
+                  <div className="sm:col-span-6 flex items-center justify-start sm:justify-center gap-2.5 h-10 px-1">
+                    <label className="text-xs font-semibold text-[#1E3A5F] flex items-center gap-1.5 shrink-0">
                       <Clock className="w-3.5 h-3.5 text-[#E8B4A0]" />
-                      Hora de Ejecución (24h)
+                      <span>Hora de envío (24h)</span>
                     </label>
                     <input
                       type="time"
-                      value={executionTime}
-                      onChange={(e) => setExecutionTime(e.target.value)}
-                      className="w-full h-11 px-3.5 bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl text-xs font-mono text-[#1E3A5F] focus:outline-none shadow-xs"
+                      value={executionTime || '02:00'}
+                      onChange={(e) => setExecutionTime(e.target.value || '02:00')}
+                      className="w-20 h-7.5 px-1.5 bg-neutral-50 border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-lg text-xs font-mono font-bold text-[#1E3A5F] focus:outline-none shadow-xs text-center shrink-0"
                     />
                   </div>
 
                   {/* Botón Guardar Programación */}
-                  <div className={`${frequencyOption === 'custom' ? 'sm:col-span-4' : 'sm:col-span-6'}`}>
+                  <div className="sm:col-span-6">
                     <button
                       type="button"
                       onClick={handleSaveSchedule}
-                      disabled={isSavingSettings}
-                      className="w-full h-11 px-4 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer"
+                      disabled={isSavingSettings || (isScheduled && !isScheduledEmailVerified)}
+                      className="w-full h-11 px-4 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer disabled:opacity-50"
+                      title={
+                        isScheduled && !isScheduledEmailVerified
+                          ? 'Debes validar el correo de destino con OTP antes de guardar.'
+                          : 'Guardar Programación'
+                      }
                     >
                       {isSavingSettings ? (
                         <>
@@ -626,6 +1277,10 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
         fileName={selectedFile?.name || 'backup.json'}
         onConfirm={handleConfirmRestore}
         isLoading={isRestoring}
+        sourceCurrency={selectedFile?.content?.inventory_metadata?.currency || 'PEN'}
+        targetCurrency={currentInventory?.currency || 'PEN'}
+        backupExchangeRate={selectedFile?.content?.inventory_metadata?.exchange_rate}
+        inventoryExchangeRate={currentInventory?.exchange_rate}
       />
     </>
   );

@@ -1,47 +1,96 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './lib/supabase';
 import { Product, Category, Subcategory, Location } from './types/database';
+import { useIsDesktop } from './hooks/useDevice';
 
 // Componentes de Layout y UI
-import { Sidebar } from './components/layout/Sidebar';
-import { Navbar } from './components/layout/Navbar';
 import { BottomNav, TabType } from './components/layout/BottomNav';
 import { PendingInvitationsBanner } from './components/ui/PendingInvitationsBanner';
 import { AuthPage } from './pages/AuthPage';
-import { HomePage } from './pages/HomePage';
-import { InventoryPage } from './pages/InventoryPage';
-import { LocationsPage, LocationSubTab } from './pages/LocationsPage';
-import { SalesPage } from './pages/SalesPage';
-import { SalesHistoryPage } from './pages/SalesHistoryPage';
-import { ReportsPage } from './pages/ReportsPage';
-import { AnalyticsPage } from './pages/AnalyticsPage';
-import { SettingsPage } from './pages/SettingsPage';
+const HomePage = React.lazy(() => import('./pages/HomePage'));
+import type { LocationSubTab } from './pages/LocationsPage';
 
-// Modales Especializados
-import { ProductFormModal } from './components/modals/ProductFormModal';
-import { ProductDetailModal } from './components/modals/ProductDetailModal';
-import { MoveProductModal } from './components/modals/MoveProductModal';
-import { WithdrawProductModal } from './components/modals/WithdrawProductModal';
-import { CategoriesManagementModal } from './components/modals/CategoriesManagementModal';
-import { LocationsManagementModal } from './components/modals/LocationsManagementModal';
-import { CollaboratorsModal } from './components/modals/CollaboratorsModal';
-import { InventorySelectorModal } from './components/modals/InventorySelectorModal';
-import { BarcodeScannerModal } from './components/modals/BarcodeScannerModal';
-import { RestockProductModal } from './components/modals/RestockProductModal';
+// Layout Desktop condicional (cargado solo en viewport de escritorio)
+const Sidebar = React.lazy(() => import('./components/layout/Sidebar').then(m => ({ default: m.Sidebar })));
+const Navbar = React.lazy(() => import('./components/layout/Navbar').then(m => ({ default: m.Navbar })));
+
+// Vistas secundarias lazy (Code Splitting por dispositivo y ruta)
+const InventoryPage = React.lazy(() => import('./pages/InventoryPage'));
+const LocationsPage = React.lazy(() => import('./pages/LocationsPage'));
+const SalesPage = React.lazy(() => import('./pages/SalesPage'));
+const SalesHistoryPage = React.lazy(() => import('./pages/SalesHistoryPage'));
+const ReportsPage = React.lazy(() => import('./pages/ReportsPage'));
+const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
+const TermsPage = React.lazy(() => import('./pages/TermsPage'));
+const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage'));
+const FirstTimeOnboarding = React.lazy(() => import('./components/inventory/FirstTimeOnboarding'));
+
+// Modales Especializados lazy (descargados bajo demanda solo al abrirse)
+const ProductFormModal = React.lazy(() => import('./components/modals/ProductFormModal').then(m => ({ default: m.ProductFormModal })));
+const ProductDetailModal = React.lazy(() => import('./components/modals/ProductDetailModal').then(m => ({ default: m.ProductDetailModal })));
+const MoveProductModal = React.lazy(() => import('./components/modals/MoveProductModal').then(m => ({ default: m.MoveProductModal })));
+const WithdrawProductModal = React.lazy(() => import('./components/modals/WithdrawProductModal').then(m => ({ default: m.WithdrawProductModal })));
+const CategoriesManagementModal = React.lazy(() => import('./components/modals/CategoriesManagementModal').then(m => ({ default: m.CategoriesManagementModal })));
+const LocationsManagementModal = React.lazy(() => import('./components/modals/LocationsManagementModal').then(m => ({ default: m.LocationsManagementModal })));
+const CollaboratorsModal = React.lazy(() => import('./components/modals/CollaboratorsModal').then(m => ({ default: m.CollaboratorsModal })));
+const InventorySelectorModal = React.lazy(() => import('./components/modals/InventorySelectorModal').then(m => ({ default: m.InventorySelectorModal })));
+const BarcodeScannerModal = React.lazy(() => import('./components/modals/BarcodeScannerModal').then(m => ({ default: m.BarcodeScannerModal })));
+const RestockProductModal = React.lazy(() => import('./components/modals/RestockProductModal').then(m => ({ default: m.RestockProductModal })));
 import { ToastNotification, showAppToast } from './components/ui';
 import { syncAllOfflineDataSilently } from './services/offlineSync';
 
 import { Loader2, Layers, Plus, Sparkles } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
-  const { user, loading: authLoading, currentInventory, refreshInventories } = useAuth();
+  const { user, isInitialAuthCheck, currentInventory, refreshInventories, inventories } = useAuth();
+  const isDesktop = useIsDesktop();
+
+  // Control de Rutas Estáticas Públicas (RF-LEGAL-001)
+  const [currentPath, setCurrentPath] = useState(() =>
+    typeof window !== 'undefined' ? window.location.pathname : '/'
+  );
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Regla lógica: Funcionalidades comerciales solo activas si es NEGOCIO
   const isBusiness = currentInventory?.inventory_type !== 'PERSONAL';
 
   // Estado de Navegación: Inicialmente en "home" (Dashboard Principal)
   const [activeTab, setActiveTab] = useState<TabType>('home');
+
+  // Al iniciar sesión siempre debe iniciar en "home" como primera vista obligatoria
+  const prevUserRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (user && prevUserRef.current !== user.id) {
+      setActiveTab('home');
+      if (typeof window !== 'undefined' && window.location.pathname !== '/' && window.location.pathname !== '/terms' && window.location.pathname !== '/privacy') {
+        window.history.replaceState({}, '', '/');
+        setCurrentPath('/');
+      }
+      prevUserRef.current = user.id;
+    } else if (!user) {
+      prevUserRef.current = null;
+      setActiveTab('home');
+    }
+  }, [user]);
+
+  // Al cambiar de inventario activo, asegurar el regreso a la vista principal "home"
+  const prevInventoryTabRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (currentInventory && prevInventoryTabRef.current !== currentInventory.id) {
+      prevInventoryTabRef.current = currentInventory.id;
+      setActiveTab('home');
+    }
+  }, [currentInventory]);
 
   // Redirigir a Home si el tipo de inventario no permite ventas ni historial comercial
   useEffect(() => {
@@ -55,7 +104,6 @@ export const AppContent: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [dataLoading, setDataLoading] = useState(false);
 
   // Estados de Modales
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -86,12 +134,49 @@ export const AppContent: React.FC = () => {
   const [scannedRestockProduct, setScannedRestockProduct] = useState<Product | null>(null);
   const [stockSearchFilter, setStockSearchFilter] = useState<string>('');
 
-  // Cargar datos del inventario seleccionado
-  const fetchInventoryData = useCallback(async () => {
-    if (!currentInventory) return;
-    try {
-      setDataLoading(true);
+  // RNF-PERF-FEEDBACK-004: Aislamiento de Concurrencia y Skeleton Debounced (250ms)
+  const [dataLoading, setDataLoading] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const prevInventoryIdRef = useRef<string | null>(null);
 
+  // Cargar datos del inventario seleccionado cancelando peticiones previas en vuelo
+  const fetchInventoryData = useCallback(async () => {
+    if (!currentInventory) {
+      setProducts([]);
+      setCategories([]);
+      setSubcategories([]);
+      setLocations([]);
+      return;
+    }
+
+    // 1. Cancelar petición anterior en vuelo al cambiar de almacén
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
+    // 2. Solo limpiar el estado previo si realmente cambiamos de almacén
+    // Esto previene que modales abiertos pierdan opciones de categorías/ubicaciones durante revalidaciones silenciosas
+    const isDifferentInventory = prevInventoryIdRef.current !== currentInventory.id;
+    if (isDifferentInventory) {
+      prevInventoryIdRef.current = currentInventory.id;
+      setProducts([]);
+      setCategories([]);
+      setSubcategories([]);
+      setLocations([]);
+      setDataLoading(true);
+    }
+
+    // 3. Temporizador Debounce: Solo activar Skeleton si cambia de almacén y tarda más de 250ms
+    const skeletonTimer = setTimeout(() => {
+      if (isDifferentInventory) {
+        setShowSkeleton(true);
+      }
+    }, 250);
+
+    try {
       const [prodsRes, catsRes, subRes, locsRes] = await Promise.all([
         supabase
           .from('products')
@@ -102,26 +187,32 @@ export const AppContent: React.FC = () => {
             locations (id, name, code)
           `)
           .eq('inventory_id', currentInventory.id)
-          .order('created_at', { ascending: false }),
+          .order('created_at', { ascending: false })
+          .abortSignal(signal),
 
         supabase
           .from('categories')
           .select('*')
           .eq('inventory_id', currentInventory.id)
-          .order('name', { ascending: true }),
+          .order('name', { ascending: true })
+          .abortSignal(signal),
 
         supabase
           .from('subcategories')
           .select('*')
           .eq('inventory_id', currentInventory.id)
-          .order('name', { ascending: true }),
+          .order('name', { ascending: true })
+          .abortSignal(signal),
 
         supabase
           .from('locations')
           .select('*')
           .eq('inventory_id', currentInventory.id)
           .order('name', { ascending: true })
+          .abortSignal(signal)
       ]);
+
+      if (signal.aborted) return;
 
       if (prodsRes.error) throw prodsRes.error;
       if (catsRes.error) throw catsRes.error;
@@ -133,8 +224,12 @@ export const AppContent: React.FC = () => {
       setSubcategories(subRes.data || []);
       setLocations(locsRes.data || []);
     } catch (err: any) {
-      console.error('Error fetching inventory data:', err);
+      if (err.name !== 'AbortError') {
+        console.error('Error fetching inventory data:', err);
+      }
     } finally {
+      clearTimeout(skeletonTimer);
+      setShowSkeleton(false);
       setDataLoading(false);
     }
   }, [currentInventory]);
@@ -146,13 +241,15 @@ export const AppContent: React.FC = () => {
   // RF-5: Motor de Sincronización Automática Integral (Creación, Salidas Masivas y Ventas POS)
   useEffect(() => {
     const handleOnline = () => {
-      syncAllOfflineDataSilently(() => {
+      syncAllOfflineDataSilently((summary) => {
         fetchInventoryData();
-        showAppToast(
-          'Sincronización en segundo plano completada con éxito.',
-          'success',
-          4500
-        );
+        if (summary.syncedProducts > 0 || summary.syncedWithdrawals > 0) {
+          showAppToast(
+            'Sincronización en segundo plano completada con éxito.',
+            'success',
+            4500
+          );
+        }
       });
     };
 
@@ -167,6 +264,18 @@ export const AppContent: React.FC = () => {
       window.removeEventListener('online', handleOnline);
     };
   }, [fetchInventoryData]);
+
+  // Sincronización reactiva cuando se restaura una copia de seguridad
+  useEffect(() => {
+    const handleBackupRestoreUpdated = () => {
+      fetchInventoryData();
+      refreshInventories();
+    };
+    window.addEventListener('stockly_inventory_data_updated', handleBackupRestoreUpdated);
+    return () => {
+      window.removeEventListener('stockly_inventory_data_updated', handleBackupRestoreUpdated);
+    };
+  }, [fetchInventoryData, refreshInventories]);
 
   // Inyección reactiva inmediata de productos guardados (soporte offline)
   const handleProductSaved = (savedProduct?: Product) => {
@@ -226,18 +335,49 @@ export const AppContent: React.FC = () => {
     }
   };
 
-  // 1. Pantalla de Carga Inicial
-  if (authLoading) {
+  // 0. Rutas Estáticas Públicas sin Requerir Sesión (RF-LEGAL-001)
+  if (currentPath === '/terms') {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center space-y-4 font-mono text-[#1E3A5F]">
-        <div className="w-12 h-12 rounded-2xl bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center shadow-md animate-pulse">
-          <Layers className="w-6 h-6 stroke-[1.5]" />
+      <Suspense fallback={<div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center font-mono text-xs text-[#616161]">CARGANDO TÉRMINOS...</div>}>
+        <TermsPage onBack={() => {
+          window.history.pushState({}, '', '/');
+          setCurrentPath('/');
+        }} />
+      </Suspense>
+    );
+  }
+
+  if (currentPath === '/privacy') {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center font-mono text-xs text-[#616161]">CARGANDO PRIVACIDAD...</div>}>
+        <PrivacyPage onBack={() => {
+          window.history.pushState({}, '', '/');
+          setCurrentPath('/');
+        }} />
+      </Suspense>
+    );
+  }
+
+  // 1. Pantalla de Carga Inicial o Carga de Inventarios (Evita parpadeos de onboarding)
+  if (isInitialAuthCheck || (user && inventories === null)) {
+    return (
+      <main id="main-content" className="min-h-screen bg-black md:bg-[#F8F9FA] flex flex-col items-center justify-center font-mono">
+        {/* Móvil: Splash nativo oscuro mínimo y centrado sin elementos web (evita flash blanco) */}
+        <div className="flex md:hidden flex-col items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-white/80" />
         </div>
-        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#616161]">
-          <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
-          <span>INICIANDO INVENTARIO...</span>
+
+        {/* Desktop: Indicador editorial de carga */}
+        <div className="hidden md:flex flex-col items-center justify-center space-y-4 text-[#1E3A5F]">
+          <div className="w-12 h-12 rounded-2xl bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center shadow-md animate-pulse">
+            <Layers className="w-6 h-6 stroke-[1.5]" />
+          </div>
+          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#616161]">
+            <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
+            <span>INICIANDO INVENTARIO...</span>
+          </div>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -246,36 +386,81 @@ export const AppContent: React.FC = () => {
     return <AuthPage />;
   }
 
+  // RF-INV-044: Onboarding Exclusivo para Primer Inicio
+  // UNICAMENTE si la cuenta se registra por primera vez
+  const isFirstTimeRegistration =
+    Boolean(user) &&
+    typeof window !== 'undefined' &&
+    localStorage.getItem(`is_new_registration_${user?.id}`) === 'true' &&
+    !localStorage.getItem(`onboarding_completed_${user?.id}`);
+
+  // O si el usuario verdaderamente tiene 0 inventarios en base de datos y no ha completado onboarding
+  const hasNoInventories =
+    Boolean(user) &&
+    inventories !== null &&
+    inventories.length === 0 &&
+    !localStorage.getItem(`onboarding_completed_${user?.id}`);
+
+  if (inventories !== null && (isFirstTimeRegistration || hasNoInventories)) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-white" />}>
+        <FirstTimeOnboarding
+          defaultInventoryId={inventories.length > 0 ? inventories[0].id : undefined}
+          onComplete={() => {
+            if (user?.id) {
+              try {
+                localStorage.setItem(`onboarding_completed_${user.id}`, 'true');
+                localStorage.removeItem(`is_new_registration_${user.id}`);
+              } catch (e) {
+                console.warn(e);
+              }
+            }
+            setActiveTab('home');
+            fetchInventoryData();
+          }}
+        />
+      </Suspense>
+    );
+  }
+
   return (
     <div className="min-h-screen max-md:fixed max-md:inset-0 max-md:h-[100dvh] max-md:w-full max-md:overflow-hidden md:overflow-visible md:h-auto bg-white md:bg-[#EAEFF5] text-[#1E3A5F] flex flex-col font-normal selection:bg-[#1E3A5F] selection:text-white transition-colors duration-200">
-      {/* Sidebar Lateral Fijo Desktop (>= 1024px) */}
-      <Sidebar
-        activeTab={activeTab}
-        onChangeTab={setActiveTab}
-        onOpenCreateModal={() => {
-          setProductToEdit(null);
-          setProductFormOpen(true);
-        }}
-        onQuickScan={() => setQuickScanOpen(true)}
-        onOpenInventorySelector={() => setInventorySelectorOpen(true)}
-        onOpenCategories={() => setCategoriesModalOpen(true)}
-        onOpenLocations={() => openLocationsWorkspace('assign')}
-        onOpenCollaborators={() => setCollaboratorsModalOpen(true)}
-        isBusiness={isBusiness}
-      />
+      {/* Sidebar Lateral Fijo Desktop (>= 1024px) - Carga condicional reactiva */}
+      {isDesktop && (
+        <Suspense fallback={null}>
+          <Sidebar
+            activeTab={activeTab}
+            onChangeTab={setActiveTab}
+            onOpenCreateModal={() => {
+              setProductToEdit(null);
+              setProductFormOpen(true);
+            }}
+            onQuickScan={() => setQuickScanOpen(true)}
+            onOpenInventorySelector={() => setInventorySelectorOpen(true)}
+            onOpenCategories={() => setCategoriesModalOpen(true)}
+            onOpenLocations={() => openLocationsWorkspace('assign')}
+            onOpenCollaborators={() => setCollaboratorsModalOpen(true)}
+            isBusiness={isBusiness}
+          />
+        </Suspense>
+      )}
 
       {/* Barra de Navegación Superior (Visible en >= 768px) */}
-      <Navbar
-        activeTab={activeTab}
-        onOpenInventorySelector={() => setInventorySelectorOpen(true)}
-        onOpenCollaborators={() => setCollaboratorsModalOpen(true)}
-        onOpenLocations={() => openLocationsWorkspace('assign')}
-        onOpenCategories={() => setCategoriesModalOpen(true)}
-        onQuickScan={() => setQuickScanOpen(true)}
-      />
+      {isDesktop && (
+        <Suspense fallback={null}>
+          <Navbar
+            activeTab={activeTab}
+            onOpenInventorySelector={() => setInventorySelectorOpen(true)}
+            onOpenCollaborators={() => setCollaboratorsModalOpen(true)}
+            onOpenLocations={() => openLocationsWorkspace('assign')}
+            onOpenCategories={() => setCategoriesModalOpen(true)}
+            onQuickScan={() => setQuickScanOpen(true)}
+          />
+        </Suspense>
+      )}
 
       {/* Contenedor Principal Responsive con offset para el Sidebar en Desktop y safe area en móvil */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto px-0 pt-0 md:px-6 md:pt-5 lg:pl-[266px] pb-0 md:pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-12 max-md:h-full max-md:overflow-hidden md:overflow-visible">
+      <main id="main-content" className="flex-1 max-w-[1600px] w-full mx-auto px-0 pt-0 md:px-6 md:pt-5 lg:pl-[266px] pb-0 md:pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-12 max-md:h-full max-md:overflow-hidden md:overflow-visible">
         {/* Banner de Invitaciones Pendientes */}
         <div className="px-4 md:px-0">
           <PendingInvitationsBanner />
@@ -312,31 +497,34 @@ export const AppContent: React.FC = () => {
         
         {/* VISTA 1: HOME (DASHBOARD PRINCIPAL) */}
         {activeTab === 'home' && (
-          <HomePage
-            products={products}
-            onNavigateToStock={() => setActiveTab('inventory')}
-            onNavigateToSales={() => setActiveTab('sales')}
-            onNavigateToHistory={() => setActiveTab('sales-history')}
-            onSelectProduct={(p) => {
-              setSelectedProduct(p);
-              setProductDetailOpen(true);
-            }}
-            onQuickScan={() => setQuickScanOpen(true)}
-            onOpenCreateModal={() => {
-              setProductToEdit(null);
-              setProductFormOpen(true);
-            }}
-          />
+          <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[#616161] flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" /><span>CARGANDO RESUMEN...</span></div>}>
+            <HomePage
+              products={products}
+              onNavigateToStock={() => setActiveTab('inventory')}
+              onNavigateToSales={() => setActiveTab('sales')}
+              onNavigateToHistory={() => setActiveTab('sales-history')}
+              onSelectProduct={(p: Product) => {
+                setSelectedProduct(p);
+                setProductDetailOpen(true);
+              }}
+              onQuickScan={() => setQuickScanOpen(true)}
+              onOpenCreateModal={() => {
+                setProductToEdit(null);
+                setProductFormOpen(true);
+              }}
+            />
+          </Suspense>
         )}
 
         {/* VISTA 2: STOCK (CATÁLOGO DE EXISTENCIAS & RECURSOS) */}
         {activeTab === 'inventory' && (
+          <Suspense fallback={<div className="p-8 text-center text-xs font-mono text-[#616161]">CARGANDO EXISTENCIAS...</div>}>
           <InventoryPage
             products={products}
             categories={categories}
             subcategories={subcategories}
             locations={locations}
-            onSelectProduct={(p) => {
+            onSelectProduct={(p: Product) => {
               setSelectedProduct(p);
               setProductDetailOpen(true);
             }}
@@ -344,17 +532,19 @@ export const AppContent: React.FC = () => {
               setProductToEdit(null);
               setProductFormOpen(true);
             }}
-            onOpenLocationsModule={(sub, prod) => openLocationsWorkspace(sub || 'assign', prod || null)}
+            onOpenLocationsModule={(sub?: LocationSubTab, prod?: Product | null) => openLocationsWorkspace(sub || 'assign', prod || null)}
             onRefresh={fetchInventoryData}
             onBulkWithdrawn={handleBulkWithdrawn}
-            loading={dataLoading}
+            loading={showSkeleton}
             initialSearchTerm={stockSearchFilter}
             onClearInitialSearch={() => setStockSearchFilter('')}
           />
+          </Suspense>
         )}
 
         {/* VISTA 2.B: GESTIÓN DE UBICACIONES (ASIGNAR, CONSULTAR, MOVER, ESTANTES) */}
         {activeTab === 'locations' && (
+          <Suspense fallback={<div className="p-8 text-center text-xs font-mono text-[#616161]">CARGANDO UBICACIONES...</div>}>
           <LocationsPage
             products={products}
             locations={locations}
@@ -362,51 +552,63 @@ export const AppContent: React.FC = () => {
             initialSubTab={locationSubTab}
             initialProduct={locationTargetProduct}
           />
+          </Suspense>
         )}
 
         {/* VISTA 3: TERMINAL DE VENTAS (Solo NEGOCIO) */}
         {activeTab === 'sales' && isBusiness && (
+          <Suspense fallback={<div className="p-8 text-center text-xs font-mono text-[#616161]">CARGANDO PUNTO DE VENTA...</div>}>
           <SalesPage
             products={products}
             onSaleCompleted={fetchInventoryData}
             onNavigateToHistory={() => setActiveTab('sales-history')}
           />
+          </Suspense>
         )}
 
         {/* VISTA 4: HISTORIAL DE TRANSACCIONES (Solo NEGOCIO) */}
         {activeTab === 'sales-history' && isBusiness && (
+          <Suspense fallback={<div className="p-8 text-center text-xs font-mono text-[#616161]">CARGANDO HISTORIAL DE VENTAS...</div>}>
           <SalesHistoryPage
             onNavigateToSales={() => setActiveTab('sales')}
           />
+          </Suspense>
         )}
 
         {/* VISTA 5: REPORTES Y EXPORTACIÓN */}
         {activeTab === 'reports' && (
+          <Suspense fallback={<div className="p-8 text-center text-xs font-mono text-[#616161]">CARGANDO MÓDULO DE REPORTES...</div>}>
           <ReportsPage
             products={products}
             categories={categories}
             subcategories={subcategories}
             locations={locations}
           />
+          </Suspense>
         )}
 
         {/* VISTA 6: ESTADÍSTICAS Y TELEMETRÍA */}
         {activeTab === 'analytics' && (
+          <Suspense fallback={<div className="p-8 text-center text-xs font-mono text-[#616161]">CARGANDO TELEMETRÍA Y ESTADÍSTICAS...</div>}>
           <AnalyticsPage
             products={products}
             categories={categories}
             locations={locations}
           />
+          </Suspense>
         )}
 
         {/* VISTA 7: AJUSTES Y CONFIGURACIÓN */}
         {activeTab === 'settings' && (
+          <Suspense fallback={<div className="p-8 text-center text-xs font-mono text-[#616161]">CARGANDO AJUSTES...</div>}>
           <SettingsPage
             onOpenCategories={() => setCategoriesModalOpen(true)}
             onOpenLocations={() => setLocationsModalOpen(true)}
             onOpenCollaborators={() => setCollaboratorsModalOpen(true)}
             onOpenInventorySelector={() => setInventorySelectorOpen(true)}
+            onRefreshInventoryData={fetchInventoryData}
           />
+          </Suspense>
         )}
       </main>
 
@@ -425,117 +627,157 @@ export const AppContent: React.FC = () => {
          ========================================================= */}
 
       {/* 1. Modal de Creación / Edición de Producto */}
-      <ProductFormModal
-        isOpen={productFormOpen}
-        onClose={() => setProductFormOpen(false)}
-        onSaved={handleProductSaved}
-        productToEdit={productToEdit}
-        categories={categories}
-        subcategories={subcategories}
-        locations={locations}
-        products={products}
-        onRedirectToStock={(prod) => {
-          setProductFormOpen(false);
-          setStockSearchFilter(prod.code);
-          setActiveTab('inventory');
-          setScannedRestockProduct(prod);
-        }}
-      />
+      {productFormOpen && (
+        <Suspense fallback={null}>
+          <ProductFormModal
+            isOpen={productFormOpen}
+            onClose={() => setProductFormOpen(false)}
+            onSaved={handleProductSaved}
+            productToEdit={productToEdit}
+            categories={categories}
+            subcategories={subcategories}
+            locations={locations}
+            products={products}
+            onRedirectToStock={(prod) => {
+              setProductFormOpen(false);
+              setStockSearchFilter(prod.code);
+              setActiveTab('inventory');
+              setScannedRestockProduct(prod);
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* 2. Modal de Detalle de Producto (Ficha Técnica Suiza) */}
-      <ProductDetailModal
-        product={selectedProduct}
-        isOpen={productDetailOpen}
-        onClose={() => setProductDetailOpen(false)}
-        onEdit={(p) => {
-          setProductDetailOpen(false);
-          setProductToEdit(p);
-          setProductFormOpen(true);
-        }}
-        onMove={(p) => {
-          setProductDetailOpen(false);
-          setSelectedProduct(p);
-          setMoveModalOpen(true);
-        }}
-        onAssignLocation={(p) => {
-          setProductDetailOpen(false);
-          openLocationsWorkspace('assign', p);
-        }}
-        onWithdraw={(p) => {
-          setProductDetailOpen(false);
-          setSelectedProduct(p);
-          setWithdrawModalOpen(true);
-        }}
-        locations={locations}
-        allProducts={products}
-        onSelectProduct={(p) => setSelectedProduct(p)}
-        onUpdated={fetchInventoryData}
-      />
+      {productDetailOpen && (
+        <Suspense fallback={null}>
+          <ProductDetailModal
+            product={selectedProduct}
+            isOpen={productDetailOpen}
+            onClose={() => setProductDetailOpen(false)}
+            onEdit={(p) => {
+              setProductDetailOpen(false);
+              setProductToEdit(p);
+              setProductFormOpen(true);
+            }}
+            onMove={(p) => {
+              setProductDetailOpen(false);
+              setSelectedProduct(p);
+              setMoveModalOpen(true);
+            }}
+            onAssignLocation={(p) => {
+              setProductDetailOpen(false);
+              openLocationsWorkspace('assign', p);
+            }}
+            onWithdraw={(p) => {
+              setProductDetailOpen(false);
+              setSelectedProduct(p);
+              setWithdrawModalOpen(true);
+            }}
+            locations={locations}
+            allProducts={products}
+            onSelectProduct={(p) => setSelectedProduct(p)}
+            onUpdated={fetchInventoryData}
+          />
+        </Suspense>
+      )}
 
       {/* 3. Modal de Traslado de Ubicación */}
-      <MoveProductModal
-        product={selectedProduct}
-        isOpen={moveModalOpen}
-        onClose={() => setMoveModalOpen(false)}
-        onMoved={fetchInventoryData}
-        locations={locations}
-      />
+      {moveModalOpen && (
+        <Suspense fallback={null}>
+          <MoveProductModal
+            product={selectedProduct}
+            isOpen={moveModalOpen}
+            onClose={() => setMoveModalOpen(false)}
+            onMoved={fetchInventoryData}
+            locations={locations}
+          />
+        </Suspense>
+      )}
 
       {/* 4. Modal de Retiro / Baja de Stock */}
-      <WithdrawProductModal
-        product={selectedProduct}
-        isOpen={withdrawModalOpen}
-        onClose={() => setWithdrawModalOpen(false)}
-        onWithdrawn={fetchInventoryData}
-      />
+      {withdrawModalOpen && (
+        <Suspense fallback={null}>
+          <WithdrawProductModal
+            product={selectedProduct}
+            isOpen={withdrawModalOpen}
+            onClose={() => setWithdrawModalOpen(false)}
+            onWithdrawn={fetchInventoryData}
+          />
+        </Suspense>
+      )}
 
       {/* 5. Modales de Configuración */}
-      <CategoriesManagementModal
-        isOpen={categoriesModalOpen}
-        onClose={() => setCategoriesModalOpen(false)}
-        categories={categories}
-        subcategories={subcategories}
-        onRefresh={fetchInventoryData}
-      />
+      {categoriesModalOpen && (
+        <Suspense fallback={null}>
+          <CategoriesManagementModal
+            isOpen={categoriesModalOpen}
+            onClose={() => setCategoriesModalOpen(false)}
+            categories={categories}
+            subcategories={subcategories}
+            onRefresh={fetchInventoryData}
+          />
+        </Suspense>
+      )}
 
-      <LocationsManagementModal
-        isOpen={locationsModalOpen}
-        onClose={() => setLocationsModalOpen(false)}
-        locations={locations}
-        onRefresh={fetchInventoryData}
-      />
+      {locationsModalOpen && (
+        <Suspense fallback={null}>
+          <LocationsManagementModal
+            isOpen={locationsModalOpen}
+            onClose={() => setLocationsModalOpen(false)}
+            locations={locations}
+            onRefresh={fetchInventoryData}
+          />
+        </Suspense>
+      )}
 
-      <CollaboratorsModal
-        isOpen={collaboratorsModalOpen}
-        onClose={() => setCollaboratorsModalOpen(false)}
-      />
+      {collaboratorsModalOpen && (
+        <Suspense fallback={null}>
+          <CollaboratorsModal
+            isOpen={collaboratorsModalOpen}
+            onClose={() => setCollaboratorsModalOpen(false)}
+          />
+        </Suspense>
+      )}
 
-      <InventorySelectorModal
-        isOpen={inventorySelectorOpen}
-        onClose={() => setInventorySelectorOpen(false)}
-      />
+      {inventorySelectorOpen && (
+        <Suspense fallback={null}>
+          <InventorySelectorModal
+            isOpen={inventorySelectorOpen}
+            onClose={() => setInventorySelectorOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Escáner Rápido Global */}
-      <BarcodeScannerModal
-        isOpen={quickScanOpen}
-        onClose={() => setQuickScanOpen(false)}
-        onScanSuccess={handleQuickScanSuccess}
-        title="ESCANEAR CÓDIGO // BÚSQUEDA RÁPIDA"
-        instructions="Apunta la cámara al código de barras o QR de cualquier producto o estantería."
-      />
+      {quickScanOpen && (
+        <Suspense fallback={null}>
+          <BarcodeScannerModal
+            isOpen={quickScanOpen}
+            onClose={() => setQuickScanOpen(false)}
+            onScanSuccess={handleQuickScanSuccess}
+            title="ESCANEAR CÓDIGO // BÚSQUEDA RÁPIDA"
+            instructions="Apunta la cámara al código de barras o QR de cualquier producto o estantería."
+          />
+        </Suspense>
+      )}
 
       {/* 3.2: Modal de Reingreso de Stock al escanear código existente */}
-      <RestockProductModal
-        product={scannedRestockProduct}
-        isOpen={Boolean(scannedRestockProduct)}
-        onClose={() => setScannedRestockProduct(null)}
-        onRestocked={fetchInventoryData}
-        onViewDetails={prod => {
-          setScannedRestockProduct(null);
-          setSelectedProduct(prod);
-          setProductDetailOpen(true);
-        }}
-      />
+      {Boolean(scannedRestockProduct) && (
+        <Suspense fallback={null}>
+          <RestockProductModal
+            product={scannedRestockProduct}
+            isOpen={Boolean(scannedRestockProduct)}
+            onClose={() => setScannedRestockProduct(null)}
+            onRestocked={fetchInventoryData}
+            onViewDetails={prod => {
+              setScannedRestockProduct(null);
+              setSelectedProduct(prod);
+              setProductDetailOpen(true);
+            }}
+          />
+        </Suspense>
+      )}
       {/* Notificación Toast Global Flotante (Zero-UI Alterations) */}
       <ToastNotification />
     </div>

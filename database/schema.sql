@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS public.inventories (
     name TEXT NOT NULL,
     description TEXT,
     currency VARCHAR(10) NOT NULL DEFAULT 'PEN',
+    exchange_rate NUMERIC(10, 3) NOT NULL DEFAULT 1.000,
+    exchange_rate_updated_at TIMESTAMPTZ DEFAULT NOW(),
     inventory_type VARCHAR(20) NOT NULL DEFAULT 'BUSINESS' CHECK (inventory_type IN ('PERSONAL', 'BUSINESS')),
     yape_phone TEXT,
     yape_qr_url TEXT,
@@ -181,8 +183,11 @@ CREATE TABLE IF NOT EXISTS public.sales (
     customer_name TEXT,
     customer_contact TEXT,
     notes TEXT,
+    status VARCHAR(20) DEFAULT 'COMPLETED',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'COMPLETED';
 
 -- ==============================================================================
 -- 12. TABLA: sale_items (Detalle de Productos Vendidos)
@@ -484,12 +489,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- Trigger automático al crearse un usuario en Supabase Auth
+-- Trigger automático al crearse un usuario en Supabase Auth (Crea solo el perfil; el inventario se crea en onboarding)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
-DECLARE
-    new_inv_id UUID;
-    cat_gen_id UUID;
 BEGIN
     INSERT INTO public.profiles (id, email, full_name, avatar_url)
     VALUES (
@@ -499,25 +501,6 @@ BEGIN
         NEW.raw_user_meta_data->>'avatar_url'
     )
     ON CONFLICT (id) DO NOTHING;
-
-    INSERT INTO public.inventories (name, description, currency, inventory_type, owner_id)
-    VALUES ('Mi Inventario Principal', 'Inventario generado automáticamente', 'PEN', 'BUSINESS', NEW.id)
-    RETURNING id INTO new_inv_id;
-
-    INSERT INTO public.inventory_users (inventory_id, user_id, role)
-    VALUES (new_inv_id, NEW.id, 'owner')
-    ON CONFLICT (inventory_id, user_id) DO NOTHING;
-
-    INSERT INTO public.locations (inventory_id, name, code, description) VALUES
-        (new_inv_id, 'Almacén Central', 'LOC-ALM-001', 'Área física principal de almacenamiento'),
-        (new_inv_id, 'Estante A', 'LOC-EST-A01', 'Estantería de fácil acceso');
-
-    INSERT INTO public.categories (inventory_id, name, color, description)
-    VALUES (new_inv_id, 'General', '#3B82F6', 'Categoría general')
-    RETURNING id INTO cat_gen_id;
-
-    INSERT INTO public.subcategories (inventory_id, category_id, name)
-    VALUES (new_inv_id, cat_gen_id, 'Suministros');
 
     RETURN NEW;
 END;
@@ -628,6 +611,9 @@ DECLARE
     v_remaining_deduct NUMERIC(12, 4);
     v_effective_seller_id UUID;
     v_effective_seller_email TEXT;
+    v_unit_type VARCHAR(10);
+    v_disp_str TEXT;
+    v_sol_str TEXT;
 BEGIN
     IF NOT public.has_inventory_access(p_inventory_id) THEN
         RAISE EXCEPTION 'No tienes permiso para operar en este inventario.';
@@ -648,7 +634,7 @@ BEGIN
         subtotal NUMERIC(12, 2)
     )
     LOOP
-        SELECT stock, name INTO v_current_stock, v_product_name
+        SELECT stock, name, COALESCE(unit_type, 'UNIT') INTO v_current_stock, v_product_name, v_unit_type
         FROM public.products
         WHERE id = v_item.product_id AND inventory_id = p_inventory_id
         FOR UPDATE;
@@ -658,8 +644,16 @@ BEGIN
         END IF;
 
         IF (v_current_stock + 0.0002) < v_item.quantity THEN
+            IF v_unit_type = 'BOX' THEN
+                v_disp_str := to_char(ROUND(v_current_stock, 2), 'FM999999990.##');
+                v_sol_str := to_char(ROUND(v_item.quantity, 2), 'FM999999990.##');
+            ELSE
+                v_disp_str := ROUND(v_current_stock, 0)::BIGINT::TEXT;
+                v_sol_str := ROUND(v_item.quantity, 0)::BIGINT::TEXT;
+            END IF;
+
             RAISE EXCEPTION 'Stock insuficiente para "%". Disponible: %, Solicitado: %.', 
-                v_product_name, v_current_stock, v_item.quantity;
+                v_product_name, v_disp_str, v_sol_str;
         END IF;
     END LOOP;
 

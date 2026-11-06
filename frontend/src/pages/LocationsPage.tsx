@@ -28,6 +28,7 @@ import {
   formatLocationQuantity
 } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
+import { matchesAnyField, normalizeText } from '../utils/searchUtils';
 import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import { MinimalDropdown } from '../components/ui/MinimalDropdown';
 
@@ -438,7 +439,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
   // Coincidencias en vivo al escribir en el buscador de "Asignar Ubicación" (solo productos con unidades pendientes de asignar)
   const assignSuggestions = useMemo(() => {
-    const term = assignScanCode.trim().toLowerCase();
+    const term = normalizeText(assignScanCode);
     if (!term) return [];
     return products
       .filter(p => {
@@ -446,7 +447,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
         const inBatchQty = batchItems.find(b => b.product.id === p.id)?.quantity || 0;
         const remainingPending = getPendingLocationStock(p) - inBatchQty;
         if (remainingPending <= 0.0001) return false;
-        return p.code.toLowerCase().includes(term) || p.name.toLowerCase().includes(term);
+        return matchesAnyField([p.code, p.name], term);
       })
       .slice(0, 6);
   }, [products, assignScanCode, batchItems]);
@@ -461,26 +462,21 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
   // Coincidencias en vivo al escribir en el buscador de "Consultar Ubicación" (vacío si no se escribe nada)
   const consultSuggestions = useMemo(() => {
-    const term = consultQuery.trim().toLowerCase();
+    const term = normalizeText(consultQuery);
     if (!term) return [];
     return products
-      .filter(
-        p =>
-          p.code.toLowerCase().includes(term) ||
-          p.name.toLowerCase().includes(term) ||
-          (p.description && p.description.toLowerCase().includes(term))
-      )
+      .filter(p => matchesAnyField([p.code, p.name, p.description], term))
       .slice(0, 6);
   }, [products, consultQuery]);
 
   const handleConsultSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const raw = consultQuery.trim().toLowerCase();
+    const raw = normalizeText(consultQuery);
     if (!raw) return;
 
-    // 1. Coincidencia exacta por código o nombre
+    // 1. Coincidencia exacta por código o nombre (insensible a tildes)
     const exact = products.find(
-      p => p.code.toLowerCase() === raw || p.name.toLowerCase() === raw
+      p => normalizeText(p.code) === raw || normalizeText(p.name) === raw
     );
     if (exact) {
       setConsultedProductId(exact.id);
@@ -490,12 +486,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       return;
     }
 
-    // 2. Coincidencia parcial por código o nombre
+    // 2. Coincidencia parcial por código o nombre (RF-SEARCH-016)
     const partialMatches = products.filter(
-      p =>
-        p.code.toLowerCase().includes(raw) ||
-        p.name.toLowerCase().includes(raw) ||
-        (p.description && p.description.toLowerCase().includes(raw))
+      p => matchesAnyField([p.code, p.name, p.description], raw)
     );
 
     if (partialMatches.length > 0) {
@@ -518,16 +511,16 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
     [products, moveProductId]
   );
 
-  // Coincidencias en vivo al escribir en el buscador de "Mover Ubicación" (solo productos con stock ubicado)
+  // Coincidencias en vivo al escribir en el buscador de "Mover Ubicación" (RF-SEARCH-016)
   const moveSuggestions = useMemo(() => {
-    const term = moveScanQuery.trim().toLowerCase();
+    const term = normalizeText(moveScanQuery);
     if (!term) return [];
     return products
       .filter(
         p =>
           p.status === 'ACTIVE' &&
           getAssignedLocationStock(p) > 0.0001 &&
-          (p.code.toLowerCase().includes(term) || p.name.toLowerCase().includes(term))
+          matchesAnyField([p.code, p.name], term)
       )
       .slice(0, 6);
   }, [products, moveScanQuery]);
@@ -583,15 +576,15 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
   const handleMoveScanSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const raw = moveScanQuery.trim().toLowerCase();
+    const raw = normalizeText(moveScanQuery);
     if (!raw) return;
 
     let matched = products.find(
-      p => p.code.toLowerCase() === raw || p.name.toLowerCase() === raw
+      p => normalizeText(p.code) === raw || normalizeText(p.name) === raw
     );
     if (!matched) {
       const partial = products.filter(
-        p => p.code.toLowerCase().includes(raw) || p.name.toLowerCase().includes(raw)
+        p => matchesAnyField([p.code, p.name], raw)
       );
       if (partial.length > 0) matched = partial[0];
     }
@@ -2782,3 +2775,5 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
     </>
   );
 };
+
+export default LocationsPage;

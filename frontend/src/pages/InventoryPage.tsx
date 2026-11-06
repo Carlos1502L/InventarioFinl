@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   GitBranch,
-  PackageMinus
+  PackageMinus,
+  History
 } from 'lucide-react';
 import { Product, Category, Subcategory, Location } from '../types/database';
 import {
@@ -27,8 +28,11 @@ import { useAuth } from '../context/AuthContext';
 import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import { RestockProductModal } from '../components/modals/RestockProductModal';
 import { BulkWithdrawModal } from '../components/modals/BulkWithdrawModal';
+import { ProductAuditModal } from '../components/modals/ProductAuditModal';
 import { MinimalDropdown } from '../components/ui/MinimalDropdown';
+import { ProductTableSkeleton } from '../components/ui/Skeleton';
 import { LocationSubTab } from './LocationsPage';
+import { matchesAnyField, normalizeText } from '../utils/searchUtils';
 
 interface InventoryPageProps {
   products: Product[];
@@ -63,6 +67,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
   // Modal de Salida Masiva (Multi-Withdraw)
   const [bulkWithdrawOpen, setBulkWithdrawOpen] = useState(false);
+  // Modal de Auditoría y Trazabilidad (RF-AUDIT-015)
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
 
   // Filtros y Búsqueda
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '');
@@ -116,15 +122,16 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
     setCurrentPage(1);
   };
 
-  // Filtrado reactivo
+  // Filtrado reactivo (RF-SEARCH-016: Tolerancia estricta a diacríticos y acentos)
   const filteredProducts = useMemo(() => {
+    const normTerm = normalizeText(searchTerm);
     return products.filter((prod) => {
-      const term = searchTerm.toLowerCase().trim();
       const matchSearch =
-        !term ||
-        prod.name.toLowerCase().includes(term) ||
-        prod.code.toLowerCase().includes(term) ||
-        (prod.description && prod.description.toLowerCase().includes(term));
+        !normTerm ||
+        matchesAnyField(
+          [prod.name, prod.code, (prod as any).sku, prod.description],
+          normTerm
+        );
 
       const matchCategory =
         selectedCategory === 'ALL' || prod.category_id === selectedCategory;
@@ -191,6 +198,15 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </h1>
 
             <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setAuditModalOpen(true)}
+                aria-label="Auditoría y Trazabilidad"
+                title="Historial de Auditoría"
+                className="w-10 h-10 rounded-full border border-neutral-700/80 bg-neutral-900/60 hover:bg-neutral-800 text-neutral-200 flex items-center justify-center transition-colors active:scale-95"
+              >
+                <History className="w-4 h-4 stroke-[1.75]" />
+              </button>
               <button
                 type="button"
                 onClick={() => setBulkWithdrawOpen(true)}
@@ -315,7 +331,9 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
           {/* SUB-CAPA 2B: Contenedor de Datos con Scroll Aislado */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 divide-y divide-neutral-100 pb-28">
-            {filteredProducts.length === 0 ? (
+            {loading && products.length === 0 ? (
+              <ProductTableSkeleton />
+            ) : filteredProducts.length === 0 ? (
               <p className="py-12 text-center text-xs text-neutral-400">
                 No se encontraron productos en el catálogo.
               </p>
@@ -414,6 +432,17 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setAuditModalOpen(true)}
+            aria-label="Auditoría y Trazabilidad"
+            title="Historial de Auditoría"
+            className="min-h-[44px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm"
+          >
+            <History className="w-4 h-4 stroke-[1.5]" />
+            <span className="hidden sm:inline">AUDITORÍA</span>
+          </button>
+
           <button
             onClick={onRefresh}
             className="min-h-[44px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-colors active:bg-[#F8F9FA] shadow-sm"
@@ -671,7 +700,9 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
       {/* =========================================================
           3. PRODUCT MATRIX // LIST (EDITORIAL GALLERY)
          ========================================================= */}
-      {filteredProducts.length === 0 ? (
+      {loading && products.length === 0 ? (
+        <ProductTableSkeleton />
+      ) : filteredProducts.length === 0 ? (
         <div className="border border-[#E5E7EB] bg-white rounded-2xl p-12 text-center space-y-4 shadow-sm">
           <div className="w-12 h-12 border border-[#E5E7EB] rounded-full mx-auto flex items-center justify-center">
             <Package className="w-6 h-6 stroke-[1.2] text-[#616161]" />
@@ -999,6 +1030,15 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
           }
         }}
       />
+
+      {/* Modal de Auditoría Rápida & Kardex Centralizado (RF-AUDIT-015) */}
+      <ProductAuditModal
+        isOpen={auditModalOpen}
+        onClose={() => setAuditModalOpen(false)}
+        products={products}
+      />
     </>
   );
 };
+
+export default InventoryPage;

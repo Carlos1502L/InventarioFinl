@@ -27,6 +27,7 @@ import {
 } from '../../services/offlineSync';
 import { showAppToast } from '../ui/ToastNotification';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
+import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
 
 export interface BulkWithdrawalSelectedItem {
   product: Product;
@@ -67,16 +68,14 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Filtrado reactivo de búsqueda en catálogo
+  // Filtrado reactivo de búsqueda en catálogo (RF-SEARCH-016: Tolerancia a acentos)
   const searchResults = useMemo(() => {
-    if (!searchTerm.trim()) return [];
-    const term = searchTerm.trim().toLowerCase();
+    const norm = normalizeText(searchTerm);
+    if (!norm) return [];
     return products
       .filter(p =>
         p.status === 'ACTIVE' &&
-        (p.name.toLowerCase().includes(term) ||
-          p.code.toLowerCase().includes(term) ||
-          (p.description && p.description.toLowerCase().includes(term)))
+        matchesAnyField([p.name, p.code, (p as any).sku, p.description], norm)
       )
       .slice(0, 8);
   }, [searchTerm, products]);

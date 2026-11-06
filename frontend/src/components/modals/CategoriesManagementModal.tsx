@@ -1,8 +1,19 @@
-import React, { useState } from 'react';
-import { X, Tag, Plus, Trash2, Layers, FolderPlus, Loader2 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import {
+  X,
+  Tag,
+  Plus,
+  Trash2,
+  Layers,
+  FolderPlus,
+  Loader2,
+  Search,
+  Filter
+} from 'lucide-react';
 import { Category, Subcategory } from '../../types/database';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
 import { MinimalDropdown } from '../ui/MinimalDropdown';
 
 interface CategoriesManagementModalProps {
@@ -26,7 +37,17 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
   onRefresh
 }) => {
   const { currentInventory } = useAuth();
-  const [activeTab, setActiveTab] = useState<'categories' | 'subcategories'>('categories');
+
+  // Pestaña Principal (RF-UI-CAT-011): 'create' | 'existing'
+  const [mainTab, setMainTab] = useState<'create' | 'existing'>('create');
+
+  // Sub-selector dentro de 'Crear': registrar categoría o subcategoría
+  const [createType, setCreateType] = useState<'category' | 'subcategory'>('category');
+
+  // Filtros y buscador dentro de 'Existentes'
+  const [filterType, setFilterType] = useState<'all' | 'categories' | 'subcategories'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [parentCategoryFilter, setParentCategoryFilter] = useState<string>('all');
 
   // Formulario Categoría
   const [catName, setCatName] = useState('');
@@ -42,6 +63,8 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const totalCount = categories.length + subcategories.length;
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +86,8 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
       setCatName('');
       setCatDesc('');
       onRefresh();
+      setMainTab('existing');
+      setFilterType('categories');
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al crear la categoría.');
     } finally {
@@ -90,6 +115,8 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
       setSubName('');
       setSubDesc('');
       onRefresh();
+      setMainTab('existing');
+      setFilterType('subcategories');
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al crear la subcategoría.');
     } finally {
@@ -119,272 +146,473 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
     }
   };
 
+  // Filtrado reactivo en tiempo real para la pestaña 'Existentes' (RF-SEARCH-016: Tolerancia a acentos)
+  const filteredCategories = useMemo(() => {
+    if (filterType === 'subcategories') return [];
+    const norm = normalizeText(searchQuery);
+    return categories.filter((c) => {
+      return !norm || matchesAnyField([c.name, c.description], norm);
+    });
+  }, [categories, filterType, searchQuery]);
+
+  const filteredSubcategories = useMemo(() => {
+    if (filterType === 'categories') return [];
+    const norm = normalizeText(searchQuery);
+    return subcategories.filter((s) => {
+      const matchesSearch = !norm || matchesAnyField([s.name, s.description], norm);
+      const matchesParent =
+        parentCategoryFilter === 'all' || s.category_id === parentCategoryFilter;
+      return matchesSearch && matchesParent;
+    });
+  }, [subcategories, filterType, searchQuery, parentCategoryFilter]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
-        {/* Cabecera */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff]">
+      <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl max-h-[85dvh] overflow-hidden shadow-2xl flex flex-col font-sans">
+        
+        {/* Cabecera Principal */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center shrink-0">
               <Tag className="w-5 h-5 text-[#1E3A5F]" />
             </div>
             <div>
-              <h3 className="font-bold text-[#1E3A5F] text-base uppercase tracking-tight">Categorías y Subcategorías</h3>
-              <p className="text-[11px] text-[#616161]">Estructura de clasificación de productos</p>
+              <h3 className="font-bold text-[#1E3A5F] text-base uppercase tracking-tight">
+                Categorías y Subcategorías
+              </h3>
+              <p className="text-[11px] text-[#616161]">
+                Estructura taxonómica del catálogo de productos
+              </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Pestañas */}
-        <div className="mobile-tabs-bar flex border-b border-[#E5E7EB] bg-[#F8F9FA]">
+        {/* Barra de Pestañas Tipo Píldora (RF-UI-CAT-011 & RF-UI-TABS-008) */}
+        <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#E5E7EB] bg-white shrink-0 overflow-x-auto">
           <button
-            onClick={() => setActiveTab('categories')}
-            className={`flex-1 py-3 text-xs uppercase tracking-wider font-mono flex items-center justify-center gap-2 border-b-2 transition-all ${
-              activeTab === 'categories'
-                ? 'border-[#1E3A5F] text-[#1E3A5F] bg-white font-medium mobile-tab-active'
-                : 'border-transparent text-[#616161] hover:text-[#1E3A5F]'
+            type="button"
+            onClick={() => setMainTab('create')}
+            className={`inline-flex items-center justify-center gap-1.5 px-4 py-2 min-h-[38px] rounded-full text-xs font-medium transition-all duration-200 active:scale-95 cursor-pointer whitespace-nowrap ${
+              mainTab === 'create'
+                ? 'mobile-tab-active bg-black text-white dark:bg-white dark:text-black shadow-xs'
+                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200/70 dark:hover:bg-zinc-700'
             }`}
           >
-            <Tag className="w-3.5 h-3.5" /> Categorías ({categories.length})
+            <Plus className="w-3.5 h-3.5" />
+            <span>Crear</span>
           </button>
+
           <button
-            onClick={() => setActiveTab('subcategories')}
-            className={`flex-1 py-3 text-xs uppercase tracking-wider font-mono flex items-center justify-center gap-2 border-b-2 transition-all ${
-              activeTab === 'subcategories'
-                ? 'border-[#1E3A5F] text-[#1E3A5F] bg-white font-medium mobile-tab-active'
-                : 'border-transparent text-[#616161] hover:text-[#1E3A5F]'
+            type="button"
+            onClick={() => setMainTab('existing')}
+            className={`inline-flex items-center justify-center gap-2 px-4 py-2 min-h-[38px] rounded-full text-xs font-medium transition-all duration-200 active:scale-95 cursor-pointer whitespace-nowrap ${
+              mainTab === 'existing'
+                ? 'mobile-tab-active bg-black text-white dark:bg-white dark:text-black shadow-xs'
+                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200/70 dark:hover:bg-zinc-700'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" /> Subcategorías ({subcategories.length})
+            <span>Existentes</span>
+            <span
+              className={`text-[10px] font-mono font-semibold rounded-full px-2 py-0.5 transition-colors duration-200 ${
+                mainTab === 'existing'
+                  ? 'bg-zinc-800 text-zinc-200 dark:bg-zinc-200 dark:text-zinc-800'
+                  : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300'
+              }`}
+            >
+              {totalCount}
+            </span>
           </button>
         </div>
 
-        {/* Contenido con scroll */}
-        <div className="p-6 overflow-y-auto space-y-6 font-mono">
-          {errorMsg && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
-              {errorMsg}
+        {/* Mensaje de Error Global */}
+        {errorMsg && (
+          <div className="mx-6 mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
+            {errorMsg}
+          </div>
+        )}
+
+        {/* Contenido según Pestaña */}
+        <div className="p-6 overflow-y-auto space-y-4">
+          
+          {/* =========================================================
+              VISTA 1: CREAR (Formulario Único sin Scroll Excesivo)
+             ========================================================= */}
+          {mainTab === 'create' && (
+            <div className="space-y-4 animate-in fade-in">
+              {/* Selector de Tipo a Crear: Categoría vs Subcategoría */}
+              <div className="flex items-center gap-2 p-1 bg-zinc-100 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setCreateType('category')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    createType === 'category'
+                      ? 'bg-white text-[#1E3A5F] shadow-xs'
+                      : 'text-zinc-500 hover:text-zinc-900'
+                  }`}
+                >
+                  <FolderPlus className="w-3.5 h-3.5 text-[#E8B4A0]" />
+                  <span>Nueva Categoría</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreateType('subcategory')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    createType === 'subcategory'
+                      ? 'bg-white text-[#1E3A5F] shadow-xs'
+                      : 'text-zinc-500 hover:text-zinc-900'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5 text-[#E8B4A0]" />
+                  <span>Nueva Subcategoría</span>
+                </button>
+              </div>
+
+              {/* Formulario 1A: Categoría */}
+              {createType === 'category' ? (
+                <form onSubmit={handleCreateCategory} className="p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                        Nombre de Categoría <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={catName}
+                        onChange={(e) => setCatName(e.target.value)}
+                        placeholder="Ej. Bebidas, Ferretería, Lácteos..."
+                        required
+                        className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                        Color de Etiqueta
+                      </label>
+                      <div className="flex items-center gap-2 pt-1 flex-wrap">
+                        {PRESET_COLORS.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => setCatColor(c)}
+                            style={{ backgroundColor: c }}
+                            className={`w-6 h-6 rounded-full transition-all cursor-pointer ${
+                              catColor === c
+                                ? 'ring-2 ring-[#1E3A5F] scale-110 shadow-xs'
+                                : 'opacity-70 hover:opacity-100'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                      Descripción (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={catDesc}
+                      onChange={(e) => setCatDesc(e.target.value)}
+                      placeholder="Breve descripción o notas de la familia de productos..."
+                      className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !catName.trim()}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8B4A0]" />
+                      ) : (
+                        <Plus className="w-3.5 h-3.5" />
+                      )}
+                      <span>Crear Categoría</span>
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* Formulario 1B: Subcategoría */
+                <form onSubmit={handleCreateSubcategory} className="p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                        Categoría Padre <span className="text-rose-500">*</span>
+                      </label>
+                      <MinimalDropdown
+                        value={selectedCatId}
+                        onChange={(val) => setSelectedCatId(val)}
+                        placeholder="Selecciona una categoría..."
+                        options={[
+                          { value: '', label: 'Selecciona una categoría...' },
+                          ...categories.map((c) => ({
+                            value: c.id,
+                            label: c.name
+                          }))
+                        ]}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                        Nombre de Subcategoría <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={subName}
+                        onChange={(e) => setSubName(e.target.value)}
+                        placeholder="Ej. Gaseosas, Jugos, Herramientas manuales..."
+                        required
+                        className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                      Descripción (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={subDesc}
+                      onChange={(e) => setSubDesc(e.target.value)}
+                      placeholder="Detalles sobre los artículos de esta subclasificación..."
+                      className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !selectedCatId || !subName.trim()}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8B4A0]" />
+                      ) : (
+                        <Plus className="w-3.5 h-3.5" />
+                      )}
+                      <span>Crear Subcategoría</span>
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           )}
 
-          {activeTab === 'categories' ? (
-            <>
-              {/* Formulario Nueva Categoría */}
-              <form onSubmit={handleCreateCategory} className="mobile-flat-section p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
-                  <FolderPlus className="w-4 h-4 text-blue-500 dark:text-blue-400" /> Nueva Categoría
-                </span>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] text-slate-600 dark:text-slate-400 mb-1">Nombre</label>
-                    <input
-                      type="text"
-                      value={catName}
-                      onChange={e => setCatName(e.target.value)}
-                      placeholder="Ej: Materiales Eléctricos"
-                      required
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] text-slate-600 dark:text-slate-400 mb-1">Color de Etiqueta</label>
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      {PRESET_COLORS.map(c => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => setCatColor(c)}
-                          style={{ backgroundColor: c }}
-                          className={`w-6 h-6 rounded-full transition-all ${
-                            catColor === c ? 'ring-2 ring-slate-800 dark:ring-white scale-110 shadow-sm' : 'opacity-70 hover:opacity-100'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] text-slate-600 dark:text-slate-400 mb-1">Descripción (Opcional)</label>
-                  <input
-                    type="text"
-                    value={catDesc}
-                    onChange={e => setCatDesc(e.target.value)}
-                    placeholder="Breve descripción o notas..."
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="flex justify-end pt-1">
+          {/* =========================================================
+              VISTA 2: EXISTENTES (Filtros Chips, Buscador y Lista Bounded)
+             ========================================================= */}
+          {mainTab === 'existing' && (
+            <div className="space-y-3.5 animate-in fade-in">
+              
+              {/* Buscador Rápido Integrado */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar por nombre o descripción..."
+                  className="w-full h-10 pl-9 pr-8 bg-zinc-100 rounded-xl text-xs text-[#1E3A5F] placeholder:text-zinc-400 focus:bg-white focus:ring-1 focus:ring-[#1E3A5F] focus:outline-none transition-all box-border"
+                />
+                <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-3 pointer-events-none" />
+                {searchQuery && (
                   <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow transition-all active:scale-95 disabled:opacity-50"
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-2.5 text-zinc-400 hover:text-zinc-600 p-0.5 cursor-pointer"
                   >
-                    {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                    Crear Categoría
+                    <X className="w-3.5 h-3.5" />
                   </button>
-                </div>
-              </form>
-
-              {/* Lista de Categorías Existentes */}
-              <div className="space-y-2">
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 block">Categorías Creadas</span>
-                {categories.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-4">No hay categorías aún. Crea la primera arriba.</p>
-                ) : (
-                  categories.map(cat => (
-                    <div
-                      key={cat.id}
-                      className="mobile-flat-row p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="w-3.5 h-3.5 rounded-full ring-2 ring-white dark:ring-slate-900"
-                          style={{ backgroundColor: cat.color || '#3B82F6' }}
-                        />
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-white">{cat.name}</h4>
-                          {cat.description && (
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400">{cat.description}</p>
-                          )}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => handleDeleteCategory(cat.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition-colors"
-                        title="Eliminar categoría"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))
                 )}
               </div>
-            </>
-          ) : (
-            <>
-              {/* Formulario Nueva Subcategoría */}
-              <form onSubmit={handleCreateSubcategory} className="mobile-flat-section p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
-                  <Plus className="w-4 h-4 text-blue-500 dark:text-blue-400" /> Nueva Subcategoría
-                </span>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] text-slate-600 dark:text-slate-400 mb-1">Categoría Padre <span className="text-blue-500">*</span></label>
+              {/* Filtro de Visualización Secundario Tipo Chip/Píldora */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                <button
+                  type="button"
+                  onClick={() => setFilterType('all')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+                    filterType === 'all'
+                      ? 'bg-[#1E3A5F] text-white shadow-2xs'
+                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200/70'
+                  }`}
+                >
+                  Todas ({totalCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterType('categories')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+                    filterType === 'categories'
+                      ? 'bg-[#1E3A5F] text-white shadow-2xs'
+                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200/70'
+                  }`}
+                >
+                  Solo Categorías ({categories.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterType('subcategories')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+                    filterType === 'subcategories'
+                      ? 'bg-[#1E3A5F] text-white shadow-2xs'
+                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200/70'
+                  }`}
+                >
+                  Solo Subcategorías ({subcategories.length})
+                </button>
+              </div>
+
+              {/* Filtro adicional por Categoría Padre si está en subcategorías */}
+              {filterType === 'subcategories' && categories.length > 0 && (
+                <div className="flex items-center gap-2 pt-0.5">
+                  <Filter className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                  <div className="flex-1">
                     <MinimalDropdown
-                      value={selectedCatId}
-                      onChange={(val) => setSelectedCatId(val)}
-                      placeholder="Selecciona una categoría..."
+                      value={parentCategoryFilter}
+                      onChange={(val) => setParentCategoryFilter(val)}
                       options={[
-                        { value: '', label: 'Selecciona una categoría...' },
+                        { value: 'all', label: 'Todas las categorías padre' },
                         ...categories.map((c) => ({
                           value: c.id,
-                          label: c.name
+                          label: `Filtrar por: ${c.name}`
                         }))
                       ]}
                     />
-                    {false && (
-                    <select
-                      value={selectedCatId}
-                      onChange={e => setSelectedCatId(e.target.value)}
-                      required
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  </div>
+                </div>
+              )}
+
+              {/* Contenedor Scrolleable Independiente (Evita Scroll Infinito) */}
+              <div className="max-h-[360px] overflow-y-auto overscroll-contain space-y-2.5 border border-[#E5E7EB] rounded-2xl bg-[#F8F9FA]/40 p-3">
+                {filteredCategories.length === 0 && filteredSubcategories.length === 0 ? (
+                  <div className="text-center py-10 text-xs text-[#616161] space-y-2">
+                    <p>No se encontraron resultados para la consulta actual.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setFilterType('all');
+                        setParentCategoryFilter('all');
+                      }}
+                      className="text-xs text-[#1E3A5F] underline font-semibold cursor-pointer"
                     >
-                      <option value="">Selecciona una categoría...</option>
-                      {categories.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                    )}
+                      Restablecer filtros
+                    </button>
                   </div>
-
-                  <div>
-                    <label className="block text-[11px] text-slate-600 dark:text-slate-400 mb-1">Nombre Subcategoría</label>
-                    <input
-                      type="text"
-                      value={subName}
-                      onChange={e => setSubName(e.target.value)}
-                      placeholder="Ej: Cables, Interruptores..."
-                      required
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] text-slate-600 dark:text-slate-400 mb-1">Descripción (Opcional)</label>
-                  <input
-                    type="text"
-                    value={subDesc}
-                    onChange={e => setSubDesc(e.target.value)}
-                    placeholder="Detalles..."
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="flex justify-end pt-1">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !selectedCatId}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                    Crear Subcategoría
-                  </button>
-                </div>
-              </form>
-
-              {/* Lista de Subcategorías */}
-              <div className="space-y-2">
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 block">Subcategorías Existentes</span>
-                {subcategories.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-4">No hay subcategorías registradas.</p>
                 ) : (
-                  subcategories.map(sub => {
-                    const parentCat = categories.find(c => c.id === sub.category_id);
-                    return (
-                      <div
-                        key={sub.id}
-                        className="mobile-flat-row p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-xs font-bold text-slate-900 dark:text-white">{sub.name}</h4>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                              {parentCat?.name || 'Categoría'}
-                            </span>
-                          </div>
-                          {sub.description && (
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{sub.description}</p>
-                          )}
-                        </div>
+                  <>
+                    {/* Sección Categorías */}
+                    {filteredCategories.length > 0 && (
+                      <div className="space-y-1.5">
+                        {filterType === 'all' && (
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block px-1">
+                            Categorías ({filteredCategories.length})
+                          </span>
+                        )}
+                        {filteredCategories.map((cat) => {
+                          const catSubCount = subcategories.filter(s => s.category_id === cat.id).length;
+                          return (
+                            <div
+                              key={cat.id}
+                              className="p-3 bg-white rounded-xl border border-[#E5E7EB] flex items-center justify-between group hover:border-[#1E3A5F]/40 transition-colors shadow-2xs"
+                            >
+                              <div className="flex items-center gap-3 min-w-0 pr-2">
+                                <span
+                                  className="w-3.5 h-3.5 rounded-full ring-2 ring-white shrink-0 shadow-2xs"
+                                  style={{ backgroundColor: cat.color || '#3B82F6' }}
+                                />
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="text-xs font-bold text-[#1E3A5F] truncate">
+                                      {cat.name}
+                                    </h4>
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 font-mono font-medium">
+                                      {catSubCount} {catSubCount === 1 ? 'subcat.' : 'subcats.'}
+                                    </span>
+                                  </div>
+                                  {cat.description && (
+                                    <p className="text-[11px] text-[#616161] truncate mt-0.5">
+                                      {cat.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
 
-                        <button
-                          onClick={() => handleDeleteSubcategory(sub.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition-colors"
-                          title="Eliminar subcategoría"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCategory(cat.id)}
+                                className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer shrink-0"
+                                title="Eliminar categoría"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })
+                    )}
+
+                    {/* Sección Subcategorías */}
+                    {filteredSubcategories.length > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        {filterType === 'all' && (
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block px-1">
+                            Subcategorías ({filteredSubcategories.length})
+                          </span>
+                        )}
+                        {filteredSubcategories.map((sub) => {
+                          const parentCat = categories.find((c) => c.id === sub.category_id);
+                          return (
+                            <div
+                              key={sub.id}
+                              className="p-3 bg-white rounded-xl border border-[#E5E7EB] flex items-center justify-between group hover:border-[#1E3A5F]/40 transition-colors shadow-2xs"
+                            >
+                              <div className="min-w-0 pr-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="text-xs font-bold text-[#1E3A5F] truncate">
+                                    {sub.name}
+                                  </h4>
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] font-semibold">
+                                    {parentCat?.name || 'Categoría'}
+                                  </span>
+                                </div>
+                                {sub.description && (
+                                  <p className="text-[11px] text-[#616161] truncate mt-0.5">
+                                    {sub.description}
+                                  </p>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSubcategory(sub.id)}
+                                className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer shrink-0"
+                                title="Eliminar subcategoría"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>

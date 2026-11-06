@@ -29,6 +29,7 @@ import {
   getBoxBreakdown
 } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
+import { matchesAnyField, normalizeText } from '../utils/searchUtils';
 import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import { SuccessCheckModal } from '../components/modals/SuccessCheckModal';
 import { saveSaleLocally, isNetworkOrOfflineError, QueuedSalePayload } from '../services/offlineSync';
@@ -97,13 +98,13 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
   const [qrModalType, setQrModalType] = useState<'YAPE' | 'PLIN' | null>(null);
   const [copiedText, setCopiedText] = useState(false);
 
-  // Búsqueda de Productos para el Carrito
+  // Búsqueda de Productos para el Carrito (RF-SEARCH-016: Tolerancia a acentos)
   const searchResults = useMemo(() => {
-    if (!searchTerm.trim()) return [];
-    const term = searchTerm.toLowerCase().trim();
+    const normTerm = normalizeText(searchTerm);
+    if (!normTerm) return [];
     return products
       .filter(p => (p.status === 'ACTIVE' || !p.status) && Number(p.stock) > 0)
-      .filter(p => p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term))
+      .filter(p => matchesAnyField([p.name, p.code, (p as any).sku], normTerm))
       .slice(0, 6);
   }, [products, searchTerm]);
 
@@ -1878,3 +1879,5 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
     </>
   );
 };
+
+export default SalesPage;

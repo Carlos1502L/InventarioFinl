@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, ArrowRight, Loader2, CheckCircle2, ShieldCheck, Sparkles, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { MobileAuthScreen } from '../components/auth/MobileAuthScreen';
 
 export const AuthPage: React.FC = () => {
   const { signIn, signUp } = useAuth();
-  const [isRegister, setIsRegister] = useState(false);
+  const [isRegister, setIsRegister] = useState(() =>
+    typeof window !== 'undefined' && window.location.pathname === '/register'
+  );
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -29,6 +33,11 @@ export const AuthPage: React.FC = () => {
 
     if (asRegister && !fullName.trim()) {
       setErrorMsg('Por favor introduce tu nombre completo.');
+      return;
+    }
+
+    if (asRegister && !termsAccepted) {
+      setErrorMsg('Debes aceptar los Términos de Servicio y la Política de Privacidad para registrarte.');
       return;
     }
 
@@ -57,9 +66,16 @@ export const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-[#F8F9FA] flex flex-col items-center justify-center p-4 sm:p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] overflow-y-auto overscroll-y-contain selection:bg-[#1E3A5F] selection:text-white">
-      {/* Split-Card Container con Altura Fija y Consistente en Ambos Modos */}
-      <div className="w-full max-w-md md:max-w-4xl bg-white border border-[#E5E7EB] rounded-2xl shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-[620px] my-auto">
+    <main id="main-content" className="w-full min-h-[100dvh]">
+      {/* Vista Móvil: Splash cinético con fusión tipográfica e implosión/explosión al login */}
+      <div className="block md:hidden w-full min-h-[100dvh]">
+        <MobileAuthScreen />
+      </div>
+
+      {/* Vista Desktop: Split-Card Editorial */}
+      <div className="hidden md:flex min-h-[100dvh] w-full bg-[#F8F9FA] flex-col items-center justify-center p-4 sm:p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] overflow-y-auto overscroll-y-contain selection:bg-[#1E3A5F] selection:text-white">
+        {/* Split-Card Container con Altura Fija y Consistente en Ambos Modos */}
+        <div className="w-full max-w-4xl bg-white border border-[#E5E7EB] rounded-2xl shadow-sm overflow-hidden grid grid-cols-2 min-h-[620px] my-auto">
         
         {/* =========================================================
             PANEL IZQUIERDO: MARCA & EDITORIAL (AZUL MARINO #1E3A5F)
@@ -140,7 +156,7 @@ export const AuthPage: React.FC = () => {
                   setSuccessMsg(null);
                 }}
                 className={`py-2 rounded-full transition-colors duration-200 text-center ${
-                  !isRegister ? 'text-white' : 'text-[#616161] hover:text-[#1E3A5F]'
+                  !isRegister ? 'text-white' : 'text-neutral-700 hover:text-[#1E3A5F] font-bold'
                 }`}
               >
                 INICIAR SESIÓN
@@ -153,7 +169,7 @@ export const AuthPage: React.FC = () => {
                   setSuccessMsg(null);
                 }}
                 className={`py-2 rounded-full transition-colors duration-200 text-center ${
-                  isRegister ? 'text-white' : 'text-[#616161] hover:text-[#1E3A5F]'
+                  isRegister ? 'text-white' : 'text-neutral-700 hover:text-[#1E3A5F] font-bold'
                 }`}
               >
                 REGISTRARME
@@ -369,18 +385,43 @@ export const AuthPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Opciones */}
-                  <div className="flex items-center justify-between pt-0.5">
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                  {/* Opciones y Checkbox de Términos (RF-LEGAL-001) */}
+                  <div className="pt-1">
+                    <label className="flex items-start gap-2.5 cursor-pointer select-none">
                       <div
-                        onClick={() => setRememberMe(!rememberMe)}
-                        className={`w-4 h-4 rounded border transition-colors flex items-center justify-center ${
-                          rememberMe ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white' : 'border-[#E5E7EB] bg-white'
+                        onClick={() => setTermsAccepted(!termsAccepted)}
+                        className={`w-4 h-4 mt-0.5 rounded border transition-colors flex items-center justify-center shrink-0 ${
+                          termsAccepted ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white' : 'border-[#CBD5E1] bg-white'
                         }`}
                       >
-                        {rememberMe && <Check className="w-3 h-3 stroke-[2.5]" />}
+                        {termsAccepted && <Check className="w-3 h-3 stroke-[2.5]" />}
                       </div>
-                      <span className="text-xs text-[#616161] font-light">Acepto condiciones de uso del sistema</span>
+                      <span className="text-xs text-[#616161] leading-tight font-light">
+                        He leído y acepto los{' '}
+                        <a
+                          href="/terms"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            window.history.pushState({}, '', '/terms');
+                            window.dispatchEvent(new PopStateEvent('popstate'));
+                          }}
+                          className="text-[#1E3A5F] font-semibold underline underline-offset-2 hover:text-[#172E4C]"
+                        >
+                          Términos de Servicio
+                        </a>{' '}
+                        y la{' '}
+                        <a
+                          href="/privacy"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            window.history.pushState({}, '', '/privacy');
+                            window.dispatchEvent(new PopStateEvent('popstate'));
+                          }}
+                          className="text-[#1E3A5F] font-semibold underline underline-offset-2 hover:text-[#172E4C]"
+                        >
+                          Política de Privacidad
+                        </a>.
+                      </span>
                     </label>
                   </div>
                 </div>
@@ -389,7 +430,7 @@ export const AuthPage: React.FC = () => {
                 <div className="flex-shrink-0 pt-2">
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !termsAccepted}
                     tabIndex={isRegister ? 0 : -1}
                     className="w-full min-h-[44px] py-3 bg-[#1E3A5F] hover:bg-[#172E4C] text-white text-xs font-mono font-bold uppercase tracking-wider rounded-full transition-all active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
                   >
@@ -413,6 +454,9 @@ export const AuthPage: React.FC = () => {
         </div>
       </div>
     </div>
+  </main>
   );
 };
 
+
+export default AuthPage;

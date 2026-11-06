@@ -3,12 +3,9 @@ import {
   X,
   MapPin,
   Package,
-  Clock,
-  User,
   ArrowRightLeft,
   Archive,
   Edit,
-  History,
   AlertCircle,
   ChevronLeft,
   ChevronRight,
@@ -18,11 +15,10 @@ import {
   Plus,
   Layers
 } from 'lucide-react';
-import { Product, AuditLog, Location } from '../../types/database';
+import { Product, Location } from '../../types/database';
 import {
   supabase,
   formatCurrency,
-  formatDate,
   logAuditAction,
   formatStockDisplay,
   getBoxBreakdown,
@@ -61,27 +57,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 }) => {
   const { currentInventory, user } = useAuth();
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [loadingAudit, setLoadingAudit] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
   const [restockModalOpen, setRestockModalOpen] = useState(false);
 
   useEffect(() => {
     if (product && isOpen) {
       setActivePhotoIdx(0);
-      setLoadingAudit(true);
-      supabase
-        .from('audit_logs')
-        .select('*')
-        .eq('product_id', product.id)
-        .order('created_at', { ascending: false })
-        .limit(20)
-        .then(({ data, error }) => {
-          if (!error && data) {
-            setAuditLogs(data);
-          }
-          setLoadingAudit(false);
-        });
     }
   }, [product, isOpen]);
 
@@ -545,58 +526,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
               </div>
             )}
-
-            {/* =========================================================
-                TRAZABILIDAD // AUDIT LOG SHEET
-               ========================================================= */}
-            <div className="border border-[#E5E7EB] rounded-2xl p-4 sm:p-5 space-y-3 bg-[#ffffff] shadow-sm">
-              <div className="flex items-center justify-between font-mono">
-                <div className="flex items-center gap-2">
-                  <History className="w-4 h-4 text-[#1E3A5F]" />
-                  <h4 className="text-xs uppercase tracking-wider text-[#1E3A5F] font-medium">
-                    MANIFIESTO DE TRAZABILIDAD & AUDITORÍA
-                  </h4>
-                </div>
-                <span className="text-[10px] text-[#616161] uppercase">{auditLogs.length} REGISTROS</span>
-              </div>
-
-              {/* Metadato de Última Modificación */}
-              <div className="p-3 border border-[#E5E7EB] rounded-xl bg-[#F8F9FA] flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs font-mono">
-                <div className="flex items-center gap-2 text-[#1E3A5F]">
-                  <User className="w-3.5 h-3.5 text-[#1E3A5F]" />
-                  <span>ÚLTIMA MODIFICACIÓN: {product.last_modified_by_email || 'SISTEMA'}</span>
-                </div>
-                <span className="text-[10px] text-[#616161] flex items-center gap-1 uppercase">
-                  <Clock className="w-3 h-3" /> {formatDate(product.updated_at)}
-                </span>
-              </div>
-
-              {/* Historial en Lista */}
-              <div className="space-y-2 max-h-48 overflow-y-auto divide-y divide-[#E5E7EB] border border-[#E5E7EB] rounded-xl bg-white font-mono text-xs">
-                {loadingAudit ? (
-                  <div className="text-center py-6 text-xs text-[#616161] uppercase">
-                    CARGANDO HISTORIAL TÉCNICO...
-                  </div>
-                ) : auditLogs.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-[#616161] uppercase">
-                    SIN EVENTOS REGISTRADOS EN AUDITORÍA
-                  </div>
-                ) : (
-                  auditLogs.map(log => (
-                    <div key={log.id} className="p-3 hover:bg-[#F8F9FA] transition-colors space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-[#1E3A5F] uppercase tracking-wider text-[11px]">
-                          [{log.action_type}]
-                        </span>
-                        <span className="text-[10px] text-[#616161]">{formatDate(log.created_at)}</span>
-                      </div>
-                      <p className="text-[#1E3A5F] text-[11px] uppercase">{log.details}</p>
-                      <div className="text-[10px] text-[#616161] uppercase">USUARIO: {log.user_email}</div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </div>

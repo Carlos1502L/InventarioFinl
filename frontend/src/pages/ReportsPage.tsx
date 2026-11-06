@@ -13,7 +13,6 @@ import { Product, Category, Subcategory, Location } from '../types/database';
 import { formatCurrency } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { MinimalDropdown } from '../components/ui/MinimalDropdown';
-import jsPDF from 'jspdf';
 
 interface ReportsPageProps {
   products: Product[];
@@ -98,6 +97,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
     try {
       setIsExportingPDF(true);
 
+      const { default: jsPDF } = await import('jspdf');
       const doc = new jsPDF();
       const inventoryTitle = currentInventory.name || 'Reporte de Inventario';
       const currency = currentInventory.currency || 'USD';
@@ -507,3 +507,5 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
     </div>
   );
 };
+
+export default ReportsPage;
