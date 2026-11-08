@@ -863,9 +863,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
                   {/* Campos Dinámicos según Selección: Unidad vs Caja */}
                   {unitType === 'UNIT' ? (
-                    <div className="pt-2 border-t border-[#E5E7EB] grid grid-cols-1 sm:grid-cols-2 gap-3 animate-in fade-in">
+                    <div className="pt-2 border-t border-[#E5E7EB] grid grid-cols-2 gap-3 animate-in fade-in">
                       <div>
-                        <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
+                        <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1 leading-snug">
                           {productToEdit ? 'Stock Actual (Unidades)' : 'Stock Inicial (Unidades)'} <span className="text-[#E8B4A0]">*</span>
                         </label>
                         <input
@@ -875,12 +875,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           value={stock}
                           onChange={e => setStock(e.target.value)}
                           required
-                          className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                          className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-3 sm:px-4 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
+                        <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1 leading-snug">
                           Stock Mínimo (Alerta en und)
                         </label>
                         <input
@@ -891,19 +891,19 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           onChange={e => setMinStock(e.target.value)}
                           required
                           placeholder="1"
-                          className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                          className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-3 sm:px-4 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                         />
                       </div>
                     </div>
                   ) : (
                     <div className="pt-3 border-t border-[#E5E7EB] space-y-3 animate-in fade-in">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3">
                         {/* Campo 1: Unidades por caja (units_per_box) */}
                         <div>
-                          <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
+                          <label className="block text-[11px] sm:text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1 leading-snug">
                             Unidades por caja <span className="text-[#E8B4A0]">*</span>
                           </label>
-                          <p className="text-[10px] text-[#616161] mb-1.5">
+                          <p className="text-[10px] text-[#616161] mb-1.5 hidden sm:block">
                             ¿Cuántas unidades contiene 1 caja?
                           </p>
                           <input
@@ -914,16 +914,16 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                             onChange={e => setUnitsPerBox(e.target.value)}
                             placeholder="Ej: 50"
                             required
-                            className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                            className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-3 sm:px-4 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                           />
                         </div>
 
                         {/* Campo 2: Cantidad inicial de cajas */}
                         <div>
-                          <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
+                          <label className="block text-[11px] sm:text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1 leading-snug">
                             {productToEdit ? 'Cantidad de cajas' : 'Cantidad inicial de cajas'} <span className="text-[#E8B4A0]">*</span>
                           </label>
-                          <p className="text-[10px] text-[#616161] mb-1.5">
+                          <p className="text-[10px] text-[#616161] mb-1.5 hidden sm:block">
                             Cajas a registrar en inventario
                           </p>
                           <input
@@ -934,16 +934,16 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                             onChange={e => setStock(e.target.value)}
                             placeholder="Ej: 2"
                             required
-                            className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                            className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-3 sm:px-4 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                           />
                         </div>
                       </div>
 
                       {/* Unidades sueltas opcionales al registrar/editar y Stock Mínimo en Cajas */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[11px] font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
-                            Unidades sueltas adicionales (Opcional)
+                          <label className="block text-[11px] font-bold text-[#1E3A5F] uppercase tracking-wider mb-1 leading-snug">
+                            Unidades sueltas (Opcional)
                           </label>
                           <input
                             type="number"
@@ -952,12 +952,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                             value={initialLooseUnits}
                             onChange={e => setInitialLooseUnits(e.target.value)}
                             placeholder="0"
-                            className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-1.5 text-xs font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                            className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3 sm:px-3.5 py-1.5 text-xs font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">
+                          <label className="block text-[11px] font-bold text-[#1E3A5F] uppercase tracking-wider mb-1 leading-snug">
                             Alerta Stock Mínimo (Cajas)
                           </label>
                           <input
@@ -968,7 +968,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                             onChange={e => setMinStock(e.target.value)}
                             required
                             placeholder="1"
-                            className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-1.5 text-xs font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                            className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3 sm:px-3.5 py-1.5 text-xs font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                           />
                         </div>
                       </div>
@@ -1111,38 +1111,42 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       <Sparkles className="w-3.5 h-3.5 text-[#E8B4A0]" />
                       <span>Estructura Financiera (Modo Comercial)</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-[11px] text-[#616161] uppercase tracking-wider mb-1">
-                          Costo ({currentInventory?.currency || 'USD'})
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={costPrice}
-                          onChange={e => handleCostChange(e.target.value)}
-                          className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
-                        />
+                    <div className="space-y-3">
+                      {/* Costo y Margen al mismo nivel */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] text-[#616161] uppercase tracking-wider mb-1 leading-snug">
+                            Costo ({currentInventory?.currency || 'USD'})
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={costPrice}
+                            onChange={e => handleCostChange(e.target.value)}
+                            className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] text-[#616161] uppercase tracking-wider mb-1 leading-snug">
+                            Margen (%)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            value={markupPercentage}
+                            onChange={e => handleMarkupChange(e.target.value)}
+                            placeholder="20"
+                            className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                          />
+                        </div>
                       </div>
 
+                      {/* Venta final abajo */}
                       <div>
-                        <label className="block text-[11px] text-[#616161] uppercase tracking-wider mb-1">
-                          Margen (%)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          value={markupPercentage}
-                          onChange={e => handleMarkupChange(e.target.value)}
-                          placeholder="20"
-                          className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-medium text-[#1E3A5F] uppercase tracking-wider mb-1">
+                        <label className="block text-[11px] font-medium text-[#1E3A5F] uppercase tracking-wider mb-1 leading-snug">
                           Venta Final
                         </label>
                         <input
