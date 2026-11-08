@@ -280,7 +280,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                 onClick={() => setSearchScannerOpen(true)}
                 aria-label="Escanear código para buscar"
                 title="Escanear código"
-                className="w-12 h-12 flex items-center justify-center bg-black hover:bg-neutral-800 border border-black rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
+                className="w-12 h-12 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
               >
                 <Camera className="w-5 h-5 text-white" />
               </button>
@@ -509,7 +509,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             {/* Escáner de Cámara */}
             <button
               onClick={() => setSearchScannerOpen(true)}
-              className="flex-1 sm:flex-initial min-h-[44px] px-4 rounded-full border border-black bg-black hover:bg-neutral-800 text-white flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer"
+              className="flex-1 sm:flex-initial min-h-[44px] px-4 rounded-full border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-white flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer"
               title="Escanear código de barras o QR"
             >
               <Camera className="w-4 h-4 stroke-[1.5] text-white" />

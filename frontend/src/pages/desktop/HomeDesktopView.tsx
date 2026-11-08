@@ -66,7 +66,7 @@ export const HomeDesktopView: React.FC<HomeDesktopViewProps> = ({
           <div className="flex items-center gap-2.5 flex-wrap">
             <button
               onClick={onQuickScan}
-              className="min-h-[40px] px-4 rounded-full border border-black bg-black hover:bg-neutral-800 text-white text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+              className="min-h-[40px] px-4 rounded-full border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
             >
               <Camera className="w-3.5 h-3.5 stroke-[1.5] text-white" />
               <span>ESCANEAR</span>

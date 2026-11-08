@@ -568,7 +568,7 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
                 onClick={() => setScannerOpen(true)}
                 title="Escanear código de barras con la cámara"
                 aria-label="Escanear código de barras"
-                className="h-11 w-11 rounded-2xl bg-black hover:bg-neutral-800 border border-black text-white flex items-center justify-center transition-all active:scale-95 shrink-0 cursor-pointer shadow-xs"
+                className="h-11 w-11 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white flex items-center justify-center transition-all active:scale-95 shrink-0 cursor-pointer shadow-xs"
               >
                 <Camera className="w-5 h-5 text-white stroke-[1.75]" />
               </button>
@@ -699,12 +699,12 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
                     </div>
 
                     {/* 2. Abajo del indicador, "Nombre del responsable" alineado al lado derecho, fecha y hora de la modificación */}
-                    <div className="flex items-center justify-end gap-3 text-[11px] text-zinc-500 dark:text-zinc-400">
-                      <span className="flex items-center gap-1 font-medium text-zinc-800 dark:text-zinc-200">
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+                      <span className="flex items-center gap-1.5 font-medium text-zinc-800 dark:text-zinc-200 text-left min-w-0">
                         <User className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                        <strong className="font-semibold font-sans">{userFullName}</strong>
+                        <strong className="font-semibold font-sans truncate">{userFullName}</strong>
                       </span>
-                      <span className="flex items-center gap-1 font-mono text-[10px] text-zinc-400 shrink-0">
+                      <span className="flex items-center gap-1 font-mono text-[10px] text-zinc-400 shrink-0 text-right">
                         <Clock className="w-3 h-3 text-zinc-400 shrink-0" />
                         {formatDate(log.created_at)}
                       </span>

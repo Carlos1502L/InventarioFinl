@@ -106,7 +106,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {onQuickScan && (
             <button
               onClick={onQuickScan}
-              className="lg:hidden min-h-[36px] px-3 rounded-full bg-black hover:bg-neutral-800 border border-black text-white flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider transition-all active:scale-95 shadow-xs cursor-pointer"
+              className="lg:hidden min-h-[36px] px-3 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider transition-all active:scale-95 shadow-xs cursor-pointer"
               title="Escanear"
             >
               <Camera className="w-3.5 h-3.5 text-white" />

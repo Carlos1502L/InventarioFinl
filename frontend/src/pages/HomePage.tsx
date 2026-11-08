@@ -425,7 +425,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 onClick={() => setHomeScannerOpen(true)}
                 aria-label="Consulta rápida por código de barras o QR"
                 title="Consulta rápida de producto"
-                className="w-10 h-10 rounded-full bg-black hover:bg-neutral-800 border border-black text-white flex items-center justify-center transition-colors active:scale-95 shadow-xs cursor-pointer"
+                className="w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white flex items-center justify-center transition-colors active:scale-95 shadow-xs cursor-pointer"
               >
                 <Camera className="w-4 h-4 stroke-[1.75] text-white" />
               </button>

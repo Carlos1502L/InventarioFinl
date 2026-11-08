@@ -234,8 +234,8 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                   <Plus className="w-4 h-4 text-[#E8B4A0]" /> Datos de la Promoción
                 </span>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* Código */}
+                <div className="space-y-3">
+                  {/* Código Promocional */}
                   <div>
                     <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
                       Código Promocional <span className="text-rose-500">*</span>
@@ -250,36 +250,37 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                     />
                   </div>
 
-                  {/* Tipo de Descuento */}
-                  <div>
-                    <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
-                      Tipo de Descuento
-                    </label>
-                    <MinimalDropdown
-                      value={discountType}
-                      onChange={(val) => setDiscountType(val as DiscountType)}
-                      options={[
-                        { value: 'PERCENTAGE', label: 'Porcentaje (%)' },
-                        { value: 'FIXED', label: `Monto Fijo (${currentInventory?.currency || 'PEN'})` }
-                      ]}
-                    />
-                  </div>
+                  {/* Al Mismo Nivel: Tipo de Descuento y Valor */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1 truncate">
+                        Tipo de Descuento
+                      </label>
+                      <MinimalDropdown
+                        value={discountType}
+                        onChange={(val) => setDiscountType(val as DiscountType)}
+                        options={[
+                          { value: 'PERCENTAGE', label: 'Porcentaje (%)' },
+                          { value: 'FIXED', label: `Monto Fijo (${currentInventory?.currency || 'PEN'})` }
+                        ]}
+                      />
+                    </div>
 
-                  {/* Valor del Descuento */}
-                  <div>
-                    <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
-                      Valor {discountType === 'PERCENTAGE' ? '(%)' : `(${currentInventory?.currency || 'PEN'})`} <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      max={discountType === 'PERCENTAGE' ? '100' : undefined}
-                      value={discountValue}
-                      onChange={e => setDiscountValue(e.target.value)}
-                      required
-                      className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs font-bold text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
-                    />
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1 truncate">
+                        Valor {discountType === 'PERCENTAGE' ? '(%)' : `(${currentInventory?.currency || 'PEN'})`} <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max={discountType === 'PERCENTAGE' ? '100' : undefined}
+                        value={discountValue}
+                        onChange={e => setDiscountValue(e.target.value)}
+                        required
+                        className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs font-bold text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -351,18 +352,18 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                     return (
                       <div
                         key={coupon.id}
-                        className="p-3.5 bg-white rounded-xl border border-[#E5E7EB] flex items-center justify-between gap-3 group hover:border-[#1E3A5F]/40 transition-colors shadow-2xs"
+                        className="py-2.5 px-3 bg-white rounded-xl border border-[#E5E7EB] flex items-center justify-between gap-2.5 group hover:border-[#1E3A5F]/40 transition-colors shadow-2xs"
                       >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
                             isActive
                               ? 'bg-[#1E3A5F]/10 text-[#1E3A5F]'
                               : 'bg-neutral-100 text-neutral-400'
                           }`}>
                             {coupon.discount_type === 'PERCENTAGE' ? (
-                              <Percent className="w-4 h-4" />
+                              <Percent className="w-3.5 h-3.5" />
                             ) : (
-                              <DollarSign className="w-4 h-4" />
+                              <DollarSign className="w-3.5 h-3.5" />
                             )}
                           </div>
 
@@ -371,12 +372,12 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                               <span className="font-mono text-xs font-bold text-[#1E3A5F]">
                                 {coupon.code}
                               </span>
-                              <span className="text-xs font-bold text-[#1E3A5F]">
+                              <span className="text-[11px] font-bold text-[#1E3A5F]">
                                 {coupon.discount_type === 'PERCENTAGE'
                                   ? `-${coupon.discount_value}%`
                                   : `-${formatCurrency(coupon.discount_value, currentInventory?.currency)}`}
                               </span>
-                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                                 isActive
                                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                   : 'bg-neutral-100 text-neutral-500 border border-neutral-200'
@@ -385,7 +386,7 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                               </span>
                             </div>
                             {coupon.description && (
-                              <p className="text-[11px] text-[#616161] mt-0.5 truncate">{coupon.description}</p>
+                              <p className="text-[10px] text-[#616161] truncate leading-tight mt-0.5">{coupon.description}</p>
                             )}
                           </div>
                         </div>
@@ -394,7 +395,7 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                           <button
                             type="button"
                             onClick={() => handleToggleStatus(coupon)}
-                            className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-colors cursor-pointer border ${
+                            className={`px-2 py-1 text-[10px] font-semibold rounded-lg transition-colors cursor-pointer border ${
                               isActive
                                 ? 'bg-[#F8F9FA] hover:bg-neutral-100 text-[#616161] border-[#E5E7EB]'
                                 : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
@@ -406,10 +407,10 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                           <button
                             type="button"
                             onClick={() => handleDeleteCoupon(coupon)}
-                            className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                            className="p-1 text-neutral-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
                             title="Eliminar cupón"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>

@@ -778,7 +778,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                 onClick={() => setScannerOpen(true)}
                 aria-label="Escanear código para agregar al carrito"
                 title="Escanear código"
-                className="w-12 h-12 flex items-center justify-center bg-black hover:bg-neutral-800 border border-black rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
+                className="w-12 h-12 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
               >
                 <Camera className="w-5 h-5 text-white" />
               </button>
@@ -1213,7 +1213,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
               <button
                 type="button"
                 onClick={() => setScannerOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-black hover:bg-neutral-800 text-white border border-black rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 whitespace-nowrap shadow-xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 whitespace-nowrap shadow-xs cursor-pointer"
               >
                 <Camera className="w-4 h-4 text-white" />
                 <span>Escanear</span>

@@ -891,7 +891,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       setCameraScanTarget('assignProduct');
                       setCameraScannerOpen(true);
                     }}
-                    className="w-12 h-12 flex items-center justify-center bg-black hover:bg-neutral-800 border border-black rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
+                    className="w-12 h-12 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
                     aria-label="Cámara"
                   >
                     <Camera className="w-5 h-5 text-white" />
@@ -1113,7 +1113,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     }}
                     title="Escanear código o QR de ubicación"
                     aria-label="Escanear ubicación destino"
-                    className="py-3 px-4 rounded-2xl bg-black hover:bg-neutral-800 border border-black text-white flex items-center justify-center gap-1.5 text-xs font-semibold shrink-0 active:scale-95 transition-all shadow-xs cursor-pointer"
+                    className="py-3 px-4 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white flex items-center justify-center gap-1.5 text-xs font-semibold shrink-0 active:scale-95 transition-all shadow-xs cursor-pointer"
                   >
                     <Camera className="w-4 h-4 text-white" />
                     <span>Escanear</span>
@@ -1162,7 +1162,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       setCameraScanTarget('consultProduct');
                       setCameraScannerOpen(true);
                     }}
-                    className="w-12 h-12 flex items-center justify-center bg-black hover:bg-neutral-800 border border-black rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
+                    className="w-12 h-12 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
                     aria-label="Cámara"
                   >
                     <Camera className="w-5 h-5 text-white" />
@@ -1318,7 +1318,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       setCameraScanTarget('moveProduct');
                       setCameraScannerOpen(true);
                     }}
-                    className="w-12 h-12 flex items-center justify-center bg-black hover:bg-neutral-800 border border-black rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
+                    className="w-12 h-12 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
                     aria-label="Cámara"
                   >
                     <Camera className="w-5 h-5 text-white" />
@@ -1540,7 +1540,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                         }}
                         title="Escanear código o QR de ubicación destino"
                         aria-label="Escanear ubicación destino"
-                        className="py-3 px-4 rounded-2xl bg-black hover:bg-neutral-800 border border-black text-white flex items-center justify-center gap-1.5 text-xs font-semibold shrink-0 active:scale-95 transition-all shadow-xs cursor-pointer"
+                        className="py-3 px-4 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white flex items-center justify-center gap-1.5 text-xs font-semibold shrink-0 active:scale-95 transition-all shadow-xs cursor-pointer"
                       >
                         <Camera className="w-4 h-4 text-white" />
                         <span>Escanear</span>
@@ -1798,7 +1798,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       setCameraScanTarget('assignProduct');
                       setCameraScannerOpen(true);
                     }}
-                    className="min-h-[46px] px-4 bg-black hover:bg-neutral-800 text-white border border-black rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                    className="min-h-[46px] px-4 bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
                     title="Usar cámara como escáner"
                   >
                     <Camera className="w-4 h-4 text-white" />
@@ -2279,7 +2279,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     setCameraScanTarget('consultProduct');
                     setCameraScannerOpen(true);
                   }}
-                  className="min-h-[46px] px-4 bg-black hover:bg-neutral-800 text-white border border-black rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                  className="min-h-[46px] px-4 bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
                 >
                   <Camera className="w-4 h-4 text-white" />
                   <span>Cámara</span>
@@ -2519,7 +2519,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     setCameraScanTarget('moveProduct');
                     setCameraScannerOpen(true);
                   }}
-                  className="px-3.5 min-h-[44px] bg-black hover:bg-neutral-800 text-white border border-black rounded-xl text-xs uppercase flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                  className="px-3.5 min-h-[44px] bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 rounded-xl text-xs uppercase flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
                   title="Escanear con cámara"
                 >
                   <Camera className="w-4 h-4 text-white" />

@@ -230,31 +230,23 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
           {mainTab === 'create' && (
             <div className="space-y-4 animate-in fade-in">
               {/* Selector de Tipo a Crear: Categoría vs Subcategoría */}
-              <div className="flex items-center gap-2 p-1 bg-zinc-100 rounded-xl">
-                <button
-                  type="button"
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                <PillOption
+                  active={createType === 'category'}
                   onClick={() => setCreateType('category')}
-                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    createType === 'category'
-                      ? 'bg-white text-[#1E3A5F] shadow-xs'
-                      : 'text-zinc-500 hover:text-zinc-900'
-                  }`}
+                  icon={<FolderPlus className="w-3.5 h-3.5" />}
+                  className="flex-1"
                 >
-                  <FolderPlus className="w-3.5 h-3.5 text-[#E8B4A0]" />
-                  <span>Nueva Categoría</span>
-                </button>
-                <button
-                  type="button"
+                  Categoría
+                </PillOption>
+                <PillOption
+                  active={createType === 'subcategory'}
                   onClick={() => setCreateType('subcategory')}
-                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    createType === 'subcategory'
-                      ? 'bg-white text-[#1E3A5F] shadow-xs'
-                      : 'text-zinc-500 hover:text-zinc-900'
-                  }`}
+                  icon={<Layers className="w-3.5 h-3.5" />}
+                  className="flex-1"
                 >
-                  <Layers className="w-3.5 h-3.5 text-[#E8B4A0]" />
-                  <span>Nueva Subcategoría</span>
-                </button>
+                  Subcategoría
+                </PillOption>
               </div>
 
               {/* Formulario 1A: Categoría */}
