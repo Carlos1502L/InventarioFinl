@@ -761,7 +761,7 @@ div:has(> label:empty + span.hidden) {
     border: 1px solid #d4d4d4 !important;
   }
 
-  /* Switch y Toggle Buttons: Proteger estrictamente dimensiones bloqueadas inmutables */
+  /* Switch y Toggle Buttons: Proteger estrictamente dimensiones bloqueadas inmutables y centrado */
   .mobile-dark-modal button[role="switch"],
   button[role="switch"] {
     width: 3rem !important; /* 48px / w-12 */
@@ -770,15 +770,17 @@ div:has(> label:empty + span.hidden) {
     height: 1.75rem !important; /* 28px / h-7 */
     min-height: 1.75rem !important;
     max-height: 1.75rem !important;
-    padding: 0 !important;
+    padding: 0.25rem !important; /* 4px exactos para centrado perfecto arriba y abajo */
+    box-sizing: border-box !important;
     flex-shrink: 0 !important;
     box-shadow: none !important;
     border: none !important;
     border-radius: 9999px !important;
     text-transform: none !important;
     letter-spacing: normal !important;
-    justify-content: flex-start !important;
+    display: inline-flex !important;
     align-items: center !important;
+    justify-content: flex-start !important;
   }
 
   /* 10. Botones de Acción Principal (Guardar / Crear / Confirmar) */

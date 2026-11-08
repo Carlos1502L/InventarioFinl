@@ -937,7 +937,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                     <span className="text-xs text-gray-500 block truncate">Envío recurrente sin abrir la app</span>
                   </div>
                   
-                  {/* Switch con tamaño fijo bloqueado (evita que se expanda al 100%) */}
+                  {/* Switch con tamaño fijo bloqueado y centrado vertical exacto */}
                   <button
                     type="button"
                     role="switch"
@@ -951,14 +951,16 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       height: '28px',
                       minHeight: '28px',
                       maxHeight: '28px',
+                      padding: '4px',
+                      boxSizing: 'border-box',
                       flexShrink: 0
                     }}
-                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+                    className={`relative inline-flex items-center p-1 h-7 w-12 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
                       isScheduled ? 'bg-black' : 'bg-gray-300'
                     }`}
                   >
                     <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out mt-1 ml-1 ${
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
                         isScheduled ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />

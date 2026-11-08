@@ -13,8 +13,8 @@ export interface SwitchProps {
 
 /**
  * Componente Switch estandarizado y reutilizable.
- * Garantiza centrado vertical perfecto del círculo interno y dimensiones bloqueadas
- * inmutables para evitar desbordamientos o estiramientos no deseados.
+ * Centrado vertical perfecto: la misma distancia en la parte superior e inferior del círculo.
+ * Dimensiones fijas bloqueadas para evitar desbordamientos o estiramientos no deseados.
  */
 export const Switch: React.FC<SwitchProps> = ({
   checked,
@@ -31,19 +31,19 @@ export const Switch: React.FC<SwitchProps> = ({
       track: 'h-5 w-9 p-[2px]',
       thumb: 'h-4 w-4',
       translate: 'translate-x-4',
-      dims: { width: '36px', height: '20px' }
+      dims: { width: '36px', height: '20px', padding: '2px' }
     },
     md: {
-      track: 'h-7 w-12',
+      track: 'h-7 w-12 p-1',
       thumb: 'h-5 w-5',
       translate: 'translate-x-5',
-      dims: { width: '48px', height: '28px' }
+      dims: { width: '48px', height: '28px', padding: '4px' }
     },
     lg: {
-      track: 'h-7 w-14 p-[2px]',
+      track: 'h-8 w-14 p-1',
       thumb: 'h-6 w-6',
-      translate: 'translate-x-7',
-      dims: { width: '56px', height: '28px' }
+      translate: 'translate-x-6',
+      dims: { width: '56px', height: '32px', padding: '4px' }
     }
   }[size];
 
@@ -67,6 +67,8 @@ export const Switch: React.FC<SwitchProps> = ({
         height: sizeStyles.dims.height,
         minHeight: sizeStyles.dims.height,
         maxHeight: sizeStyles.dims.height,
+        padding: sizeStyles.dims.padding,
+        boxSizing: 'border-box',
         flexShrink: 0
       }}
       className={`relative inline-flex items-center shrink-0 cursor-pointer rounded-full border-0 transition-colors duration-200 ease-in-out select-none outline-none focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${sizeStyles.track} ${
@@ -76,7 +78,7 @@ export const Switch: React.FC<SwitchProps> = ({
       } ${className}`}
     >
       <span
-        className={`pointer-events-none inline-block rounded-full bg-white shadow-md transform transition duration-200 ease-in-out mt-1 ml-1 ${sizeStyles.thumb} ${
+        className={`pointer-events-none inline-block rounded-full bg-white shadow-md transform transition duration-200 ease-in-out ${sizeStyles.thumb} ${
           checked ? sizeStyles.translate : 'translate-x-0'
         }`}
       />
