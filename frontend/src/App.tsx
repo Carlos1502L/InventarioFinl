@@ -184,7 +184,13 @@ export const AppContent: React.FC = () => {
             *,
             categories (id, name, color),
             subcategories (id, name),
-            locations (id, name, code)
+            locations (id, name, code),
+            product_locations (
+              id,
+              location_id,
+              quantity,
+              locations (id, name, code)
+            )
           `)
           .eq('inventory_id', currentInventory.id)
           .order('created_at', { ascending: false })
