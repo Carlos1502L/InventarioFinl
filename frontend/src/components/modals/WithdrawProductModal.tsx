@@ -10,6 +10,7 @@ import {
 } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { MinimalDropdown } from '../ui/MinimalDropdown';
+import { CancelButton } from '../common/CancelButton';
 
 interface WithdrawProductModalProps {
   product: Product | null;
@@ -407,13 +408,7 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
 
           {/* Acciones */}
           <div className="pt-3 border-t border-[#E5E7EB] max-md:border-0 flex max-md:flex-col-reverse justify-end gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="mobile-cancel-btn min-h-[44px] px-5 text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] transition-colors"
-            >
-              Cancelar
-            </button>
+            <CancelButton onClick={onClose} />
             <button
               type="submit"
               disabled={isSubmitting || (withdrawMode === 'partial' && maxStock <= 0)}

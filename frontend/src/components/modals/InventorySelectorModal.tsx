@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Layers, Plus, CheckCircle, Shield, Users, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { CancelButton } from '../common/CancelButton';
 import { supabase } from '../../services/supabase';
 import { MinimalDropdown } from '../ui/MinimalDropdown';
 
@@ -251,13 +252,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
               </div>
 
               <div className="flex max-md:flex-col-reverse justify-end gap-2.5 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCreatingNew(false)}
-                  className="mobile-cancel-btn min-h-[44px] px-4 text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] transition-colors"
-                >
-                  Volver a la Lista
-                </button>
+                <CancelButton onClick={() => setIsCreatingNew(false)} label="Volver a la Lista" />
                 <button
                   type="submit"
                   disabled={isSubmitting}

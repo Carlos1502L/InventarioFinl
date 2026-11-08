@@ -33,6 +33,7 @@ import { showAppToast } from '../ui/ToastNotification';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { RestockProductModal } from './RestockProductModal';
 import { MinimalDropdown } from '../ui/MinimalDropdown';
+import { CancelButton } from '../common/CancelButton';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -1267,13 +1268,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
                 {/* Botones de Acción para Dispositivos Móviles (< lg: sin panel de previsualización) */}
                 <div className="pt-4 mt-4 mb-2 border-t border-[#E5E7EB] max-md:border-0 flex max-md:flex-col-reverse items-center gap-2 lg:hidden">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="mobile-cancel-btn min-h-[44px] max-md:min-h-0 px-5 text-xs uppercase tracking-wider font-medium text-[#616161] hover:text-[#1E3A5F] hover:bg-black/5 rounded-full border border-transparent transition-colors"
-                  >
-                    Cancelar
-                  </button>
+                  <CancelButton onClick={onClose} />
                   <button
                     type="submit"
                     disabled={isSubmitting || isUploadingImage}
@@ -1404,13 +1399,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
                   {/* Botones de Acción (Confirmación / Cancelación) Siempre a la vista sin scroll */}
                   <div className="mt-4 pt-4 border-t border-[#E5E7EB] flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      className="min-h-[44px] px-5 text-xs uppercase tracking-wider font-medium text-[#616161] hover:text-[#1E3A5F] hover:bg-black/5 rounded-full border border-transparent transition-colors"
-                    >
-                      Cancelar
-                    </button>
+                    <CancelButton onClick={onClose} />
                     <button
                       type="submit"
                       disabled={isSubmitting || isUploadingImage}
@@ -1485,13 +1474,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               </div>
 
               <div className="flex flex-col-reverse sm:flex-row items-center gap-2.5 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setDuplicateDetectedProduct(null)}
-                  className="mobile-cancel-btn w-full sm:flex-1 py-3 px-4 rounded-2xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold uppercase tracking-wider transition-colors"
-                >
-                  Cancelar
-                </button>
+                <CancelButton onClick={() => setDuplicateDetectedProduct(null)} className="w-full sm:flex-1" />
                 <button
                   type="button"
                   onClick={() => {

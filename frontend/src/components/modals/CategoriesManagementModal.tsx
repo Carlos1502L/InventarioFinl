@@ -14,6 +14,7 @@ import { Category, Subcategory } from '../../types/database';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
+import { PillOption } from '../common/PillOption';
 import { MinimalDropdown } from '../ui/MinimalDropdown';
 
 interface CategoriesManagementModalProps {
@@ -196,39 +197,21 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
 
         {/* Barra de Pestañas Tipo Píldora (RF-UI-CAT-011 & RF-UI-TABS-008) */}
         <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#E5E7EB] bg-white shrink-0 overflow-x-auto">
-          <button
-            type="button"
+          <PillOption
+            active={mainTab === 'create'}
             onClick={() => setMainTab('create')}
-            className={`inline-flex items-center justify-center gap-1.5 px-4 py-2 min-h-[38px] rounded-full text-xs font-medium transition-all duration-200 active:scale-95 cursor-pointer whitespace-nowrap ${
-              mainTab === 'create'
-                ? 'mobile-tab-active bg-black text-white dark:bg-white dark:text-black shadow-xs'
-                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200/70 dark:hover:bg-zinc-700'
-            }`}
+            icon={<Plus className="w-3.5 h-3.5" />}
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Crear</span>
-          </button>
+            Crear
+          </PillOption>
 
-          <button
-            type="button"
+          <PillOption
+            active={mainTab === 'existing'}
             onClick={() => setMainTab('existing')}
-            className={`inline-flex items-center justify-center gap-2 px-4 py-2 min-h-[38px] rounded-full text-xs font-medium transition-all duration-200 active:scale-95 cursor-pointer whitespace-nowrap ${
-              mainTab === 'existing'
-                ? 'mobile-tab-active bg-black text-white dark:bg-white dark:text-black shadow-xs'
-                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200/70 dark:hover:bg-zinc-700'
-            }`}
+            badge={totalCount}
           >
-            <span>Existentes</span>
-            <span
-              className={`text-[10px] font-mono font-semibold rounded-full px-2 py-0.5 transition-colors duration-200 ${
-                mainTab === 'existing'
-                  ? 'bg-zinc-800 text-zinc-200 dark:bg-zinc-200 dark:text-zinc-800'
-                  : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300'
-              }`}
-            >
-              {totalCount}
-            </span>
-          </button>
+            Existentes
+          </PillOption>
         </div>
 
         {/* Mensaje de Error Global */}

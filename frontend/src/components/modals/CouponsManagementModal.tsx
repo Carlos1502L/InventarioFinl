@@ -4,6 +4,7 @@ import { Coupon, DiscountType } from '../../types/database';
 import { supabase, formatCurrency } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { MinimalDropdown } from '../ui/MinimalDropdown';
+import { PillOption } from '../common/PillOption';
 
 interface CouponsManagementModalProps {
   isOpen: boolean;
@@ -194,39 +195,21 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
 
         {/* Barra de Pestañas Tipo Píldora (RF-UI-TABS-008 & RNF-UX-CONSISTENCY-005) */}
         <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#E5E7EB] bg-white shrink-0 overflow-x-auto">
-          <button
-            type="button"
+          <PillOption
+            active={activeTab === 'create'}
             onClick={() => setActiveTab('create')}
-            className={`inline-flex items-center justify-center gap-1.5 px-4 py-2 min-h-[38px] rounded-full text-xs font-medium transition-all duration-200 active:scale-95 cursor-pointer whitespace-nowrap ${
-              activeTab === 'create'
-                ? 'mobile-tab-active bg-black text-white dark:bg-white dark:text-black shadow-xs'
-                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200/70 dark:hover:bg-zinc-700'
-            }`}
+            icon={<Plus className="w-3.5 h-3.5" />}
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Crear cupón</span>
-          </button>
+            Crear cupón
+          </PillOption>
 
-          <button
-            type="button"
+          <PillOption
+            active={activeTab === 'existing'}
             onClick={() => setActiveTab('existing')}
-            className={`inline-flex items-center justify-center gap-2 px-4 py-2 min-h-[38px] rounded-full text-xs font-medium transition-all duration-200 active:scale-95 cursor-pointer whitespace-nowrap ${
-              activeTab === 'existing'
-                ? 'mobile-tab-active bg-black text-white dark:bg-white dark:text-black shadow-xs'
-                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200/70 dark:hover:bg-zinc-700'
-            }`}
+            badge={coupons.length}
           >
-            <span>Existentes</span>
-            <span
-              className={`text-[10px] font-mono font-semibold rounded-full px-2 py-0.5 transition-colors duration-200 ${
-                activeTab === 'existing'
-                  ? 'bg-zinc-800 text-zinc-200 dark:bg-zinc-200 dark:text-zinc-800'
-                  : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300'
-              }`}
-            >
-              {coupons.length}
-            </span>
-          </button>
+            Existentes
+          </PillOption>
         </div>
 
         {/* Contenido según Pestaña Activa */}

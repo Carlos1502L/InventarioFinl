@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase, getApiUrl } from '../../services/supabase';
+import { CancelButton } from '../common/CancelButton';
 
 interface DeleteAccountModalProps {
   isOpen: boolean;
@@ -234,14 +235,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
               </>
             )}
           </button>
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isDeleting}
-            className="w-full py-2.5 border-0 bg-transparent shadow-none font-normal text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 active:opacity-70 transition-opacity cursor-pointer disabled:opacity-50 text-center"
-          >
-            Cancelar
-          </button>
+          <CancelButton onClick={handleClose} disabled={isDeleting} className="w-full" />
         </div>
       </div>
     </div>

@@ -21,6 +21,7 @@ import { supabase, getApiUrl } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { showAppToast } from '../ui';
 import { BackupRestoreModal } from '../settings/BackupRestoreModal';
+import { PillOption } from '../common/PillOption';
 
 interface BackupManagementModalProps {
   isOpen: boolean;
@@ -739,27 +740,24 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
 
           {/* Barra de Pestañas (Píldoras móviles) */}
           <div className="mobile-tabs-bar">
-            <button
-              type="button"
+            <PillOption
+              active={activeTab === 'manual'}
               onClick={() => setActiveTab('manual')}
-              className={activeTab === 'manual' ? 'mobile-tab-active' : ''}
             >
               Manual
-            </button>
-            <button
-              type="button"
+            </PillOption>
+            <PillOption
+              active={activeTab === 'scheduled'}
               onClick={() => setActiveTab('scheduled')}
-              className={activeTab === 'scheduled' ? 'mobile-tab-active' : ''}
             >
               Automático
-            </button>
-            <button
-              type="button"
+            </PillOption>
+            <PillOption
+              active={activeTab === 'restore'}
               onClick={() => setActiveTab('restore')}
-              className={activeTab === 'restore' ? 'mobile-tab-active' : ''}
             >
               Restaurar
-            </button>
+            </PillOption>
           </div>
 
           {/* Cuerpo Scrollable con Padding y Espaciado Limpio */}

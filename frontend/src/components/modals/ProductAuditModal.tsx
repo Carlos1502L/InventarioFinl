@@ -23,6 +23,7 @@ import { Product, AuditLog } from '../../types/database';
 import { supabase, formatDate } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
+import { CancelButton } from '../common/CancelButton';
 import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
 
 interface ProductAuditModalProps {
@@ -558,13 +559,7 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
             <span>
               {selectedProduct ? `${auditLogs.length} ${auditLogs.length === 1 ? 'registro' : 'registros'} indexados` : 'Esperando selección'}
             </span>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-xs font-medium transition-colors"
-            >
-              Cerrar
-            </button>
+            <CancelButton onClick={onClose} label="Cerrar" />
           </div>
         </div>
       </div>

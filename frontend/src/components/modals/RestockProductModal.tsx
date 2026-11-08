@@ -10,6 +10,7 @@ import {
   getBoxBreakdown
 } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { CancelButton } from '../common/CancelButton';
 
 interface RestockProductModalProps {
   product: Product | null;
@@ -354,13 +355,7 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
                 <span />
               )}
 
-              <button
-                type="button"
-                onClick={onClose}
-                className="mobile-cancel-btn px-4 py-1.5 text-xs font-medium text-[#1E3A5F] hover:bg-[#F8F9FA] rounded-full border border-[#E5E7EB] transition-colors"
-              >
-                Cancelar
-              </button>
+              <CancelButton onClick={onClose} />
             </div>
           </div>
         </form>

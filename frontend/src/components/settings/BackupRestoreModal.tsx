@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, AlertTriangle, Loader2, Database, ShieldAlert, ArrowRightLeft, DollarSign } from 'lucide-react';
+import { CancelButton } from '../common/CancelButton';
 
 export interface CurrencyConversionOptions {
   enabled: boolean;
@@ -223,14 +224,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
 
         {/* Botones de Acción (Stacking en móvil para evitar desbordes) */}
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 px-5 py-4 border-t border-neutral-100 bg-neutral-50/50 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isLoading}
-            className="h-11 px-4 rounded-xl border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100 text-xs font-medium transition-colors"
-          >
-            Cancelar
-          </button>
+          <CancelButton onClick={onClose} disabled={isLoading} />
           <button
             type="button"
             onClick={handleConfirm}

@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { MinimalDropdown } from '../ui/MinimalDropdown';
+import { CancelButton } from '../common/CancelButton';
 
 interface MoveProductModalProps {
   product: Product | null;
@@ -324,13 +325,7 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
             )}
 
             <div className="pt-3 border-t border-[#E5E7EB] max-md:border-0 flex max-md:flex-col-reverse justify-end gap-2.5">
-              <button
-                type="button"
-                onClick={onClose}
-                className="mobile-cancel-btn min-h-[44px] px-5 text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-[#F8F9FA] rounded-xl border border-[#E5E7EB]"
-              >
-                Cancelar
-              </button>
+              <CancelButton onClick={onClose} />
               {availableOrigins.length > 0 && (
                 <button
                   type="submit"
