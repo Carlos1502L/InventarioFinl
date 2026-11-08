@@ -1030,29 +1030,40 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <div>
-                          <label className="block text-[10px] text-[#616161] uppercase tracking-wider mb-1">Color</label>
-                          <input
-                            type="text"
-                            value={variantColor}
-                            onChange={e => setVariantColor(e.target.value)}
-                            placeholder="Ej: Dorado"
-                            className="w-full bg-white border border-[#E5E7EB] rounded-lg px-2.5 py-1.5 text-xs text-[#1E3A5F]"
-                          />
+                      <div className="space-y-2">
+                        {/* Color y Talla al mismo nivel */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[10px] text-[#616161] uppercase tracking-wider mb-1 leading-snug truncate">
+                              Color
+                            </label>
+                            <input
+                              type="text"
+                              value={variantColor}
+                              onChange={e => setVariantColor(e.target.value)}
+                              placeholder="Ej: Dorado"
+                              className="w-full bg-white border border-[#E5E7EB] rounded-lg px-2.5 py-1.5 text-xs text-[#1E3A5F]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-[#616161] uppercase tracking-wider mb-1 leading-snug truncate">
+                              Talla
+                            </label>
+                            <input
+                              type="text"
+                              value={variantSize}
+                              onChange={e => setVariantSize(e.target.value)}
+                              placeholder="Ej: 18cm"
+                              className="w-full bg-white border border-[#E5E7EB] rounded-lg px-2.5 py-1.5 text-xs text-[#1E3A5F]"
+                            />
+                          </div>
                         </div>
+
+                        {/* Versión abajo */}
                         <div>
-                          <label className="block text-[10px] text-[#616161] uppercase tracking-wider mb-1">Talla</label>
-                          <input
-                            type="text"
-                            value={variantSize}
-                            onChange={e => setVariantSize(e.target.value)}
-                            placeholder="Ej: 18cm"
-                            className="w-full bg-white border border-[#E5E7EB] rounded-lg px-2.5 py-1.5 text-xs text-[#1E3A5F]"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] text-[#616161] uppercase tracking-wider mb-1">Versión</label>
+                          <label className="block text-[10px] text-[#616161] uppercase tracking-wider mb-1 leading-snug truncate">
+                            Versión
+                          </label>
                           <input
                             type="text"
                             value={variantRegion}
