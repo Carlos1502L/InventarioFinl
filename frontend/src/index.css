@@ -289,6 +289,12 @@ div:has(> label:empty + span.hidden) {
     font-family: 'Inter Tight', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   }
 
+  /* Altura fija y estable para ventanas flotantes con pestañas en móvil (evita saltos de layout o recentrados) */
+  .mobile-dark-modal:has(.mobile-tabs-bar) {
+    height: 84dvh !important;
+    max-height: 86vh !important;
+  }
+
   .mobile-dark-modal * {
     font-family: inherit;
     box-sizing: border-box;
