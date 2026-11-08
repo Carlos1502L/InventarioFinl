@@ -1213,9 +1213,10 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
               <button
                 type="button"
                 onClick={() => setScannerOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 whitespace-nowrap shadow-xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 min-h-[44px] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] border border-[#CBD5E1] hover:border-[#1E3A5F] rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 whitespace-nowrap shadow-xs cursor-pointer"
+                title="Escanear código"
               >
-                <Camera className="w-4 h-4 text-white" />
+                <Camera className="w-4 h-4 text-[#1E3A5F]" />
                 <span>Escanear</span>
               </button>
             </div>

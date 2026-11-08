@@ -117,10 +117,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="pt-4">
           <button
             onClick={onQuickScan}
-            className="w-full min-h-[40px] px-3.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 transition-all flex items-center justify-center gap-2 font-mono text-xs uppercase tracking-wider active:scale-95 shadow-xs cursor-pointer"
+            className="w-full min-h-[40px] px-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/15 transition-all flex items-center justify-center gap-2 font-mono text-xs uppercase tracking-wider active:scale-95 shadow-xs cursor-pointer"
+            title="Escanear código"
           >
-            <Camera className="w-4 h-4 stroke-[1.5] text-white" />
-            <span>ESCANEAR CÓDIGO</span>
+            <Camera className="w-4 h-4 text-[#E8B4A0]" />
+            <span>Escanear</span>
           </button>
         </div>
       </div>

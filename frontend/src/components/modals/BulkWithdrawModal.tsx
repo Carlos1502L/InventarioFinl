@@ -383,15 +383,16 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
                 )}
               </div>
 
-              {/* Botón Escáner Continuo: En móvil negro con cámara blanca, en escritorio estándar */}
+              {/* Botón Escáner Continuo al lado de la barra de búsqueda */}
               <button
                 type="button"
                 onClick={() => setScannerOpen(true)}
                 title="Abrir escáner continuo de cámara"
                 aria-label="Escanear con cámara"
-                className="w-11 h-11 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-white active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer"
+                className="h-11 px-3.5 flex items-center justify-center gap-1.5 bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] border border-[#CBD5E1] hover:border-[#1E3A5F] rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer"
               >
-                <Camera className="w-5 h-5 text-white" />
+                <Camera className="w-4 h-4 text-[#1E3A5F]" />
+                <span>Escanear</span>
               </button>
             </div>
 

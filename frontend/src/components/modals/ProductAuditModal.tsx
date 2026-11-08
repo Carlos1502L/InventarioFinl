@@ -568,9 +568,10 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
                 onClick={() => setScannerOpen(true)}
                 title="Escanear código de barras con la cámara"
                 aria-label="Escanear código de barras"
-                className="h-11 w-11 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white flex items-center justify-center transition-all active:scale-95 shrink-0 cursor-pointer shadow-xs"
+                className="h-11 px-3.5 rounded-2xl bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] border border-[#CBD5E1] hover:border-[#1E3A5F] flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-95 shrink-0 cursor-pointer shadow-xs"
               >
-                <Camera className="w-5 h-5 text-white stroke-[1.75]" />
+                <Camera className="w-4 h-4 text-[#1E3A5F] stroke-[1.75]" />
+                <span>Escanear</span>
               </button>
             </div>
 
