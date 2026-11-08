@@ -34,6 +34,7 @@ import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import { SuccessCheckModal } from '../components/modals/SuccessCheckModal';
 import { saveSaleLocally, isNetworkOrOfflineError, QueuedSalePayload } from '../services/offlineSync';
 import { showAppToast } from '../components/ui/ToastNotification';
+import { Switch } from '../components/common/Switch';
 import jsPDF from 'jspdf';
 
 interface SalesPageProps {
@@ -1063,29 +1064,20 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
               >
                 ¿Información del cliente?
               </label>
-              <button
+              <Switch
                 id="mobile-customer-switch"
-                type="button"
-                role="switch"
-                aria-checked={showCustomerInfo}
-                onClick={() => {
-                  const next = !showCustomerInfo;
+                size="lg"
+                activeColor="bg-neutral-950"
+                checked={showCustomerInfo}
+                onChange={(next) => {
                   setShowCustomerInfo(next);
                   if (!next) {
                     setCustomerName('');
                     setCustomerContact('');
                   }
                 }}
-                className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  showCustomerInfo ? 'bg-neutral-950' : 'bg-neutral-200'
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                    showCustomerInfo ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
+                ariaLabel="¿Información del cliente?"
+              />
             </div>
 
             {showCustomerInfo && (
@@ -1654,29 +1646,20 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                 >
                   ¿Información del cliente?
                 </label>
-                <button
+                <Switch
                   id="desktop-customer-switch"
-                  type="button"
-                  role="switch"
-                  aria-checked={showCustomerInfo}
-                  onClick={() => {
-                    const next = !showCustomerInfo;
+                  size="md"
+                  activeColor="bg-[#1E3A5F]"
+                  checked={showCustomerInfo}
+                  onChange={(next) => {
                     setShowCustomerInfo(next);
                     if (!next) {
                       setCustomerName('');
                       setCustomerContact('');
                     }
                   }}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    showCustomerInfo ? 'bg-[#1E3A5F]' : 'bg-[#E5E7EB]'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                      showCustomerInfo ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
+                  ariaLabel="¿Información del cliente?"
+                />
               </div>
 
               {showCustomerInfo && (

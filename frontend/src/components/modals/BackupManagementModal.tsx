@@ -22,6 +22,7 @@ import { useAuth } from '../../context/AuthContext';
 import { showAppToast } from '../ui';
 import { BackupRestoreModal } from '../settings/BackupRestoreModal';
 import { PillOption } from '../common/PillOption';
+import { Switch } from '../common/Switch';
 
 interface BackupManagementModalProps {
   isOpen: boolean;
@@ -935,15 +936,11 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                     <span className="text-xs font-bold text-neutral-800 block">Respaldos automáticos</span>
                     <span className="text-[11px] text-neutral-500 block">Envío recurrente sin abrir la app</span>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                    <input
-                      type="checkbox"
-                      checked={isScheduled}
-                      onChange={(e) => setIsScheduled(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1E3A5F]"></div>
-                  </label>
+                  <Switch
+                    checked={isScheduled}
+                    onChange={setIsScheduled}
+                    ariaLabel="Respaldos automáticos"
+                  />
                 </div>
 
                 {isScheduled && (

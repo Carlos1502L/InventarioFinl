@@ -21,6 +21,7 @@ import { supabase, getApiUrl } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { showAppToast } from '../ui';
 import { BackupRestoreModal } from './BackupRestoreModal';
+import { Switch } from '../common/Switch';
 
 interface BackupManagementCardProps {
   className?: string;
@@ -928,15 +929,11 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
               </div>
 
               {/* Switch de Activación */}
-              <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                <input
-                  type="checkbox"
-                  checked={isScheduled}
-                  onChange={(e) => setIsScheduled(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1E3A5F]"></div>
-              </label>
+              <Switch
+                checked={isScheduled}
+                onChange={setIsScheduled}
+                ariaLabel="Respaldos automáticos"
+              />
             </div>
 
             {isScheduled ? (

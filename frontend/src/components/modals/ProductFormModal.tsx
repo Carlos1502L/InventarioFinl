@@ -34,6 +34,7 @@ import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { RestockProductModal } from './RestockProductModal';
 import { MinimalDropdown } from '../ui/MinimalDropdown';
 import { CancelButton } from '../common/CancelButton';
+import { Switch } from '../common/Switch';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -998,15 +999,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         ¿Es variante de otro ítem?
                       </span>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isVariant}
-                        onChange={e => setIsVariant(e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-10 h-5 bg-[#E5E7EB] max-md:bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1E3A5F] max-md:peer-checked:bg-neutral-950"></div>
-                    </label>
+                    <Switch
+                      checked={isVariant}
+                      onChange={setIsVariant}
+                      ariaLabel="¿Es variante de otro ítem?"
+                    />
                   </div>
 
                   {isVariant && (
