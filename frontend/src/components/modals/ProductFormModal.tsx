@@ -1067,9 +1067,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 </div>
 
                 {/* 4. Categoría y Subcategoría */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">Categoría</label>
+                    <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1 leading-snug truncate">Categoría</label>
                     <MinimalDropdown
                       value={categoryId}
                       onChange={(val) => {
@@ -1088,7 +1088,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1">Subcategoría</label>
+                    <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1 leading-snug truncate">Subcategoría</label>
                     <MinimalDropdown
                       value={subcategoryId}
                       onChange={(val) => setSubcategoryId(val)}
