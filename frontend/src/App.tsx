@@ -123,6 +123,12 @@ export const AppContent: React.FC = () => {
   const [locationSubTab, setLocationSubTab] = useState<LocationSubTab>('assign');
   const [locationTargetProduct, setLocationTargetProduct] = useState<Product | null>(null);
 
+  useEffect(() => {
+    if (activeTab !== 'locations') {
+      setLocationTargetProduct(null);
+    }
+  }, [activeTab]);
+
   const openLocationsWorkspace = (subTab: LocationSubTab = 'assign', prod: Product | null = null) => {
     setLocationSubTab(subTab);
     setLocationTargetProduct(prod);
@@ -557,6 +563,7 @@ export const AppContent: React.FC = () => {
             onRefresh={fetchInventoryData}
             initialSubTab={locationSubTab}
             initialProduct={locationTargetProduct}
+            onClearInitialProduct={() => setLocationTargetProduct(null)}
           />
           </Suspense>
         )}

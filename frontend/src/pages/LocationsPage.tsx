@@ -16,7 +16,8 @@ import {
   Loader2,
   CheckCircle2,
   Inbox,
-  ChevronDown
+  ChevronDown,
+  X
 } from 'lucide-react';
 import { Product, Location } from '../types/database';
 import {
@@ -31,6 +32,7 @@ import { useAuth } from '../context/AuthContext';
 import { matchesAnyField, normalizeText } from '../utils/searchUtils';
 import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import { MinimalDropdown } from '../components/ui/MinimalDropdown';
+import { showAppToast } from '../components/ui/ToastNotification';
 
 export type LocationSubTab = 'assign' | 'consult' | 'move';
 
@@ -48,6 +50,7 @@ interface LocationsPageProps {
   onRefresh: () => void;
   initialSubTab?: LocationSubTab;
   initialProduct?: Product | null;
+  onClearInitialProduct?: () => void;
 }
 
 export const LocationsPage: React.FC<LocationsPageProps> = ({
@@ -55,7 +58,8 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
   locations,
   onRefresh,
   initialSubTab = 'assign',
-  initialProduct = null
+  initialProduct = null,
+  onClearInitialProduct
 }) => {
   const { currentInventory, user } = useAuth();
 
@@ -132,6 +136,11 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
   const [moveAlert, setMoveAlert] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [isMovingStock, setIsMovingStock] = useState(false);
 
+  // Estados para búsqueda de Ubicación de Destino (Campo de búsqueda en vez de select)
+  const moveDestSearchRef = useRef<HTMLDivElement>(null);
+  const [moveDestSearchQuery, setMoveDestSearchQuery] = useState('');
+  const [isMoveDestSearchOpen, setIsMoveDestSearchOpen] = useState(false);
+
   // ============================================================================
   // ESTADOS DEL ESCÁNER DE CÁMARA
   // ============================================================================
@@ -140,15 +149,132 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
     'assignProduct' | 'assignLocation' | 'consultProduct' | 'moveProduct' | 'moveDestination'
   >('assignProduct');
 
-  // Sincronizar producto inicial si viene desde otra vista
+  const decomposeBoxQty = (qty: number, upb: number) => {
+    const totalUnits = Math.round(qty * upb);
+    return {
+      boxes: Math.floor(totalUnits / upb),
+      looseUnits: totalUnits % upb
+    };
+  };
+
+  // Limpiar búsquedas al desmontar el componente (cambio de módulo general)
+  useEffect(() => {
+    return () => {
+      setConsultQuery('');
+      setConsultedProductId(null);
+      setConsultAlert(null);
+      setMoveScanQuery('');
+      setMoveProductId(null);
+      setMoveFromLocationId('');
+      setMoveToLocationId('');
+      setMoveDestSearchQuery('');
+      setMoveAlert(null);
+      setIsMoveDestSearchOpen(false);
+      setAssignScanCode('');
+      setAssignAlert(null);
+    };
+  }, []);
+
+  // Cierre de dropdown al hacer clic fuera del buscador de destino
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moveDestSearchRef.current && !moveDestSearchRef.current.contains(e.target as Node)) {
+        setIsMoveDestSearchOpen(false);
+        const sel = locations.find(l => l.id === moveToLocationId);
+        if (sel) {
+          setMoveDestSearchQuery(`${sel.name} (${sel.code})`);
+        } else if (!moveToLocationId) {
+          setMoveDestSearchQuery('');
+        }
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [locations, moveToLocationId]);
+
+  // Sincronizar producto inicial si viene desde otra vista (ej: botón "+ Asignar Ubicación")
   useEffect(() => {
     if (initialProduct) {
+      const freshProd = products.find(p => p.id === initialProduct.id) || initialProduct;
+      const pendingStock = getPendingLocationStock(freshProd);
+
+      // Si tiene stock pendiente de ubicar, agregarlo directamente a la lista temporal de productos por ubicar
+      if (pendingStock > 0.0001) {
+        const isBox = freshProd.unit_type === 'BOX' && Number(freshProd.units_per_box) > 0;
+        const upb = Number(freshProd.units_per_box || 1);
+        const assignQty = pendingStock;
+        const breakdown = isBox ? decomposeBoxQty(assignQty, upb) : { boxes: assignQty, looseUnits: 0 };
+
+        setBatchItems(prev => {
+          const existingIdx = prev.findIndex(i => i.product.id === freshProd.id);
+          if (existingIdx >= 0) {
+            return prev.map((item, idx) =>
+              idx === existingIdx
+                ? {
+                    ...item,
+                    product: freshProd,
+                    quantity: assignQty,
+                    boxes: breakdown.boxes,
+                    looseUnits: breakdown.looseUnits,
+                    maxPending: pendingStock
+                  }
+                : item
+            );
+          }
+          return [
+            ...prev,
+            {
+              product: freshProd,
+              quantity: assignQty,
+              boxes: breakdown.boxes,
+              looseUnits: breakdown.looseUnits,
+              maxPending: pendingStock
+            }
+          ];
+        });
+        setAssignAlert(null);
+      } else {
+        setAssignAlert({
+          type: 'error',
+          message: `El producto "${freshProd.name}" no tiene unidades pendientes por ubicar.`
+        });
+      }
+
       setConsultedProductId(initialProduct.id);
       setMoveProductId(initialProduct.id);
-      const firstLocWithStock = (initialProduct.product_locations || []).find(pl => Number(pl.quantity || 0) > 0);
+      const firstLocWithStock = (freshProd.product_locations || []).find(pl => Number(pl.quantity || 0) > 0);
       setMoveFromLocationId(firstLocWithStock?.location_id || '');
+      setMoveToLocationId('');
+      setMoveDestSearchQuery('');
+
+      if (onClearInitialProduct) {
+        onClearInitialProduct();
+      }
     }
   }, [initialProduct]);
+
+  // Manejador centralizado para alternar pestañas y limpiar búsquedas
+  const handleTabSwitch = (newTab: LocationSubTab) => {
+    setSubTab(newTab);
+    setConsultQuery('');
+    setConsultedProductId(null);
+    setConsultAlert(null);
+    setMoveScanQuery('');
+    setMoveProductId(null);
+    setMoveFromLocationId('');
+    setMoveToLocationId('');
+    setMoveDestSearchQuery('');
+    setMoveAlert(null);
+    setIsMoveDestSearchOpen(false);
+  };
+
+  // Limpiar consulta manual en la pestaña Consultar
+  const handleClearConsult = () => {
+    setConsultQuery('');
+    setConsultedProductId(null);
+    setConsultAlert(null);
+    setTimeout(() => consultInputRef.current?.focus(), 50);
+  };
 
   // Autofocus ergonómico al cambiar de pestaña
   useEffect(() => {
@@ -188,14 +314,6 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
   // ============================================================================
   // LÓGICA DEL MÓDULO 2: "ASIGNAR UBICACIÓN"
   // ============================================================================
-
-  const decomposeBoxQty = (qty: number, upb: number) => {
-    const totalUnits = Math.round(qty * upb);
-    return {
-      boxes: Math.floor(totalUnits / upb),
-      looseUnits: totalUnits % upb
-    };
-  };
 
   /**
    * Agrega o incrementa (+1) un producto en la lista temporal de asignación validando estrictamente Stock Pendiente
@@ -519,10 +637,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       .filter(
         p =>
           p.status === 'ACTIVE' &&
-          getAssignedLocationStock(p) > 0.0001 &&
           matchesAnyField([p.code, p.name], term)
       )
-      .slice(0, 6);
+      .slice(0, 8);
   }, [products, moveScanQuery]);
 
   // Ubicaciones de origen donde el producto seleccionado tiene stock actual > 0
@@ -542,17 +659,41 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
     return locations.filter(loc => loc.id !== moveFromLocationId);
   }, [locations, moveFromLocationId]);
 
+  // Sugerencias de Ubicación Destino según lo que escribe el usuario (Búsqueda en lugar de select)
+  const moveDestSuggestions = useMemo(() => {
+    const term = normalizeText(moveDestSearchQuery);
+    const candidates = locations.filter(loc => loc.id !== moveFromLocationId);
+    if (!term) return candidates.slice(0, 10);
+    return candidates.filter(loc =>
+      matchesAnyField([loc.name, loc.code, loc.description], term)
+    );
+  }, [locations, moveFromLocationId, moveDestSearchQuery]);
+
   // Seleccionar producto a trasladar por escáner o clic
   const selectProductForMove = (prod: Product, preferredOriginId?: string) => {
+    const origins = (prod.product_locations || []).filter(pl => Number(pl.quantity || 0) > 0.0001);
+
+    if (origins.length === 0) {
+      setMoveAlert({
+        type: 'error',
+        message: 'Producto sin ubicación, asígnelo antes de mover'
+      });
+      showAppToast('Producto sin ubicación, asígnelo antes de mover', 'warning', 3500);
+      setMoveProductId(null);
+      setMoveScanQuery('');
+      return;
+    }
+
     setMoveProductId(prod.id);
     setMoveAlert(null);
-    const origins = (prod.product_locations || []).filter(pl => Number(pl.quantity || 0) > 0.0001);
+    setMoveScanQuery('');
     const chosenOrigin =
       preferredOriginId && origins.some(o => o.location_id === preferredOriginId)
         ? preferredOriginId
         : origins[0]?.location_id || '';
     setMoveFromLocationId(chosenOrigin);
     setMoveToLocationId('');
+    setMoveDestSearchQuery('');
 
     const originEntry = origins.find(o => o.location_id === chosenOrigin);
     const avail = Number(originEntry?.quantity || 0);
@@ -598,6 +739,19 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       return;
     }
 
+    const origins = (matched.product_locations || []).filter(pl => Number(pl.quantity || 0) > 0.0001);
+    if (origins.length === 0) {
+      setMoveAlert({
+        type: 'error',
+        message: 'Producto sin ubicación, asígnelo antes de mover'
+      });
+      showAppToast('Producto sin ubicación, asígnelo antes de mover', 'warning', 3500);
+      setMoveProductId(null);
+      setMoveScanQuery('');
+      moveScanInputRef.current?.focus();
+      return;
+    }
+
     selectProductForMove(matched);
     setMoveScanQuery('');
   };
@@ -607,6 +761,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
     setMoveFromLocationId(locId);
     if (moveToLocationId === locId) {
       setMoveToLocationId('');
+      setMoveDestSearchQuery('');
     }
     const found = moveAvailableOrigins.find(pl => pl.location_id === locId);
     const avail = Number(found?.quantity || 0);
@@ -695,6 +850,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       setMoveProductId(null);
       setMoveFromLocationId('');
       setMoveToLocationId('');
+      setMoveDestSearchQuery('');
       setMoveQuantity('1');
       setMoveBoxes(1);
       setMoveLooseUnits(0);
@@ -780,6 +936,8 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
           });
         } else {
           setMoveToLocationId(foundLoc.id);
+          setMoveDestSearchQuery(`${foundLoc.name} (${foundLoc.code})`);
+          setIsMoveDestSearchOpen(false);
           setMoveAlert(null);
         }
       } else {
@@ -852,7 +1010,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setSubTab(tab.id)}
+                  onClick={() => handleTabSwitch(tab.id)}
                   className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
                     active
                       ? 'bg-white text-neutral-950 shadow-sm'
@@ -1146,15 +1304,25 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
               {/* SUB-CAPA 2A: Barra Fija de Herramientas / Buscador */}
               <div className="shrink-0 w-full bg-white px-5 pt-4 pb-2 space-y-2">
                 <form onSubmit={handleConsultSearchSubmit} className="flex items-center gap-2.5">
-                  <div className="flex-1 min-w-0 flex items-center gap-3 bg-neutral-50 border border-neutral-200/60 rounded-2xl px-4 py-3.5 focus-within:border-neutral-950 focus-within:bg-white transition-all">
+                  <div className="flex-1 min-w-0 flex items-center gap-3 bg-neutral-50 border border-neutral-200/60 rounded-2xl px-4 py-3.5 focus-within:border-neutral-950 focus-within:bg-white transition-all relative">
                     <Search className="w-5 h-5 text-neutral-400 shrink-0" />
                     <input
                       type="text"
                       value={consultQuery}
                       onChange={(e) => setConsultQuery(e.target.value)}
                       placeholder="Buscar producto por código o nombre..."
-                      className="w-full bg-transparent border-0 outline-none ring-0 p-0 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-0"
+                      className="w-full bg-transparent border-0 outline-none ring-0 p-0 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-0 pr-6"
                     />
+                    {(consultQuery || consultedProductId) && (
+                      <button
+                        type="button"
+                        onClick={handleClearConsult}
+                        className="text-neutral-400 hover:text-neutral-700 p-1"
+                        aria-label="Limpiar búsqueda"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -1212,13 +1380,23 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                   </p>
                 ) : (
                 <div className="space-y-4">
-                  <div className="pb-4 border-b border-neutral-100">
-                    <h2 className="text-base font-semibold text-neutral-900">
-                      {consultedProduct.name}
-                    </h2>
-                    <p className="text-xs text-neutral-400 mt-0.5">
-                      SKU {consultedProduct.code} · Total: {formatStockDisplay(consultedProduct)}
-                    </p>
+                  <div className="pb-4 border-b border-neutral-100 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-base font-semibold text-neutral-900">
+                        {consultedProduct.name}
+                      </h2>
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        SKU {consultedProduct.code} · Total: {formatStockDisplay(consultedProduct)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleClearConsult}
+                      className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors"
+                      title="Cerrar consulta"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
 
                   <div className="divide-y divide-neutral-100">
@@ -1383,16 +1561,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                         {moveSelectedProduct.name}
                       </p>
                       <p className="text-xs text-neutral-400">
-                        SKU {moveSelectedProduct.code}
+                        SKU {moveSelectedProduct.code} · Total: {formatStockDisplay(moveSelectedProduct)}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setMoveProductId(null)}
-                      className="text-xs text-neutral-400 hover:text-neutral-900"
-                    >
-                      Cambiar
-                    </button>
                   </div>
 
                   {/* Origen */}
@@ -1463,48 +1634,62 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     </div>
                   </div>
 
-                  {/* Destino */}
+                  {/* Destino (Buscador en vez de select) */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-neutral-500 block">
                       Ubicación de destino
                     </label>
                     <div className="flex items-center gap-2.5 w-full">
-                      <div ref={moveDestDropdownRef} className="relative w-full flex-1 min-w-0">
-                        <button
-                          type="button"
-                          onClick={() => setIsMoveDestDropdownOpen((prev) => !prev)}
-                          className="w-full flex items-center justify-between bg-neutral-50 border border-neutral-200/60 rounded-2xl py-3 px-4 text-sm text-neutral-800 font-medium hover:bg-neutral-100/60 transition-colors"
-                        >
-                          {(() => {
-                            const selectedDest = moveAvailableDestinations.find((loc) => loc.id === moveToLocationId);
-                            return selectedDest ? (
-                              <span className="truncate">
-                                {selectedDest.name}
-                                <span className="text-xs text-neutral-400 font-normal ml-2">
-                                  {selectedDest.code}
-                                </span>
-                              </span>
-                            ) : (
-                              <span className="truncate text-neutral-400 font-normal">
-                                Seleccionar destino...
-                              </span>
-                            );
-                          })()}
-                          <ChevronDown
-                            className={`w-4 h-4 text-neutral-400 shrink-0 ml-2 transition-transform duration-200 ${
-                              isMoveDestDropdownOpen ? 'rotate-180' : ''
-                            }`}
+                      <div ref={moveDestSearchRef} className="relative w-full flex-1 min-w-0">
+                        <div className="relative flex items-center">
+                          <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 pointer-events-none" />
+                          <input
+                            type="text"
+                            value={moveDestSearchQuery}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setMoveDestSearchQuery(val);
+                              setIsMoveDestSearchOpen(true);
+                              const exact = moveAvailableDestinations.find(
+                                (l) =>
+                                  normalizeText(l.code) === normalizeText(val) ||
+                                  normalizeText(l.name) === normalizeText(val) ||
+                                  normalizeText(`${l.name} (${l.code})`) === normalizeText(val)
+                              );
+                              if (exact) {
+                                setMoveToLocationId(exact.id);
+                              } else {
+                                setMoveToLocationId('');
+                              }
+                            }}
+                            onFocus={() => setIsMoveDestSearchOpen(true)}
+                            placeholder="Buscar estante o código destino..."
+                            className="w-full bg-neutral-50 border border-neutral-200/60 rounded-2xl py-3 pl-10 pr-9 text-sm text-neutral-800 placeholder:text-neutral-400 focus:bg-white focus:border-neutral-950 focus:outline-none transition-all"
                           />
-                        </button>
+                          {moveDestSearchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMoveDestSearchQuery('');
+                                setMoveToLocationId('');
+                                setIsMoveDestSearchOpen(true);
+                              }}
+                              className="absolute right-3 p-1 text-neutral-400 hover:text-neutral-700 rounded-full"
+                              aria-label="Limpiar destino"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
 
-                        {isMoveDestDropdownOpen && (
+                        {isMoveDestSearchOpen && (
                           <div className="absolute left-0 right-0 top-full mt-2 z-30 bg-white rounded-2xl border border-neutral-200/80 shadow-xl p-1.5 overflow-hidden max-h-60 overflow-y-auto">
-                            {moveAvailableDestinations.length === 0 ? (
+                            {moveDestSuggestions.length === 0 ? (
                               <div className="px-3 py-2.5 text-xs text-neutral-400 text-center">
-                                No hay ubicaciones disponibles
+                                No hay ubicaciones destino coincidentes
                               </div>
                             ) : (
-                              moveAvailableDestinations.map((loc) => {
+                              moveDestSuggestions.map((loc) => {
                                 const isSelected = moveToLocationId === loc.id;
                                 return (
                                   <button
@@ -1512,7 +1697,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                                     type="button"
                                     onClick={() => {
                                       setMoveToLocationId(loc.id);
-                                      setIsMoveDestDropdownOpen(false);
+                                      setMoveDestSearchQuery(`${loc.name} (${loc.code})`);
+                                      setIsMoveDestSearchOpen(false);
+                                      setMoveAlert(null);
                                     }}
                                     className={`w-full rounded-xl px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950 transition-colors flex items-center justify-between cursor-pointer text-left ${
                                       isSelected ? 'bg-neutral-100/80 font-semibold text-neutral-950' : ''
@@ -1657,7 +1844,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-[#E5E7EB] font-mono text-xs">
           <button
             type="button"
-            onClick={() => setSubTab('assign')}
+            onClick={() => handleTabSwitch('assign')}
             className={`min-h-[44px] px-4 py-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${
               subTab === 'assign'
                 ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-sm'
@@ -1684,7 +1871,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
           <button
             type="button"
-            onClick={() => setSubTab('consult')}
+            onClick={() => handleTabSwitch('consult')}
             className={`min-h-[44px] px-4 py-2.5 rounded-xl border text-left transition-all flex items-center gap-2.5 ${
               subTab === 'consult'
                 ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-sm'
@@ -1700,7 +1887,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
           <button
             type="button"
-            onClick={() => setSubTab('move')}
+            onClick={() => handleTabSwitch('move')}
             className={`min-h-[44px] px-4 py-2.5 rounded-xl border text-left transition-all flex items-center gap-2.5 ${
               subTab === 'move'
                 ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-sm'
@@ -2233,8 +2420,18 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                   value={consultQuery}
                   onChange={e => setConsultQuery(e.target.value)}
                   placeholder="Escanea el código de barras o escribe el nombre / SKU del artículo..."
-                  className="w-full min-h-[46px] bg-[#F8F9FA] focus:bg-white border-2 border-[#1E3A5F] rounded-xl pl-11 pr-4 py-2.5 text-xs sm:text-sm font-mono text-[#1E3A5F] placeholder:text-[#616161]/60 focus:outline-none"
+                  className="w-full min-h-[46px] bg-[#F8F9FA] focus:bg-white border-2 border-[#1E3A5F] rounded-xl pl-11 pr-10 py-2.5 text-xs sm:text-sm font-mono text-[#1E3A5F] placeholder:text-[#616161]/60 focus:outline-none"
                 />
+                {(consultQuery || consultedProductId) && (
+                  <button
+                    type="button"
+                    onClick={handleClearConsult}
+                    className="absolute right-3.5 top-3.5 text-[#616161] hover:text-[#1E3A5F] p-0.5 rounded-full"
+                    title="Limpiar consulta"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
 
                 {/* Coincidencias desplegables al escribir */}
                 {consultSuggestions.length > 0 && (
@@ -2337,18 +2534,29 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                   </h3>
                 </div>
 
-                <div className="p-4 bg-[#F8F9FA] border border-[#E5E7EB] rounded-2xl text-right shrink-0">
-                  <span className="text-[10px] uppercase tracking-wider text-[#616161] block">
-                    STOCK TOTAL GLOBAL
-                  </span>
-                  <span className="text-2xl font-bold text-[#1E3A5F] block">
-                    {formatLocationQuantity(consultedProduct.stock, consultedProduct)}
-                  </span>
-                  {consultedProduct.unit_type === 'BOX' && getBoxBreakdown(consultedProduct).breakdownLabel && (
-                    <span className="text-[10px] text-[#616161] block">
-                      {getBoxBreakdown(consultedProduct).breakdownLabel}
+                <div className="flex items-center gap-3 self-start md:self-auto">
+                  <div className="p-4 bg-[#F8F9FA] border border-[#E5E7EB] rounded-2xl text-right shrink-0">
+                    <span className="text-[10px] uppercase tracking-wider text-[#616161] block">
+                      STOCK TOTAL GLOBAL
                     </span>
-                  )}
+                    <span className="text-2xl font-bold text-[#1E3A5F] block">
+                      {formatLocationQuantity(consultedProduct.stock, consultedProduct)}
+                    </span>
+                    {consultedProduct.unit_type === 'BOX' && getBoxBreakdown(consultedProduct).breakdownLabel && (
+                      <span className="text-[10px] text-[#616161] block">
+                        {getBoxBreakdown(consultedProduct).breakdownLabel}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClearConsult}
+                    className="p-2.5 rounded-xl border border-[#E5E7EB] hover:bg-[#F8F9FA] text-[#616161] hover:text-[#1E3A5F] transition-colors"
+                    title="Cerrar consulta"
+                    aria-label="Cerrar consulta"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
 
@@ -2692,23 +2900,93 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       </div>
                     )}
 
-                    {/* 3. Selector de Destino */}
+                    {/* 3. Selector de Destino (Campo de búsqueda por nombre o código) */}
                     <div>
                       <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1.5">
                         3. Ubicación de Destino <span className="text-[#E8B4A0]">*</span>
                       </label>
                       <div className="flex gap-2">
-                        <div className="flex-1 min-w-0">
-                          <MinimalDropdown
-                            value={moveToLocationId}
-                            onChange={(val) => setMoveToLocationId(val)}
-                            placeholder="Seleccionar destino..."
-                            options={moveAvailableDestinations.map((loc) => ({
-                              value: loc.id,
-                              label: loc.name,
-                              badge: loc.code
-                            }))}
-                          />
+                        <div ref={moveDestSearchRef} className="relative flex-1 min-w-0">
+                          <div className="relative flex items-center">
+                            <Search className="w-4 h-4 text-[#1E3A5F] absolute left-3.5 pointer-events-none" />
+                            <input
+                              type="text"
+                              value={moveDestSearchQuery}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setMoveDestSearchQuery(val);
+                                setIsMoveDestSearchOpen(true);
+                                const exact = moveAvailableDestinations.find(
+                                  (l) =>
+                                    normalizeText(l.code) === normalizeText(val) ||
+                                    normalizeText(l.name) === normalizeText(val) ||
+                                    normalizeText(`${l.name} (${l.code})`) === normalizeText(val)
+                                );
+                                if (exact) {
+                                  setMoveToLocationId(exact.id);
+                                } else {
+                                  setMoveToLocationId('');
+                                }
+                              }}
+                              onFocus={() => setIsMoveDestSearchOpen(true)}
+                              placeholder="Buscar ubicación por nombre o código (ej: Estante B, LOC-02)..."
+                              className="w-full bg-[#F8F9FA] focus:bg-white border-2 border-[#1E3A5F] rounded-xl pl-10 pr-9 py-2 text-xs font-mono text-[#1E3A5F] placeholder:text-[#616161]/60 focus:outline-none transition-all"
+                            />
+                            {moveDestSearchQuery && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMoveDestSearchQuery('');
+                                  setMoveToLocationId('');
+                                  setIsMoveDestSearchOpen(true);
+                                }}
+                                className="absolute right-3 p-0.5 text-[#616161] hover:text-[#1E3A5F] rounded-full"
+                                aria-label="Limpiar destino"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+
+                          {isMoveDestSearchOpen && (
+                            <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white border border-[#1E3A5F] rounded-xl shadow-xl max-h-56 overflow-y-auto divide-y divide-[#E5E7EB]">
+                              {moveDestSuggestions.length === 0 ? (
+                                <div className="p-3 text-xs text-neutral-400 text-center font-mono">
+                                  No se encontraron ubicaciones destino coincidentes.
+                                </div>
+                              ) : (
+                                moveDestSuggestions.map((loc) => {
+                                  const isSelected = moveToLocationId === loc.id;
+                                  return (
+                                    <button
+                                      key={loc.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setMoveToLocationId(loc.id);
+                                        setMoveDestSearchQuery(`${loc.name} (${loc.code})`);
+                                        setIsMoveDestSearchOpen(false);
+                                        setMoveAlert(null);
+                                      }}
+                                      className={`w-full px-3.5 py-2.5 text-left font-mono text-xs flex items-center justify-between gap-2 hover:bg-[#F8F9FA] transition-colors ${
+                                        isSelected ? 'bg-[#E8B4A0]/20 font-bold' : ''
+                                      }`}
+                                    >
+                                      <div className="truncate">
+                                        <span className="font-bold text-[#1E3A5F] mr-2">[{loc.code}]</span>
+                                        <span className="text-[#1E3A5F] uppercase font-medium">{loc.name}</span>
+                                        {loc.description && (
+                                          <span className="text-[10px] text-[#616161] block truncate font-normal">
+                                            {loc.description}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {isSelected && <Check className="w-4 h-4 text-[#1E3A5F] shrink-0" />}
+                                    </button>
+                                  );
+                                })
+                              )}
+                            </div>
+                          )}
                         </div>
                         <button
                           type="button"
