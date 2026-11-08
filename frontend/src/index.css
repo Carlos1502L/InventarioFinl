@@ -883,15 +883,13 @@ div:has(> label:empty + span.hidden) {
    ANIMACIÓN FLUIDA PARA BOTONES SWITCH (ACTIVACIÓN Y DESACTIVACIÓN)
    ========================================================================== */
 [role="switch"] {
-  transition: background-color 300ms cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 300ms cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 300ms cubic-bezier(0.16, 1, 0.3, 1),
-              transform 150ms ease-out !important;
-  will-change: background-color, transform;
+  transition: background-color 250ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 250ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  will-change: background-color;
 }
 
 [role="switch"] > span {
-  transition: transform 300ms cubic-bezier(0.34, 1.25, 0.64, 1),
+  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1),
               box-shadow 200ms ease-out !important;
   will-change: transform;
 }
