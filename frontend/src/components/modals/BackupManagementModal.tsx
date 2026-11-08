@@ -714,7 +714,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in fade-in">
-        <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-lg max-h-[90vh] max-md:h-[84dvh] sm:min-h-[520px] overflow-hidden shadow-2xl flex flex-col font-sans">
+        <div className="mobile-dark-modal w-full max-w-md bg-white border border-[#E5E7EB] rounded-3xl shadow-2xl flex flex-col font-sans h-auto max-h-[85vh] overflow-hidden transition-all duration-300 ease-in-out">
           
           {/* Cabecera Limpia */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E7EB] bg-[#ffffff] shrink-0">
@@ -762,7 +762,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
           </div>
 
           {/* Cuerpo Scrollable con Padding y Espaciado Limpio */}
-          <div className="overflow-y-auto space-y-4 p-5 flex-1 min-h-0">
+          <div className="overflow-y-auto space-y-4 p-5 h-auto transition-all duration-300 ease-in-out">
             {loadingSettings && (
               <div className="flex items-center justify-center gap-2 py-3 text-xs text-[#616161]">
                 <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
@@ -929,22 +929,45 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
 
             {/* PESTAÑA 2: AUTOMÁTICO */}
             {activeTab === 'scheduled' && (
-              <div className="space-y-4">
-                {/* Switch de activación */}
-                <div className="flex items-center justify-between p-3.5 bg-neutral-50 rounded-2xl border border-neutral-100 min-h-[58px] shrink-0">
-                  <div className="min-w-0 flex-1 pr-3">
-                    <span className="text-xs font-bold text-neutral-800 block truncate">Respaldos automáticos</span>
-                    <span className="text-[11px] text-neutral-500 block truncate">Envío recurrente sin abrir la app</span>
+              <div className="flex flex-col gap-4 animate-in fade-in duration-300">
+                {/* Fila del Toggle: Siempre visible e intacta */}
+                <div className="flex items-center justify-between p-4 bg-gray-50/80 rounded-2xl border border-gray-100 min-h-[58px] shrink-0">
+                  <div className="flex flex-col pr-4 min-w-0 flex-1">
+                    <span className="text-sm font-semibold text-gray-900 block truncate">Respaldos automáticos</span>
+                    <span className="text-xs text-gray-500 block truncate">Envío recurrente sin abrir la app</span>
                   </div>
-                  <Switch
-                    checked={isScheduled}
-                    onChange={setIsScheduled}
-                    ariaLabel="Respaldos automáticos"
-                  />
+                  
+                  {/* Switch con tamaño fijo bloqueado (evita que se expanda al 100%) */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isScheduled}
+                    aria-label="Respaldos automáticos"
+                    onClick={() => setIsScheduled(!isScheduled)}
+                    style={{
+                      width: '48px',
+                      minWidth: '48px',
+                      maxWidth: '48px',
+                      height: '28px',
+                      minHeight: '28px',
+                      maxHeight: '28px',
+                      flexShrink: 0
+                    }}
+                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+                      isScheduled ? 'bg-black' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out mt-1 ml-1 ${
+                        isScheduled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
                 </div>
 
+                {/* Formulario desplegable: Solo se renderiza DEBAJO cuando isScheduled es true */}
                 {isScheduled && (
-                  <div className="space-y-3.5 animate-in fade-in">
+                  <div className="flex flex-col gap-4 pt-1 transition-all duration-300 animate-in fade-in">
                     {/* Correo de destino con Validación Minimalista */}
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between gap-2 min-w-0">

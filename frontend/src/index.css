@@ -274,10 +274,11 @@ div:has(> label:empty + span.hidden) {
     top: auto !important;
     z-index: 65 !important;
     width: calc(100vw - 1.75rem) !important;
-    max-width: 26rem !important;
-    max-height: 86vh !important;
+    max-width: 28rem !important;
+    height: auto !important;
+    max-height: 85vh !important;
     margin: auto !important;
-    border-radius: 1.75rem !important;
+    border-radius: 1.5rem !important;
     border: none !important;
     background-color: #ffffff !important;
     color: #171717 !important;
@@ -287,13 +288,10 @@ div:has(> label:empty + span.hidden) {
     box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.3) !important;
     padding: 0 !important;
     font-family: 'Inter Tight', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    transition: all 300ms ease-in-out !important;
   }
 
-  /* Altura fija y estable para ventanas flotantes con pestañas en móvil (evita saltos de layout o recentrados) */
-  .mobile-dark-modal:has(.mobile-tabs-bar) {
-    height: 84dvh !important;
-    max-height: 86vh !important;
-  }
+
 
   .mobile-dark-modal * {
     font-family: inherit;
@@ -763,15 +761,35 @@ div:has(> label:empty + span.hidden) {
     border: 1px solid #d4d4d4 !important;
   }
 
+  /* Switch y Toggle Buttons: Proteger estrictamente dimensiones bloqueadas inmutables */
+  .mobile-dark-modal button[role="switch"],
+  button[role="switch"] {
+    width: 3rem !important; /* 48px / w-12 */
+    min-width: 3rem !important;
+    max-width: 3rem !important;
+    height: 1.75rem !important; /* 28px / h-7 */
+    min-height: 1.75rem !important;
+    max-height: 1.75rem !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 9999px !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+  }
+
   /* 10. Botones de Acción Principal (Guardar / Crear / Confirmar) */
-  .mobile-dark-modal button[type="submit"],
-  .mobile-dark-modal button.mobile-primary-btn,
-  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-\[\#1E3A5F\]:not(.mobile-inline-btn):not(.w-5):not(.w-6),
-  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-blue-600:not(.mobile-inline-btn):not(.w-5):not(.w-6),
-  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-indigo-600:not(.mobile-inline-btn):not(.w-5):not(.w-6),
-  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-purple-600:not(.mobile-inline-btn):not(.w-5):not(.w-6),
-  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-amber-600:not(.mobile-inline-btn):not(.w-5):not(.w-6),
-  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-emerald-600:not(.mobile-inline-btn):not(.w-5):not(.w-6) {
+  .mobile-dark-modal button[type="submit"]:not([role="switch"]):not([aria-checked]),
+  .mobile-dark-modal button.mobile-primary-btn:not([role="switch"]):not([aria-checked]),
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-\[\#1E3A5F\]:not(.mobile-inline-btn):not([role="switch"]):not([aria-checked]):not(.w-5):not(.w-6),
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-blue-600:not(.mobile-inline-btn):not([role="switch"]):not([aria-checked]):not(.w-5):not(.w-6),
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-indigo-600:not(.mobile-inline-btn):not([role="switch"]):not([aria-checked]):not(.w-5):not(.w-6),
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-purple-600:not(.mobile-inline-btn):not([role="switch"]):not([aria-checked]):not(.w-5):not(.w-6),
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-amber-600:not(.mobile-inline-btn):not([role="switch"]):not([aria-checked]):not(.w-5):not(.w-6),
+  .mobile-dark-modal > div:not(:first-child):not(.mobile-tabs-bar) button.bg-emerald-600:not(.mobile-inline-btn):not([role="switch"]):not([aria-checked]):not(.w-5):not(.w-6) {
     width: 100% !important;
     padding-top: 0.875rem !important;
     padding-bottom: 0.875rem !important;
