@@ -1113,9 +1113,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     }}
                     title="Escanear código o QR de ubicación"
                     aria-label="Escanear ubicación destino"
-                    className="py-3 px-4 rounded-2xl bg-neutral-50 border border-neutral-200/60 text-neutral-800 hover:bg-neutral-100/60 flex items-center justify-center gap-1.5 text-xs font-semibold shrink-0 active:scale-95 transition-all"
+                    className="py-3 px-4 rounded-2xl bg-black hover:bg-neutral-800 border border-black text-white flex items-center justify-center gap-1.5 text-xs font-semibold shrink-0 active:scale-95 transition-all shadow-xs cursor-pointer"
                   >
-                    <Camera className="w-4 h-4" />
+                    <Camera className="w-4 h-4 text-white" />
                     <span>Escanear</span>
                   </button>
                 </div>
@@ -1540,9 +1540,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                         }}
                         title="Escanear código o QR de ubicación destino"
                         aria-label="Escanear ubicación destino"
-                        className="py-3 px-4 rounded-2xl bg-neutral-50 border border-neutral-200/60 text-neutral-800 hover:bg-neutral-100/60 flex items-center justify-center gap-1.5 text-xs font-semibold shrink-0 active:scale-95 transition-all"
+                        className="py-3 px-4 rounded-2xl bg-black hover:bg-neutral-800 border border-black text-white flex items-center justify-center gap-1.5 text-xs font-semibold shrink-0 active:scale-95 transition-all shadow-xs cursor-pointer"
                       >
-                        <Camera className="w-4 h-4" />
+                        <Camera className="w-4 h-4 text-white" />
                         <span>Escanear</span>
                       </button>
                     </div>
@@ -1798,10 +1798,10 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       setCameraScanTarget('assignProduct');
                       setCameraScannerOpen(true);
                     }}
-                    className="min-h-[46px] px-4 bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all"
+                    className="min-h-[46px] px-4 bg-black hover:bg-neutral-800 text-white border border-black rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
                     title="Usar cámara como escáner"
                   >
-                    <Camera className="w-4 h-4" />
+                    <Camera className="w-4 h-4 text-white" />
                     <span>Cámara</span>
                   </button>
                 </div>
@@ -2279,9 +2279,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     setCameraScanTarget('consultProduct');
                     setCameraScannerOpen(true);
                   }}
-                  className="min-h-[46px] px-4 bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5"
+                  className="min-h-[46px] px-4 bg-black hover:bg-neutral-800 text-white border border-black rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
                 >
-                  <Camera className="w-4 h-4" />
+                  <Camera className="w-4 h-4 text-white" />
                   <span>Cámara</span>
                 </button>
               </div>
@@ -2519,10 +2519,10 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     setCameraScanTarget('moveProduct');
                     setCameraScannerOpen(true);
                   }}
-                  className="px-3.5 min-h-[44px] bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs uppercase flex items-center justify-center gap-1.5"
+                  className="px-3.5 min-h-[44px] bg-black hover:bg-neutral-800 text-white border border-black rounded-xl text-xs uppercase flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
                   title="Escanear con cámara"
                 >
-                  <Camera className="w-4 h-4" />
+                  <Camera className="w-4 h-4 text-white" />
                   <span className="sm:hidden">Cámara</span>
                 </button>
               </div>

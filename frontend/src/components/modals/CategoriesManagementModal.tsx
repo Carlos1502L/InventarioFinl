@@ -46,7 +46,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
   const [createType, setCreateType] = useState<'category' | 'subcategory'>('category');
 
   // Filtros y buscador dentro de 'Existentes'
-  const [filterType, setFilterType] = useState<'all' | 'categories' | 'subcategories'>('all');
+  const [filterType, setFilterType] = useState<'categories' | 'subcategories'>('categories');
   const [searchQuery, setSearchQuery] = useState('');
   const [parentCategoryFilter, setParentCategoryFilter] = useState<string>('all');
 
@@ -421,41 +421,22 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                 )}
               </div>
 
-              {/* Filtro de Visualización Secundario Tipo Chip/Píldora */}
+              {/* Filtro de Visualización Secundario Tipo Píldora Estandarizada */}
               <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                <button
-                  type="button"
-                  onClick={() => setFilterType('all')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    filterType === 'all'
-                      ? 'bg-[#1E3A5F] text-white shadow-2xs'
-                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200/70'
-                  }`}
-                >
-                  Todas ({totalCount})
-                </button>
-                <button
-                  type="button"
+                <PillOption
+                  active={filterType === 'categories'}
                   onClick={() => setFilterType('categories')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    filterType === 'categories'
-                      ? 'bg-[#1E3A5F] text-white shadow-2xs'
-                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200/70'
-                  }`}
+                  badge={categories.length}
                 >
-                  Solo Categorías ({categories.length})
-                </button>
-                <button
-                  type="button"
+                  Categorías
+                </PillOption>
+                <PillOption
+                  active={filterType === 'subcategories'}
                   onClick={() => setFilterType('subcategories')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    filterType === 'subcategories'
-                      ? 'bg-[#1E3A5F] text-white shadow-2xs'
-                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200/70'
-                  }`}
+                  badge={subcategories.length}
                 >
-                  Solo Subcategorías ({subcategories.length})
-                </button>
+                  Subcategorías
+                </PillOption>
               </div>
 
               {/* Filtro adicional por Categoría Padre si está en subcategorías */}
@@ -487,7 +468,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                       type="button"
                       onClick={() => {
                         setSearchQuery('');
-                        setFilterType('all');
+                        setFilterType('categories');
                         setParentCategoryFilter('all');
                       }}
                       className="text-xs text-[#1E3A5F] underline font-semibold cursor-pointer"
@@ -500,11 +481,6 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                     {/* Sección Categorías */}
                     {filteredCategories.length > 0 && (
                       <div className="space-y-1.5">
-                        {filterType === 'all' && (
-                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block px-1">
-                            Categorías ({filteredCategories.length})
-                          </span>
-                        )}
                         {filteredCategories.map((cat) => {
                           const catSubCount = subcategories.filter(s => s.category_id === cat.id).length;
                           return (
@@ -551,11 +527,6 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                     {/* Sección Subcategorías */}
                     {filteredSubcategories.length > 0 && (
                       <div className="space-y-1.5 pt-1">
-                        {filterType === 'all' && (
-                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block px-1">
-                            Subcategorías ({filteredSubcategories.length})
-                          </span>
-                        )}
                         {filteredSubcategories.map((sub) => {
                           const parentCat = categories.find((c) => c.id === sub.category_id);
                           return (

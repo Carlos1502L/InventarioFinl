@@ -568,9 +568,9 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
                 onClick={() => setScannerOpen(true)}
                 title="Escanear código de barras con la cámara"
                 aria-label="Escanear código de barras"
-                className="h-11 w-11 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center transition-all active:scale-95 shrink-0 cursor-pointer shadow-xs border border-transparent hover:border-zinc-300 dark:hover:border-zinc-700"
+                className="h-11 w-11 rounded-2xl bg-black hover:bg-neutral-800 border border-black text-white flex items-center justify-center transition-all active:scale-95 shrink-0 cursor-pointer shadow-xs"
               >
-                <Camera className="w-5 h-5 stroke-[1.75]" />
+                <Camera className="w-5 h-5 text-white stroke-[1.75]" />
               </button>
             </div>
 
@@ -610,17 +610,26 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
 
             {/* Cápsula de Producto Activo Seleccionado */}
             {selectedProduct && (
-              <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/80 text-xs">
-                <div className="w-7 h-7 rounded-lg bg-[#1E3A5F]/10 dark:bg-white/10 text-[#1E3A5F] dark:text-zinc-200 flex items-center justify-center shrink-0">
-                  <Package className="w-3.5 h-3.5" />
+              <div className="flex items-center justify-between gap-2.5 px-3.5 py-2 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/80 text-xs">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="w-7 h-7 rounded-lg bg-[#1E3A5F]/10 dark:bg-white/10 text-[#1E3A5F] dark:text-zinc-200 flex items-center justify-center shrink-0">
+                    <Package className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                      {selectedProduct.name}
+                    </p>
+                    <p className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+                      REF: {selectedProduct.code || selectedProduct.sku || 'N/A'} • Stock: {selectedProduct.stock} {selectedProduct.unit_type === 'BOX' ? 'cajas' : 'und'}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-                    {selectedProduct.name}
-                  </p>
-                  <p className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
-                    REF: {selectedProduct.code || selectedProduct.sku || 'N/A'} • Stock: {selectedProduct.stock} {selectedProduct.unit_type === 'BOX' ? 'cajas' : 'und'}
-                  </p>
+
+                {/* Indicador de registros indexados bajo la barra de búsqueda, a la derecha de la información del producto */}
+                <div className="shrink-0 pl-2">
+                  <span className="inline-flex items-center px-2 py-1 rounded-xl bg-white dark:bg-zinc-700/80 border border-zinc-200 dark:border-zinc-600 font-mono text-[11px] font-semibold text-zinc-800 dark:text-zinc-100 shadow-2xs whitespace-nowrap">
+                    Registro: {auditLogs.length}
+                  </span>
                 </div>
               </div>
             )}
@@ -674,35 +683,34 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
                     key={log.id}
                     className="border border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-800/40 rounded-2xl p-3.5 space-y-2 hover:bg-zinc-50 dark:hover:bg-zinc-800/70 transition-colors shadow-2xs"
                   >
-                    {/* Fila Superior: Badge de Acción a la izquierda | Nombre Completo y Hora a la derecha (Estructura 100% Uniforme) */}
-                    <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${diff.badgeColor} shrink-0`}
-                        >
-                          {diff.icon}
-                          <span>{diff.badgeText}</span>
+                    {/* 1. Indicador en la parte superior, ejm "Reabastecimiento", "Precio", "Eliminacion" */}
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${diff.badgeColor} shrink-0`}
+                      >
+                        {diff.icon}
+                        <span>{diff.badgeText}</span>
+                      </span>
+                      {!selectedProduct && log.product_name && (
+                        <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 truncate max-w-[180px]">
+                          • {log.product_name}
                         </span>
-                        {!selectedProduct && log.product_name && (
-                          <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 truncate max-w-[150px]">
-                            • {log.product_name}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-3 text-[11px] text-zinc-500 dark:text-zinc-400">
-                        <span className="flex items-center gap-1 font-medium text-zinc-800 dark:text-zinc-200">
-                          <User className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                          <strong className="font-semibold font-sans">{userFullName}</strong>
-                        </span>
-                        <span className="flex items-center gap-1 font-mono text-[10px] text-zinc-400 shrink-0">
-                          <Clock className="w-3 h-3 text-zinc-400 shrink-0" />
-                          {formatDate(log.created_at)}
-                        </span>
-                      </div>
+                      )}
                     </div>
 
-                    {/* Acción Exacta y Diferencial (Diff) */}
+                    {/* 2. Abajo del indicador, "Nombre del responsable" alineado al lado derecho, fecha y hora de la modificación */}
+                    <div className="flex items-center justify-end gap-3 text-[11px] text-zinc-500 dark:text-zinc-400">
+                      <span className="flex items-center gap-1 font-medium text-zinc-800 dark:text-zinc-200">
+                        <User className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                        <strong className="font-semibold font-sans">{userFullName}</strong>
+                      </span>
+                      <span className="flex items-center gap-1 font-mono text-[10px] text-zinc-400 shrink-0">
+                        <Clock className="w-3 h-3 text-zinc-400 shrink-0" />
+                        {formatDate(log.created_at)}
+                      </span>
+                    </div>
+
+                    {/* 3. Abajo de ello, Motivo o detalle */}
                     <p className="text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-200 leading-snug">
                       {diff.headline}
                     </p>
@@ -713,19 +721,11 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
           </div>
 
           {/* Pie del Modal con contador de eventos y botón cerrar perfectamente centrados */}
-          <div className="px-5 sm:px-6 py-3 border-t border-[#E5E7EB] dark:border-zinc-800 bg-[#F8F9FA]/90 dark:bg-zinc-900/90 flex items-center justify-between gap-3 text-xs shrink-0 min-h-[52px]">
-            <div className="flex items-center gap-2 font-mono text-zinc-500 dark:text-zinc-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-              <span className="font-medium">
-                {selectedProduct
-                  ? `${auditLogs.length} ${auditLogs.length === 1 ? 'registro indexado' : 'registros indexados'}`
-                  : 'Esperando selección'}
-              </span>
-            </div>
+          <div className="px-5 sm:px-6 py-3.5 border-t border-[#E5E7EB] dark:border-zinc-800 bg-[#F8F9FA]/90 dark:bg-zinc-900/90 flex items-center justify-center shrink-0 min-h-[56px]">
             <CancelButton
               onClick={onClose}
               label="Cerrar"
-              className="shrink-0 font-sans shadow-xs min-h-[34px] flex items-center justify-center px-4 py-1.5"
+              className="min-w-[140px] font-sans shadow-xs min-h-[38px] flex items-center justify-center px-6 py-2"
             />
           </div>
         </div>

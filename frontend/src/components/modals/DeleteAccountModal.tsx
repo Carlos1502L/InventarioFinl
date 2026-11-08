@@ -153,7 +153,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
               <span>Confirmación de seguridad</span>
             </div>
             <p className="text-xs text-[#616161] leading-relaxed">
-              Esta acción es irreversible. Se eliminará permanentemente la cuenta de <strong className="text-[#1E3A5F] font-mono">{user?.email}</strong>, junto con tus inventarios propios, catálogo de existencias, historial y cachés locales.
+              Se eliminará permanentemente la cuenta de <strong className="text-[#1E3A5F] font-mono">{user?.email}</strong>, junto con toda la información existente. Esta acción es irreversible.
             </p>
           </div>
 

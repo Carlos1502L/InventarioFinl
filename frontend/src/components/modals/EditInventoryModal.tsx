@@ -1073,7 +1073,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                     Transferencia de Propiedad
                   </div>
                   <p className="text-xs text-indigo-600/90 dark:text-indigo-300/80 leading-relaxed">
-                    Al transferir la propiedad, el colaborador seleccionado pasará a ser el <strong>Dueño legítimo</strong> del inventario con control de eliminación y tú mantendrás acceso completo como <strong>Colaborador</strong>.
+                    Al transferir la propiedad, el colaborador seleccionado pasará a ser el <strong>Dueño Legitimo</strong> del inventario y tú mantendrás acceso como <strong>Colaborador</strong>.
                   </p>
                 </div>
 
@@ -1129,7 +1129,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                     Advertencia de Eliminación Permanente
                   </div>
                   <p className="text-xs text-rose-600/90 dark:text-rose-300/80 leading-relaxed">
-                    Esta acción es irreversible. Se eliminarán permanentemente el inventario <strong>"{inventory.name}"</strong>, todos sus productos, fotos asociadas, categorías, ubicaciones y el registro histórico de auditoría.
+                    Se eliminará permanentemente el inventario <strong>"{inventory.name}"</strong>, y toda su información existente. Esta acción es irreversible.
                   </p>
                 </div>
 

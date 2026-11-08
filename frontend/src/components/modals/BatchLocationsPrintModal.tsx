@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { Location } from '../../types/database';
+import { PillOption } from '../common/PillOption';
 import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
 import { useAuth } from '../../context/AuthContext';
 import { escapeHtml } from '../../utils/security';
@@ -464,20 +465,18 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
               />
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <PillOption
+                active={selectedIds.size === filteredLocations.length && filteredLocations.length > 0}
                 onClick={handleSelectAll}
-                className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors active:scale-95"
               >
-                Todas
-              </button>
-              <button
-                type="button"
+                Todos
+              </PillOption>
+              <PillOption
+                active={selectedIds.size === 0}
                 onClick={handleDeselectAll}
-                className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors active:scale-95"
               >
                 Ninguna
-              </button>
+              </PillOption>
               <span className="text-xs font-bold text-amber-600 dark:text-amber-400 px-2 py-1 bg-amber-50 dark:bg-amber-500/10 rounded-lg whitespace-nowrap">
                 {selectedIds.size} / {locations.length} sel.
               </span>
