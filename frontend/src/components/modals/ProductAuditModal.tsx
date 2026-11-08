@@ -34,15 +34,48 @@ interface ProductAuditModalProps {
 }
 
 /**
- * Normaliza y formatea el nombre o alias legible del usuario responsable
+ * Resuelve el nombre completo registrado del usuario responsable
  */
-function formatUserAlias(email?: string | null, userId?: string | null): string {
-  if (!email || email === 'sistema' || email === 'anonimo@usuario.com') {
+function resolveUserDisplayName(
+  log: AuditLog,
+  userNamesMap: Record<string, string>,
+  currentUser?: any
+): string {
+  // 1. Si viene en metadata.user_full_name
+  if (log.metadata?.user_full_name && typeof log.metadata.user_full_name === 'string' && log.metadata.user_full_name.trim()) {
+    return log.metadata.user_full_name.trim();
+  }
+
+  // 2. Si coincide con el usuario actualmente autenticado
+  if (currentUser) {
+    const isCurrentUser = (log.user_id && log.user_id === currentUser.id) ||
+      (log.user_email && log.user_email.toLowerCase() === currentUser.email?.toLowerCase());
+    if (isCurrentUser) {
+      const metaName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name;
+      if (metaName && typeof metaName === 'string' && metaName.trim()) {
+        return metaName.trim();
+      }
+    }
+  }
+
+  // 3. Buscar en el mapa de perfiles cargados por ID
+  if (log.user_id && userNamesMap[log.user_id]) {
+    return userNamesMap[log.user_id];
+  }
+
+  // 4. Buscar en el mapa de perfiles cargados por Email
+  if (log.user_email && userNamesMap[log.user_email.toLowerCase()]) {
+    return userNamesMap[log.user_email.toLowerCase()];
+  }
+
+  // 5. Casos especiales de sistema / anónimo
+  if (!log.user_email || log.user_email === 'sistema' || log.user_email === 'anonimo@usuario.com') {
     return 'Sistema';
   }
-  const cleanEmail = email.trim();
+
+  // 6. Si no hay nombre registrado disponible, capitalizar nombre derivado del correo
+  const cleanEmail = log.user_email.trim();
   const namePart = cleanEmail.split('@')[0];
-  // Si contiene puntos (ej. carlos.gonzalez), capitalizar
   if (namePart.includes('.')) {
     return namePart
       .split('.')
@@ -54,6 +87,7 @@ function formatUserAlias(email?: string | null, userId?: string | null): string 
 
 /**
  * Traduce y resume el diferencial (Diff) exacto de la acción en formato editorial
+ * Garantiza estructura uniforme sea realizada por dueño o colaborador
  */
 function formatActionDiff(
   log: AuditLog,
@@ -68,6 +102,72 @@ function formatActionDiff(
   const meta = log.metadata || {};
 
   switch (log.action_type) {
+    case 'CREATE': {
+      let headline = log.details || 'Producto registrado en el catálogo';
+      headline = headline.replace(/\s+por\s+[\w.-]+@[\w.-]+/gi, '');
+      return {
+        headline,
+        badgeText: 'Creación',
+        badgeColor: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+        icon: <PlusCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+      };
+    }
+
+    case 'RESTOCK': {
+      let headline = log.details || 'Reingreso de mercancía al stock';
+      headline = headline.replace(/\s+por\s+[\w.-]+@[\w.-]+/gi, '');
+      return {
+        headline,
+        badgeText: 'Reabastecimiento',
+        badgeColor: 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+        icon: <ArrowUpRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+      };
+    }
+
+    case 'WITHDRAW': {
+      let headline = log.details || 'Salida de mercancía o merma descontada';
+      headline = headline.replace(/\s+por\s+[\w.-]+@[\w.-]+/gi, '');
+      return {
+        headline,
+        badgeText: 'Descuento / Merma',
+        badgeColor: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+        icon: <TrendingDown className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
+      };
+    }
+
+    case 'MOVE': {
+      let headline = log.details || 'Traslado físico de ubicación';
+      headline = headline.replace(/\s+por\s+[\w.-]+@[\w.-]+/gi, '');
+      return {
+        headline,
+        badgeText: 'Traslado',
+        badgeColor: 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+        icon: <ArrowRightLeft className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
+      };
+    }
+
+    case 'SALE': {
+      let headline = log.details || 'Venta registrada en punto de venta';
+      headline = headline.replace(/\s+por\s+[\w.-]+@[\w.-]+/gi, '');
+      return {
+        headline,
+        badgeText: 'Venta',
+        badgeColor: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+        icon: <ShoppingCart className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+      };
+    }
+
+    case 'DELETE': {
+      let headline = log.details || 'Producto eliminado del catálogo';
+      headline = headline.replace(/\s+por\s+[\w.-]+@[\w.-]+/gi, '');
+      return {
+        headline,
+        badgeText: 'Baja',
+        badgeColor: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+        icon: <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
+      };
+    }
+
     case 'UPDATE': {
       // 1. Si viene diff_summary en metadata
       if (Array.isArray(meta.diff_summary) && meta.diff_summary.length > 0) {
@@ -91,8 +191,9 @@ function formatActionDiff(
       // 2. Si details ya contiene un resumen de cambios (contiene • o Renombró)
       if (log.details && (log.details.includes('Renombró') || log.details.includes('Cambió categoría') || log.details.includes(' • '))) {
         const isRename = log.details.includes('Renombró');
+        let headline = log.details.replace(/\s+por\s+[\w.-]+@[\w.-]+/gi, '');
         return {
-          headline: log.details,
+          headline,
           badgeText: isRename ? 'Renombre' : 'Edición',
           badgeColor: isRename
             ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
@@ -165,9 +266,10 @@ function formatActionDiff(
 
       // 8. Sanitización de texto legado
       let headline = log.details || 'Ficha técnica actualizada';
-      if (headline.includes('Producto actualizado por')) {
+      if (headline.includes('Producto actualizado por') || headline.includes('Actualización de ficha técnica por')) {
         headline = 'Actualización de ficha técnica y parámetros del producto';
       }
+      headline = headline.replace(/\s+por\s+[\w.-]+@[\w.-]+/gi, '');
 
       return {
         headline,
@@ -177,13 +279,16 @@ function formatActionDiff(
       };
     }
 
-    default:
+    default: {
+      let headline = log.details || 'Movimiento registrado en auditoría';
+      headline = headline.replace(/\s+por\s+[\w.-]+@[\w.-]+/gi, '');
       return {
-        headline: log.details || 'Movimiento registrado en auditoría',
+        headline,
         badgeText: log.action_type || 'Registro',
         badgeColor: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700',
         icon: <History className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400 shrink-0" />
       };
+    }
   }
 }
 
@@ -193,10 +298,11 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
   products,
   initialProductId = null
 }) => {
-  const { currentInventory } = useAuth();
+  const { currentInventory, user } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [userNamesMap, setUserNamesMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [showDebouncedLoading, setShowDebouncedLoading] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -244,11 +350,65 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
       .order('created_at', { ascending: false })
       .limit(50);
 
-    query.then(({ data, error }) => {
+    query.then(async ({ data, error }) => {
       clearTimeout(debounceTimer);
       if (!isMounted) return;
       if (!error && data) {
         setAuditLogs(data as AuditLog[]);
+
+        // Cargar nombres completos registrados desde la tabla profiles
+        const ids = Array.from(new Set(data.map((l: any) => l.user_id).filter(Boolean))) as string[];
+        const emails = Array.from(new Set(data.map((l: any) => l.user_email).filter((e: any) => e && e.includes('@')))) as string[];
+
+        try {
+          const newMap: Record<string, string> = {};
+
+          if (user) {
+            const myFullName = user.user_metadata?.full_name || user.user_metadata?.name;
+            if (myFullName) {
+              newMap[user.id] = myFullName;
+              if (user.email) newMap[user.email.toLowerCase()] = myFullName;
+            }
+          }
+
+          if (ids.length > 0) {
+            const { data: profsById } = await supabase
+              .from('profiles')
+              .select('id, email, full_name')
+              .in('id', ids);
+
+            if (profsById) {
+              profsById.forEach(p => {
+                if (p.full_name) {
+                  newMap[p.id] = p.full_name;
+                  if (p.email) newMap[p.email.toLowerCase()] = p.full_name;
+                }
+              });
+            }
+          }
+
+          if (emails.length > 0) {
+            const { data: profsByEmail } = await supabase
+              .from('profiles')
+              .select('id, email, full_name')
+              .in('email', emails);
+
+            if (profsByEmail) {
+              profsByEmail.forEach(p => {
+                if (p.full_name) {
+                  newMap[p.id] = p.full_name;
+                  if (p.email) newMap[p.email.toLowerCase()] = p.full_name;
+                }
+              });
+            }
+          }
+
+          if (isMounted && Object.keys(newMap).length > 0) {
+            setUserNamesMap(prev => ({ ...prev, ...newMap }));
+          }
+        } catch (err) {
+          console.warn('Error resolviendo perfiles de auditoría:', err);
+        }
       } else {
         setAuditLogs([]);
       }
@@ -507,18 +667,18 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
             ) : (
               auditLogs.map((log, index) => {
                 const diff = formatActionDiff(log, auditLogs, index);
-                const userAlias = formatUserAlias(log.user_email, log.user_id);
+                const userFullName = resolveUserDisplayName(log, userNamesMap, user);
 
                 return (
                   <div
                     key={log.id}
                     className="border border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-800/40 rounded-2xl p-3.5 space-y-2 hover:bg-zinc-50 dark:hover:bg-zinc-800/70 transition-colors shadow-2xs"
                   >
-                    {/* Fila Superior: Badge de Acción, Usuario y Hora */}
+                    {/* Fila Superior: Badge de Acción a la izquierda | Nombre Completo y Hora a la derecha (Estructura 100% Uniforme) */}
                     <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
                         <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${diff.badgeColor}`}
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${diff.badgeColor} shrink-0`}
                         >
                           {diff.icon}
                           <span>{diff.badgeText}</span>
@@ -530,15 +690,13 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
                         )}
                       </div>
 
-                      <div className="flex items-center gap-3 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
-                        <span className="flex items-center gap-1">
-                          <User className="w-3 h-3 text-zinc-400" />
-                          <strong className="font-semibold text-zinc-700 dark:text-zinc-300">
-                            {userAlias}
-                          </strong>
+                      <div className="flex items-center gap-3 text-[11px] text-zinc-500 dark:text-zinc-400">
+                        <span className="flex items-center gap-1 font-medium text-zinc-800 dark:text-zinc-200">
+                          <User className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                          <strong className="font-semibold font-sans">{userFullName}</strong>
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-zinc-400" />
+                        <span className="flex items-center gap-1 font-mono text-[10px] text-zinc-400 shrink-0">
+                          <Clock className="w-3 h-3 text-zinc-400 shrink-0" />
                           {formatDate(log.created_at)}
                         </span>
                       </div>
@@ -554,12 +712,21 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
             )}
           </div>
 
-          {/* Pie del Modal con contador de eventos */}
-          <div className="px-6 py-3 border-t border-[#E5E7EB] dark:border-zinc-800 bg-[#F8F9FA]/80 dark:bg-zinc-900/80 flex items-center justify-between text-xs font-mono text-zinc-500 dark:text-zinc-400 shrink-0">
-            <span>
-              {selectedProduct ? `${auditLogs.length} ${auditLogs.length === 1 ? 'registro' : 'registros'} indexados` : 'Esperando selección'}
-            </span>
-            <CancelButton onClick={onClose} label="Cerrar" />
+          {/* Pie del Modal con contador de eventos y botón cerrar perfectamente centrados */}
+          <div className="px-5 sm:px-6 py-3 border-t border-[#E5E7EB] dark:border-zinc-800 bg-[#F8F9FA]/90 dark:bg-zinc-900/90 flex items-center justify-between gap-3 text-xs shrink-0 min-h-[52px]">
+            <div className="flex items-center gap-2 font-mono text-zinc-500 dark:text-zinc-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span className="font-medium">
+                {selectedProduct
+                  ? `${auditLogs.length} ${auditLogs.length === 1 ? 'registro indexado' : 'registros indexados'}`
+                  : 'Esperando selección'}
+              </span>
+            </div>
+            <CancelButton
+              onClick={onClose}
+              label="Cerrar"
+              className="shrink-0 font-sans shadow-xs min-h-[34px] flex items-center justify-center px-4 py-1.5"
+            />
           </div>
         </div>
       </div>

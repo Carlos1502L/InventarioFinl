@@ -110,6 +110,8 @@ export async function logAuditAction({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
+  const userFullName = user.user_metadata?.full_name || user.user_metadata?.name || null;
+
   const { error } = await supabase.from('audit_logs').insert({
     inventory_id: inventoryId,
     product_id: productId,
@@ -118,7 +120,10 @@ export async function logAuditAction({
     user_email: user.email || 'anonimo@usuario.com',
     action_type: actionType,
     details,
-    metadata
+    metadata: {
+      ...metadata,
+      ...(userFullName ? { user_full_name: userFullName } : {})
+    }
   });
 
   if (error) {

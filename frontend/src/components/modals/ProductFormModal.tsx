@@ -819,15 +819,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
                 {/* 3.1: SELECTOR DE UNIDAD DE MEDIDA DUAL: [ Unidad ] | [ Caja ] */}
                 <div className="mobile-flat-section p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <span className="text-xs font-bold text-[#1E3A5F] max-md:text-neutral-700 max-md:font-semibold max-md:normal-case uppercase tracking-wider block">
-                        Unidad de Medida Operativa <span className="text-[#E8B4A0]">*</span>
-                      </span>
-                      <span className="text-[11px] text-[#616161]">
-                        Define si el control de inventario se realiza por unidad individual o por caja fraccionable
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-[#1E3A5F] max-md:text-neutral-700 max-md:font-semibold max-md:normal-case uppercase tracking-wider">
+                      Unidad de Medida Operativa <span className="text-[#E8B4A0]">*</span>
+                    </span>
 
                     {/* Botones Selector [ Unidad ] | [ Caja ] */}
                     <div className="mobile-segmented grid grid-cols-2 gap-1.5 p-1 bg-white border border-[#E5E7EB] rounded-xl shrink-0 font-mono text-xs">
