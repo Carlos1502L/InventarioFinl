@@ -4,13 +4,10 @@ import {
   ChevronLeft,
   ChevronDown,
   ShieldCheck,
-  CheckCircle2,
+  Check,
   FileText,
   Lock,
-  Cpu,
-  Database,
-  ArrowRight,
-  ExternalLink
+  Cpu
 } from 'lucide-react';
 
 export type LegalTab = 'terms' | 'privacy';
@@ -40,8 +37,7 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
     return initialTab;
   });
 
-  // Estado de los acordeones: id -> boolean (abierto/cerrado)
-  // Por defecto la primera cláusula de cada sección se presenta abierta para invitar a la interacción
+  // Estado independiente por cláusula (abierto/cerrado)
   const [openClauses, setOpenClauses] = useState<Record<string, boolean>>({
     'terms-1': true,
     'privacy-1': true
@@ -97,7 +93,7 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
       title: 'Objeto y Alcance del Servicio',
       badge: 'Alcance Operativo',
       renderContent: () => (
-        <p className="text-slate-600 font-normal leading-relaxed text-sm">
+        <p className="text-neutral-600 font-normal leading-relaxed text-xs sm:text-sm">
           Stockly es una Progressive Web App (PWA) de gestión de inventarios, control de existencias, bodegas y terminal de punto de venta (POS), diseñada para operar de forma online y en modo offline diferido en dispositivos móviles y de escritorio.
         </p>
       )
@@ -108,33 +104,33 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
       title: 'Cláusula de Recopilación de Datos',
       badge: 'Datos Recabados',
       renderContent: () => (
-        <div className="space-y-3.5">
-          <p className="text-slate-600 font-normal leading-relaxed text-sm">
+        <div className="space-y-3">
+          <p className="text-neutral-600 font-normal leading-relaxed text-xs sm:text-sm">
             Para brindar el servicio, se recopila exclusivamente la información estrictamente necesaria:
           </p>
-          <ul className="space-y-2.5 text-sm text-slate-700">
+          <ul className="space-y-2.5 text-xs sm:text-sm text-neutral-800">
             <li className="flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+              <Check className="w-4 h-4 text-neutral-950 mt-0.5 shrink-0 stroke-[2.5]" />
               <span>
-                <strong className="text-slate-900 font-semibold">Correo de Registro:</strong> Identificador principal de cuenta, correo electrónico y credenciales seguras.
+                <strong className="text-neutral-950 font-semibold">Correo de Registro:</strong> Identificador principal de cuenta, correo electrónico y credenciales seguras.
               </span>
             </li>
             <li className="flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+              <Check className="w-4 h-4 text-neutral-950 mt-0.5 shrink-0 stroke-[2.5]" />
               <span>
-                <strong className="text-slate-900 font-semibold">Catálogo de Inventario:</strong> Nombres de productos, códigos de barra (EAN/UPC/QR), existencias, precios de costo y venta, categorías y ubicaciones de almacén.
+                <strong className="text-neutral-950 font-semibold">Catálogo de Inventario:</strong> Nombres de productos, códigos de barra (EAN/UPC/QR), existencias, precios de costo y venta, categorías y ubicaciones de almacén.
               </span>
             </li>
             <li className="flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+              <Check className="w-4 h-4 text-neutral-950 mt-0.5 shrink-0 stroke-[2.5]" />
               <span>
-                <strong className="text-slate-900 font-semibold">Registros de Ventas y Precios:</strong> Transacciones emitidas, fechas, montos liquidados, medios de pago y notas de despacho.
+                <strong className="text-neutral-950 font-semibold">Registros de Ventas y Precios:</strong> Transacciones emitidas, fechas, montos liquidados, medios de pago y notas de despacho.
               </span>
             </li>
             <li className="flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+              <Check className="w-4 h-4 text-neutral-950 mt-0.5 shrink-0 stroke-[2.5]" />
               <span>
-                <strong className="text-slate-900 font-semibold">Almacenamiento Técnico Local (PWA):</strong> Uso de IndexedDB y Service Workers en el navegador para garantizar operatividad y sincronización sin conexión.
+                <strong className="text-neutral-950 font-semibold">Almacenamiento Técnico Local (PWA):</strong> Uso de IndexedDB y Service Workers en el navegador para garantizar operatividad y sincronización sin conexión.
               </span>
             </li>
           </ul>
@@ -147,23 +143,23 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
       title: 'Procesamiento de Inteligencia Artificial y Visión',
       badge: 'IA & Privacidad',
       renderContent: () => (
-        <div className="space-y-3 text-sm text-slate-600 leading-relaxed">
-          <div className="flex items-start gap-2.5 bg-amber-50/70 border border-amber-200/80 rounded-xl p-3.5 text-amber-950">
-            <Cpu className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
-            <div className="space-y-1">
-              <span className="font-semibold text-xs uppercase tracking-wider text-amber-900 block">
+        <div className="space-y-3 text-xs sm:text-sm text-neutral-600 leading-relaxed">
+          <div className="bg-neutral-50 border border-neutral-200/80 rounded-2xl p-3.5 space-y-1 text-neutral-950">
+            <div className="flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-neutral-950 shrink-0" />
+              <span className="font-bold text-xs uppercase tracking-wider text-neutral-950">
                 Inferencia Multimodal Efímera
               </span>
-              <p className="text-xs text-amber-900/90 leading-relaxed">
-                El procesamiento asistido por cámara no almacena copias de fotografías ni metadatos personales una vez concluido el reconocimiento.
-              </p>
             </div>
+            <p className="text-xs text-neutral-600 leading-relaxed font-normal">
+              El procesamiento asistido por cámara no almacena copias de fotografías ni metadatos personales una vez concluido el reconocimiento.
+            </p>
           </div>
           <p>
-            <strong className="text-slate-900 font-semibold">Procesamiento Efímero:</strong> Las imágenes transmitidas mediante escaneo o cámara se procesan en memoria de manera estrictamente temporal para la extracción de códigos y detalles de producto. No se almacenan permanentemente en los servidores de inferencia.
+            <strong className="text-neutral-950 font-semibold">Procesamiento Efímero:</strong> Las imágenes transmitidas mediante escaneo o cámara se procesan en memoria de manera estrictamente temporal para la extracción de códigos y detalles de producto. No se almacenan permanentemente en los servidores de inferencia.
           </p>
           <p>
-            <strong className="text-slate-900 font-semibold">Consentimiento y Propiedad Intelectual:</strong> El usuario otorga consentimiento expreso para dicho análisis sin que esto constituya cesión de propiedad intelectual. Los datos nunca se utilizan para entrenar modelos fundacionales públicos de terceros.
+            <strong className="text-neutral-950 font-semibold">Consentimiento y Propiedad Intelectual:</strong> El usuario otorga consentimiento expreso para dicho análisis sin que esto constituya cesión de propiedad intelectual. Los datos nunca se utilizan para entrenar modelos fundacionales públicos de terceros.
           </p>
         </div>
       )
@@ -174,20 +170,20 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
       title: 'Transferencia a Terceros y Subencargados',
       badge: 'Proveedores Certificados',
       renderContent: () => (
-        <div className="space-y-3.5 text-sm text-slate-600 leading-relaxed">
+        <div className="space-y-3 text-xs sm:text-sm text-neutral-600 leading-relaxed">
           <p>
             Los datos transitan exclusivamente por proveedores tecnológicos certificados: Supabase / PostgreSQL (base de datos y auth cifrado), Vercel (distribución CDN segura) y APIs de visión multimodal bajo protocolos HTTPS.
           </p>
-          <div className="flex items-start gap-3 bg-emerald-50/80 border border-emerald-200/90 rounded-xl p-3.5 text-emerald-950">
-            <ShieldCheck className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
-            <div className="space-y-0.5">
-              <strong className="text-emerald-900 font-semibold text-xs uppercase tracking-wider block">
+          <div className="bg-neutral-950 text-white rounded-2xl p-4 space-y-1">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-white shrink-0" />
+              <span className="font-bold text-xs uppercase tracking-wider text-white">
                 Garantía de No Comercialización
-              </strong>
-              <p className="text-xs text-emerald-900/90 font-medium">
-                Los datos de inventario y negocio NO son vendidos, comercializados, alquilados ni cedidos a terceros con fines publicitarios bajo ninguna modalidad.
-              </p>
+              </span>
             </div>
+            <p className="text-xs text-neutral-300 font-normal leading-relaxed">
+              Los datos de inventario y negocio NO son vendidos, comercializados, alquilados ni cedidos a terceros con fines publicitarios bajo ninguna modalidad.
+            </p>
           </div>
         </div>
       )
@@ -198,7 +194,7 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
       title: 'Derechos ARCO y Supresión de Cuenta',
       badge: 'Control Total',
       renderContent: () => (
-        <div className="space-y-2.5 text-sm text-slate-600 leading-relaxed">
+        <div className="space-y-2 text-xs sm:text-sm text-neutral-600 leading-relaxed">
           <p>
             El usuario puede ejercer sus derechos de acceso, rectificación, cancelación y oposición. La eliminación definitiva e irrevocable de la cuenta puede ejecutarse directamente desde la sección Configuración &gt; Zona de Peligro, purgando irreversiblemente todos los datos vinculados.
           </p>
@@ -217,7 +213,7 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
       title: 'Responsable y Encargado del Tratamiento',
       badge: 'Seguridad RLS',
       renderContent: () => (
-        <p className="text-slate-600 font-normal leading-relaxed text-sm">
+        <p className="text-neutral-600 font-normal leading-relaxed text-xs sm:text-sm">
           Stockly opera como encargado técnico de la custodia de inventarios y datos de negocio introducidos por los usuarios en la PWA, respetando el aislamiento estricto de cada cuenta mediante políticas RLS en PostgreSQL.
         </p>
       )
@@ -229,36 +225,36 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
       badge: 'Estructura de Datos',
       renderContent: () => (
         <div className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-1">
-              <strong className="text-slate-900 font-semibold block text-xs uppercase tracking-wider">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+            <div className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-1">
+              <strong className="text-neutral-950 font-bold block text-xs">
                 Cuenta y Perfil
               </strong>
-              <p className="text-slate-600 text-xs font-normal">
+              <p className="text-neutral-600 font-normal text-xs leading-relaxed">
                 Correo de autenticación, nombre y roles asignados.
               </p>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-1">
-              <strong className="text-slate-900 font-semibold block text-xs uppercase tracking-wider">
+            <div className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-1">
+              <strong className="text-neutral-950 font-bold block text-xs">
                 Catálogo y Stock
               </strong>
-              <p className="text-slate-600 text-xs font-normal">
+              <p className="text-neutral-600 font-normal text-xs leading-relaxed">
                 Productos, existencias, códigos, categorías y ubicaciones.
               </p>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-1">
-              <strong className="text-slate-900 font-semibold block text-xs uppercase tracking-wider">
+            <div className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-1">
+              <strong className="text-neutral-950 font-bold block text-xs">
                 Ventas y Precios
               </strong>
-              <p className="text-slate-600 text-xs font-normal">
+              <p className="text-neutral-600 font-normal text-xs leading-relaxed">
                 Historial transaccional, comprobantes, montos y métodos de pago.
               </p>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-1">
-              <strong className="text-slate-900 font-semibold block text-xs uppercase tracking-wider">
+            <div className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-1">
+              <strong className="text-neutral-950 font-bold block text-xs">
                 Caché Local Offline
               </strong>
-              <p className="text-slate-600 text-xs font-normal">
+              <p className="text-neutral-600 font-normal text-xs leading-relaxed">
                 IndexedDB y Service Workers para continuidad sin conexión.
               </p>
             </div>
@@ -272,7 +268,7 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
       title: 'Tratamiento de Imágenes e IA',
       badge: 'Análisis Efímero',
       renderContent: () => (
-        <div className="space-y-3 text-sm text-slate-600 leading-relaxed">
+        <div className="space-y-3 text-xs sm:text-sm text-neutral-600 leading-relaxed">
           <p>
             El análisis multimodal de imágenes para escaneo de códigos y rótulos se ejecuta de forma estrictamente efímera. Las imágenes no se conservan tras la extracción y nunca son utilizadas para entrenar modelos públicos de terceros.
           </p>
@@ -285,15 +281,15 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
       title: 'Subencargados e Integridad Comercial',
       badge: 'Cifrado en Tránsito',
       renderContent: () => (
-        <div className="space-y-3.5 text-sm text-slate-600 leading-relaxed">
+        <div className="space-y-3 text-xs sm:text-sm text-neutral-600 leading-relaxed">
           <p>
             La infraestructura opera sobre Supabase (PostgreSQL en AWS) y Vercel con comunicaciones cifradas en tránsito (TLS/HTTPS).
           </p>
-          <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-xl p-3.5 text-emerald-950 space-y-1">
-            <span className="font-bold text-xs uppercase tracking-wider text-emerald-900 block">
+          <div className="bg-neutral-950 text-white rounded-2xl p-4 space-y-1">
+            <span className="font-bold text-xs uppercase tracking-wider text-white block">
               Declaración Expresa:
             </span>
-            <p className="text-xs text-emerald-900 font-medium leading-relaxed">
+            <p className="text-xs text-neutral-300 font-normal leading-relaxed">
               Tus datos de ventas, catálogo, clientes y márgenes comerciales NUNCA son comercializados, vendidos ni transferidos a terceros para fines publicitarios.
             </p>
           </div>
@@ -306,7 +302,7 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
       title: 'Derecho de Supresión Total',
       badge: 'Purga Permanente',
       renderContent: () => (
-        <div className="space-y-2.5 text-sm text-slate-600 leading-relaxed">
+        <div className="space-y-2 text-xs sm:text-sm text-neutral-600 leading-relaxed">
           <p>
             El usuario puede ejercer en cualquier momento la eliminación definitiva de su cuenta desde Ajustes &gt; Zona de Peligro. La confirmación desencadena la purga permanente de los datos en el servidor y la limpieza total de bases locales en el navegador.
           </p>
@@ -319,59 +315,58 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
   const allCurrentOpen = currentClauses.every(c => openClauses[c.id]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#F8F9FA] text-slate-900 flex flex-col h-[100dvh] overflow-hidden selection:bg-[#1E3A5F] selection:text-white font-sans">
+    <div className="fixed inset-0 z-50 bg-white text-neutral-900 flex flex-col h-[100dvh] overflow-hidden select-none font-sans">
       {/* =========================================================
-          ENCABEZADO FIJO SUPERIOR: NAVEGACIÓN Y MARCA
+          1. HEADER OSCURO NATIVO MÓVIL (Con orbes y esquinas redondeadas)
          ========================================================= */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 py-3.5 sticky top-0 z-30 shrink-0 shadow-xs">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-[#1E3A5F] bg-slate-100/80 hover:bg-slate-200/70 active:scale-95 rounded-xl transition-all cursor-pointer border border-slate-200/60"
-            aria-label="Volver a la pantalla anterior"
-          >
-            <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
-            <span>Volver</span>
-          </button>
+      <header className="shrink-0 bg-neutral-950 text-white rounded-b-[2.5rem] z-20 select-none px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-6 transition-all duration-300 relative overflow-hidden shadow-sm">
+        {/* Orbes de luz ambiental de fondo */}
+        <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full bg-sky-500/15 blur-3xl pointer-events-none" />
+        <div className="absolute top-1/2 -left-12 w-52 h-52 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none" />
 
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center shadow-xs">
-              <ShieldCheck className="w-4 h-4 stroke-[2]" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-xs uppercase tracking-wider text-[#1E3A5F]">
-                Stockly Legal
-              </span>
-              <span className="text-[10px] text-slate-500 font-medium hidden sm:inline">
-                Centro de Confianza & Gobernanza
-              </span>
+        <div className="flex items-center justify-between gap-4 relative z-10 max-w-xl mx-auto">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="w-10 h-10 rounded-full border border-neutral-700/80 bg-neutral-900/80 hover:bg-neutral-800 text-neutral-200 flex items-center justify-center transition-colors active:scale-95 shadow-xs shrink-0 cursor-pointer"
+              aria-label="Volver"
+            >
+              <ChevronLeft className="w-5 h-5 stroke-[2]" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-white truncate">
+                Centro Legal
+              </h1>
+              <p className="text-xs text-neutral-400 truncate mt-0.5 font-medium">
+                Términos y Privacidad de Stockly
+              </p>
             </div>
           </div>
 
-          <div className="text-right">
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold bg-slate-100 text-slate-600 border border-slate-200/80">
-              Noviembre 2026
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-neutral-800/80 text-neutral-300 text-xs font-medium tabular-nums border border-neutral-700/60">
+              Nov 2026
             </span>
           </div>
         </div>
       </header>
 
       {/* =========================================================
-          CONTENEDOR PRINCIPAL SCROLLEABLE
+          2. CUERPO BLANCO GLOBAL CON SCROLL TÁCTIL NATIVO
          ========================================================= */}
       <main
-        className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 sm:py-8 overscroll-contain pb-[max(3rem,env(safe-area-inset-bottom))]"
+        className="flex-1 min-h-0 w-full bg-white overflow-y-auto overscroll-contain px-5 pt-4 pb-[max(2.5rem,env(safe-area-inset-bottom))]"
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
       >
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="max-w-xl mx-auto space-y-4">
           {/* =========================================================
-              SELECTOR DE SECCIONES (TABS INDEPENDIENTES)
+              SELECTOR NATIVO MÓVIL (Segmented Control)
              ========================================================= */}
           <div
             role="tablist"
             aria-label="Secciones del Centro Legal"
-            className="p-1.5 bg-slate-200/70 border border-slate-300/60 rounded-2xl grid grid-cols-2 gap-1.5 select-none shadow-xs"
+            className="p-1 bg-neutral-100 rounded-2xl flex items-center select-none"
           >
             <button
               type="button"
@@ -380,14 +375,14 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
               aria-controls="panel-terms"
               aria-selected={activeTab === 'terms'}
               onClick={() => handleTabChange('terms')}
-              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer ${
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
                 activeTab === 'terms'
-                  ? 'bg-white text-[#1E3A5F] shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
+                  ? 'bg-white text-neutral-950 shadow-xs font-bold'
+                  : 'text-neutral-500 hover:text-neutral-950'
               }`}
             >
-              <FileText className={`w-4 h-4 ${activeTab === 'terms' ? 'text-[#1E3A5F]' : 'text-slate-400'}`} />
-              <span className="truncate">Términos y Condiciones</span>
+              <FileText className={`w-4 h-4 ${activeTab === 'terms' ? 'text-neutral-950' : 'text-neutral-400'}`} />
+              <span className="truncate">Términos de Uso</span>
             </button>
 
             <button
@@ -397,64 +392,51 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
               aria-controls="panel-privacy"
               aria-selected={activeTab === 'privacy'}
               onClick={() => handleTabChange('privacy')}
-              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer ${
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
                 activeTab === 'privacy'
-                  ? 'bg-white text-[#1E3A5F] shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
+                  ? 'bg-white text-neutral-950 shadow-xs font-bold'
+                  : 'text-neutral-500 hover:text-neutral-950'
               }`}
             >
-              <Lock className={`w-4 h-4 ${activeTab === 'privacy' ? 'text-[#1E3A5F]' : 'text-slate-400'}`} />
-              <span className="truncate">Política de Privacidad</span>
+              <Lock className={`w-4 h-4 ${activeTab === 'privacy' ? 'text-neutral-950' : 'text-neutral-400'}`} />
+              <span className="truncate">Privacidad y Datos</span>
             </button>
           </div>
 
           {/* =========================================================
-              ENCABEZADO DE LA SECCIÓN ACTIVA
+              TARJETA EDITORIAL DE ENCABEZADO
              ========================================================= */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-xs space-y-2">
-            {activeTab === 'terms' ? (
-              <>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F]">
-                  Términos y Condiciones de Uso
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
-                  Última actualización: Noviembre de 2026. Al registrarte o utilizar la plataforma Stockly, aceptas las siguientes condiciones de servicio.
-                </p>
-              </>
-            ) : (
-              <>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F]">
-                  Política de Privacidad y Datos
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
-                  Garantizamos la confidencialidad absoluta de tu información comercial y el control total de tus datos.
-                </p>
-              </>
-            )}
-
-            {/* Barra de utilidades del acordeón */}
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-              <span className="font-mono text-[11px]">
-                {currentClauses.length} cláusulas disponibles
+          <div className="bg-neutral-50 border border-neutral-200/80 rounded-3xl p-5 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
+                {activeTab === 'terms' ? 'Condiciones de Servicio' : 'Protección de Datos'}
               </span>
               <button
                 type="button"
                 onClick={() => setAllCurrentClauses(!allCurrentOpen)}
-                className="font-medium text-[#1E3A5F] hover:underline cursor-pointer text-xs"
+                className="text-xs font-semibold text-neutral-700 hover:text-neutral-950 underline underline-offset-2 cursor-pointer"
               >
-                {allCurrentOpen ? 'Colapsar todas' : 'Expandir todas'}
+                {allCurrentOpen ? 'Colapsar todo' : 'Expandir todo'}
               </button>
             </div>
+            <h2 className="text-lg sm:text-xl font-bold text-neutral-950 tracking-tight">
+              {activeTab === 'terms' ? 'Términos y Condiciones de Uso' : 'Política de Privacidad y Datos'}
+            </h2>
+            <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed font-normal">
+              {activeTab === 'terms'
+                ? 'Última actualización: Noviembre de 2026. Al registrarte o utilizar la plataforma Stockly, aceptas las siguientes condiciones de servicio.'
+                : 'Garantizamos la confidencialidad absoluta de tu información comercial y el control total de tus datos.'}
+            </p>
           </div>
 
           {/* =========================================================
-              LISTADO DE CLÁUSULAS CON COMPONENTE ACORDEÓN
+              ACORDEÓN DE CLÁUSULAS CON ESTILO MÓVIL
              ========================================================= */}
           <div
             id={activeTab === 'terms' ? 'panel-terms' : 'panel-privacy'}
             role="tabpanel"
             aria-labelledby={activeTab === 'terms' ? 'tab-terms' : 'tab-privacy'}
-            className="space-y-3"
+            className="space-y-3 select-text"
           >
             {currentClauses.map(clause => {
               const isOpen = Boolean(openClauses[clause.id]);
@@ -462,47 +444,50 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
               return (
                 <div
                   key={clause.id}
-                  className={`bg-white border transition-colors duration-200 rounded-2xl overflow-hidden shadow-xs ${
-                    isOpen ? 'border-[#1E3A5F]/40 shadow-sm' : 'border-slate-200/90 hover:border-slate-300'
+                  className={`bg-white border rounded-3xl transition-all duration-200 overflow-hidden ${
+                    isOpen
+                      ? 'border-neutral-950/25 shadow-sm'
+                      : 'border-neutral-200/80 hover:border-neutral-300'
                   }`}
                 >
-                  {/* Encabezado accesible del acordeón */}
+                  {/* Encabezado Táctil */}
                   <button
                     type="button"
                     id={`clause-header-${clause.id}`}
                     aria-expanded={isOpen}
                     aria-controls={`clause-content-${clause.id}`}
                     onClick={() => toggleClause(clause.id)}
-                    className="w-full flex items-center justify-between gap-3 p-4 sm:p-5 text-left cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3A5F] focus-visible:ring-offset-2 transition-colors hover:bg-slate-50/60"
+                    className="w-full flex items-center justify-between gap-3 p-4 sm:p-5 text-left cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-mono font-bold text-xs text-[#1E3A5F] shrink-0">
+                      <span className="w-8 h-8 rounded-full bg-neutral-100 border border-neutral-200/80 flex items-center justify-center font-bold text-xs text-neutral-950 shrink-0">
                         {clause.number}
                       </span>
                       <div className="min-w-0">
-                        <span className="font-bold text-sm sm:text-base text-slate-900 block truncate">
+                        <span className="font-bold text-sm text-neutral-950 block truncate">
                           {clause.title}
                         </span>
                         {clause.badge && (
-                          <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mt-0.5">
+                          <span className="text-[10px] font-medium text-neutral-500 uppercase tracking-wider block mt-0.5">
                             {clause.badge}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Ícono Chevron con rotación suave de 180° */}
-                    <div className="p-1 rounded-lg bg-slate-100/70 border border-slate-200/60 shrink-0">
-                      <ChevronDown
-                        className={`w-4 h-4 text-slate-600 transition-transform duration-300 ease-in-out ${
-                          isOpen ? 'rotate-180 text-[#1E3A5F]' : 'rotate-0'
-                        }`}
-                        aria-hidden="true"
-                      />
+                    {/* Botón Circular Chevron Móvil con rotación 180° */}
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 ${
+                        isOpen
+                          ? 'bg-neutral-950 text-white rotate-180'
+                          : 'bg-neutral-100 text-neutral-700'
+                      }`}
+                    >
+                      <ChevronDown className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
                     </div>
                   </button>
 
-                  {/* Contenedor del contenido con animación fluida de altura y opacidad */}
+                  {/* Contenedor del contenido con animación de altura y opacidad */}
                   <AnimatePresence initial={false}>
                     {isOpen && (
                       <motion.div
@@ -515,7 +500,7 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
                         transition={{ duration: 0.28, ease: [0.04, 0.62, 0.23, 0.98] }}
                         className="overflow-hidden"
                       >
-                        <div className="px-4 sm:px-5 pb-5 pt-1 border-t border-slate-100">
+                        <div className="px-5 pb-5 pt-1 border-t border-neutral-100 text-neutral-600 text-xs sm:text-sm leading-relaxed">
                           {clause.renderContent()}
                         </div>
                       </motion.div>
@@ -527,15 +512,14 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
           </div>
 
           {/* =========================================================
-              PIE DE PÁGINA EDITORIAL
+              PIE EDITORIAL MÓVIL
              ========================================================= */}
-          <footer className="pt-6 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 font-sans">
-            <span>© 2026 Stockly. Todos los derechos reservados.</span>
+          <footer className="pt-6 pb-4 border-t border-neutral-100 flex flex-col items-center gap-3 text-center text-xs text-neutral-500">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => handleTabChange(activeTab === 'terms' ? 'privacy' : 'terms')}
-                className="text-[#1E3A5F] hover:underline font-medium cursor-pointer"
+                className="text-neutral-950 font-semibold underline underline-offset-2 hover:text-neutral-700 cursor-pointer"
               >
                 {activeTab === 'terms' ? 'Ver Política de Privacidad' : 'Ver Términos de Servicio'}
               </button>
@@ -543,11 +527,14 @@ export const LegalCenterPage: React.FC<LegalPageProps> = ({
               <button
                 type="button"
                 onClick={handleBack}
-                className="text-slate-700 hover:text-[#1E3A5F] font-semibold underline underline-offset-2 cursor-pointer"
+                className="text-neutral-950 font-semibold underline underline-offset-2 hover:text-neutral-700 cursor-pointer"
               >
-                Volver a la aplicación
+                Volver
               </button>
             </div>
+            <p className="text-[11px] text-neutral-400">
+              © 2026 Stockly PWA. Todos los derechos reservados.
+            </p>
           </footer>
         </div>
       </main>
