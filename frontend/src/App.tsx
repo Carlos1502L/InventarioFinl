@@ -442,7 +442,7 @@ export const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen max-md:fixed max-md:inset-0 max-md:h-[100dvh] max-md:w-full max-md:overflow-hidden md:overflow-visible md:h-auto bg-white md:bg-[#EAEFF5] text-[#1E3A5F] flex flex-col font-normal selection:bg-[#1E3A5F] selection:text-white transition-colors duration-200">
+    <div className="min-h-screen max-md:fixed max-md:inset-0 max-md:h-[100dvh] max-md:w-full max-md:overflow-hidden md:overflow-visible md:h-auto bg-white md:bg-[#F9FBF9] text-[#0F291E] flex flex-col font-normal selection:bg-[#0F291E] selection:text-white transition-colors duration-200">
       {/* Sidebar Lateral Fijo Desktop (>= 1024px) - Carga condicional reactiva */}
       {isDesktop && (
         <Suspense fallback={null}>
@@ -486,25 +486,25 @@ export const AppContent: React.FC = () => {
 
         {/* Banner si el usuario no tiene inventario activo */}
         {!currentInventory && (
-          <div className="mx-4 md:mx-0 mt-4 md:mt-0 mb-6 p-6 bg-[#ffffff] border border-[#E5E7EB] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm font-mono">
+          <div className="mx-4 md:mx-0 mt-4 md:mt-0 mb-6 p-6 bg-white border border-gray-100 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs font-sans">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center flex-shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-[#0F291E] text-[#BBF7D0] flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-5 h-5 stroke-[1.5]" />
               </div>
               <div>
-                <h3 className="text-sm font-light uppercase tracking-wider text-[#1E3A5F]">
-                  INVENTARIO DE TRABAJO NO SELECCIONADO
+                <h3 className="text-sm font-semibold text-[#0F291E]">
+                  Inventario de trabajo no seleccionado
                 </h3>
-                <p className="text-xs text-[#616161] mt-0.5 font-light">
-                  Para comenzar a indexar existencias y mercancía, selecciona o crea tu primer depósito.
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Para comenzar a gestionar existencias, selecciona o crea tu primer depósito.
                 </p>
               </div>
             </div>
             <button
               onClick={() => setInventorySelectorOpen(true)}
-              className="w-full sm:w-auto min-h-[44px] px-6 rounded-full bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm"
+              className="w-full sm:w-auto min-h-[44px] px-6 rounded-xl bg-[#0F291E] hover:bg-[#1B3D2F] text-white text-xs font-medium transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
             >
-              <Plus className="w-4 h-4 stroke-[1.5] text-[#E8B4A0]" /> CREAR O SELECCIONAR DEPÓSITO
+              <Plus className="w-4 h-4 stroke-[1.5] text-[#BBF7D0]" /> Crear o seleccionar depósito
             </button>
           </div>
         )}
