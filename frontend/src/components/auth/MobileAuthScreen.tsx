@@ -33,8 +33,22 @@ const LETTERS: LetterItem[] = [
 ];
 
 export function MobileAuthScreen() {
+  // Si la animación inicial ya se reprodujo en esta sesión, ir directo al login (evita reejecución al volver de legal)
+  const isDirectLogin = typeof window !== 'undefined' && sessionStorage.getItem('stockly_splash_shown') === 'true';
+
   // 'CONVERGING' -> 'EXPLODING' -> 'LOGIN_READY'
-  const [stage, setStage] = useState<'CONVERGING' | 'EXPLODING' | 'LOGIN_READY'>('CONVERGING');
+  const [stage, setStage] = useState<'CONVERGING' | 'EXPLODING' | 'LOGIN_READY'>(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('stockly_splash_shown') === 'true') {
+      return 'LOGIN_READY';
+    }
+    return 'CONVERGING';
+  });
+
+  React.useEffect(() => {
+    if (stage === 'LOGIN_READY' && typeof window !== 'undefined') {
+      sessionStorage.setItem('stockly_splash_shown', 'true');
+    }
+  }, [stage]);
 
   const { signIn, signUp } = useAuth();
   const [isRegister, setIsRegister] = useState(() =>
@@ -130,7 +144,7 @@ export function MobileAuthScreen() {
       animate={{
         backgroundColor: stage === 'LOGIN_READY' ? '#ffffff' : '#000000',
       }}
-      transition={{ duration: 0.55, ease: 'easeInOut' }}
+      transition={{ duration: isDirectLogin && stage === 'LOGIN_READY' ? 0 : 0.55, ease: 'easeInOut' }}
       className="relative min-h-[100dvh] w-full text-neutral-900 flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto overscroll-y-contain select-none pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] font-sans"
     >
       {/* =========================================================
@@ -210,9 +224,9 @@ export function MobileAuthScreen() {
       <AnimatePresence>
         {stage === 'LOGIN_READY' && (
           <motion.div
-            initial={{ scale: 0.92, opacity: 0, y: 14 }}
+            initial={isDirectLogin ? false : { scale: 0.92, opacity: 0, y: 14 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: isDirectLogin ? 0.2 : 0.45, ease: [0.16, 1, 0.3, 1] }}
             className="relative z-30 w-full max-w-sm bg-white border border-neutral-200/80 rounded-3xl shadow-sm p-6 sm:p-7 flex flex-col justify-between my-auto"
           >
             {/* Encabezado: Identidad minimalista */}
@@ -432,6 +446,9 @@ export function MobileAuthScreen() {
                           href="/terms"
                           onClick={(e) => {
                             e.preventDefault();
+                            if (typeof window !== 'undefined') {
+                              sessionStorage.setItem('stockly_splash_shown', 'true');
+                            }
                             window.history.pushState({}, '', '/terms');
                             window.dispatchEvent(new PopStateEvent('popstate'));
                           }}
@@ -444,6 +461,9 @@ export function MobileAuthScreen() {
                           href="/privacy"
                           onClick={(e) => {
                             e.preventDefault();
+                            if (typeof window !== 'undefined') {
+                              sessionStorage.setItem('stockly_splash_shown', 'true');
+                            }
                             window.history.pushState({}, '', '/privacy');
                             window.dispatchEvent(new PopStateEvent('popstate'));
                           }}

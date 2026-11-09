@@ -347,11 +347,14 @@ export const AppContent: React.FC = () => {
     }
   };
 
-  // 0. Rutas Estáticas Públicas sin Requerir Sesión (RF-LEGAL-001)
+  // 0. Rutas Estáticas Públicas sin Requerir Sesión (Centro Legal)
   if (currentPath === '/terms') {
     return (
-      <Suspense fallback={<div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center font-mono text-xs text-[#616161]">CARGANDO TÉRMINOS...</div>}>
+      <Suspense fallback={<div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center font-mono text-xs text-[#616161]">CARGANDO CENTRO LEGAL...</div>}>
         <TermsPage onBack={() => {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('stockly_splash_shown', 'true');
+          }
           window.history.pushState({}, '', '/');
           setCurrentPath('/');
         }} />
@@ -361,8 +364,11 @@ export const AppContent: React.FC = () => {
 
   if (currentPath === '/privacy') {
     return (
-      <Suspense fallback={<div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center font-mono text-xs text-[#616161]">CARGANDO PRIVACIDAD...</div>}>
+      <Suspense fallback={<div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center font-mono text-xs text-[#616161]">CARGANDO CENTRO LEGAL...</div>}>
         <PrivacyPage onBack={() => {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('stockly_splash_shown', 'true');
+          }
           window.history.pushState({}, '', '/');
           setCurrentPath('/');
         }} />

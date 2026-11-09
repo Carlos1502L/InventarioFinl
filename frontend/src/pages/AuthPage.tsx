@@ -402,6 +402,9 @@ export const AuthPage: React.FC = () => {
                           href="/terms"
                           onClick={(e) => {
                             e.preventDefault();
+                            if (typeof window !== 'undefined') {
+                              sessionStorage.setItem('stockly_splash_shown', 'true');
+                            }
                             window.history.pushState({}, '', '/terms');
                             window.dispatchEvent(new PopStateEvent('popstate'));
                           }}
@@ -414,6 +417,9 @@ export const AuthPage: React.FC = () => {
                           href="/privacy"
                           onClick={(e) => {
                             e.preventDefault();
+                            if (typeof window !== 'undefined') {
+                              sessionStorage.setItem('stockly_splash_shown', 'true');
+                            }
                             window.history.pushState({}, '', '/privacy');
                             window.dispatchEvent(new PopStateEvent('popstate'));
                           }}
