@@ -286,7 +286,7 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
             !isBox ? (
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#17191c] mb-1.5">
-                  CANTIDAD DE UNIDADES A DESCONTAR <span className="text-[#5d2a1a]">*</span>
+                  CANTIDAD DE UNIDADES A DESCONTAR <span className="text-[#e7000b]">*</span>
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -421,7 +421,7 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
                 </>
               ) : (
                 <>
-                  <Check className="w-4 h-4 text-[#5d2a1a]" />
+                  <Check className="w-4 h-4 text-white" />
                   <span>Confirmar Descuento</span>
                 </>
               )}

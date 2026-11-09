@@ -51,43 +51,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="hidden lg:flex flex-col fixed top-0 left-0 bottom-0 w-[260px] h-screen bg-[#ffffff] z-40 text-[#17191c] select-none border-r border-[#ececec]">
+    <aside className="hidden lg:flex flex-col fixed top-0 left-0 bottom-0 w-[260px] h-screen bg-[#fafafa] z-40 text-[#0a0a0a] select-none border-r border-[#e5e5e5] font-sans">
       {/* 1. SECCIÓN SUPERIOR: LOGO Y SELECTOR DE DEPÓSITO */}
-      <div className="p-6 border-b border-[#ececec]">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-9 h-9 rounded-xl bg-[#17191c] flex items-center justify-center flex-shrink-0 overflow-hidden shadow-xs">
+      <div className="p-5 border-b border-[#e5e5e5]">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-8 h-8 rounded-[10px] bg-[#0a0a0a] flex items-center justify-center flex-shrink-0 overflow-hidden shadow-xs">
             <img src="/logo.png" alt="Stockly" className="w-full h-full object-cover" loading="lazy" decoding="async" />
           </div>
           <div>
-            <span className="font-serif text-lg tracking-tight text-[#17191c] font-normal block leading-tight">
+            <span className="text-base font-semibold tracking-[-0.03em] text-[#0a0a0a] block leading-tight">
               Stockly
             </span>
-            <span className="text-[11px] text-[#777b86] font-normal tracking-wide block">
-              Inventory OS
+            <span className="text-[12px] text-[#737373] font-normal tracking-normal block">
+              Inventory System
             </span>
           </div>
         </div>
 
-        {/* Depósito Activo (Chip Selector) */}
+        {/* Depósito Activo (Surface Alt / Ghost Input Affordance) */}
         <button
           onClick={onOpenInventorySelector}
-          className="w-full text-left p-3 rounded-2xl bg-[#f2f2f3] hover:bg-[#e8e8ea] border-0 transition-all flex items-center justify-between group cursor-pointer"
+          className="w-full text-left p-2.5 rounded-[18px] bg-[#f5f5f5] hover:bg-[#ebebeb] border border-transparent hover:border-[#e5e5e5] transition-all flex items-center justify-between group cursor-pointer"
         >
           <div className="min-w-0 pr-2">
-            <span className="text-[10px] uppercase tracking-wider text-[#777b86] font-medium block">
-              Depósito activo
+            <span className="text-[11px] uppercase tracking-[0.05em] text-[#737373] font-medium block">
+              Depósito
             </span>
-            <span className="text-xs font-semibold text-[#17191c] truncate block">
+            <span className="text-xs font-medium text-[#0a0a0a] truncate block">
               {currentInventory?.name || 'Seleccionar...'}
             </span>
           </div>
-          <ChevronRight className="w-4 h-4 text-[#777b86] group-hover:text-[#17191c] flex-shrink-0 transition-colors" />
+          <ChevronRight className="w-4 h-4 text-[#737373] group-hover:text-[#0a0a0a] flex-shrink-0 transition-colors" />
         </button>
       </div>
 
       {/* 2. SECCIÓN CENTRAL: MENÚ DE NAVEGACIÓN VERTICAL */}
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-1.5 text-xs">
-        <span className="px-3 text-[10px] uppercase tracking-wider text-[#979799] font-medium block mb-2.5">
+      <div className="flex-1 overflow-y-auto px-3.5 py-4 space-y-1 text-sm">
+        <span className="px-3 text-[11px] uppercase tracking-[0.05em] text-[#737373] font-medium block mb-2">
           Módulos
         </span>
 
@@ -99,44 +99,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               key={item.id}
               onClick={() => onChangeTab(item.id)}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-full transition-all text-left cursor-pointer ${
+              className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-[18px] transition-colors text-left cursor-pointer ${
                 isActive
-                  ? 'bg-[#17191c] text-white font-medium shadow-sm'
-                  : 'text-[#777b86] hover:text-[#17191c] hover:bg-[#f2f2f3]'
+                  ? 'bg-[#0a0a0a] text-[#fafafa] font-medium shadow-none'
+                  : 'text-[#737373] hover:text-[#0a0a0a] hover:bg-[#f5f5f5]'
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'stroke-[2]' : 'stroke-[1.5]'}`} />
-              <span className="text-[13px] tracking-tight truncate">
+              <Icon className="w-4 h-4 stroke-[1.8]" />
+              <span className="text-[13px] tracking-[-0.01em] truncate">
                 {item.label}
               </span>
             </button>
           );
         })}
 
-        {/* Acceso Rápido: Escáner Central (Blush Peach Accent) */}
+        {/* Acceso Rápido: Escáner Central (Ghost secondary button) */}
         <div className="pt-4">
           <button
             onClick={onQuickScan}
-            className="w-full min-h-[42px] px-4 rounded-full bg-[#fbe1d1] hover:bg-[#f8d4bf] text-[#5d2a1a] transition-all flex items-center justify-center gap-2 text-xs font-medium active:scale-[0.98] shadow-xs cursor-pointer"
+            className="w-full min-h-[38px] px-3.5 rounded-[18px] bg-[#f5f5f5] hover:bg-[#ebebeb] text-[#0a0a0a] transition-all flex items-center justify-center gap-2 text-xs font-medium active:scale-[0.98] cursor-pointer"
           >
-            <Camera className="w-4 h-4 stroke-[1.8] text-[#5d2a1a]" />
+            <Camera className="w-4 h-4 stroke-[1.8] text-[#0a0a0a]" />
             <span>Escanear producto</span>
           </button>
         </div>
       </div>
 
       {/* 3. SECCIÓN INFERIOR: PERFIL DE USUARIO & SALIR */}
-      <div className="p-4 border-t border-[#ececec]">
-        <div className="p-2.5 rounded-2xl bg-[#fafafb] border border-[#ececec] flex items-center justify-between gap-2">
+      <div className="p-3.5 border-t border-[#e5e5e5]">
+        <div className="p-2.5 rounded-[14px] bg-[#ffffff] border border-[#e5e5e5] flex items-center justify-between gap-2 shadow-sm">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-[#f2f2f3] text-[#17191c] flex items-center justify-center flex-shrink-0 text-xs font-semibold">
-              <User className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-[10px] bg-[#f5f5f5] text-[#0a0a0a] flex items-center justify-center flex-shrink-0 text-xs font-semibold">
+              <User className="w-3.5 h-3.5 stroke-[1.8]" />
             </div>
             <div className="min-w-0">
-              <span className="text-xs font-medium text-[#17191c] truncate block">
+              <span className="text-xs font-medium text-[#0a0a0a] truncate block">
                 {user?.email?.split('@')[0] || 'Usuario'}
               </span>
-              <span className="text-[10px] text-[#777b86] truncate block">
+              <span className="text-[11px] text-[#737373] truncate block">
                 {user?.email || ''}
               </span>
             </div>
@@ -144,10 +144,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={() => signOut()}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[#777b86] hover:text-[#17191c] hover:bg-white transition-colors flex-shrink-0 cursor-pointer"
+            className="w-7 h-7 rounded-[8px] flex items-center justify-center text-[#737373] hover:text-[#e7000b] hover:bg-[#f5f5f5] transition-colors flex-shrink-0 cursor-pointer"
             title="Cerrar sesión"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-3.5 h-3.5 stroke-[1.8]" />
           </button>
         </div>
       </div>

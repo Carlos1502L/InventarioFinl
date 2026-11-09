@@ -201,7 +201,7 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                 {/* Selector de Origen */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-[#17191c] mb-1.5">
-                    UBICACIÓN DE ORIGEN <span className="text-[#5d2a1a]">*</span>
+                    UBICACIÓN DE ORIGEN <span className="text-[#e7000b]">*</span>
                   </label>
                   <MinimalDropdown
                     value={fromLocationId}
@@ -219,7 +219,7 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                 <div className="mobile-flat-section p-4 bg-[#fafafb] border border-[#ececec] rounded-xl space-y-2.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold uppercase tracking-wider text-[#17191c]">
-                      CANTIDAD A TRASLADAR <span className="text-[#5d2a1a]">*</span>
+                      CANTIDAD A TRASLADAR <span className="text-[#e7000b]">*</span>
                     </label>
                     <span className="text-[10px] text-[#777b86] uppercase">
                       DISPONIBLE:{' '}
@@ -267,7 +267,7 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setQuantityToMove(String(Math.round(originStock)))}
-                        className="px-3 min-h-[40px] text-[11px] uppercase tracking-wider text-[#17191c] bg-[#fbe1d1]/20 hover:bg-[#fbe1d1]/30 border border-[#E8B4A0]/40 rounded-xl"
+                        className="px-3 min-h-[40px] text-[11px] uppercase tracking-wider text-[#17191c] bg-[#f5f5f5] hover:bg-[#f5f5f5] border border-[#e5e5e5] rounded-xl"
                       >
                         Todas ({Math.round(originStock)})
                       </button>
@@ -278,7 +278,7 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                 {/* Selección de Destino */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-[#17191c] mb-1.5">
-                    UBICACIÓN DE DESTINO <span className="text-[#5d2a1a]">*</span>
+                    UBICACIÓN DE DESTINO <span className="text-[#e7000b]">*</span>
                   </label>
                   <div className="flex items-center gap-2.5 w-full">
                     <div className="flex-1 min-w-0">
@@ -305,7 +305,7 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                   </div>
                   {selectedLocation && (
                     <p className="text-[11px] text-[#17191c] font-medium mt-1.5 flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5 text-[#5d2a1a]" /> Destino: {selectedLocation.name} ({selectedLocation.code})
+                      <Check className="w-3.5 h-3.5 text-white" /> Destino: {selectedLocation.name} ({selectedLocation.code})
                     </p>
                   )}
                 </div>
@@ -341,7 +341,7 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                     </>
                   ) : (
                     <>
-                      <Check className="w-4 h-4 text-[#5d2a1a]" />
+                      <Check className="w-4 h-4 text-white" />
                       <span>Confirmar Traslado</span>
                     </>
                   )}

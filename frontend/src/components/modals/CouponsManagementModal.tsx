@@ -231,7 +231,7 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
             <form onSubmit={handleCreateCoupon} className="space-y-4 animate-in fade-in">
               <div className="p-4 bg-[#fafafb] rounded-2xl border border-[#ececec] space-y-3.5">
                 <span className="text-xs font-bold text-[#17191c] uppercase tracking-wider flex items-center gap-1.5">
-                  <Plus className="w-4 h-4 text-[#5d2a1a]" /> Datos de la Promoción
+                  <Plus className="w-4 h-4 text-white" /> Datos de la Promoción
                 </span>
 
                 <div className="space-y-3">
@@ -305,7 +305,7 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#17191c] hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                   >
                     {isSubmitting ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5d2a1a]" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                     ) : (
                       <Sparkles className="w-3.5 h-3.5" />
                     )}

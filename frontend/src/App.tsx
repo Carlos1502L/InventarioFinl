@@ -442,7 +442,7 @@ export const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen max-md:fixed max-md:inset-0 max-md:h-[100dvh] max-md:w-full max-md:overflow-hidden md:overflow-visible md:h-auto bg-white md:bg-[#fafafb] text-[#17191c] flex flex-col font-normal selection:bg-[#fbe1d1] selection:text-[#5d2a1a] transition-colors duration-200">
+    <div className="min-h-screen max-md:fixed max-md:inset-0 max-md:h-[100dvh] max-md:w-full max-md:overflow-hidden md:overflow-visible md:h-auto bg-white md:bg-[#f5f5f5] text-[#0a0a0a] flex flex-col font-normal selection:bg-[#0a0a0a] selection:text-[#fafafa] transition-colors duration-200">
       {/* Sidebar Lateral Fijo Desktop (>= 1024px) - Carga condicional reactiva */}
       {isDesktop && (
         <Suspense fallback={null}>

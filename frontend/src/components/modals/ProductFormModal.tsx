@@ -740,7 +740,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           <div className="px-6 py-4 border-b border-[#ececec] bg-[#ffffff] shrink-0 z-20">
             <div className="flex items-center justify-between gap-3">
               <div className="flex flex-col max-md:flex-col-reverse">
-                <span className="text-[10px] tracking-widest uppercase font-mono text-[#5d2a1a] block">
+                <span className="text-[10px] tracking-widest uppercase font-mono text-white block">
                   {productToEdit ? 'Edición de manifiesto en catálogo' : 'Nuevo registro en catálogo'}
                 </span>
                 <h3 className="font-bold text-[#17191c] text-lg uppercase tracking-tight">
@@ -775,7 +775,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 {/* 1. Nombre */}
                 <div>
                   <label className="block text-xs font-bold text-[#17191c] uppercase tracking-wider mb-1">
-                    Nombre del Producto <span className="text-[#5d2a1a]">*</span>
+                    Nombre del Producto <span className="text-[#e7000b]">*</span>
                   </label>
                   <input
                     type="text"
@@ -790,7 +790,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 {/* 2. Código / SKU con Escáner de Cámara */}
                 <div>
                   <label className="block text-xs font-bold text-[#17191c] uppercase tracking-wider mb-1">
-                    Código / SKU / Código de Barras <span className="text-[#5d2a1a]">*</span>
+                    Código / SKU / Código de Barras <span className="text-[#e7000b]">*</span>
                   </label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
@@ -823,7 +823,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <div className="mobile-flat-section p-4 bg-[#fafafb] rounded-2xl border border-[#ececec] space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold text-[#17191c] max-md:text-neutral-700 max-md:font-semibold max-md:normal-case uppercase tracking-wider">
-                      Unidad de Medida Operativa <span className="text-[#5d2a1a]">*</span>
+                      Unidad de Medida Operativa <span className="text-[#e7000b]">*</span>
                     </span>
 
                     {/* Botones Selector [ Unidad ] | [ Caja ] */}
@@ -864,7 +864,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     <div className="pt-2 border-t border-[#ececec] grid grid-cols-2 gap-3 animate-in fade-in">
                       <div>
                         <label className="block text-xs font-bold text-[#17191c] uppercase tracking-wider mb-1 leading-snug">
-                          {productToEdit ? 'Stock Actual (Unidades)' : 'Stock Inicial (Unidades)'} <span className="text-[#5d2a1a]">*</span>
+                          {productToEdit ? 'Stock Actual (Unidades)' : 'Stock Inicial (Unidades)'} <span className="text-[#e7000b]">*</span>
                         </label>
                         <input
                           type="number"
@@ -899,7 +899,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         {/* Campo 1: Unidades por caja (units_per_box) */}
                         <div>
                           <label className="block text-[11px] sm:text-xs font-bold text-[#17191c] uppercase tracking-wider mb-1 leading-snug">
-                            Unidades por caja <span className="text-[#5d2a1a]">*</span>
+                            Unidades por caja <span className="text-[#e7000b]">*</span>
                           </label>
                           <p className="text-[10px] text-[#777b86] mb-1.5 hidden sm:block">
                             ¿Cuántas unidades contiene 1 caja?
@@ -919,7 +919,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         {/* Campo 2: Cantidad inicial de cajas */}
                         <div>
                           <label className="block text-[11px] sm:text-xs font-bold text-[#17191c] uppercase tracking-wider mb-1 leading-snug">
-                            {productToEdit ? 'Cantidad de cajas' : 'Cantidad inicial de cajas'} <span className="text-[#5d2a1a]">*</span>
+                            {productToEdit ? 'Cantidad de cajas' : 'Cantidad inicial de cajas'} <span className="text-[#e7000b]">*</span>
                           </label>
                           <p className="text-[10px] text-[#777b86] mb-1.5 hidden sm:block">
                             Cajas a registrar en inventario
@@ -1113,7 +1113,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 {isBusiness ? (
                   <div className="mobile-flat-section p-4 bg-[#fafafb] rounded-2xl border border-[#ececec] space-y-3">
                     <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#17191c] max-md:hidden">
-                      <Sparkles className="w-3.5 h-3.5 text-[#5d2a1a]" />
+                      <Sparkles className="w-3.5 h-3.5 text-white" />
                       <span>Estructura Financiera (Modo Comercial)</span>
                     </div>
                     <div className="space-y-3">
@@ -1207,7 +1207,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUploadingImage}
-                        className="text-xs font-medium text-[#17191c] hover:text-[#5d2a1a] flex items-center gap-1 disabled:opacity-50 transition-colors"
+                        className="text-xs font-medium text-[#17191c] hover:text-white flex items-center gap-1 disabled:opacity-50 transition-colors"
                       >
                         {isUploadingImage ? (
                           <>
@@ -1290,7 +1290,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       </>
                     ) : (
                       <>
-                        <Check className="w-4 h-4 text-[#5d2a1a] max-md:hidden" />
+                        <Check className="w-4 h-4 text-white max-md:hidden" />
                         <span>{productToEdit ? 'Guardar Cambios' : 'Confirmar Registro'}</span>
                       </>
                     )}
@@ -1307,7 +1307,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   {/* Encabezado de la Ficha en Vivo */}
                   <div className="flex items-center justify-between pb-3 border-b border-[#ececec]">
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#fbe1d1] animate-pulse"></span>
+                      <span className="w-2 h-2 rounded-full bg-[#f5f5f5] animate-pulse"></span>
                       <span className="text-[10px] font-mono uppercase tracking-widest text-[#17191c]">
                         PREVISUALIZACIÓN EN VIVO
                       </span>
@@ -1339,7 +1339,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     {/* Badge de Stock en Vivo sobre la imagen */}
                     <div className="absolute top-2.5 right-2.5">
                       {isStockLow ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#fbe1d1] text-[#17191c] border border-[#1E3A5F]/15 text-[10px] font-mono font-bold shadow-sm">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#fee2e2] text-[#e7000b] border border-[#1E3A5F]/15 text-[10px] font-mono font-bold shadow-sm">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#17191c] animate-ping"></span>
                           <span>STOCK BAJO ({previewStockText.toUpperCase()})</span>
                         </div>
@@ -1368,7 +1368,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         {unitType === 'BOX' ? `CAJA (${parsedUpb || 0} UND)` : 'UNIDAD'}
                       </span>
                       {selectedCategoryObj && (
-                        <span className="px-2.5 py-0.5 rounded-full bg-[#fbe1d1]/20 text-[#17191c] border border-[#E8B4A0]/50 uppercase">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#f5f5f5] text-[#17191c] border border-[#e5e5e5] uppercase">
                           {selectedCategoryObj.name}
                         </span>
                       )}
@@ -1377,7 +1377,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           {selectedSubcategoryObj.name}
                         </span>
                       )}
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#fbe1d1]/25 text-[#17191c] border border-[#E8B4A0]/60 uppercase font-bold">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#f5f5f5] text-[#17191c] border border-[#e5e5e5] uppercase font-bold">
                         <MapPin className="w-3 h-3 text-[#17191c]" />
                         {productToEdit ? 'MULTI-UBICACIÓN' : 'STOCK PENDIENTE DE UBICAR'}
                       </span>
@@ -1398,7 +1398,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           <span className="text-[10px] text-[#777b86] uppercase block">
                             COSTO: {formatCurrency(Number(costPrice || 0), currentInventory?.currency)}
                           </span>
-                          <span className="text-[10px] font-mono text-[#5d2a1a] block">
+                          <span className="text-[10px] font-mono text-white block">
                             +{markupPercentage || 0}% MARGEN
                           </span>
                         </div>
@@ -1421,7 +1421,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         </>
                       ) : (
                         <>
-                          <Check className="w-4 h-4 text-[#5d2a1a]" />
+                          <Check className="w-4 h-4 text-white" />
                           <span>{productToEdit ? 'Guardar Cambios' : 'Confirmar Registro'}</span>
                         </>
                       )}

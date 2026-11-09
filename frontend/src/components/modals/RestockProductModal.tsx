@@ -155,11 +155,11 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
         {/* Cabecera */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] bg-white">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#fbe1d1]/25 text-[#17191c] border border-[#E8B4A0] flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#f5f5f5] text-[#17191c] border border-[#e5e5e5] flex items-center justify-center flex-shrink-0">
               <Barcode className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-widest text-[#5d2a1a] block font-bold">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-white block font-bold">
                 REINGRESO DE EXISTENCIAS // {isBox ? 'MODO CAJA' : 'MODO UNIDAD'}
               </span>
               <h4 className="font-bold text-[#17191c] text-sm sm:text-base uppercase tracking-tight">
@@ -220,7 +220,7 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
             /* FLUJO TIPO UNIT */
             <div className="space-y-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-[#17191c]">
-                Unidades a añadir: <span className="text-[#5d2a1a]">*</span>
+                Unidades a añadir: <span className="text-[#e7000b]">*</span>
               </label>
               <input
                 type="number"
@@ -319,7 +319,7 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4 text-[#5d2a1a]" />
+                  <Plus className="w-4 h-4 text-white" />
                   <span>
                     Sumar +{isBox ? `${formatCleanDecimal(calculation.deltaStock, 2)} cajas` : `${calculation.deltaStock} und`} al Stock
                   </span>

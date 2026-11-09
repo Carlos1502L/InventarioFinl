@@ -144,7 +144,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                     }}
                     className={`mobile-flat-row w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group ${
                       isSelected
-                        ? 'bg-[#fbe1d1]/10 border-[#1E3A5F] ring-1 ring-[#1E3A5F] mobile-card-active'
+                        ? 'bg-[#f5f5f5] border-[#1E3A5F] ring-1 ring-[#1E3A5F] mobile-card-active'
                         : 'bg-white border-[#ececec] hover:border-[#17191c] hover:bg-[#fafafb]'
                     }`}
                   >
@@ -171,7 +171,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
 
                     <div className="flex items-center gap-2 shrink-0">
                       {isSelected ? (
-                        <div className="w-8 h-8 rounded-full bg-[#17191c] text-[#5d2a1a] flex items-center justify-center shadow-sm">
+                        <div className="w-8 h-8 rounded-full bg-[#17191c] text-white flex items-center justify-center shadow-sm">
                           <CheckCircle className="w-4 h-4" />
                         </div>
                       ) : (
@@ -189,7 +189,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                 onClick={() => setIsCreatingNew(true)}
                 className="w-full mt-2 min-h-[44px] p-3 border-2 border-dashed border-[#ececec] hover:border-[#17191c] rounded-2xl text-xs uppercase tracking-wider text-[#17191c] hover:bg-[#fafafb] transition-all flex items-center justify-center gap-2"
               >
-                <Plus className="w-4 h-4 text-[#5d2a1a]" /> Crear Nuevo Depósito
+                <Plus className="w-4 h-4 text-white" /> Crear Nuevo Depósito
               </button>
             </>
           ) : (
@@ -197,7 +197,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
             <form onSubmit={handleCreateInventory} className="space-y-4">
               <div>
                 <label className="block text-xs uppercase tracking-wider text-[#17191c] mb-1">
-                  Nombre del Depósito <span className="text-[#5d2a1a]">*</span>
+                  Nombre del Depósito <span className="text-[#e7000b]">*</span>
                 </label>
                 <input
                   type="text"
@@ -258,7 +258,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                   disabled={isSubmitting}
                   className="min-h-[44px] inline-flex items-center gap-2 px-6 bg-[#17191c] hover:bg-black text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50 transition-all active:scale-95"
                 >
-                  {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <Plus className="w-3.5 h-3.5 text-[#5d2a1a]" />}
+                  {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <Plus className="w-3.5 h-3.5 text-white" />}
                   Crear e Ingresar
                 </button>
               </div>

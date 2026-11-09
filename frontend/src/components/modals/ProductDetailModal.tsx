@@ -152,7 +152,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   REF // {product.code}
                 </span>
                 <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#17191c] text-white flex items-center gap-1">
-                  <Layers className="w-3 h-3 text-[#5d2a1a]" />
+                  <Layers className="w-3 h-3 text-white" />
                   {product.unit_type === 'BOX' ? `CAJA (${product.units_per_box || 1} UND)` : 'UNIDAD'}
                 </span>
                 {isInactive ? (
@@ -160,7 +160,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     ESTADO // RETIRADO
                   </span>
                 ) : isLowStock ? (
-                  <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#fbe1d1] text-[#17191c] border border-[#1E3A5F]/15 font-bold flex items-center gap-1.5 shadow-sm">
+                  <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#fee2e2] text-[#e7000b] border border-[#1E3A5F]/15 font-bold flex items-center gap-1.5 shadow-sm">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#17191c] animate-ping" />
                     ESTADO // STOCK CRÍTICO
                   </span>
@@ -178,7 +178,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 className="mobile-header-tab min-h-[38px] max-md:min-h-0 max-md:h-8 max-md:px-3 max-md:bg-neutral-100 max-md:text-neutral-800 max-md:border-0 px-3.5 rounded-full bg-[#17191c] hover:bg-black text-white text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow-sm"
                 title="Añadir más existencias (Reingreso de Stock)"
               >
-                <Plus className="w-3.5 h-3.5 text-[#5d2a1a] max-md:text-neutral-800" />
+                <Plus className="w-3.5 h-3.5 text-white max-md:text-neutral-800" />
                 <span className="hidden sm:inline">REINGRESO</span>
               </button>
               <button
@@ -221,7 +221,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   {isReactivating ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                   ) : (
-                    <RotateCcw className="w-3.5 h-3.5 text-[#5d2a1a]" />
+                    <RotateCcw className="w-3.5 h-3.5 text-white" />
                   )}
                   <span>REACTIVAR ÍTEM</span>
                 </button>
@@ -306,14 +306,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {/* COLUMNA DERECHA: ESPECIFICACIONES TÉCNICAS */}
               <div className="space-y-5">
                 <div>
-                  <p className="font-mono text-[10px] text-[#5d2a1a] uppercase tracking-[0.2em] mb-1 font-medium">
+                  <p className="font-mono text-[10px] text-white uppercase tracking-[0.2em] mb-1 font-medium">
                     FICHA TÉCNICA // {product.categories?.name || 'MERCANCÍA GENERAL'}
                   </p>
                   <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-[#17191c]">
                     {product.name}
                   </h2>
                   {product.description && (
-                    <p className="text-xs text-[#777b86] mt-2 font-light leading-relaxed uppercase border-l-2 border-[#E8B4A0] pl-3 py-0.5">
+                    <p className="text-xs text-[#777b86] mt-2 font-light leading-relaxed uppercase border-l-2 border-[#e5e5e5] pl-3 py-0.5">
                       {product.description}
                     </p>
                   )}
@@ -385,7 +385,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         <button
                           type="button"
                           onClick={() => onAssignLocation(product)}
-                          className="mobile-inline-btn text-[10px] font-bold uppercase text-[#17191c] bg-[#fbe1d1]/30 hover:bg-[#fbe1d1]/50 px-2.5 py-0.5 rounded-full transition-colors"
+                          className="mobile-inline-btn text-[10px] font-bold uppercase text-[#17191c] bg-[#f5f5f5] hover:bg-[#f5f5f5]/50 px-2.5 py-0.5 rounded-full transition-colors"
                         >
                           + Asignar Ubicación
                         </button>
@@ -411,7 +411,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         ))}
 
                       {getPendingLocationStock(product) > 0.0001 && (
-                        <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#fbe1d1]/20 border border-[#E8B4A0] text-xs">
+                        <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#f5f5f5] border border-[#e5e5e5] text-xs">
                           <span className="text-[#17191c] font-bold uppercase">
                             Sin Ubicación Asignada / En Recepción
                           </span>
@@ -513,7 +513,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                               vInactive
                                 ? 'text-[#777b86]'
                                 : v.stock < (v.min_stock !== undefined && v.min_stock !== null ? v.min_stock : 1)
-                                  ? 'text-[#17191c] bg-[#fbe1d1] px-2 py-0.5 rounded-full font-bold border border-[#1E3A5F]/15'
+                                  ? 'text-[#17191c] bg-[#f5f5f5] px-2 py-0.5 rounded-full font-bold border border-[#1E3A5F]/15'
                                   : 'text-[#17191c]'
                             }`}
                           >

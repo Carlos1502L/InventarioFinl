@@ -8,81 +8,100 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: {
-          DEFAULT: '#17191c',
-          black: '#17191c',
+        // Monochromatic clinical blueprint palette (Ui / shadcn)
+        canvas: {
+          DEFAULT: '#f5f5f5',
+          alt: '#f0f0f0',
         },
         paper: '#ffffff',
-        mist: {
-          DEFAULT: '#f2f2f3',
-          gray: '#f2f2f3',
+        surface: {
+          DEFAULT: '#fafafa',
+          alt: '#fafafa',
         },
-        fog: {
-          DEFAULT: '#fafafb',
-          white: '#fafafb',
-          light: '#F3F4F6',
-          dark: '#D1D5DB',
+        ink: {
+          DEFAULT: '#0a0a0a',
+          soft: '#171717',
+          black: '#0a0a0a',
         },
-        slate: {
-          DEFAULT: '#777b86',
-          gray: '#777b86',
+        midgray: {
+          DEFAULT: '#737373',
+          gray: '#737373',
         },
-        ash: {
-          DEFAULT: '#979799',
-          gray: '#979799',
+        hairline: '#e5e5e5',
+        ember: {
+          DEFAULT: '#e7000b',
+          dark: '#c4000a',
         },
-        smoke: {
-          DEFAULT: '#a3a6af',
-          gray: '#a3a6af',
-        },
-        peach: {
-          DEFAULT: '#fbe1d1',
-          blush: '#fbe1d1',
-        },
-        sienna: {
-          DEFAULT: '#5d2a1a',
-          brown: '#5d2a1a',
-        },
-        hairline: '#ececec',
+        // Legacy fallbacks preserved for business components
         navy: {
-          DEFAULT: '#1E3A5F',
-          dark: '#142740',
-          light: '#284E7E',
-          50: '#F0F4F8',
-          100: '#D9E3ED',
-          500: '#1E3A5F',
-          600: '#172E4C',
-          900: '#0F1E32',
+          DEFAULT: '#0a0a0a',
+          dark: '#000000',
+          light: '#171717',
+          50: '#f5f5f5',
+          100: '#e5e5e5',
+          500: '#0a0a0a',
+          600: '#171717',
+          900: '#000000',
         },
         nude: {
-          DEFAULT: '#E8B4A0',
-          dark: '#D89E88',
-          light: '#F5D3C6',
-          50: '#FAF0EB',
-          100: '#F5E1D8',
-          200: '#E8B4A0',
+          DEFAULT: '#737373',
+          dark: '#525252',
+          light: '#f5f5f5',
+          50: '#fafafa',
+          100: '#f5f5f5',
+          200: '#e5e5e5',
         },
-        canvas: {
-          DEFAULT: '#F8F9FA',
-          alt: '#F3F4F6',
+        fog: {
+          DEFAULT: '#e5e5e5',
+          white: '#fafafa',
+          light: '#f5f5f5',
+          dark: '#737373',
+        },
+        slate: {
+          DEFAULT: '#737373',
+          gray: '#737373',
+        },
+        ash: {
+          DEFAULT: '#737373',
+          gray: '#737373',
+        },
+        smoke: {
+          DEFAULT: '#a3a3a3',
+          gray: '#a3a3a3',
+        },
+        mist: {
+          DEFAULT: '#f5f5f5',
+          gray: '#f5f5f5',
+        },
+        peach: {
+          DEFAULT: '#f5f5f5',
+          blush: '#f5f5f5',
+        },
+        sienna: {
+          DEFAULT: '#0a0a0a',
+          brown: '#0a0a0a',
         },
         alert: {
-          yellow: '#ffdd00',
+          yellow: '#e7000b',
         }
       },
       fontFamily: {
-        serif: ['"Playfair Display"', 'Georgia', 'ui-serif', 'serif'],
-        sans: ['"Inter Tight"', 'Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        geist: ['"Geist"', '"Inter"', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        sans: ['"Geist"', '"Inter Tight"', '"Inter"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
       },
       borderRadius: {
         '3xl': '24px',
-        '2xl': '16px',
-        'xl': '12px',
-        'pill': '9999px',
+        '2xl': '18px',
+        'xl': '14px',
+        'lg': '10px',
+        'md': '6px',
+        'pill': '18px',
       },
       boxShadow: {
-        'steep-subtle': '0 0 0 1px rgba(0,0,0,0.05), 0 4px 24px 0 rgba(0,0,0,0.06)',
-        'steep-card': '0 0 0 1px rgba(4,23,43,0.05), 0 20px 25px -5px rgba(0,0,0,0.06), 0 8px 10px -6px rgba(0,0,0,0.04)',
+        'ui-card': '0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)',
+        'ui-subtle': '0 0 0 1px rgba(23,23,23,0.05)',
+        'steep-subtle': '0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.08)',
+        'steep-card': '0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)',
       }
     },
   },

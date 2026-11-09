@@ -163,7 +163,7 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
               <form onSubmit={handleCreateLocation} className="space-y-4 animate-in fade-in">
                 <div className="p-4 bg-[#fafafb] rounded-2xl border border-[#ececec] space-y-3.5">
                   <span className="text-xs font-bold text-[#17191c] uppercase tracking-wider flex items-center gap-1.5">
-                    <Plus className="w-4 h-4 text-[#5d2a1a]" /> Datos de la Nueva Ubicación
+                    <Plus className="w-4 h-4 text-white" /> Datos de la Nueva Ubicación
                   </span>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -192,7 +192,7 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                           onClick={() => setCode(generateUniqueCode(name || 'LOC'))}
                           className="text-[10px] text-[#17191c] hover:underline flex items-center gap-1 cursor-pointer font-medium"
                         >
-                          <Sparkles className="w-2.5 h-2.5 text-[#5d2a1a]" /> Auto-generar
+                          <Sparkles className="w-2.5 h-2.5 text-white" /> Auto-generar
                         </button>
                       </div>
                       <input
@@ -225,7 +225,7 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                       className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#17191c] hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                     >
                       {isSubmitting ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5d2a1a]" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                       ) : (
                         <Plus className="w-3.5 h-3.5" />
                       )}

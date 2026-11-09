@@ -309,7 +309,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                       className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#17191c] hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                     >
                       {isSubmitting ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5d2a1a]" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                       ) : (
                         <Plus className="w-3.5 h-3.5" />
                       )}
@@ -374,7 +374,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                       className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#17191c] hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                     >
                       {isSubmitting ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5d2a1a]" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                       ) : (
                         <Plus className="w-3.5 h-3.5" />
                       )}
