@@ -169,19 +169,19 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl max-h-[85dvh] overflow-hidden shadow-2xl flex flex-col font-sans">
+      <div className="mobile-dark-modal bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-xl max-h-[85dvh] overflow-hidden shadow-2xl flex flex-col font-sans">
         
         {/* Cabecera Principal */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] bg-[#ffffff] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center shrink-0">
-              <Tag className="w-5 h-5 text-[#1E3A5F]" />
+            <div className="w-10 h-10 rounded-full bg-[#17191c]/10 text-[#17191c] flex items-center justify-center shrink-0">
+              <Tag className="w-5 h-5 text-[#17191c]" />
             </div>
             <div>
-              <h3 className="font-bold text-[#1E3A5F] text-base uppercase tracking-tight">
+              <h3 className="font-bold text-[#17191c] text-base uppercase tracking-tight">
                 Categorías y Subcategorías
               </h3>
-              <p className="text-[11px] text-[#616161]">
+              <p className="text-[11px] text-[#777b86]">
                 Estructura taxonómica del catálogo de productos
               </p>
             </div>
@@ -189,14 +189,14 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Barra de Pestañas Tipo Píldora (RF-UI-CAT-011 & RF-UI-TABS-008) */}
-        <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#E5E7EB] bg-white shrink-0 overflow-x-auto">
+        <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#ececec] bg-white shrink-0 overflow-x-auto">
           <PillOption
             active={mainTab === 'create'}
             onClick={() => setMainTab('create')}
@@ -251,10 +251,10 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
 
               {/* Formulario 1A: Categoría */}
               {createType === 'category' ? (
-                <form onSubmit={handleCreateCategory} className="p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3.5">
+                <form onSubmit={handleCreateCategory} className="p-4 bg-[#fafafb] rounded-2xl border border-[#ececec] space-y-3.5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                      <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
                         Nombre de Categoría <span className="text-rose-500">*</span>
                       </label>
                       <input
@@ -263,12 +263,12 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                         onChange={(e) => setCatName(e.target.value)}
                         placeholder="Ej. Bebidas, Ferretería, Lácteos..."
                         required
-                        className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                        className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                      <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
                         Color de Etiqueta
                       </label>
                       <div className="flex items-center gap-2 pt-1 flex-wrap">
@@ -290,7 +290,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                    <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
                       Descripción (Opcional)
                     </label>
                     <input
@@ -298,7 +298,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                       value={catDesc}
                       onChange={(e) => setCatDesc(e.target.value)}
                       placeholder="Breve descripción o notas de la familia de productos..."
-                      className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                      className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
                     />
                   </div>
 
@@ -306,10 +306,10 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                     <button
                       type="submit"
                       disabled={isSubmitting || !catName.trim()}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#17191c] hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                     >
                       {isSubmitting ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8B4A0]" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5d2a1a]" />
                       ) : (
                         <Plus className="w-3.5 h-3.5" />
                       )}
@@ -319,10 +319,10 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                 </form>
               ) : (
                 /* Formulario 1B: Subcategoría */
-                <form onSubmit={handleCreateSubcategory} className="p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3.5">
+                <form onSubmit={handleCreateSubcategory} className="p-4 bg-[#fafafb] rounded-2xl border border-[#ececec] space-y-3.5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                      <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
                         Categoría Padre <span className="text-rose-500">*</span>
                       </label>
                       <MinimalDropdown
@@ -340,7 +340,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                      <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
                         Nombre de Subcategoría <span className="text-rose-500">*</span>
                       </label>
                       <input
@@ -349,13 +349,13 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                         onChange={(e) => setSubName(e.target.value)}
                         placeholder="Ej. Gaseosas, Jugos, Herramientas manuales..."
                         required
-                        className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                        className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                    <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
                       Descripción (Opcional)
                     </label>
                     <input
@@ -363,7 +363,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                       value={subDesc}
                       onChange={(e) => setSubDesc(e.target.value)}
                       placeholder="Detalles sobre los artículos de esta subclasificación..."
-                      className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                      className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
                     />
                   </div>
 
@@ -371,10 +371,10 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                     <button
                       type="submit"
                       disabled={isSubmitting || !selectedCatId || !subName.trim()}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#17191c] hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                     >
                       {isSubmitting ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8B4A0]" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5d2a1a]" />
                       ) : (
                         <Plus className="w-3.5 h-3.5" />
                       )}
@@ -399,7 +399,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar por nombre o descripción..."
-                  className="w-full h-10 pl-9 pr-8 bg-zinc-100 rounded-xl text-xs text-[#1E3A5F] placeholder:text-zinc-400 focus:bg-white focus:ring-1 focus:ring-[#1E3A5F] focus:outline-none transition-all box-border"
+                  className="w-full h-10 pl-9 pr-8 bg-zinc-100 rounded-xl text-xs text-[#17191c] placeholder:text-zinc-400 focus:bg-white focus:ring-1 focus:ring-[#17191c] focus:outline-none transition-all box-border"
                 />
                 <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-3 pointer-events-none" />
                 {searchQuery && (
@@ -452,9 +452,9 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
               )}
 
               {/* Contenedor Scrolleable Independiente (Evita Scroll Infinito) */}
-              <div className="max-h-[360px] overflow-y-auto overscroll-contain space-y-2.5 border border-[#E5E7EB] rounded-2xl bg-[#F8F9FA]/40 p-3">
+              <div className="max-h-[360px] overflow-y-auto overscroll-contain space-y-2.5 border border-[#ececec] rounded-2xl bg-[#fafafb]/40 p-3">
                 {filteredCategories.length === 0 && filteredSubcategories.length === 0 ? (
-                  <div className="text-center py-10 text-xs text-[#616161] space-y-2">
+                  <div className="text-center py-10 text-xs text-[#777b86] space-y-2">
                     <p>No se encontraron resultados para la consulta actual.</p>
                     <button
                       type="button"
@@ -463,7 +463,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                         setFilterType('categories');
                         setParentCategoryFilter('all');
                       }}
-                      className="text-xs text-[#1E3A5F] underline font-semibold cursor-pointer"
+                      className="text-xs text-[#17191c] underline font-semibold cursor-pointer"
                     >
                       Restablecer filtros
                     </button>
@@ -478,7 +478,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                           return (
                             <div
                               key={cat.id}
-                              className="p-3 bg-white rounded-xl border border-[#E5E7EB] flex items-center justify-between group hover:border-[#1E3A5F]/40 transition-colors shadow-2xs"
+                              className="p-3 bg-white rounded-xl border border-[#ececec] flex items-center justify-between group hover:border-[#17191c]/40 transition-colors shadow-2xs"
                             >
                               <div className="flex items-center gap-3 min-w-0 pr-2">
                                 <span
@@ -487,7 +487,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                                 />
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <h4 className="text-xs font-bold text-[#1E3A5F] truncate">
+                                    <h4 className="text-xs font-bold text-[#17191c] truncate">
                                       {cat.name}
                                     </h4>
                                     <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 font-mono font-medium">
@@ -495,7 +495,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                                     </span>
                                   </div>
                                   {cat.description && (
-                                    <p className="text-[11px] text-[#616161] truncate mt-0.5">
+                                    <p className="text-[11px] text-[#777b86] truncate mt-0.5">
                                       {cat.description}
                                     </p>
                                   )}
@@ -524,19 +524,19 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                           return (
                             <div
                               key={sub.id}
-                              className="p-3 bg-white rounded-xl border border-[#E5E7EB] flex items-center justify-between group hover:border-[#1E3A5F]/40 transition-colors shadow-2xs"
+                              className="p-3 bg-white rounded-xl border border-[#ececec] flex items-center justify-between group hover:border-[#17191c]/40 transition-colors shadow-2xs"
                             >
                               <div className="min-w-0 pr-2">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <h4 className="text-xs font-bold text-[#1E3A5F] truncate">
+                                  <h4 className="text-xs font-bold text-[#17191c] truncate">
                                     {sub.name}
                                   </h4>
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] font-semibold">
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#17191c]/10 text-[#17191c] font-semibold">
                                     {parentCat?.name || 'Categoría'}
                                   </span>
                                 </div>
                                 {sub.description && (
-                                  <p className="text-[11px] text-[#616161] truncate mt-0.5">
+                                  <p className="text-[11px] text-[#777b86] truncate mt-0.5">
                                     {sub.description}
                                   </p>
                                 )}

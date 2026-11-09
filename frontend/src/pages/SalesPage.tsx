@@ -1141,24 +1141,24 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
       {/* =========================================================
           VISTA DE ESCRITORIO (>= 768px / hidden md:block)
          ========================================================= */}
-      <div className="hidden md:block space-y-6 pb-28 sm:pb-12 max-w-7xl mx-auto font-normal text-[#1E3A5F]">
+      <div className="hidden md:block space-y-6 pb-28 sm:pb-12 max-w-7xl mx-auto font-normal text-[#17191c]">
       {/* 1. Cabecera Editorial */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white border border-[#ececec] rounded-3xl p-5 sm:p-6 shadow-steep-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
-            TERMINAL OPERATIVA // CHECKOUT
+          <span className="text-[10px]  tracking-widest text-[#5d2a1a]  block">
+            Terminal de cobro & checkout
           </span>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F] uppercase">
-            Punto de Venta & Caja
+          <h1 className="text-3xl sm:text-4xl font-serif font-normal tracking-tight text-[#17191c] ">
+            Punto de venta & <span className="italic font-serif">caja</span>
           </h1>
-          <p className="text-xs text-[#616161] font-light mt-0.5">
+          <p className="text-xs text-[#777b86] font-light mt-0.5">
             Registro ágil de transacciones en unidades o cajas fraccionables, emisión de comprobantes y descuento automático de stock.
           </p>
         </div>
       </div>
 
       {errorMessage && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center justify-between gap-3 text-xs text-rose-700 animate-in fade-in shadow-xs">
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-3xl flex items-center justify-between gap-3 text-xs text-rose-700 animate-in fade-in shadow-steep-subtle">
           <div className="flex items-center gap-2.5">
             <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
             <span>{errorMessage}</span>
@@ -1174,10 +1174,10 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
         {/* Columna Izquierda: Búsqueda y Carrito de Productos */}
         <div className="lg:col-span-2 space-y-5">
           {/* Tarjeta de Búsqueda */}
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-3">
+          <div className="bg-white border border-[#ececec] rounded-3xl p-5 shadow-steep-subtle space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono uppercase tracking-widest text-[#1E3A5F] font-bold block">
+                <span className="text-[10px]   tracking-widest text-[#17191c] font-bold block">
                   CATÁLOGO ACTIVO
                 </span>
                 <span
@@ -1187,23 +1187,23 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                   title={isOnline ? 'En línea' : 'Modo fuera de línea'}
                 />
               </div>
-              <span className="text-xs text-[#616161]">{products.length} ítems indexados</span>
+              <span className="text-xs text-[#777b86]">{products.length} ítems indexados</span>
             </div>
 
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Search className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                <Search className="w-4 h-4 text-[#777b86] absolute left-3.5 top-3.5" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   placeholder="Escribe el nombre o SKU del producto..."
-                  className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl pl-10 pr-8 py-2.5 text-xs text-[#1E3A5F] placeholder:text-[#616161]/50 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] focus:border-[#1E3A5F] transition-all"
+                  className="w-full bg-[#ffffff] border border-[#ececec] rounded-xl pl-10 pr-8 py-2.5 text-xs text-[#17191c] placeholder:text-[#777b86]/50 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] focus:border-[#1E3A5F] transition-all"
                 />
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm('')}
-                    className="absolute right-3 top-3 text-xs text-[#616161] hover:text-[#1E3A5F]"
+                    className="absolute right-3 top-3 text-xs text-[#777b86] hover:text-[#17191c]"
                   >
                     ✕
                   </button>
@@ -1213,17 +1213,17 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
               <button
                 type="button"
                 onClick={() => setScannerOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 min-h-[44px] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] border border-[#CBD5E1] hover:border-[#1E3A5F] rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 whitespace-nowrap shadow-xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 min-h-[44px] bg-white hover:bg-[#fafafb] text-[#17191c] border border-[#ececec] hover:border-[#1E3A5F] rounded-xl text-xs  tracking-wider transition-all active:scale-95 whitespace-nowrap shadow-steep-subtle cursor-pointer"
                 title="Escanear código"
               >
-                <Camera className="w-4 h-4 text-[#1E3A5F]" />
+                <Camera className="w-4 h-4 text-[#17191c]" />
                 <span>Escanear</span>
               </button>
             </div>
 
             {/* Resultados de Búsqueda Desplegables */}
             {searchResults.length > 0 && (
-              <div className="divide-y divide-[#E5E7EB] border border-[#E5E7EB] rounded-xl overflow-hidden bg-[#F8F9FA]/60 animate-in fade-in">
+              <div className="divide-y divide-[#E5E7EB] border border-[#ececec] rounded-xl overflow-hidden bg-[#fafafb]/60 animate-in fade-in">
                 {searchResults.map(p => {
                   const isBox = p.unit_type === 'BOX' && Number(p.units_per_box) > 0;
                   const breakdown = getBoxBreakdown(p);
@@ -1236,20 +1236,20 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                     >
                       <div className="min-w-0 pr-3">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-bold text-[#1E3A5F] uppercase truncate">{p.name}</p>
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-mono uppercase bg-[#1E3A5F] text-white shrink-0">
+                          <p className="text-sm font-bold text-[#17191c]  truncate">{p.name}</p>
+                          <span className="px-2 py-0.5 rounded-full text-[9px]   bg-[#17191c] text-white shrink-0">
                             {isBox ? `CAJA (${p.units_per_box} UND)` : 'UNIDAD'}
                           </span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#616161] font-mono mt-0.5">
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#777b86]  mt-0.5">
                           <span className="font-semibold">{p.code}</span>
                           <span>•</span>
                           <span>
-                            Stock: <strong className="text-[#1E3A5F] font-semibold">{formatStockDisplay(p)}</strong>
+                            Stock: <strong className="text-[#17191c] font-semibold">{formatStockDisplay(p)}</strong>
                             {isBox && breakdown.breakdownLabel ? ` (${breakdown.breakdownLabel})` : ''}
                           </span>
                           <span>•</span>
-                          <span className="text-[#1E3A5F] font-bold">
+                          <span className="text-[#17191c] font-bold">
                             {formatCurrency(p.price, currentInventory?.currency)}
                             {isBox ? ` / caja (${formatCurrency(unitPriceEquiv, currentInventory?.currency)} / und)` : ''}
                           </span>
@@ -1262,28 +1262,28 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                             <button
                               type="button"
                               onClick={() => addToCart(p, 'BOX')}
-                              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 px-3 min-h-[38px] bg-[#1E3A5F] hover:bg-[#152a45] text-white text-[11px] font-mono uppercase tracking-wider rounded-xl shadow-xs active:scale-95 transition-all"
+                              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 px-3 min-h-[38px] bg-[#17191c] hover:bg-black text-white text-[11px]   tracking-wider rounded-xl shadow-steep-subtle active:scale-95 transition-all"
                               title="Vender por caja completa"
                             >
-                              <Layers className="w-3.5 h-3.5 text-[#E8B4A0]" /> +1 Caja
+                              <Layers className="w-3.5 h-3.5 text-[#5d2a1a]" /> +1 Caja
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => addToCart(p, 'UNIT')}
-                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 px-3 min-h-[38px] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] border border-[#1E3A5F] text-[11px] font-mono uppercase tracking-wider rounded-xl shadow-xs active:scale-95 transition-all"
+                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 px-3 min-h-[38px] bg-white hover:bg-[#fafafb] text-[#17191c] border border-[#1E3A5F] text-[11px]   tracking-wider rounded-xl shadow-steep-subtle active:scale-95 transition-all"
                             title="Vender por unidades sueltas"
                           >
-                            <Package className="w-3.5 h-3.5 text-[#1E3A5F]" /> +1 Und
+                            <Package className="w-3.5 h-3.5 text-[#17191c]" /> +1 Und
                           </button>
                         </div>
                       ) : (
                         <button
                           type="button"
                           onClick={() => addToCart(p, 'UNIT')}
-                          className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-3 min-h-[38px] bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-xl shadow-xs active:scale-95 transition-all flex-shrink-0"
+                          className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-3 min-h-[38px] bg-[#17191c] hover:bg-black text-white text-xs  tracking-wider rounded-xl shadow-steep-subtle active:scale-95 transition-all flex-shrink-0"
                         >
-                          <Plus className="w-3.5 h-3.5 text-[#E8B4A0]" /> Añadir
+                          <Plus className="w-3.5 h-3.5 text-[#5d2a1a]" /> Añadir
                         </button>
                       )}
                     </div>
@@ -1294,18 +1294,18 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
           </div>
 
           {/* Tabla / Lista de Ítems en el Carrito */}
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
+          <div className="bg-white border border-[#ececec] rounded-3xl p-5 shadow-steep-subtle space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#ececec]">
               <div className="flex items-center gap-2">
-                <ShoppingCart className="w-4 h-4 text-[#E8B4A0]" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
+                <ShoppingCart className="w-4 h-4 text-[#5d2a1a]" />
+                <h3 className="text-xs font-bold  tracking-wider text-[#17191c]">
                   Ítems Seleccionados ({cart.length})
                 </h3>
               </div>
               {cart.length > 0 && (
                 <button
                   onClick={() => setCart([])}
-                  className="text-xs text-[#616161] hover:text-rose-600 transition-colors uppercase tracking-wider font-mono text-[11px]"
+                  className="text-xs text-[#777b86] hover:text-rose-600 transition-colors  tracking-wider  text-[11px]"
                 >
                   Vaciar Carrito
                 </button>
@@ -1313,10 +1313,10 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
             </div>
 
             {cart.length === 0 ? (
-              <div className="py-12 text-center text-[#616161] space-y-2 font-mono">
-                <ShoppingCart className="w-10 h-10 mx-auto stroke-1 text-[#1E3A5F]/20" />
-                <p className="text-xs uppercase tracking-wider">El carrito de caja está vacío.</p>
-                <p className="text-[11px] text-[#616161]/70 font-sans">
+              <div className="py-12 text-center text-[#777b86] space-y-2 ">
+                <ShoppingCart className="w-10 h-10 mx-auto stroke-1 text-[#17191c]/20" />
+                <p className="text-xs  tracking-wider">El carrito de caja está vacío.</p>
+                <p className="text-[11px] text-[#777b86]/70 font-sans">
                   Busca por nombre/código o utiliza el escáner para sumar productos al ticket.
                 </p>
               </div>
@@ -1334,18 +1334,18 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-bold text-[#1E3A5F] uppercase truncate">{item.product.name}</p>
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-mono uppercase bg-[#1E3A5F]/10 text-[#1E3A5F] font-semibold">
+                            <p className="text-sm font-bold text-[#17191c]  truncate">{item.product.name}</p>
+                            <span className="px-2 py-0.5 rounded-full text-[9px]   bg-[#17191c]/10 text-[#17191c] font-semibold">
                               {isBox ? `CAJA (1 caja = ${upb} und)` : 'UNIDAD'}
                             </span>
                           </div>
-                          <p className="text-[11px] text-[#616161] font-mono mt-0.5">
+                          <p className="text-[11px] text-[#777b86]  mt-0.5">
                             <span className="font-semibold">{item.product.code}</span> •{' '}
                             <span className="font-semibold">
                               {formatCurrency(item.product.price, currentInventory?.currency)}
                               {isBox ? ` / caja (${formatCurrency(unitPrice, currentInventory?.currency)} / und)` : ' / und'}
                             </span>{' '}
-                            • Disponible: <strong className="text-[#1E3A5F]">{formatStockDisplay(item.product)}</strong>
+                            • Disponible: <strong className="text-[#17191c]">{formatStockDisplay(item.product)}</strong>
                             {isBox && breakdown.breakdownLabel ? ` (${breakdown.breakdownLabel})` : ''}
                           </p>
                         </div>
@@ -1353,10 +1353,10 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                         {/* Subtotal y Botón Quitar */}
                         <div className="flex items-center gap-3 shrink-0">
                           <div className="text-right">
-                            <p className="text-sm font-mono font-bold text-[#1E3A5F]">
+                            <p className="text-sm  font-bold text-[#17191c]">
                               {formatCurrency(itemSubtotal, currentInventory?.currency)}
                             </p>
-                            <span className="text-[10px] font-mono text-[#616161] block">
+                            <span className="text-[10px]  text-[#777b86] block">
                               {isBox
                                 ? `Descuenta: ${formatCleanDecimal(item.quantity, 2)} ${item.quantity === 1 ? 'caja' : 'cajas'}`
                                 : `Descuenta: ${item.quantity} und`}
@@ -1365,7 +1365,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                           <button
                             type="button"
                             onClick={() => removeFromCart(item.product.id)}
-                            className="p-1.5 text-[#616161] hover:text-rose-600 transition-colors"
+                            className="p-1.5 text-[#777b86] hover:text-rose-600 transition-colors"
                             title="Quitar ítem"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1375,13 +1375,13 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
 
                       {/* Controles de Cantidad según Tipo (UNIT vs BOX fraccionable) */}
                       {!isBox ? (
-                        <div className="flex items-center justify-between bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-3.5 py-2 font-mono text-xs">
-                          <span className="text-[11px] text-[#616161] uppercase">Cantidad (Unidades):</span>
+                        <div className="flex items-center justify-between bg-[#fafafb] border border-[#ececec] rounded-xl px-3.5 py-2  text-xs">
+                          <span className="text-[11px] text-[#777b86] ">Cantidad (Unidades):</span>
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => updateUnitCartQuantity(item.product.id, item.quantity - 1)}
-                              className="w-7 h-7 rounded-lg bg-white border border-[#E5E7EB] flex items-center justify-center text-[#1E3A5F] hover:border-[#1E3A5F] transition-colors"
+                              className="w-7 h-7 rounded-lg bg-white border border-[#ececec] flex items-center justify-center text-[#17191c] hover:border-[#1E3A5F] transition-colors"
                             >
                               <Minus className="w-3.5 h-3.5" />
                             </button>
@@ -1392,26 +1392,26 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                               step="1"
                               value={item.quantity}
                               onChange={e => updateUnitCartQuantity(item.product.id, parseInt(e.target.value, 10) || 1)}
-                              className="w-16 h-7 text-center bg-white border border-[#E5E7EB] rounded-lg text-xs font-mono font-bold text-[#1E3A5F] focus:outline-none focus:border-[#1E3A5F]"
+                              className="w-16 h-7 text-center bg-white border border-[#ececec] rounded-lg text-xs  font-bold text-[#17191c] focus:outline-none focus:border-[#1E3A5F]"
                             />
                             <button
                               type="button"
                               onClick={() => updateUnitCartQuantity(item.product.id, item.quantity + 1)}
-                              className="w-7 h-7 rounded-lg bg-white border border-[#E5E7EB] flex items-center justify-center text-[#1E3A5F] hover:border-[#1E3A5F] transition-colors"
+                              className="w-7 h-7 rounded-lg bg-white border border-[#ececec] flex items-center justify-center text-[#17191c] hover:border-[#1E3A5F] transition-colors"
                             >
                               <Plus className="w-3.5 h-3.5" />
                             </button>
-                            <span className="text-[11px] text-[#616161]">und</span>
+                            <span className="text-[11px] text-[#777b86]">und</span>
                           </div>
                         </div>
                       ) : (
                         /* Selector Dual para Producto tipo CAJA: Cajas completas + Unidades sueltas */
-                        <div className="p-3 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs">
+                        <div className="p-3 bg-[#fafafb] border border-[#ececec] rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3  text-xs">
                           {/* Control de Cajas */}
-                          <div className="flex items-center justify-between bg-white border border-[#E5E7EB] rounded-lg px-3 py-2">
+                          <div className="flex items-center justify-between bg-white border border-[#ececec] rounded-lg px-3 py-2">
                             <div>
-                              <span className="text-[10px] font-bold uppercase text-[#1E3A5F] block">Cajas a vender</span>
-                              <span className="text-[10px] text-[#616161]">
+                              <span className="text-[10px] font-bold  text-[#17191c] block">Cajas a vender</span>
+                              <span className="text-[10px] text-[#777b86]">
                                 {formatCurrency(item.product.price, currentInventory?.currency)} / caja
                               </span>
                             </div>
@@ -1421,7 +1421,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                                 onClick={() =>
                                   updateBoxCartAmounts(item.product.id, Math.max(0, item.boxes - 1), item.looseUnits)
                                 }
-                                className="w-7 h-7 rounded-lg bg-[#F8F9FA] border border-[#E5E7EB] flex items-center justify-center text-[#1E3A5F] hover:border-[#1E3A5F]"
+                                className="w-7 h-7 rounded-lg bg-[#fafafb] border border-[#ececec] flex items-center justify-center text-[#17191c] hover:border-[#1E3A5F]"
                               >
                                 <Minus className="w-3.5 h-3.5" />
                               </button>
@@ -1437,12 +1437,12 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                                     item.looseUnits
                                   )
                                 }
-                                className="w-16 h-7 text-center bg-white border border-[#E5E7EB] rounded-lg text-xs font-mono font-bold text-[#1E3A5F] focus:outline-none focus:border-[#1E3A5F]"
+                                className="w-16 h-7 text-center bg-white border border-[#ececec] rounded-lg text-xs  font-bold text-[#17191c] focus:outline-none focus:border-[#1E3A5F]"
                               />
                               <button
                                 type="button"
                                 onClick={() => updateBoxCartAmounts(item.product.id, item.boxes + 1, item.looseUnits)}
-                                className="w-7 h-7 rounded-lg bg-[#F8F9FA] border border-[#E5E7EB] flex items-center justify-center text-[#1E3A5F] hover:border-[#1E3A5F]"
+                                className="w-7 h-7 rounded-lg bg-[#fafafb] border border-[#ececec] flex items-center justify-center text-[#17191c] hover:border-[#1E3A5F]"
                               >
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
@@ -1450,12 +1450,12 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                           </div>
 
                           {/* Control de Unidades Sueltas */}
-                          <div className="flex items-center justify-between bg-white border border-[#E5E7EB] rounded-lg px-3 py-2">
+                          <div className="flex items-center justify-between bg-white border border-[#ececec] rounded-lg px-3 py-2">
                             <div>
-                              <span className="text-[10px] font-bold uppercase text-[#1E3A5F] block">
+                              <span className="text-[10px] font-bold  text-[#17191c] block">
                                 Unidades sueltas
                               </span>
-                              <span className="text-[10px] text-[#616161]">
+                              <span className="text-[10px] text-[#777b86]">
                                 {formatCurrency(unitPrice, currentInventory?.currency)} / und
                               </span>
                             </div>
@@ -1465,7 +1465,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                                 onClick={() =>
                                   updateBoxCartAmounts(item.product.id, item.boxes, Math.max(0, item.looseUnits - 1))
                                 }
-                                className="w-7 h-7 rounded-lg bg-[#F8F9FA] border border-[#E5E7EB] flex items-center justify-center text-[#1E3A5F] hover:border-[#1E3A5F]"
+                                className="w-7 h-7 rounded-lg bg-[#fafafb] border border-[#ececec] flex items-center justify-center text-[#17191c] hover:border-[#1E3A5F]"
                               >
                                 <Minus className="w-3.5 h-3.5" />
                               </button>
@@ -1481,12 +1481,12 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                                     parseInt(e.target.value, 10) || 0
                                   )
                                 }
-                                className="w-16 h-7 text-center bg-white border border-[#E5E7EB] rounded-lg text-xs font-mono font-bold text-[#1E3A5F] focus:outline-none focus:border-[#1E3A5F]"
+                                className="w-16 h-7 text-center bg-white border border-[#ececec] rounded-lg text-xs  font-bold text-[#17191c] focus:outline-none focus:border-[#1E3A5F]"
                               />
                               <button
                                 type="button"
                                 onClick={() => updateBoxCartAmounts(item.product.id, item.boxes, item.looseUnits + 1)}
-                                className="w-7 h-7 rounded-lg bg-[#F8F9FA] border border-[#E5E7EB] flex items-center justify-center text-[#1E3A5F] hover:border-[#1E3A5F]"
+                                className="w-7 h-7 rounded-lg bg-[#fafafb] border border-[#ececec] flex items-center justify-center text-[#17191c] hover:border-[#1E3A5F]"
                               >
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
@@ -1504,57 +1504,57 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
 
         {/* Columna Derecha: Resumen de Cobro y Checkout */}
         <div className="space-y-4">
-          <form onSubmit={handleProcessSale} className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-[#E5E7EB]">
-              <Receipt className="w-4 h-4 text-[#E8B4A0]" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
+          <form onSubmit={handleProcessSale} className="bg-white border border-[#ececec] rounded-3xl p-5 shadow-steep-subtle space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-[#ececec]">
+              <Receipt className="w-4 h-4 text-[#5d2a1a]" />
+              <h3 className="text-xs font-bold  tracking-wider text-[#17191c]">
                 Liquidación de Ticket
               </h3>
             </div>
 
             {/* Total Destacado y Desglose */}
-            <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] space-y-2 font-mono">
-              <div className="flex items-center justify-between text-xs text-[#616161]">
+            <div className="p-4 bg-[#fafafb] rounded-xl border border-[#ececec] space-y-2 ">
+              <div className="flex items-center justify-between text-xs text-[#777b86]">
                 <span>Subtotal ({cartTotalItemsCount} {cartTotalItemsCount === 1 ? 'ítem' : 'ítems'}):</span>
-                <span className="text-[#1E3A5F]">
+                <span className="text-[#17191c]">
                   {formatCurrency(cartSubtotal, currentInventory?.currency)}
                 </span>
               </div>
 
               {appliedCoupon && (
-                <div className="flex items-center justify-between text-xs text-[#1E3A5F]">
+                <div className="flex items-center justify-between text-xs text-[#17191c]">
                   <span className="flex items-center gap-1">
-                    <Tag className="w-3.5 h-3.5 text-[#E8B4A0]" /> Descuento ({appliedCoupon.code}):
+                    <Tag className="w-3.5 h-3.5 text-[#5d2a1a]" /> Descuento ({appliedCoupon.code}):
                   </span>
-                  <span className="text-[#E8B4A0] font-medium">
+                  <span className="text-[#5d2a1a] font-medium">
                     -{formatCurrency(discountAmount, currentInventory?.currency)}
                   </span>
                 </div>
               )}
 
-              <div className="flex items-center justify-between pt-2 border-t border-[#E5E7EB]">
-                <span className="text-xs uppercase tracking-wider text-[#1E3A5F] font-bold">TOTAL COBRO:</span>
-                <span className="text-2xl font-bold text-[#1E3A5F]">
+              <div className="flex items-center justify-between pt-2 border-t border-[#ececec]">
+                <span className="text-xs  tracking-wider text-[#17191c] font-bold">TOTAL COBRO:</span>
+                <span className="text-2xl font-bold text-[#17191c]">
                   {formatCurrency(finalTotal, currentInventory?.currency)}
                 </span>
               </div>
             </div>
 
             {/* Cupón de Descuento (Opcional) */}
-            <div className="space-y-2 pt-1 border-t border-[#E5E7EB]">
-              <label className="block text-[11px] uppercase tracking-wider font-medium text-[#1E3A5F]">
+            <div className="space-y-2 pt-1 border-t border-[#ececec]">
+              <label className="block text-[11px]  tracking-wider font-medium text-[#17191c]">
                 Cupón Promocional
               </label>
 
               {appliedCoupon ? (
-                <div className="p-2.5 bg-[#F8F9FA] border border-[#E8B4A0] rounded-xl flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-mono">
-                    <Sparkles className="w-4 h-4 text-[#E8B4A0]" />
+                <div className="p-2.5 bg-[#fafafb] border border-[#E8B4A0] rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-2 ">
+                    <Sparkles className="w-4 h-4 text-[#5d2a1a]" />
                     <div>
-                      <span className="text-xs text-[#1E3A5F] font-semibold">
+                      <span className="text-xs text-[#17191c] font-semibold">
                         {appliedCoupon.code}
                       </span>
-                      <span className="text-[11px] text-[#616161] ml-1.5">
+                      <span className="text-[11px] text-[#777b86] ml-1.5">
                         ({appliedCoupon.discount_type === 'PERCENTAGE' ? `-${appliedCoupon.discount_value}%` : `-${formatCurrency(appliedCoupon.discount_value, currentInventory?.currency)}`})
                       </span>
                     </div>
@@ -1562,7 +1562,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                   <button
                     type="button"
                     onClick={handleRemoveCoupon}
-                    className="p-1 text-[#616161] hover:text-rose-600 rounded-lg transition-colors"
+                    className="p-1 text-[#777b86] hover:text-rose-600 rounded-lg transition-colors"
                     title="Quitar cupón"
                   >
                     <X className="w-4 h-4" />
@@ -1575,13 +1575,13 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                     value={couponCodeInput}
                     onChange={e => setCouponCodeInput(e.target.value.toUpperCase())}
                     placeholder="Código (Ej: DESC10)"
-                    className="flex-1 bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs font-mono uppercase text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                    className="flex-1 bg-[#ffffff] border border-[#ececec] rounded-xl px-3 py-2 text-xs   text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                   />
                   <button
                     type="button"
                     onClick={handleApplyCoupon}
                     disabled={couponLoading || !couponCodeInput.trim()}
-                    className="px-3.5 py-2 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-xl transition-all disabled:opacity-50 active:scale-95 whitespace-nowrap shadow-xs"
+                    className="px-3.5 py-2 bg-[#17191c] hover:bg-black text-white text-xs  tracking-wider rounded-xl transition-all disabled:opacity-50 active:scale-95 whitespace-nowrap shadow-steep-subtle"
                   >
                     {couponLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Aplicar'}
                   </button>
@@ -1589,16 +1589,16 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
               )}
 
               {couponMessage && (
-                <p className={`text-[11px] font-mono ${couponMessage.type === 'success' ? 'text-[#1E3A5F]' : 'text-rose-600'}`}>
+                <p className={`text-[11px]  ${couponMessage.type === 'success' ? 'text-[#17191c]' : 'text-rose-600'}`}>
                   {couponMessage.text}
                 </p>
               )}
             </div>
 
             {/* Método de Pago */}
-            <div className="pt-2 border-t border-[#E5E7EB]">
-              <label className="block text-[11px] uppercase tracking-wider font-medium text-[#1E3A5F] mb-2">
-                Método de Pago <span className="text-[#E8B4A0]">*</span>
+            <div className="pt-2 border-t border-[#ececec]">
+              <label className="block text-[11px]  tracking-wider font-medium text-[#17191c] mb-2">
+                Método de Pago <span className="text-[#5d2a1a]">*</span>
               </label>
 
               <div className="grid grid-cols-3 gap-2">
@@ -1615,14 +1615,14 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                       if (m.id === 'YAPE') setQrModalType('YAPE');
                       if (m.id === 'PLIN') setQrModalType('PLIN');
                     }}
-                    className={`p-2.5 rounded-xl text-xs uppercase tracking-wider border flex flex-col items-center justify-center gap-1 transition-all ${
+                    className={`p-2.5 rounded-xl text-xs  tracking-wider border flex flex-col items-center justify-center gap-1 transition-all ${
                       paymentMethod === m.id
-                        ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-sm ring-2 ring-[#E8B4A0]'
-                        : 'bg-[#F8F9FA] border-[#E5E7EB] text-[#1E3A5F] hover:bg-white'
+                        ? 'bg-[#17191c] text-white border-[#1E3A5F] shadow-steep-subtle ring-2 ring-[#E8B4A0]'
+                        : 'bg-[#fafafb] border-[#ececec] text-[#17191c] hover:bg-white'
                     }`}
                   >
                     <span className="text-base">{m.icon}</span>
-                    <span className="font-mono text-[11px]">{m.label}</span>
+                    <span className=" text-[11px]">{m.label}</span>
                   </button>
                 ))}
               </div>
@@ -1631,26 +1631,26 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                 <button
                   type="button"
                   onClick={() => setQrModalType(paymentMethod)}
-                  className="w-full mt-2 py-2 px-3 bg-[#E8B4A0]/20 hover:bg-[#E8B4A0]/30 text-[#1E3A5F] border border-[#E8B4A0]/50 rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
+                  className="w-full mt-2 py-2 px-3 bg-[#fbe1d1]/20 hover:bg-[#fbe1d1]/30 text-[#17191c] border border-[#E8B4A0]/50 rounded-xl text-xs   tracking-wider flex items-center justify-center gap-1.5 transition-colors"
                 >
-                  <QrCode className="w-4 h-4 text-[#1E3A5F]" /> Ver QR para Cliente ({paymentMethod})
+                  <QrCode className="w-4 h-4 text-[#17191c]" /> Ver QR para Cliente ({paymentMethod})
                 </button>
               )}
             </div>
 
             {/* Switch: ¿Información del cliente? y Detalle de la venta */}
-            <div className="space-y-3 pt-2 border-t border-[#E5E7EB]">
+            <div className="space-y-3 pt-2 border-t border-[#ececec]">
               <div className="flex items-center justify-between">
                 <label
                   htmlFor="desktop-customer-switch"
-                  className="text-[11px] uppercase tracking-wider font-medium text-[#1E3A5F] cursor-pointer select-none"
+                  className="text-[11px]  tracking-wider font-medium text-[#17191c] cursor-pointer select-none"
                 >
                   ¿Información del cliente?
                 </label>
                 <Switch
                   id="desktop-customer-switch"
                   size="md"
-                  activeColor="bg-[#1E3A5F]"
+                  activeColor="bg-[#17191c]"
                   checked={showCustomerInfo}
                   onChange={(next) => {
                     setShowCustomerInfo(next);
@@ -1666,7 +1666,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
               {showCustomerInfo && (
                 <div className="space-y-2 animate-in fade-in duration-150">
                   <div>
-                    <label className="block text-[10px] uppercase tracking-wider text-[#616161] mb-1">
+                    <label className="block text-[10px]  tracking-wider text-[#777b86] mb-1">
                       Nombre del cliente
                     </label>
                     <input
@@ -1674,12 +1674,12 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                       value={customerName}
                       onChange={e => setCustomerName(e.target.value)}
                       placeholder="Ej: Juan Pérez"
-                      className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                      className="w-full bg-[#ffffff] border border-[#ececec] rounded-xl px-3 py-2 text-xs text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] uppercase tracking-wider text-[#616161] mb-1">
+                    <label className="block text-[10px]  tracking-wider text-[#777b86] mb-1">
                       Número de teléfono
                     </label>
                     <input
@@ -1687,14 +1687,14 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                       value={customerContact}
                       onChange={e => setCustomerContact(e.target.value)}
                       placeholder="Ej: 999888777"
-                      className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                      className="w-full bg-[#ffffff] border border-[#ececec] rounded-xl px-3 py-2 text-xs text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                     />
                   </div>
                 </div>
               )}
 
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[#616161] mb-1">
+                <label className="block text-[10px]  tracking-wider text-[#777b86] mb-1">
                   Detalle de la venta
                 </label>
                 <textarea
@@ -1702,7 +1702,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                   onChange={e => setSaleNotes(e.target.value)}
                   placeholder="Detalles de entrega, despacho, etc..."
                   rows={2}
-                  className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                  className="w-full bg-[#ffffff] border border-[#ececec] rounded-xl px-3 py-2 text-xs text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
                 />
               </div>
             </div>
@@ -1711,16 +1711,16 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
             <button
               type="submit"
               disabled={isProcessingSale || cart.length === 0}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm active:scale-95 disabled:opacity-50 transition-all"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 bg-[#17191c] hover:bg-black text-white text-xs  tracking-wider font-medium rounded-xl shadow-steep-subtle active:scale-95 disabled:opacity-50 transition-all"
             >
               {isProcessingSale ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
+                  <Loader2 className="w-4 h-4 animate-spin text-[#5d2a1a]" />
                   <span>Validando Stock y Registrando...</span>
                 </>
               ) : (
                 <>
-                  <CheckCircle className="w-4 h-4 text-[#E8B4A0]" />
+                  <CheckCircle className="w-4 h-4 text-[#5d2a1a]" />
                   <span>Confirmar Venta y Cobro</span>
                 </>
               )}

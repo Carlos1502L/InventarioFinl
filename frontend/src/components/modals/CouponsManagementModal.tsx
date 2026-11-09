@@ -167,19 +167,19 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[85dvh] font-sans">
+      <div className="mobile-dark-modal bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[85dvh] font-sans">
         
         {/* Cabecera */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] bg-[#ffffff] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center shrink-0">
-              <Tag className="w-5 h-5 text-[#1E3A5F]" />
+            <div className="w-10 h-10 rounded-full bg-[#17191c]/10 text-[#17191c] flex items-center justify-center shrink-0">
+              <Tag className="w-5 h-5 text-[#17191c]" />
             </div>
             <div>
-              <h3 className="font-bold text-[#1E3A5F] text-base uppercase tracking-tight">
+              <h3 className="font-bold text-[#17191c] text-base uppercase tracking-tight">
                 Cupones de Descuento
               </h3>
-              <p className="text-[11px] text-[#616161]">
+              <p className="text-[11px] text-[#777b86]">
                 Promociones aplicables al registrar ventas
               </p>
             </div>
@@ -187,14 +187,14 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Barra de Pestañas Tipo Píldora (RF-UI-TABS-008 & RNF-UX-CONSISTENCY-005) */}
-        <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#E5E7EB] bg-white shrink-0 overflow-x-auto">
+        <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#ececec] bg-white shrink-0 overflow-x-auto">
           <PillOption
             active={activeTab === 'create'}
             onClick={() => setActiveTab('create')}
@@ -229,15 +229,15 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
           {/* PESTAÑA 1: FORMULARIO CREAR DESCUENTO */}
           {activeTab === 'create' && (
             <form onSubmit={handleCreateCoupon} className="space-y-4 animate-in fade-in">
-              <div className="p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3.5">
-                <span className="text-xs font-bold text-[#1E3A5F] uppercase tracking-wider flex items-center gap-1.5">
-                  <Plus className="w-4 h-4 text-[#E8B4A0]" /> Datos de la Promoción
+              <div className="p-4 bg-[#fafafb] rounded-2xl border border-[#ececec] space-y-3.5">
+                <span className="text-xs font-bold text-[#17191c] uppercase tracking-wider flex items-center gap-1.5">
+                  <Plus className="w-4 h-4 text-[#5d2a1a]" /> Datos de la Promoción
                 </span>
 
                 <div className="space-y-3">
                   {/* Código Promocional */}
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                    <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
                       Código Promocional <span className="text-rose-500">*</span>
                     </label>
                     <input
@@ -246,14 +246,14 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                       onChange={e => setCode(e.target.value.toUpperCase())}
                       placeholder="Ej: PROMO10"
                       required
-                      className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs font-mono font-bold uppercase text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                      className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs font-mono font-bold uppercase text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
                     />
                   </div>
 
                   {/* Al Mismo Nivel: Tipo de Descuento y Valor */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1 truncate">
+                      <label className="block text-[11px] font-semibold text-[#17191c] mb-1 truncate">
                         Tipo de Descuento
                       </label>
                       <MinimalDropdown
@@ -267,7 +267,7 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1 truncate">
+                      <label className="block text-[11px] font-semibold text-[#17191c] mb-1 truncate">
                         Valor {discountType === 'PERCENTAGE' ? '(%)' : `(${currentInventory?.currency || 'PEN'})`} <span className="text-rose-500">*</span>
                       </label>
                       <input
@@ -278,7 +278,7 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                         value={discountValue}
                         onChange={e => setDiscountValue(e.target.value)}
                         required
-                        className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs font-bold text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                        className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs font-bold text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
                       />
                     </div>
                   </div>
@@ -286,7 +286,7 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
 
                 {/* Descripción opcional */}
                 <div>
-                  <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                  <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
                     Descripción / Términos (Opcional)
                   </label>
                   <input
@@ -294,7 +294,7 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                     value={description}
                     onChange={e => setDescription(e.target.value)}
                     placeholder="Ej: Descuento especial de temporada"
-                    className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                    className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
                   />
                 </div>
 
@@ -302,10 +302,10 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                   <button
                     type="submit"
                     disabled={isSubmitting || !code.trim()}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#17191c] hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                   >
                     {isSubmitting ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8B4A0]" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5d2a1a]" />
                     ) : (
                       <Sparkles className="w-3.5 h-3.5" />
                     )}
@@ -319,8 +319,8 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
           {/* PESTAÑA 2: DESCUENTOS EXISTENTES (RECUADRO CON SCROLL CONTENIDO) */}
           {activeTab === 'existing' && (
             <div className="space-y-3 animate-in fade-in">
-              <div className="flex items-center justify-between text-xs text-[#616161]">
-                <span className="font-semibold text-[#1E3A5F]">
+              <div className="flex items-center justify-between text-xs text-[#777b86]">
+                <span className="font-semibold text-[#17191c]">
                   Promociones y Cupones Activos ({coupons.length})
                 </span>
                 <span className="text-[10px] font-mono">
@@ -329,19 +329,19 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
               </div>
 
               {/* Recuadro contenedor con scroll para evitar scroll infinito */}
-              <div className="max-h-[380px] overflow-y-auto space-y-2.5 border border-[#E5E7EB] rounded-2xl bg-[#F8F9FA]/40 p-3 overscroll-contain">
+              <div className="max-h-[380px] overflow-y-auto space-y-2.5 border border-[#ececec] rounded-2xl bg-[#fafafb]/40 p-3 overscroll-contain">
                 {loading ? (
-                  <div className="flex items-center justify-center gap-2 py-8 text-xs text-[#616161]">
-                    <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
+                  <div className="flex items-center justify-center gap-2 py-8 text-xs text-[#777b86]">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#17191c]" />
                     <span>Cargando cupones...</span>
                   </div>
                 ) : coupons.length === 0 ? (
-                  <div className="text-center py-10 text-xs text-[#616161] space-y-2">
+                  <div className="text-center py-10 text-xs text-[#777b86] space-y-2">
                     <p>No hay descuentos ni cupones creados aún.</p>
                     <button
                       type="button"
                       onClick={() => setActiveTab('create')}
-                      className="text-xs text-[#1E3A5F] underline font-semibold cursor-pointer"
+                      className="text-xs text-[#17191c] underline font-semibold cursor-pointer"
                     >
                       Crear el primer descuento
                     </button>
@@ -352,12 +352,12 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                     return (
                       <div
                         key={coupon.id}
-                        className="py-2.5 px-3 bg-white rounded-xl border border-[#E5E7EB] flex items-center justify-between gap-2.5 group hover:border-[#1E3A5F]/40 transition-colors shadow-2xs"
+                        className="py-2.5 px-3 bg-white rounded-xl border border-[#ececec] flex items-center justify-between gap-2.5 group hover:border-[#17191c]/40 transition-colors shadow-2xs"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
                             isActive
-                              ? 'bg-[#1E3A5F]/10 text-[#1E3A5F]'
+                              ? 'bg-[#17191c]/10 text-[#17191c]'
                               : 'bg-neutral-100 text-neutral-400'
                           }`}>
                             {coupon.discount_type === 'PERCENTAGE' ? (
@@ -369,10 +369,10 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
 
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-mono text-xs font-bold text-[#1E3A5F]">
+                              <span className="font-mono text-xs font-bold text-[#17191c]">
                                 {coupon.code}
                               </span>
-                              <span className="text-[11px] font-bold text-[#1E3A5F]">
+                              <span className="text-[11px] font-bold text-[#17191c]">
                                 {coupon.discount_type === 'PERCENTAGE'
                                   ? `-${coupon.discount_value}%`
                                   : `-${formatCurrency(coupon.discount_value, currentInventory?.currency)}`}
@@ -386,7 +386,7 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                               </span>
                             </div>
                             {coupon.description && (
-                              <p className="text-[10px] text-[#616161] truncate leading-tight mt-0.5">{coupon.description}</p>
+                              <p className="text-[10px] text-[#777b86] truncate leading-tight mt-0.5">{coupon.description}</p>
                             )}
                           </div>
                         </div>
@@ -397,7 +397,7 @@ export const CouponsManagementModal: React.FC<CouponsManagementModalProps> = ({
                             onClick={() => handleToggleStatus(coupon)}
                             className={`px-2 py-1 text-[10px] font-semibold rounded-lg transition-colors cursor-pointer border ${
                               isActive
-                                ? 'bg-[#F8F9FA] hover:bg-neutral-100 text-[#616161] border-[#E5E7EB]'
+                                ? 'bg-[#fafafb] hover:bg-neutral-100 text-[#777b86] border-[#ececec]'
                                 : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
                             }`}
                             title={isActive ? 'Desactivar cupón' : 'Activar cupón'}

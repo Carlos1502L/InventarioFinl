@@ -227,28 +227,28 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
+      <div className="mobile-dark-modal bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
         {/* Cabecera */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] bg-[#ffffff]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center">
-              <Users className="w-5 h-5 text-[#1E3A5F]" />
+            <div className="w-10 h-10 rounded-full bg-[#17191c]/10 text-[#17191c] flex items-center justify-center">
+              <Users className="w-5 h-5 text-[#17191c]" />
             </div>
             <div>
-              <h3 className="font-light text-[#1E3A5F] text-base uppercase tracking-tight">Equipo y Colaboradores</h3>
-              <p className="text-[11px] text-[#616161]">Trabajo colaborativo multi-usuario en tiempo real</p>
+              <h3 className="font-light text-[#17191c] text-base uppercase tracking-tight">Equipo y Colaboradores</h3>
+              <p className="text-[11px] text-[#777b86]">Trabajo colaborativo multi-usuario en tiempo real</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Opciones tipo píldora "Invitar" y "Miembros" */}
-        <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#E5E7EB] bg-[#F8F9FA]/60 shrink-0">
+        <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#ececec] bg-[#fafafb]/60 shrink-0">
           <PillOption
             active={activeTab === 'invite'}
             onClick={() => setActiveTab('invite')}
@@ -420,7 +420,7 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
         </div>
 
         {/* Pie con botón Cancelar / Cerrar centrado */}
-        <div className="px-6 py-3.5 border-t border-[#E5E7EB] bg-[#F8F9FA]/80 flex justify-center shrink-0">
+        <div className="px-6 py-3.5 border-t border-[#ececec] bg-[#fafafb]/80 flex justify-center shrink-0">
           <CancelButton onClick={onClose} label="Cerrar" className="min-w-[130px]" />
         </div>
       </div>

@@ -189,18 +189,18 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-28 sm:pb-12 max-w-7xl mx-auto font-normal text-[#1E3A5F]">
+    <div className="space-y-6 pb-28 sm:pb-12 max-w-7xl mx-auto font-normal text-[#17191c]">
       {/* 1. Cabecera y Resumen de Exportación */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+      <div className="bg-white border border-[#ececec] rounded-3xl p-5 sm:p-6 shadow-steep-subtle space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
+            <span className="text-[10px]  tracking-widest text-[#5d2a1a]  block">
               DATA EXPORT // INVENTORY CENSUS & AUDIT
             </span>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F] uppercase">
-              Reportes & Manifiestos de Stock
+            <h1 className="text-3xl sm:text-4xl font-serif font-normal tracking-tight text-[#17191c] ">
+              Reportes & <span className="italic font-serif">manifiestos</span>
             </h1>
-            <p className="text-xs text-[#616161] font-light mt-0.5">
+            <p className="text-xs text-[#777b86] font-light mt-0.5">
               Generación y exportación de auditorías basadas estrictamente en la vista y filtros actuales.
             </p>
           </div>
@@ -210,16 +210,16 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
             <button
               onClick={handleExportPDF}
               disabled={isExportingPDF || reportProducts.length === 0}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-full shadow-xs disabled:opacity-50 transition-all active:scale-95 font-medium"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#17191c] hover:bg-black text-white text-xs  tracking-wider rounded-full shadow-steep-subtle disabled:opacity-50 transition-all active:scale-95 font-medium"
             >
-              {isExportingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8B4A0]" /> : <Download className="w-3.5 h-3.5 text-[#E8B4A0]" />}
+              {isExportingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5d2a1a]" /> : <Download className="w-3.5 h-3.5 text-[#5d2a1a]" />}
               <span>PDF</span>
             </button>
 
             <button
               onClick={handleExportExcel}
               disabled={isExportingExcel || reportProducts.length === 0}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs uppercase tracking-wider rounded-full shadow-xs disabled:opacity-50 transition-all active:scale-95 font-mono"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#fafafb] hover:bg-white text-[#17191c] border border-[#ececec] text-xs  tracking-wider rounded-full shadow-steep-subtle disabled:opacity-50 transition-all active:scale-95 "
             >
               {isExportingExcel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
               <span>Excel (.xlsx)</span>
@@ -228,7 +228,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
             <button
               onClick={() => handleExportCSV('reporte-inventario')}
               disabled={isExportingCSV || reportProducts.length === 0}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs uppercase tracking-wider rounded-full shadow-xs disabled:opacity-50 transition-all active:scale-95 font-mono"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#fafafb] hover:bg-white text-[#17191c] border border-[#ececec] text-xs  tracking-wider rounded-full shadow-steep-subtle disabled:opacity-50 transition-all active:scale-95 "
             >
               {isExportingCSV ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileCode className="w-3.5 h-3.5" />}
               <span>CSV</span>
@@ -237,30 +237,30 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         </div>
 
         {/* Tarjetas de Métricas del Reporte */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-[#E5E7EB]">
-          <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB]">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161] block">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-[#ececec]">
+          <div className="p-4 bg-[#fafafb] rounded-xl border border-[#ececec]">
+            <span className="text-[10px]   tracking-wider text-[#777b86] block">
               Ítems Filtrados
             </span>
-            <span className="text-xl font-bold text-[#1E3A5F] font-mono mt-0.5 block">
+            <span className="text-xl font-bold text-[#17191c]  mt-0.5 block">
               {reportProducts.length} ítems
             </span>
           </div>
 
-          <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB]">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161] block">
+          <div className="p-4 bg-[#fafafb] rounded-xl border border-[#ececec]">
+            <span className="text-[10px]   tracking-wider text-[#777b86] block">
               Total de Unidades
             </span>
-            <span className="text-xl font-bold text-[#1E3A5F] font-mono mt-0.5 block">
+            <span className="text-xl font-bold text-[#17191c]  mt-0.5 block">
               {totalUnits} uds
             </span>
           </div>
 
-          <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] col-span-2 sm:col-span-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161] block">
+          <div className="p-4 bg-[#fafafb] rounded-xl border border-[#ececec] col-span-2 sm:col-span-1">
+            <span className="text-[10px]   tracking-wider text-[#777b86] block">
               Valorización Total
             </span>
-            <span className="text-xl font-bold text-[#1E3A5F] font-mono mt-0.5 block">
+            <span className="text-xl font-bold text-[#17191c]  mt-0.5 block">
               {formatCurrency(totalValuation, currentInventory?.currency)}
             </span>
           </div>
@@ -268,24 +268,24 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
       </div>
 
       {/* 2. Filtros de Generación */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 space-y-3 shadow-xs">
-        <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EB]">
-          <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F]">
+      <div className="bg-white border border-[#ececec] rounded-3xl p-5 space-y-3 shadow-steep-subtle">
+        <div className="flex items-center justify-between pb-2 border-b border-[#ececec]">
+          <span className="text-xs  font-bold  tracking-wider text-[#17191c]">
             Parámetros de Segmentación
           </span>
           {hasActiveFilters && (
             <button
               onClick={handleClearFilters}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs font-mono uppercase rounded-full transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#fafafb] hover:bg-white text-[#17191c] border border-[#ececec] text-xs   rounded-full transition-colors"
             >
-              <RotateCcw className="w-3 h-3 text-[#E8B4A0]" /> Restablecer
+              <RotateCcw className="w-3 h-3 text-[#5d2a1a]" /> Restablecer
             </button>
           )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Categoría</label>
+            <label className="block text-[10px]   tracking-wider text-[#777b86] mb-1">Categoría</label>
             <MinimalDropdown
               value={filterCategory}
               onChange={(val) => {
@@ -301,7 +301,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Subcategoría</label>
+            <label className="block text-[10px]   tracking-wider text-[#777b86] mb-1">Subcategoría</label>
             <MinimalDropdown
               value={filterSubcategory}
               onChange={(val) => {
@@ -316,7 +316,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Ubicación Física</label>
+            <label className="block text-[10px]   tracking-wider text-[#777b86] mb-1">Ubicación Física</label>
             <MinimalDropdown
               value={filterLocation}
               onChange={(val) => {
@@ -331,7 +331,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Estado de Existencia</label>
+            <label className="block text-[10px]   tracking-wider text-[#777b86] mb-1">Estado de Existencia</label>
             <MinimalDropdown
               value={filterStatus}
               onChange={(val) => {
@@ -352,7 +352,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
                 setFilterSubcategory('ALL');
                 setCurrentPage(1);
               }}
-              className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+              className="w-full bg-[#ffffff] border border-[#ececec] rounded-xl px-3 py-2 text-xs text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
             >
               <option value="ALL">Todas las Categorías</option>
               {categories.map(c => (
@@ -362,7 +362,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Subcategoría</label>
+            <label className="block text-[10px]   tracking-wider text-[#777b86] mb-1">Subcategoría</label>
             <select
               value={filterSubcategory}
               onChange={e => {
@@ -370,7 +370,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
                 setCurrentPage(1);
               }}
               disabled={filterCategory === 'ALL' || activeSubcategories.length === 0}
-              className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] disabled:opacity-50"
+              className="w-full bg-[#ffffff] border border-[#ececec] rounded-xl px-3 py-2 text-xs text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c] disabled:opacity-50"
             >
               <option value="ALL">Todas las Subcategorías</option>
               {activeSubcategories.map(s => (
@@ -380,14 +380,14 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Ubicación Física</label>
+            <label className="block text-[10px]   tracking-wider text-[#777b86] mb-1">Ubicación Física</label>
             <select
               value={filterLocation}
               onChange={e => {
                 setFilterLocation(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+              className="w-full bg-[#ffffff] border border-[#ececec] rounded-xl px-3 py-2 text-xs text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
             >
               <option value="ALL">Todas las Ubicaciones</option>
               {locations.map(l => (
@@ -397,14 +397,14 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Estado de Existencia</label>
+            <label className="block text-[10px]   tracking-wider text-[#777b86] mb-1">Estado de Existencia</label>
             <select
               value={filterStatus}
               onChange={e => {
                 setFilterStatus(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+              className="w-full bg-[#ffffff] border border-[#ececec] rounded-xl px-3 py-2 text-xs text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
             >
               <option value="ALL">Todos los Estados</option>
               <option value="ACTIVE">Activos en Manifiesto</option>
@@ -416,13 +416,13 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
       </div>
 
       {/* 3. Tabla Interactiva de Datos con RNF-01 Paginación */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
-        <div className="p-4 border-b border-[#E5E7EB] flex items-center justify-between">
-          <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F]">
+      <div className="bg-white border border-[#ececec] rounded-3xl overflow-hidden shadow-steep-subtle">
+        <div className="p-4 border-b border-[#ececec] flex items-center justify-between">
+          <span className="text-xs  font-bold  tracking-wider text-[#17191c]">
             Previsualización del Manifiesto ({reportProducts.length} registros)
           </span>
           {hasActiveFilters && (
-            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E8B4A0]/40">
+            <span className="text-[10px]   px-2 py-0.5 rounded-full bg-[#fbe1d1]/20 text-[#17191c] border border-[#E8B4A0]/40">
               Filtros activos
             </span>
           )}
@@ -431,7 +431,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-[#F8F9FA] text-[#1E3A5F] font-mono text-[10px] font-bold uppercase tracking-wider border-b border-[#E5E7EB]">
+              <tr className="bg-[#fafafb] text-[#17191c]  text-[10px] font-bold  tracking-wider border-b border-[#ececec]">
                 <th className="p-3.5">CÓDIGO</th>
                 <th className="p-3.5">PRODUCTO</th>
                 <th className="p-3.5">CATEGORÍA</th>
@@ -445,28 +445,28 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
             <tbody className="divide-y divide-[#E5E7EB]">
               {reportProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-12 text-center text-[#616161] font-mono text-xs uppercase">
+                  <td colSpan={8} className="p-12 text-center text-[#777b86]  text-xs ">
                     No hay productos que coincidan con los filtros seleccionados.
                   </td>
                 </tr>
               ) : (
                 paginatedReportProducts.map(p => (
-                  <tr key={p.id} className="hover:bg-[#F8F9FA]/60 transition-colors">
-                    <td className="p-3.5 font-mono font-bold text-[#1E3A5F]">{p.code}</td>
-                    <td className="p-3.5 font-bold text-[#1E3A5F] max-w-[220px] truncate uppercase">{p.name}</td>
-                    <td className="p-3.5 text-[#616161]">{p.categories?.name || 'General'}</td>
-                    <td className="p-3.5 text-[#616161]">{p.locations?.name || '-'}</td>
-                    <td className="p-3.5 text-right text-[#1E3A5F] font-mono font-bold">
+                  <tr key={p.id} className="hover:bg-[#fafafb]/60 transition-colors">
+                    <td className="p-3.5  font-bold text-[#17191c]">{p.code}</td>
+                    <td className="p-3.5 font-bold text-[#17191c] max-w-[220px] truncate ">{p.name}</td>
+                    <td className="p-3.5 text-[#777b86]">{p.categories?.name || 'General'}</td>
+                    <td className="p-3.5 text-[#777b86]">{p.locations?.name || '-'}</td>
+                    <td className="p-3.5 text-right text-[#17191c]  font-bold">
                       {formatCurrency(p.price, currentInventory?.currency)}
                     </td>
-                    <td className="p-3.5 text-right font-mono font-bold text-[#1E3A5F]">{p.stock}</td>
-                    <td className="p-3.5 text-right font-mono font-bold text-[#1E3A5F]">
+                    <td className="p-3.5 text-right  font-bold text-[#17191c]">{p.stock}</td>
+                    <td className="p-3.5 text-right  font-bold text-[#17191c]">
                       {formatCurrency((p.price || 0) * (p.stock || 0), currentInventory?.currency)}
                     </td>
                     <td className="p-3.5 text-center">
-                      <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-full ${
+                      <span className={`text-[10px]   px-2 py-0.5 rounded-full ${
                         p.status === 'ACTIVE'
-                          ? 'bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E8B4A0]/40'
+                          ? 'bg-[#fbe1d1]/20 text-[#17191c] border border-[#E8B4A0]/40'
                           : 'bg-rose-50 text-rose-700 border border-rose-200'
                       }`}>
                         {p.status === 'ACTIVE' ? 'Activo' : 'Baja'}
@@ -481,7 +481,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
 
         {/* RNF-01: Controles de Paginación en Reportes */}
         {totalPages > 1 && (
-          <div className="p-3.5 border-t border-[#E5E7EB] flex items-center justify-between text-xs font-mono text-[#616161]">
+          <div className="p-3.5 border-t border-[#ececec] flex items-center justify-between text-xs  text-[#777b86]">
             <span>
               Página {currentPage} de {totalPages} ({reportProducts.length} productos)
             </span>
@@ -489,14 +489,14 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded-xl border border-[#E5E7EB] bg-white text-[#1E3A5F] hover:bg-[#F8F9FA] disabled:opacity-40 transition-colors"
+                className="p-1.5 rounded-xl border border-[#ececec] bg-white text-[#17191c] hover:bg-[#fafafb] disabled:opacity-40 transition-colors"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded-xl border border-[#E5E7EB] bg-white text-[#1E3A5F] hover:bg-[#F8F9FA] disabled:opacity-40 transition-colors"
+                className="p-1.5 rounded-xl border border-[#ececec] bg-white text-[#17191c] hover:bg-[#fafafb] disabled:opacity-40 transition-colors"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>

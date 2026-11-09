@@ -105,19 +105,19 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-        <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[85dvh] font-sans">
+        <div className="mobile-dark-modal bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[85dvh] font-sans">
           
           {/* Cabecera */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] shrink-0">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] bg-[#ffffff] shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center shrink-0">
-                <MapPin className="w-5 h-5 text-[#1E3A5F]" />
+              <div className="w-10 h-10 rounded-full bg-[#17191c]/10 text-[#17191c] flex items-center justify-center shrink-0">
+                <MapPin className="w-5 h-5 text-[#17191c]" />
               </div>
               <div>
-                <h3 className="font-bold text-[#1E3A5F] text-base uppercase tracking-tight">
+                <h3 className="font-bold text-[#17191c] text-base uppercase tracking-tight">
                   Ubicaciones Físicas
                 </h3>
-                <p className="text-[11px] text-[#616161]">
+                <p className="text-[11px] text-[#777b86]">
                   Depósitos, estantes y etiquetas QR imprimibles
                 </p>
               </div>
@@ -125,14 +125,14 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
             <button
               type="button"
               onClick={onClose}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors cursor-pointer"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Barra de Pestañas Tipo Píldora (RF-UI-TABS-008 & RNF-UX-CONSISTENCY-005) */}
-          <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#E5E7EB] bg-white shrink-0 overflow-x-auto">
+          <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#ececec] bg-white shrink-0 overflow-x-auto">
             <PillOption
               active={activeTab === 'create'}
               onClick={() => setActiveTab('create')}
@@ -161,14 +161,14 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
             {/* PESTAÑA 1: FORMULARIO CREAR UBICACIONES */}
             {activeTab === 'create' && (
               <form onSubmit={handleCreateLocation} className="space-y-4 animate-in fade-in">
-                <div className="p-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] space-y-3.5">
-                  <span className="text-xs font-bold text-[#1E3A5F] uppercase tracking-wider flex items-center gap-1.5">
-                    <Plus className="w-4 h-4 text-[#E8B4A0]" /> Datos de la Nueva Ubicación
+                <div className="p-4 bg-[#fafafb] rounded-2xl border border-[#ececec] space-y-3.5">
+                  <span className="text-xs font-bold text-[#17191c] uppercase tracking-wider flex items-center gap-1.5">
+                    <Plus className="w-4 h-4 text-[#5d2a1a]" /> Datos de la Nueva Ubicación
                   </span>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                      <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
                         Nombre del Espacio <span className="text-rose-500">*</span>
                       </label>
                       <input
@@ -180,19 +180,19 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                         }}
                         placeholder="Ej: Estante B - Pasillo 3"
                         required
-                        className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                        className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
                       />
                     </div>
 
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="text-[11px] font-semibold text-[#1E3A5F]">Código / QR</label>
+                        <label className="text-[11px] font-semibold text-[#17191c]">Código / QR</label>
                         <button
                           type="button"
                           onClick={() => setCode(generateUniqueCode(name || 'LOC'))}
-                          className="text-[10px] text-[#1E3A5F] hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                          className="text-[10px] text-[#17191c] hover:underline flex items-center gap-1 cursor-pointer font-medium"
                         >
-                          <Sparkles className="w-2.5 h-2.5 text-[#E8B4A0]" /> Auto-generar
+                          <Sparkles className="w-2.5 h-2.5 text-[#5d2a1a]" /> Auto-generar
                         </button>
                       </div>
                       <input
@@ -200,13 +200,13 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                         value={code}
                         onChange={e => setCode(e.target.value.toUpperCase())}
                         placeholder="Ej: LOC-EST-001"
-                        className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs font-mono text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all uppercase box-border"
+                        className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs font-mono text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all uppercase box-border"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#1E3A5F] mb-1">
+                    <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
                       Descripción / Referencia
                     </label>
                     <input
@@ -214,7 +214,7 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                       value={description}
                       onChange={e => setDescription(e.target.value)}
                       placeholder="Ej: Segundo piso junto a la puerta principal..."
-                      className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                      className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
                     />
                   </div>
 
@@ -222,10 +222,10 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                     <button
                       type="submit"
                       disabled={isSubmitting || !name.trim()}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#17191c] hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                     >
                       {isSubmitting ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8B4A0]" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5d2a1a]" />
                       ) : (
                         <Plus className="w-3.5 h-3.5" />
                       )}
@@ -239,8 +239,8 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
             {/* PESTAÑA 2: UBICACIONES EXISTENTES (RECUADRO CON SCROLL CONTENIDO) */}
             {activeTab === 'existing' && (
               <div className="space-y-3 animate-in fade-in">
-                <div className="flex items-center justify-between text-xs text-[#616161]">
-                  <span className="font-semibold text-[#1E3A5F]">
+                <div className="flex items-center justify-between text-xs text-[#777b86]">
+                  <span className="font-semibold text-[#17191c]">
                     Espacios Físicos Registrados ({locations.length})
                   </span>
                   <span className="text-[10px] font-mono">
@@ -249,14 +249,14 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                 </div>
 
                 {/* Recuadro contenedor con scroll para evitar scroll infinito */}
-                <div className="max-h-[380px] overflow-y-auto space-y-2.5 border border-[#E5E7EB] rounded-2xl bg-[#F8F9FA]/40 p-3 overscroll-contain">
+                <div className="max-h-[380px] overflow-y-auto space-y-2.5 border border-[#ececec] rounded-2xl bg-[#fafafb]/40 p-3 overscroll-contain">
                   {locations.length === 0 ? (
-                    <div className="text-center py-10 text-xs text-[#616161] space-y-2">
+                    <div className="text-center py-10 text-xs text-[#777b86] space-y-2">
                       <p>No hay ubicaciones creadas aún.</p>
                       <button
                         type="button"
                         onClick={() => setActiveTab('create')}
-                        className="text-xs text-[#1E3A5F] underline font-semibold cursor-pointer"
+                        className="text-xs text-[#17191c] underline font-semibold cursor-pointer"
                       >
                         Crear la primera ubicación
                       </button>
@@ -265,17 +265,17 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                     locations.map(loc => (
                       <div
                         key={loc.id}
-                        className="p-3.5 bg-white rounded-xl border border-[#E5E7EB] flex items-center justify-between group hover:border-[#1E3A5F]/40 transition-colors shadow-2xs"
+                        className="p-3.5 bg-white rounded-xl border border-[#ececec] flex items-center justify-between group hover:border-[#17191c]/40 transition-colors shadow-2xs"
                       >
                         <div className="space-y-0.5 min-w-0 pr-3">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="text-xs font-bold text-[#1E3A5F] truncate">{loc.name}</h4>
-                            <span className="font-mono text-[10px] px-2 py-0.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-md text-[#1E3A5F] font-semibold">
+                            <h4 className="text-xs font-bold text-[#17191c] truncate">{loc.name}</h4>
+                            <span className="font-mono text-[10px] px-2 py-0.5 bg-[#fafafb] border border-[#ececec] rounded-md text-[#17191c] font-semibold">
                               {loc.code}
                             </span>
                           </div>
                           {loc.description && (
-                            <p className="text-[11px] text-[#616161] truncate">{loc.description}</p>
+                            <p className="text-[11px] text-[#777b86] truncate">{loc.description}</p>
                           )}
                         </div>
 
@@ -283,10 +283,10 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                           <button
                             type="button"
                             onClick={() => setSelectedLocationForLabel(loc)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#F8F9FA] hover:bg-[#1E3A5F]/10 text-[#1E3A5F] rounded-lg text-xs font-semibold border border-[#E5E7EB] transition-all active:scale-95 cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#fafafb] hover:bg-[#17191c]/10 text-[#17191c] rounded-lg text-xs font-semibold border border-[#ececec] transition-all active:scale-95 cursor-pointer"
                             title="Imprimir o exportar etiqueta de tarjeta de crédito"
                           >
-                            <QrCode className="w-3.5 h-3.5 text-[#1E3A5F]" />
+                            <QrCode className="w-3.5 h-3.5 text-[#17191c]" />
                             <span className="hidden sm:inline">Etiqueta</span>
                           </button>
 

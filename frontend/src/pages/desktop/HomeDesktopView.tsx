@@ -47,124 +47,115 @@ export const HomeDesktopView: React.FC<HomeDesktopViewProps> = ({
   currentInventory
 }) => {
   return (
-    <div className="space-y-6 pb-28 lg:pb-16 max-w-[1440px] mx-auto text-[#1E3A5F]">
-      {/* 1. CABECERA & BLOQUE DE KPIS */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 sm:p-8 shadow-sm">
-        <div className="border-b border-[#E5E7EB] pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#1E3A5F] inline-block" />
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#616161]">
-                INVENTORY MANIFEST // SPECIFICATION SHEET
-              </p>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1E3A5F] uppercase">
-              RESUMEN GENERAL & OPERACIONES
-            </h1>
-          </div>
+    <div className="space-y-7 pb-28 lg:pb-16 max-w-[1440px] mx-auto text-[#17191c]">
+      {/* 1. ENCABEZADO EDITORIAL */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2">
+        <div>
+          <span className="text-xs uppercase tracking-wider text-[#777b86] font-medium block mb-1.5">
+            Visión global del depósito
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-serif font-normal text-[#17191c] tracking-tight">
+            Resumen &amp; <span className="italic font-serif">operaciones</span>
+          </h1>
+        </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <button
-              onClick={onQuickScan}
-              className="min-h-[40px] px-4 rounded-full border border-[#CBD5E1] bg-white hover:bg-[#F8F9FA] hover:border-[#1E3A5F] text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
-              title="Escanear código"
-            >
-              <Camera className="w-3.5 h-3.5 stroke-[1.5] text-[#1E3A5F]" />
-              <span>Escanear</span>
-            </button>
-            <button
-              onClick={onOpenCreateModal}
-              className="min-h-[40px] px-5 rounded-full bg-[#1E3A5F] hover:bg-[#172E4C] text-white text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-[0.98] shadow-sm"
-            >
-              <Plus className="w-4 h-4 stroke-[1.5]" />
-              <span>NUEVO ÍTEM</span>
-            </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onQuickScan}
+            className="min-h-[42px] px-5 rounded-full bg-[#f2f2f3] hover:bg-[#e8e8ea] text-[#17191c] text-xs font-medium flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
+            title="Escanear código"
+          >
+            <Camera className="w-4 h-4 stroke-[1.8]" />
+            <span>Escanear</span>
+          </button>
+          <button
+            onClick={onOpenCreateModal}
+            className="min-h-[42px] px-6 rounded-full bg-[#17191c] hover:bg-black text-white text-xs font-medium flex items-center gap-2 transition-all active:scale-[0.98] shadow-sm cursor-pointer"
+          >
+            <Plus className="w-4 h-4 stroke-[2]" />
+            <span>Nuevo producto</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. MATRIZ DE 4 TARJETAS INDEPENDIENTES (RADIUS 24px) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* Card 1: SKUs */}
+        <div className="p-6 bg-white border border-[#ececec] rounded-3xl shadow-steep-subtle flex flex-col justify-between">
+          <span className="text-xs text-[#777b86] font-medium tracking-tight">Total referencias</span>
+          <div className="mt-4">
+            <span className="text-3xl sm:text-4xl font-normal tabular-nums text-[#17191c] block tracking-tight">
+              {metrics.totalSkus.toLocaleString()}
+            </span>
+            <span className="text-xs text-[#979799] block mt-1">SKUs activos en catálogo</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-0 border-t border-[#E5E7EB] sm:divide-x divide-[#E5E7EB] font-mono mt-4 pt-3 sm:pt-0">
-          <div className="p-3 sm:p-5 bg-[#F8F9FA] sm:bg-transparent rounded-xl sm:rounded-none border sm:border-0 border-[#E5E7EB] flex flex-col justify-between">
-            <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-[0.12em] sm:tracking-[0.15em] block">
-              TOTAL SKUS REGISTRADOS
+        {/* Card 2: Unidades disponibles */}
+        <div className="p-6 bg-white border border-[#ececec] rounded-3xl shadow-steep-subtle flex flex-col justify-between">
+          <span className="text-xs text-[#777b86] font-medium tracking-tight">Existencias totales</span>
+          <div className="mt-4">
+            <span className="text-3xl sm:text-4xl font-normal tabular-nums text-[#17191c] block tracking-tight">
+              {formatCleanDecimal(metrics.totalUnits, 2)} <span className="text-sm font-normal text-[#777b86]">unid</span>
             </span>
-            <div className="mt-2 sm:mt-3">
-              <span className="text-2xl sm:text-4xl font-bold tabular-nums text-[#1E3A5F] block tracking-tight">
-                {metrics.totalSkus.toString().padStart(4, '0')}
+            <span className="text-xs text-[#979799] block mt-1">Unidades físicas en depósito</span>
+          </div>
+        </div>
+
+        {/* Card 3: Stock bajo (Blush Peach si > 0) */}
+        {metrics.lowStockCount > 0 ? (
+          <div className="p-6 bg-[#fbe1d1] border border-[#f5c7ae] rounded-3xl shadow-steep-subtle flex flex-col justify-between text-[#5d2a1a]">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#5d2a1a]/80 font-medium tracking-tight">Stock bajo alerta</span>
+              <span className="w-2 h-2 rounded-full bg-[#5d2a1a] animate-pulse" />
+            </div>
+            <div className="mt-4">
+              <span className="text-3xl sm:text-4xl font-normal tabular-nums text-[#5d2a1a] block tracking-tight">
+                {metrics.lowStockCount} <span className="text-sm font-normal text-[#5d2a1a]/80">{metrics.lowStockCount === 1 ? 'ítem' : 'ítems'}</span>
               </span>
-              <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-wider block mt-1 font-sans">
-                REFERENCIAS ACTIVAS
-              </span>
+              <span className="text-xs text-[#5d2a1a]/80 block mt-1">Requieren reabastecimiento</span>
             </div>
           </div>
-
-          <div className="p-3 sm:p-5 bg-[#F8F9FA] sm:bg-transparent rounded-xl sm:rounded-none border sm:border-0 border-[#E5E7EB] flex flex-col justify-between">
-            <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-[0.12em] sm:tracking-[0.15em] block">
-              UNIDADES DISPONIBLES
-            </span>
-            <div className="mt-2 sm:mt-3">
-              <span className="text-2xl sm:text-4xl font-bold tabular-nums text-[#1E3A5F] block tracking-tight">
-                {formatCleanDecimal(metrics.totalUnits, 2)} <span className="text-xs sm:text-base text-[#616161] font-normal">STOCK</span>
-              </span>
-              <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-wider block mt-1 font-sans">
-                EXISTENCIAS FÍSICAS
-              </span>
-            </div>
-          </div>
-
-          <div className="p-3 sm:p-5 bg-[#F8F9FA] sm:bg-transparent rounded-xl sm:rounded-none border sm:border-0 border-[#E5E7EB] flex flex-col justify-between">
-            <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-[0.12em] sm:tracking-[0.15em] block">
-              STOCK BAJO / ALERTA
-            </span>
-            <div className="mt-2 sm:mt-3">
+        ) : (
+          <div className="p-6 bg-white border border-[#ececec] rounded-3xl shadow-steep-subtle flex flex-col justify-between">
+            <span className="text-xs text-[#777b86] font-medium tracking-tight">Estado de existencias</span>
+            <div className="mt-4">
               <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-mono font-bold tracking-wider ${
-                  metrics.lowStockCount > 0
-                    ? 'bg-[#E8B4A0] text-[#1E3A5F] border border-[#1E3A5F]/15'
-                    : 'border border-[#E5E7EB] text-[#1E3A5F]'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${
-                    metrics.lowStockCount > 0 ? 'bg-[#1E3A5F] animate-pulse' : 'bg-[#E5E7EB]'
-                  }`} />
-                  {metrics.lowStockCount} {metrics.lowStockCount === 1 ? 'ÍTEM' : 'ÍTEMS'}
-                </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-2xl font-normal text-[#17191c] tracking-tight">Saludable</span>
               </div>
-              <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-wider block mt-2 font-sans">
-                POR REABASTECER
-              </span>
+              <span className="text-xs text-[#979799] block mt-1">Sin alertas de inventario</span>
             </div>
           </div>
+        )}
 
-          <div className="p-3 sm:p-5 bg-[#F8F9FA] sm:bg-transparent rounded-xl sm:rounded-none border sm:border-0 border-[#E5E7EB] flex flex-col justify-between">
-            <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-[0.12em] sm:tracking-[0.15em] block">
-              VALUACIÓN DE STOCK
+        {/* Card 4: Valuación */}
+        <div className="p-6 bg-white border border-[#ececec] rounded-3xl shadow-steep-subtle flex flex-col justify-between">
+          <span className="text-xs text-[#777b86] font-medium tracking-tight">Valuación estimada</span>
+          <div className="mt-4">
+            <span className="text-2xl sm:text-3xl font-normal tabular-nums text-[#17191c] block tracking-tight truncate">
+              {formatCurrency(metrics.totalValue, currentInventory?.currency)}
             </span>
-            <div className="mt-2 sm:mt-3">
-              <span className="text-xl sm:text-4xl font-bold tabular-nums text-[#1E3A5F] block tracking-tight truncate">
-                {formatCurrency(metrics.totalValue, currentInventory?.currency)}
-              </span>
-              <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-wider block mt-1 font-sans">
-                VALOR EN DEPÓSITO
-              </span>
-            </div>
+            <span className="text-xs text-[#979799] block mt-1">Valor activo en almacén</span>
           </div>
         </div>
       </div>
 
-      {/* 2. ACCESOS DIRECTOS */}
-      <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
+      {/* 3. ACCESOS DIRECTOS MODULARES */}
+      <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 gap-5">
         <button
           onClick={onNavigateToStock}
-          className="p-5 border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white rounded-2xl flex items-center justify-between text-left transition-all group shadow-sm"
+          className="p-6 bg-white border border-[#ececec] hover:border-[#17191c] rounded-3xl flex items-center justify-between text-left transition-all group shadow-steep-subtle cursor-pointer"
         >
           <div>
-            <span className="text-[10px] text-[#E8B4A0] uppercase tracking-[0.15em] block font-semibold">
-              MÓDULO DE STOCK
+            <span className="text-xs text-[#777b86] font-medium block">
+              Catálogo &amp; Existencias
             </span>
-            <span className="text-sm font-bold uppercase tracking-wide text-[#1E3A5F] block mt-0.5 group-hover:underline">
-              VER CATÁLOGO COMPLETO // STOCK
+            <span className="text-base font-medium text-[#17191c] block mt-1 group-hover:underline">
+              Explorar inventario completo
             </span>
           </div>
-          <div className="w-9 h-9 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] group-hover:bg-[#1E3A5F] group-hover:text-white flex items-center justify-center transition-colors">
+          <div className="w-10 h-10 rounded-full bg-[#f2f2f3] group-hover:bg-[#17191c] group-hover:text-white text-[#17191c] flex items-center justify-center transition-colors">
             <ArrowUpRight className="w-4 h-4" />
           </div>
         </button>
@@ -172,48 +163,49 @@ export const HomeDesktopView: React.FC<HomeDesktopViewProps> = ({
         {isBusiness && onNavigateToSales && (
           <button
             onClick={onNavigateToSales}
-            className="p-5 border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white rounded-2xl flex items-center justify-between text-left transition-all group shadow-sm"
+            className="p-6 bg-white border border-[#ececec] hover:border-[#17191c] rounded-3xl flex items-center justify-between text-left transition-all group shadow-steep-subtle cursor-pointer"
           >
             <div>
-              <span className="text-[10px] text-[#E8B4A0] uppercase tracking-[0.15em] block font-semibold">
-                TERMINAL DE COBRO
+              <span className="text-xs text-[#777b86] font-medium block">
+                Terminal de cobro
               </span>
-              <span className="text-sm font-bold uppercase tracking-wide text-[#1E3A5F] block mt-0.5 group-hover:underline">
-                NUEVA VENTA // REGISTRO RÁPIDO
+              <span className="text-base font-medium text-[#17191c] block mt-1 group-hover:underline">
+                Registrar nueva venta
               </span>
             </div>
-            <div className="w-9 h-9 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] group-hover:bg-[#1E3A5F] group-hover:text-white flex items-center justify-center transition-colors">
+            <div className="w-10 h-10 rounded-full bg-[#f2f2f3] group-hover:bg-[#17191c] group-hover:text-white text-[#17191c] flex items-center justify-center transition-colors">
               <ShoppingCart className="w-4 h-4" />
             </div>
           </button>
         )}
       </div>
 
-      {/* 3. ACTIVIDAD RECIENTE */}
+      {/* 4. ACTIVIDAD RECIENTE (TABLAS MODULARES EN TARJETAS 24px) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Bloque: Ventas recientes */}
         {isBusiness && (
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-sm">
+          <div className="bg-white border border-[#ececec] rounded-3xl p-6 sm:p-7 flex flex-col justify-between shadow-steep-subtle">
             <div>
-              <div className="flex items-center justify-between pb-3.5 border-b border-[#E5E7EB] font-mono">
-                <div className="flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-[#1E3A5F]" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
-                    ÚLTIMAS VENTAS / SALIDAS
+              <div className="flex items-center justify-between pb-4 border-b border-[#ececec]">
+                <div className="flex items-center gap-2.5">
+                  <Receipt className="w-4 h-4 text-[#17191c]" />
+                  <h3 className="text-sm font-semibold text-[#17191c]">
+                    Últimas transacciones
                   </h3>
                 </div>
                 <button
                   onClick={onNavigateToHistory}
-                  className="text-[10px] uppercase tracking-wider text-[#616161] hover:text-[#1E3A5F] transition-colors"
+                  className="text-xs text-[#777b86] hover:text-[#17191c] font-medium transition-colors cursor-pointer"
                 >
-                  VER TODO &gt;
+                  Ver todo &rarr;
                 </button>
               </div>
 
-              <div className="divide-y divide-[#E5E7EB] font-mono text-xs">
+              <div className="divide-y divide-[#f2f2f3] text-xs">
                 {loadingSales ? (
                   <div className="p-4 space-y-3">
                     {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="flex items-center justify-between py-2">
+                      <div key={i} className="flex items-center justify-between py-2.5">
                         <div className="space-y-1.5">
                           <Skeleton className="w-36 h-4" />
                           <Skeleton className="w-24 h-3" />
@@ -223,15 +215,15 @@ export const HomeDesktopView: React.FC<HomeDesktopViewProps> = ({
                     ))}
                   </div>
                 ) : recentSales.length === 0 ? (
-                  <div className="py-8 text-center text-[#616161] uppercase text-xs">
-                    SIN REGISTROS DE VENTAS RECIENTES
+                  <div className="py-10 text-center text-[#777b86] text-xs">
+                    Sin registros de ventas recientes
                   </div>
                 ) : (
                   recentSales.map((sale) => {
-                    const firstItem = sale.items?.[0]?.product_name || 'MERCANCÍA';
+                    const firstItem = sale.items?.[0]?.product_name || 'Mercancía';
                     const summaryText = sale.items && sale.items.length > 1
-                      ? `${sale.items[0].quantity}X ${firstItem} (+${sale.items.length - 1} MÁS)`
-                      : `${sale.items?.[0]?.quantity || 1}X ${firstItem}`;
+                      ? `${sale.items[0].quantity}x ${firstItem} (+${sale.items.length - 1} más)`
+                      : `${sale.items?.[0]?.quantity || 1}x ${firstItem}`;
 
                     const receiptCode = `TRX-${sale.id.slice(0, 8).toUpperCase()}`;
 
@@ -239,18 +231,19 @@ export const HomeDesktopView: React.FC<HomeDesktopViewProps> = ({
                       <div
                         key={sale.id}
                         onClick={onNavigateToHistory}
-                        className="py-3 hover:bg-[#F8F9FA] px-1 rounded-lg transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-1 group"
+                        className="py-3.5 hover:bg-[#fafafb] px-2 rounded-xl transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-1 group"
                       >
                         <div className="min-w-0 pr-2">
-                          <span className="text-[11px] text-[#1E3A5F] uppercase tracking-wider block truncate group-hover:underline">
-                            <span className="font-mono text-[#616161]">{receiptCode} //</span> <span className="font-bold text-[#1E3A5F]">{summaryText.toUpperCase()}</span>
+                          <span className="text-xs text-[#17191c] font-medium block truncate group-hover:underline">
+                            <span className="text-[#777b86] font-normal">{receiptCode} · </span>
+                            {summaryText}
                           </span>
-                          <span className="text-[10px] text-[#616161] uppercase tracking-widest block mt-0.5">
-                            {formatDate(sale.created_at)} // MÉTODO: {sale.payment_method?.toUpperCase()}
+                          <span className="text-[11px] text-[#777b86] block mt-0.5">
+                            {formatDate(sale.created_at)} · {sale.payment_method?.toLowerCase()}
                           </span>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <span className="text-xs sm:text-sm font-bold tabular-nums text-[#1E3A5F] block tracking-tight">
+                          <span className="text-sm font-semibold tabular-nums text-[#17191c] block">
                             {formatCurrency(sale.total_amount, currentInventory?.currency)}
                           </span>
                         </div>
@@ -261,43 +254,44 @@ export const HomeDesktopView: React.FC<HomeDesktopViewProps> = ({
               </div>
             </div>
 
-            <div className="pt-4 border-t border-[#E5E7EB] mt-3">
+            <div className="pt-5 border-t border-[#ececec] mt-4">
               <button
                 onClick={onNavigateToHistory}
-                className="w-full min-h-[38px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors bg-white"
+                className="w-full min-h-[40px] px-4 rounded-full bg-[#f2f2f3] hover:bg-[#e8e8ea] text-[#17191c] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
-                <span>IR AL HISTORIAL DE TRANSACCIONES</span>
+                <span>Ir al historial de transacciones</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
         )}
 
+        {/* Bloque: Catálogo reciente */}
         <div
-          className={`bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 flex-col justify-between shadow-sm ${
+          className={`bg-white border border-[#ececec] rounded-3xl p-6 sm:p-7 flex-col justify-between shadow-steep-subtle ${
             isBusiness ? 'hidden lg:flex' : 'flex lg:col-span-2'
           }`}
         >
           <div>
-            <div className="flex items-center justify-between pb-3.5 border-b border-[#E5E7EB] font-mono">
-              <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-[#1E3A5F]" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
-                  ÚLTIMOS ÍTEMS AÑADIDOS
+            <div className="flex items-center justify-between pb-4 border-b border-[#ececec]">
+              <div className="flex items-center gap-2.5">
+                <Package className="w-4 h-4 text-[#17191c]" />
+                <h3 className="text-sm font-semibold text-[#17191c]">
+                  Últimos ítems añadidos
                 </h3>
               </div>
               <button
                 onClick={onNavigateToStock}
-                className="text-[10px] uppercase tracking-wider text-[#616161] hover:text-[#1E3A5F] transition-colors"
+                className="text-xs text-[#777b86] hover:text-[#17191c] font-medium transition-colors cursor-pointer"
               >
-                VER CATÁLOGO &gt;
+                Ver catálogo &rarr;
               </button>
             </div>
 
-            <div className="divide-y divide-[#E5E7EB] font-mono text-xs">
+            <div className="divide-y divide-[#f2f2f3] text-xs">
               {recentProducts.length === 0 ? (
-                <div className="py-8 text-center text-[#616161] uppercase text-xs">
-                  SIN REGISTROS EN CATÁLOGO
+                <div className="py-10 text-center text-[#777b86] text-xs">
+                  Sin registros en catálogo
                 </div>
               ) : (
                 recentProducts.map((prod) => {
@@ -305,21 +299,22 @@ export const HomeDesktopView: React.FC<HomeDesktopViewProps> = ({
                     <div
                       key={prod.id}
                       onClick={() => onSelectProduct(prod)}
-                      className="py-3 hover:bg-[#F8F9FA] px-1 rounded-lg transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-1 group"
+                      className="py-3.5 hover:bg-[#fafafb] px-2 rounded-xl transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-1 group"
                     >
                       <div className="min-w-0 pr-2">
-                        <span className="text-[11px] text-[#1E3A5F] uppercase tracking-wider block truncate group-hover:underline">
-                          <span className="font-mono text-[#616161]">REF-{prod.code} //</span> <span className="font-bold text-[#1E3A5F]">{prod.name.toUpperCase()}</span>
+                        <span className="text-xs text-[#17191c] font-medium block truncate group-hover:underline">
+                          <span className="text-[#777b86] font-normal">{prod.code} · </span>
+                          {prod.name}
                         </span>
-                        <span className="text-[10px] text-[#616161] uppercase tracking-widest block mt-0.5">
-                          {formatDate(prod.created_at)} // CAT: {prod.categories?.name?.toUpperCase() || 'GENERAL'}
+                        <span className="text-[11px] text-[#777b86] block mt-0.5">
+                          {formatDate(prod.created_at)} · {prod.categories?.name || 'General'}
                         </span>
                       </div>
-                      <div className="text-right flex-shrink-0 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2">
-                        <span className="text-xs font-bold tabular-nums text-[#1E3A5F]">
+                      <div className="text-right flex-shrink-0 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1.5">
+                        <span className="text-xs font-semibold tabular-nums text-[#17191c]">
                           +{formatStockDisplay(prod)}
                         </span>
-                        <span className="text-[10px] text-[#616161] tabular-nums font-semibold">
+                        <span className="text-[11px] text-[#777b86] tabular-nums">
                           {formatCurrency(prod.price, currentInventory?.currency)}
                         </span>
                       </div>
@@ -330,12 +325,12 @@ export const HomeDesktopView: React.FC<HomeDesktopViewProps> = ({
             </div>
           </div>
 
-          <div className="pt-4 border-t border-[#E5E7EB] mt-3">
+          <div className="pt-5 border-t border-[#ececec] mt-4">
             <button
               onClick={onNavigateToStock}
-              className="w-full min-h-[38px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors bg-white"
+              className="w-full min-h-[40px] px-4 rounded-full bg-[#f2f2f3] hover:bg-[#e8e8ea] text-[#17191c] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
-              <span>EXPLORAR CATÁLOGO COMPLETO</span>
+              <span>Explorar catálogo completo</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>

@@ -413,43 +413,40 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
       {/* =========================================================
           VISTA DE ESCRITORIO (>= 768px / hidden md:block)
          ========================================================= */}
-      <div className="hidden md:block space-y-6 pb-28 lg:pb-16 max-w-[1440px] mx-auto text-[#1E3A5F]">
+      <div className="hidden md:block space-y-6 pb-28 lg:pb-16 max-w-[1440px] mx-auto text-[#17191c]">
       
       {/* =========================================================
-          1. ENCABEZADO DE STOCK (SIN BLOQUE DE KPIS)
+          1. ENCABEZADO DE STOCK
          ========================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-[#1E3A5F] inline-block" />
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#616161]">
-              CATÁLOGO GENERAL DE STOCK
-            </p>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1E3A5F] uppercase">
-            EXISTENCIAS & RECURSOS
+          <span className="text-xs uppercase tracking-wider text-[#777b86] font-medium block mb-1.5">
+            Catálogo general
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-serif font-normal text-[#17191c] tracking-tight">
+            Existencias &amp; <span className="italic font-serif">recursos</span>
           </h1>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setAuditModalOpen(true)}
             aria-label="Auditoría y Trazabilidad"
             title="Historial de Auditoría"
-            className="min-h-[44px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm"
+            className="min-h-[42px] px-4 rounded-full bg-[#f2f2f3] hover:bg-[#e8e8ea] text-[#17191c] text-xs font-medium flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
           >
-            <History className="w-4 h-4 stroke-[1.5]" />
-            <span className="hidden sm:inline">AUDITORÍA</span>
+            <History className="w-4 h-4 stroke-[1.8]" />
+            <span className="hidden sm:inline">Auditoría</span>
           </button>
 
           <button
             onClick={onRefresh}
-            className="min-h-[44px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-colors active:bg-[#F8F9FA] shadow-sm"
+            className="min-h-[42px] px-4 rounded-full bg-[#f2f2f3] hover:bg-[#e8e8ea] text-[#17191c] text-xs font-medium flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
             title="Sincronizar existencias"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">ACTUALIZAR</span>
+            <span className="hidden sm:inline">Actualizar</span>
           </button>
 
           <button
@@ -457,18 +454,18 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             onClick={() => setBulkWithdrawOpen(true)}
             aria-label="Salida de mercadería en lote"
             title="Salida de mercadería en lote"
-            className="min-h-[44px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm"
+            className="min-h-[42px] px-4 rounded-full bg-[#f2f2f3] hover:bg-[#e8e8ea] text-[#17191c] text-xs font-medium flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
           >
-            <PackageMinus className="w-4 h-4 stroke-[1.5]" />
-            <span className="hidden sm:inline">SALIDA EN LOTE</span>
+            <PackageMinus className="w-4 h-4 stroke-[1.8]" />
+            <span className="hidden sm:inline">Salida en lote</span>
           </button>
 
           <button
             onClick={onOpenCreateModal}
-            className="flex-1 sm:flex-initial min-h-[44px] px-6 rounded-full bg-[#1E3A5F] hover:bg-[#172E4C] text-white text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm"
+            className="flex-1 sm:flex-initial min-h-[42px] px-6 rounded-full bg-[#17191c] hover:bg-black text-white text-xs font-medium flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm cursor-pointer"
           >
-            <Plus className="w-4 h-4 stroke-[1.5]" />
-            <span>NUEVO PRODUCTO</span>
+            <Plus className="w-4 h-4 stroke-[2]" />
+            <span>Nuevo producto</span>
           </button>
         </div>
       </div>
@@ -476,11 +473,11 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
       {/* =========================================================
           2. BARRA DE BÚSQUEDA Y CONTROLES DIRECTOS
          ========================================================= */}
-      <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row items-stretch gap-3">
           {/* Input de Búsqueda */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-[#616161] absolute left-4 top-3.5 pointer-events-none" />
+            <Search className="w-4 h-4 text-[#777b86] absolute left-4 top-3.5 pointer-events-none" />
             <input
               type="text"
               value={searchTerm}
@@ -488,8 +485,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="BUSCAR POR NOMBRE, SKU, SERIAL O DESCRIPCIÓN..."
-              className="w-full min-h-[44px] bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-full pl-11 pr-10 py-2.5 text-xs font-mono uppercase tracking-wider text-[#1E3A5F] placeholder-[#616161] focus:outline-none transition-colors shadow-sm"
+              placeholder="Buscar por nombre, SKU, serial o categoría..."
+              className="w-full min-h-[44px] bg-[#f2f2f3] focus:bg-white border-0 focus:ring-1 focus:ring-[#17191c] rounded-full pl-11 pr-10 py-2.5 text-xs text-[#17191c] placeholder-[#a3a6af] transition-all outline-none"
             />
             {searchTerm && (
               <button
@@ -497,7 +494,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                   setSearchTerm('');
                   setCurrentPage(1);
                 }}
-                className="absolute right-4 top-3 text-xs text-[#616161] hover:text-[#1E3A5F] min-w-[24px] min-h-[24px] flex items-center justify-center"
+                className="absolute right-4 top-3 text-xs text-[#777b86] hover:text-[#17191c] min-w-[24px] min-h-[24px] flex items-center justify-center cursor-pointer"
               >
                 ✕
               </button>
@@ -505,59 +502,59 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
           </div>
 
           {/* Botones de Control en Píldora */}
-          <div className="flex items-center justify-between sm:justify-start gap-2">
+          <div className="flex items-center justify-between sm:justify-start gap-2.5">
             {/* Escáner de Cámara */}
             <button
               onClick={() => setSearchScannerOpen(true)}
-              className="flex-1 sm:flex-initial min-h-[44px] px-4 rounded-full border border-[#CBD5E1] bg-white hover:bg-[#F8F9FA] hover:border-[#1E3A5F] text-[#1E3A5F] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer"
+              className="flex-1 sm:flex-initial min-h-[44px] px-5 rounded-full bg-[#fbe1d1] hover:bg-[#f8d4bf] text-[#5d2a1a] flex items-center justify-center gap-2 text-xs font-medium transition-all active:scale-95 cursor-pointer shadow-xs"
               title="Escanear código de barras o QR"
             >
-              <Camera className="w-4 h-4 stroke-[1.5] text-[#1E3A5F]" />
-              <span className="text-xs font-mono uppercase tracking-wider">Escanear</span>
+              <Camera className="w-4 h-4 stroke-[1.8] text-[#5d2a1a]" />
+              <span>Escanear</span>
             </button>
 
             {/* Toggle de Filtros */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex-1 sm:flex-initial min-h-[44px] px-4 rounded-full border transition-all flex items-center justify-center gap-2 text-xs font-mono uppercase tracking-wider shadow-sm ${
+              className={`flex-1 sm:flex-initial min-h-[44px] px-5 rounded-full transition-all flex items-center justify-center gap-2 text-xs font-medium cursor-pointer ${
                 showFilters || hasActiveFilters
-                  ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
-                  : 'bg-white text-[#1E3A5F] border-[#E5E7EB] hover:border-[#1E3A5F]'
+                  ? 'bg-[#17191c] text-white shadow-sm'
+                  : 'bg-[#f2f2f3] hover:bg-[#e8e8ea] text-[#17191c]'
               }`}
               title="Desplegar filtros técnicos"
             >
-              <SlidersHorizontal className="w-4 h-4 stroke-[1.5]" />
-              <span>FILTROS</span>
+              <SlidersHorizontal className="w-4 h-4 stroke-[1.8]" />
+              <span>Filtros</span>
               {hasActiveFilters && (
-                <span className="w-2 h-2 rounded-full bg-[#E8B4A0]" />
+                <span className="w-2 h-2 rounded-full bg-[#fbe1d1]" />
               )}
             </button>
 
             {/* Selector de Vista */}
-            <div className="flex items-center border border-[#E5E7EB] rounded-full p-1 bg-white shadow-sm">
+            <div className="flex items-center rounded-full p-1 bg-[#f2f2f3]">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`min-h-[34px] px-3.5 rounded-full text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors ${
+                className={`min-h-[34px] px-3.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
                   viewMode === 'grid'
-                    ? 'bg-[#1E3A5F] text-white'
-                    : 'text-[#616161] hover:text-[#1E3A5F]'
+                    ? 'bg-white text-[#17191c] shadow-xs'
+                    : 'text-[#777b86] hover:text-[#17191c]'
                 }`}
                 title="Vista en Retícula"
               >
                 <Grid className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline text-[10px]">RETÍCULA</span>
+                <span className="hidden lg:inline text-[11px]">Retícula</span>
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`min-h-[34px] px-3.5 rounded-full text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors ${
+                className={`min-h-[34px] px-3.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
                   viewMode === 'list'
-                    ? 'bg-[#1E3A5F] text-white'
-                    : 'text-[#616161] hover:text-[#1E3A5F]'
+                    ? 'bg-white text-[#17191c] shadow-xs'
+                    : 'text-[#777b86] hover:text-[#17191c]'
                 }`}
-                title="Vista en Manifiesto"
+                title="Vista en Lista"
               >
                 <List className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline text-[10px]">LISTA</span>
+                <span className="hidden lg:inline text-[11px]">Lista</span>
               </button>
             </div>
           </div>
@@ -572,13 +569,13 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                 setSelectedSubcategory('ALL');
                 setCurrentPage(1);
               }}
-              className={`min-h-[36px] px-4 rounded-full text-[11px] font-mono uppercase tracking-wider whitespace-nowrap transition-all border shadow-sm ${
+              className={`min-h-[36px] px-4 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                 selectedCategory === 'ALL'
-                  ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
-                  : 'bg-white text-[#616161] border-[#E5E7EB] hover:border-[#1E3A5F]'
+                  ? 'bg-[#17191c] text-white shadow-sm'
+                  : 'bg-[#f2f2f3] text-[#777b86] hover:text-[#17191c] hover:bg-[#e8e8ea]'
               }`}
             >
-              TODAS LAS CATEGORÍAS ({products.length})
+              Todas las categorías ({products.length})
             </button>
             {categories.map(c => {
               const count = products.filter(p => p.category_id === c.id).length;
@@ -590,10 +587,10 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                     setSelectedSubcategory('ALL');
                     setCurrentPage(1);
                   }}
-                  className={`min-h-[36px] px-4 rounded-full text-[11px] font-mono uppercase tracking-wider whitespace-nowrap transition-all border shadow-sm ${
+                  className={`min-h-[36px] px-4 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                     selectedCategory === c.id
-                      ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
-                      : 'bg-white text-[#616161] border-[#E5E7EB] hover:border-[#1E3A5F]'
+                      ? 'bg-[#17191c] text-white shadow-sm'
+                      : 'bg-[#f2f2f3] text-[#777b86] hover:text-[#17191c] hover:bg-[#e8e8ea]'
                   }`}
                 >
                   {c.name} ({count})
@@ -605,10 +602,10 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
         {/* Panel Desplegable de Filtros */}
         {showFilters && (
-          <div className="p-5 bg-white border border-[#E5E7EB] rounded-2xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shadow-sm animate-in fade-in duration-200">
+          <div className="p-6 bg-white border border-[#ececec] rounded-3xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 shadow-steep-subtle animate-in fade-in duration-200">
             <div>
-              <label className="block text-[10px] font-mono font-semibold text-[#1E3A5F] uppercase tracking-[0.15em] mb-1.5">
-                [01] CATEGORÍA PRINCIPAL
+              <label className="block text-[11px] font-medium text-[#777b86] uppercase tracking-wider mb-2">
+                Categoría principal
               </label>
               <MinimalDropdown
                 value={selectedCategory}
@@ -625,8 +622,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-mono font-semibold text-[#1E3A5F] uppercase tracking-[0.15em] mb-1.5">
-                [02] SUBCATEGORÍA / TIPO
+              <label className="block text-[11px] font-medium text-[#777b86] uppercase tracking-wider mb-2">
+                Subcategoría
               </label>
               <MinimalDropdown
                 value={selectedSubcategory}
@@ -642,8 +639,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-mono font-semibold text-[#1E3A5F] uppercase tracking-[0.15em] mb-1.5">
-                [03] UBICACIÓN FÍSICA / RACK
+              <label className="block text-[11px] font-medium text-[#777b86] uppercase tracking-wider mb-2">
+                Ubicación física
               </label>
               <MinimalDropdown
                 value={selectedLocation}
@@ -660,8 +657,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-mono font-semibold text-[#1E3A5F] uppercase tracking-[0.15em] mb-1.5">
-                [04] ESTADO DE INVENTARIO
+              <label className="block text-[11px] font-medium text-[#777b86] uppercase tracking-wider mb-2">
+                Estado
               </label>
               <MinimalDropdown
                 value={selectedStatus}
@@ -680,38 +677,38 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
         )}
 
         {/* Resumen de resultados */}
-        <div className="flex items-center justify-between text-xs font-mono text-[#616161] px-1">
-          <span className="uppercase tracking-wider">
-            MOSTRANDO <span className="text-[#1E3A5F] font-semibold">{filteredProducts.length}</span> DE {products.length} ÍTEMS EN CATÁLOGO
+        <div className="flex items-center justify-between text-xs text-[#777b86] px-1">
+          <span>
+            Mostrando <span className="text-[#17191c] font-medium">{filteredProducts.length}</span> de {products.length} ítems en catálogo
           </span>
 
           {hasActiveFilters && (
             <button
               onClick={handleClearFilters}
-              className="min-h-[32px] px-3.5 rounded-full border border-[#1E3A5F] text-[#1E3A5F] hover:bg-[#1E3A5F] hover:text-white text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+              className="min-h-[32px] px-3.5 rounded-full bg-[#f2f2f3] hover:bg-[#e8e8ea] text-[#17191c] text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <RotateCcw className="w-3 h-3" />
-              <span>REINICIAR FILTROS</span>
+              <span>Reiniciar filtros</span>
             </button>
           )}
         </div>
       </div>
 
       {/* =========================================================
-          3. PRODUCT MATRIX // LIST (EDITORIAL GALLERY)
+          3. PRODUCT MATRIX (24px RADIUS CARDS)
          ========================================================= */}
       {loading && products.length === 0 ? (
         <ProductTableSkeleton />
       ) : filteredProducts.length === 0 ? (
-        <div className="border border-[#E5E7EB] bg-white rounded-2xl p-12 text-center space-y-4 shadow-sm">
-          <div className="w-12 h-12 border border-[#E5E7EB] rounded-full mx-auto flex items-center justify-center">
-            <Package className="w-6 h-6 stroke-[1.2] text-[#616161]" />
+        <div className="border border-[#ececec] bg-white rounded-3xl p-14 text-center space-y-4 shadow-steep-subtle">
+          <div className="w-12 h-12 bg-[#f2f2f3] rounded-full mx-auto flex items-center justify-center">
+            <Package className="w-5 h-5 stroke-[1.5] text-[#777b86]" />
           </div>
           <div>
-            <h3 className="text-sm font-normal uppercase tracking-wider text-[#1E3A5F]">
-              SIN REGISTROS EN EL CATÁLOGO
+            <h3 className="text-base font-medium text-[#17191c]">
+              Sin registros en el catálogo
             </h3>
-            <p className="text-xs text-[#616161] font-mono mt-1 max-w-md mx-auto uppercase">
+            <p className="text-xs text-[#777b86] mt-1 max-w-md mx-auto">
               {hasActiveFilters
                 ? 'Ningún producto coincide con los parámetros de búsqueda o filtros seleccionados.'
                 : 'No existen existencias registradas en este inventario de trabajo.'}
@@ -721,22 +718,22 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             {hasActiveFilters && (
               <button
                 onClick={handleClearFilters}
-                className="min-h-[44px] px-5 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] text-xs uppercase tracking-wider transition-colors"
+                className="min-h-[42px] px-5 rounded-full bg-[#f2f2f3] hover:bg-[#e8e8ea] text-xs font-medium text-[#17191c] transition-colors cursor-pointer"
               >
-                LIMPIAR FILTROS
+                Limpiar filtros
               </button>
             )}
             <button
               onClick={onOpenCreateModal}
-              className="min-h-[44px] px-6 rounded-full bg-[#1E3A5F] text-white hover:bg-[#172E4C] text-xs uppercase tracking-wider flex items-center gap-2 shadow-sm"
+              className="min-h-[42px] px-6 rounded-full bg-[#17191c] text-white hover:bg-black text-xs font-medium flex items-center gap-2 shadow-sm cursor-pointer"
             >
-              <Plus className="w-4 h-4" /> REGISTRAR PRODUCTO
+              <Plus className="w-4 h-4" /> Registrar producto
             </button>
           </div>
         </div>
       ) : viewMode === 'grid' ? (
-        /* VISTA RETÍCULA EN TARJETAS ROUNDED-2XL */
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        /* VISTA RETÍCULA EN TARJETAS ROUNDED-3XL (24px) */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {paginatedProducts.map(product => {
             const isLow = product.stock < (product.min_stock !== undefined && product.min_stock !== null ? product.min_stock : 1);
             const isInactive = product.status !== 'ACTIVE';
@@ -746,43 +743,43 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
               <div
                 key={product.id}
                 onClick={() => onSelectProduct(product)}
-                className="bg-white border border-[#E5E7EB] hover:border-[#1E3A5F] rounded-2xl p-4 transition-all cursor-pointer group flex flex-col justify-between shadow-sm hover:shadow-md"
+                className="bg-white border border-[#ececec] hover:border-[#17191c] rounded-3xl p-5 transition-all cursor-pointer group flex flex-col justify-between shadow-steep-subtle hover:shadow-steep-card"
               >
-                {/* Cabecera Técnica del Ítem */}
+                {/* Cabecera del Ítem */}
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="min-w-0">
-                    <span className="font-mono text-[10px] tracking-wider text-[#616161] uppercase block truncate">
-                      REF // {product.code}
+                    <span className="text-[11px] text-[#777b86] font-normal block truncate">
+                      {product.code}
                     </span>
-                    <h3 className="text-sm font-bold uppercase tracking-wide text-[#1E3A5F] truncate group-hover:text-[#1E3A5F] group-hover:underline mt-0.5">
+                    <h3 className="text-sm font-medium text-[#17191c] truncate group-hover:underline mt-0.5">
                       {product.name}
                     </h3>
                   </div>
 
-                  {/* Badge de Stock en Píldora (3.3: UNIT -> "20 und", BOX -> "2 cajas" o "1.5 cajas" + desglose) */}
+                  {/* Badge de Stock en Píldora */}
                   <div className="flex-shrink-0 text-right">
                     {isInactive ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-wider bg-[#1E3A5F] text-white">
-                        RETIRADO
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] uppercase font-medium bg-[#f2f2f3] text-[#777b86]">
+                        Retirado
                       </span>
                     ) : isLow ? (
                       <span
                         title={getBoxBreakdown(product).breakdownLabel || undefined}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold tracking-wider bg-[#E8B4A0] text-[#1E3A5F] border border-[#1E3A5F]/15"
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#fbe1d1] text-[#5d2a1a]"
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#1E3A5F] mr-1 inline-block animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#5d2a1a] mr-1.5 inline-block animate-pulse" />
                         {formatStockDisplay(product)}
                       </span>
                     ) : (
                       <span
                         title={getBoxBreakdown(product).breakdownLabel || undefined}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono tracking-wider border border-[#E5E7EB] text-[#1E3A5F]"
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#f2f2f3] text-[#17191c]"
                       >
                         {formatStockDisplay(product)}
                       </span>
                     )}
                     {product.unit_type === 'BOX' && getBoxBreakdown(product).breakdownLabel && (
-                      <span className="block text-[9px] font-mono text-[#616161] mt-0.5">
+                      <span className="block text-[10px] text-[#777b86] mt-0.5">
                         {getBoxBreakdown(product).breakdownLabel}
                       </span>
                     )}
@@ -790,7 +787,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                 </div>
 
                 {/* Fotografía de Producto */}
-                <div className="aspect-square bg-[#F8F9FA] rounded-2xl border border-[#E5E7EB] relative overflow-hidden flex items-center justify-center my-1">
+                <div className="aspect-square bg-[#fafafb] rounded-2xl border border-[#ececec] relative overflow-hidden flex items-center justify-center my-2">
                   {mainPhoto ? (
                     <img
                       src={mainPhoto}
@@ -801,35 +798,35 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                     />
                   ) : (
                     <div className="text-center p-4">
-                      <Package className="w-8 h-8 stroke-[1] text-[#616161] mx-auto mb-1 opacity-40" />
-                      <span className="font-mono text-[9px] uppercase tracking-widest text-[#616161]">
-                        SIN FOTO
+                      <Package className="w-8 h-8 stroke-[1] text-[#a3a6af] mx-auto mb-1 opacity-50" />
+                      <span className="text-[10px] text-[#a3a6af]">
+                        Sin foto
                       </span>
                     </div>
                   )}
 
                   {product.is_variant && (
-                    <div className="absolute top-2 left-2">
-                      <span className="font-mono text-[9px] uppercase px-2.5 py-0.5 rounded-full bg-[#1E3A5F] text-white flex items-center gap-1 shadow-sm">
-                        <GitBranch className="w-2.5 h-2.5" /> VARIANTE
+                    <div className="absolute top-2.5 left-2.5">
+                      <span className="text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-[#17191c] text-white flex items-center gap-1 shadow-sm">
+                        <GitBranch className="w-2.5 h-2.5" /> Variante
                       </span>
                     </div>
                   )}
                 </div>
 
                 {/* Pie con Metadatos */}
-                <div className="pt-3 mt-2 border-t border-[#E5E7EB] flex items-center justify-between text-xs">
+                <div className="pt-3.5 mt-2 border-t border-[#ececec] flex items-center justify-between text-xs">
                   <div className="min-w-0 pr-2">
-                    <span className="font-mono text-[10px] text-[#616161] uppercase tracking-wider block truncate">
-                      LOC: {getProductLocationBadgeLabel(product)}
+                    <span className="text-[11px] text-[#777b86] block truncate">
+                      {getProductLocationBadgeLabel(product)}
                     </span>
-                    <span className="font-mono text-[10px] text-[#E8B4A0] uppercase tracking-wider block truncate font-medium">
-                      CAT: {product.categories?.name || 'GENERAL'}
+                    <span className="text-[11px] text-[#979799] block truncate">
+                      {product.categories?.name || 'General'}
                     </span>
                   </div>
 
                   <div className="text-right flex-shrink-0">
-                    <span className="text-base font-bold tabular-nums text-[#1E3A5F] block tracking-tight">
+                    <span className="text-sm font-semibold tabular-nums text-[#17191c] block">
                       {formatCurrency(product.price, currentInventory?.currency)}
                     </span>
                   </div>
@@ -840,18 +837,18 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
         </div>
       ) : (
         /* VISTA MANIFIESTO EN LISTA */
-        <div className="border border-[#E5E7EB] bg-white rounded-2xl overflow-hidden shadow-sm">
-          <div className="hidden md:grid grid-cols-12 gap-2 p-3.5 bg-[#F8F9FA] border-b border-[#E5E7EB] font-mono font-bold text-[10px] uppercase tracking-[0.15em] text-[#1E3A5F]">
-            <div className="col-span-1">FOTO</div>
-            <div className="col-span-2">SKU // REF</div>
-            <div className="col-span-4">DESCRIPCIÓN TÉCNICA</div>
-            <div className="col-span-2">UBICACIÓN</div>
-            <div className="col-span-1 text-right">PRECIO</div>
-            <div className="col-span-1 text-right">STOCK</div>
-            <div className="col-span-1 text-center">ESTADO</div>
+        <div className="border border-[#ececec] bg-white rounded-3xl overflow-hidden shadow-steep-subtle">
+          <div className="hidden md:grid grid-cols-12 gap-2 p-4 bg-[#fafafb] border-b border-[#ececec] font-medium text-xs text-[#777b86]">
+            <div className="col-span-1">Foto</div>
+            <div className="col-span-2">Código SKU</div>
+            <div className="col-span-4">Descripción</div>
+            <div className="col-span-2">Ubicación</div>
+            <div className="col-span-1 text-right">Precio</div>
+            <div className="col-span-1 text-right">Stock</div>
+            <div className="col-span-1 text-center">Estado</div>
           </div>
 
-          <div className="divide-y divide-[#E5E7EB]">
+          <div className="divide-y divide-[#f2f2f3]">
             {paginatedProducts.map(product => {
               const isLow = product.stock < (product.min_stock !== undefined && product.min_stock !== null ? product.min_stock : 1);
               const isInactive = product.status !== 'ACTIVE';
@@ -861,10 +858,10 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                 <div
                   key={product.id}
                   onClick={() => onSelectProduct(product)}
-                  className="p-3.5 sm:p-4 hover:bg-[#F8F9FA] transition-colors cursor-pointer group flex flex-col md:grid md:grid-cols-12 md:items-center gap-3"
+                  className="p-4 hover:bg-[#fafafb] transition-colors cursor-pointer group flex flex-col md:grid md:grid-cols-12 md:items-center gap-3 text-xs"
                 >
                   <div className="col-span-1 flex items-center">
-                    <div className="w-12 h-12 border border-[#E5E7EB] bg-[#F8F9FA] rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center">
+                    <div className="w-11 h-11 border border-[#ececec] bg-[#fafafb] rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center">
                       {mainPhoto ? (
                         <img
                           src={mainPhoto}
@@ -874,48 +871,48 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                           decoding="async"
                         />
                       ) : (
-                        <Package className="w-4 h-4 stroke-[1] text-[#616161] opacity-50" />
+                        <Package className="w-4 h-4 stroke-[1.2] text-[#a3a6af]" />
                       )}
                     </div>
                   </div>
 
-                  <div className="col-span-2 font-mono text-xs uppercase tracking-wider text-[#1E3A5F] font-semibold">
-                    <span className="text-[#616161] md:hidden text-[10px] block font-normal">SKU:</span>
+                  <div className="col-span-2 text-xs text-[#17191c] font-medium">
+                    <span className="text-[#777b86] md:hidden text-[10px] block font-normal">SKU:</span>
                     {product.code}
                     {product.is_variant && (
-                      <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full border border-[#1E3A5F] text-[#1E3A5F]">
-                        VAR
+                      <span className="ml-1.5 text-[10px] px-2 py-0.5 rounded-full bg-[#f2f2f3] text-[#17191c]">
+                        Var
                       </span>
                     )}
                   </div>
 
                   <div className="col-span-4 min-w-0">
-                    <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wide text-[#1E3A5F] group-hover:underline truncate">
+                    <h4 className="text-xs sm:text-sm font-medium text-[#17191c] group-hover:underline truncate">
                       {product.name}
                     </h4>
-                    <span className="font-mono text-[10px] text-[#616161] uppercase tracking-wider block truncate">
-                      {product.categories?.name || 'GENERAL'} {product.subcategories?.name ? `// ${product.subcategories.name}` : ''}
+                    <span className="text-[11px] text-[#777b86] block truncate mt-0.5">
+                      {product.categories?.name || 'General'} {product.subcategories?.name ? `· ${product.subcategories.name}` : ''}
                     </span>
                   </div>
 
-                  <div className="col-span-2 font-mono text-xs uppercase tracking-wider text-[#616161] flex items-center gap-1 truncate">
-                    <MapPin className="w-3.5 h-3.5 stroke-[1.5] text-[#1E3A5F] flex-shrink-0" />
+                  <div className="col-span-2 text-xs text-[#777b86] flex items-center gap-1.5 truncate">
+                    <MapPin className="w-3.5 h-3.5 stroke-[1.8] text-[#777b86] flex-shrink-0" />
                     <span className="truncate">{getProductLocationBadgeLabel(product)}</span>
                   </div>
 
-                  <div className="col-span-1 text-left md:text-right font-bold text-xs sm:text-sm tabular-nums text-[#1E3A5F]">
-                    <span className="text-[#616161] md:hidden text-[10px] font-mono uppercase block font-normal">PRECIO:</span>
+                  <div className="col-span-1 text-left md:text-right font-semibold text-xs sm:text-sm tabular-nums text-[#17191c]">
+                    <span className="text-[#777b86] md:hidden text-[10px] uppercase block font-normal">Precio:</span>
                     {formatCurrency(product.price, currentInventory?.currency)}
                   </div>
 
                   <div
-                    className="col-span-1 text-left md:text-right font-mono font-bold text-xs tabular-nums text-[#1E3A5F]"
+                    className="col-span-1 text-left md:text-right font-semibold text-xs tabular-nums text-[#17191c]"
                     title={getBoxBreakdown(product).breakdownLabel || undefined}
                   >
-                    <span className="text-[#616161] md:hidden text-[10px] uppercase block font-normal">CANTIDAD:</span>
+                    <span className="text-[#777b86] md:hidden text-[10px] uppercase block font-normal">Stock:</span>
                     <span>{formatStockDisplay(product)}</span>
                     {product.unit_type === 'BOX' && getBoxBreakdown(product).breakdownLabel && (
-                      <span className="block text-[9px] text-[#616161] font-normal">
+                      <span className="block text-[10px] text-[#777b86] font-normal">
                         {getBoxBreakdown(product).breakdownLabel}
                       </span>
                     )}
@@ -923,16 +920,16 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
                   <div className="col-span-1 flex md:justify-center">
                     {isInactive ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono tracking-wider bg-[#1E3A5F] text-white">
-                        BAJA
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-[#f2f2f3] text-[#777b86]">
+                        Baja
                       </span>
                     ) : isLow ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono font-bold tracking-wider bg-[#E8B4A0] text-[#1E3A5F] border border-[#1E3A5F]/15">
-                        BAJO STOCK
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-[#fbe1d1] text-[#5d2a1a]">
+                        Bajo stock
                       </span>
                     ) : (
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-mono tracking-wider border border-[#E5E7EB] text-[#1E3A5F]">
-                        ACTIVO
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-[#f2f2f3] text-[#17191c]">
+                        Activo
                       </span>
                     )}
                   </div>
@@ -947,16 +944,16 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
           4. PAGINACIÓN
          ========================================================= */}
       {totalPages > 1 && (
-        <div className="border border-[#E5E7EB] bg-white rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 font-mono text-xs shadow-sm">
-          <span className="text-[#616161] uppercase tracking-wider">
-            HOJA <strong className="text-[#1E3A5F] font-normal">{currentPage.toString().padStart(2, '0')}</strong> DE {totalPages.toString().padStart(2, '0')}
+        <div className="border border-[#ececec] bg-white rounded-3xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-steep-subtle">
+          <span className="text-[#777b86]">
+            Página <strong className="text-[#17191c] font-semibold">{currentPage}</strong> de {totalPages}
           </span>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="min-h-[40px] px-3.5 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-colors text-[#1E3A5F]"
+              className="min-h-[38px] px-3.5 rounded-full bg-[#f2f2f3] hover:bg-[#e8e8ea] text-[#17191c] disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-colors cursor-pointer"
               title="Página Anterior"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -972,13 +969,13 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`min-h-[40px] min-w-[40px] rounded-full text-xs font-mono uppercase transition-all flex items-center justify-center ${
+                  className={`min-h-[38px] min-w-[38px] rounded-full text-xs font-medium transition-all flex items-center justify-center cursor-pointer ${
                     currentPage === pageNum
-                      ? 'bg-[#1E3A5F] text-white shadow-sm'
-                      : 'border border-[#E5E7EB] hover:border-[#1E3A5F] text-[#1E3A5F] bg-white'
+                      ? 'bg-[#17191c] text-white shadow-sm'
+                      : 'bg-[#f2f2f3] hover:bg-[#e8e8ea] text-[#17191c]'
                   }`}
                 >
-                  {pageNum.toString().padStart(2, '0')}
+                  {pageNum}
                 </button>
               );
             })}
@@ -986,7 +983,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="min-h-[40px] px-3.5 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-colors text-[#1E3A5F]"
+              className="min-h-[38px] px-3.5 rounded-full bg-[#f2f2f3] hover:bg-[#e8e8ea] text-[#17191c] disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-colors cursor-pointer"
               title="Página Siguiente"
             >
               <ChevronRight className="w-4 h-4" />

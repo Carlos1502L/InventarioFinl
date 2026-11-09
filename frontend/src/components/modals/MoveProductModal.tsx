@@ -153,23 +153,23 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-4 animate-in fade-in">
-        <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-md overflow-hidden shadow-xl flex flex-col">
+        <div className="mobile-dark-modal bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-md overflow-hidden shadow-xl flex flex-col">
           {/* Cabecera */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff]">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] bg-[#ffffff]">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center">
-                <ArrowRightLeft className="w-5 h-5 text-[#1E3A5F]" />
+              <div className="w-10 h-10 rounded-full bg-[#17191c]/10 text-[#17191c] flex items-center justify-center">
+                <ArrowRightLeft className="w-5 h-5 text-[#17191c]" />
               </div>
               <div>
-                <h3 className="font-bold text-[#1E3A5F] text-base uppercase tracking-tight">
+                <h3 className="font-bold text-[#17191c] text-base uppercase tracking-tight">
                   Mover de Ubicación
                 </h3>
-                <p className="text-[11px] text-[#616161]">Reubicación atómica entre zonas</p>
+                <p className="text-[11px] text-[#777b86]">Reubicación atómica entre zonas</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -182,11 +182,11 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
               </div>
             )}
 
-            <div className="mobile-flat-row p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] space-y-1">
-              <span className="text-[10px] text-[#616161] uppercase tracking-wider">
+            <div className="mobile-flat-row p-4 bg-[#fafafb] rounded-xl border border-[#ececec] space-y-1">
+              <span className="text-[10px] text-[#777b86] uppercase tracking-wider">
                 PRODUCTO ({product.code})
               </span>
-              <p className="text-sm font-bold text-[#1E3A5F] uppercase">{product.name}</p>
+              <p className="text-sm font-bold text-[#17191c] uppercase">{product.name}</p>
             </div>
 
             {availableOrigins.length === 0 ? (
@@ -200,8 +200,8 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
               <>
                 {/* Selector de Origen */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#1E3A5F] mb-1.5">
-                    UBICACIÓN DE ORIGEN <span className="text-[#E8B4A0]">*</span>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#17191c] mb-1.5">
+                    UBICACIÓN DE ORIGEN <span className="text-[#5d2a1a]">*</span>
                   </label>
                   <MinimalDropdown
                     value={fromLocationId}
@@ -216,14 +216,14 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                 </div>
 
                 {/* Cantidad a Mover */}
-                <div className="mobile-flat-section p-4 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl space-y-2.5">
+                <div className="mobile-flat-section p-4 bg-[#fafafb] border border-[#ececec] rounded-xl space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
-                      CANTIDAD A TRASLADAR <span className="text-[#E8B4A0]">*</span>
+                    <label className="text-xs font-bold uppercase tracking-wider text-[#17191c]">
+                      CANTIDAD A TRASLADAR <span className="text-[#5d2a1a]">*</span>
                     </label>
-                    <span className="text-[10px] text-[#616161] uppercase">
+                    <span className="text-[10px] text-[#777b86] uppercase">
                       DISPONIBLE:{' '}
-                      <strong className="text-[#1E3A5F]">
+                      <strong className="text-[#17191c]">
                         {formatLocationQuantity(originStock, product)}
                       </strong>
                     </span>
@@ -232,25 +232,25 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                   {isBox ? (
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <span className="text-[10px] text-[#616161] block mb-1">Cajas</span>
+                        <span className="text-[10px] text-[#777b86] block mb-1">Cajas</span>
                         <input
                           type="number"
                           min={0}
                           max={Math.floor(originStock + 0.0001)}
                           value={moveBoxes}
                           onChange={e => setMoveBoxes(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                          className="w-full min-h-[38px] bg-white border border-[#E5E7EB] rounded-xl px-3 py-1 text-center text-sm font-bold text-[#1E3A5F]"
+                          className="w-full min-h-[38px] bg-white border border-[#ececec] rounded-xl px-3 py-1 text-center text-sm font-bold text-[#17191c]"
                         />
                       </div>
                       <div>
-                        <span className="text-[10px] text-[#616161] block mb-1">Unidades sueltas</span>
+                        <span className="text-[10px] text-[#777b86] block mb-1">Unidades sueltas</span>
                         <input
                           type="number"
                           min={0}
                           max={upb - 1}
                           value={moveLooseUnits}
                           onChange={e => setMoveLooseUnits(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                          className="w-full min-h-[38px] bg-white border border-[#E5E7EB] rounded-xl px-3 py-1 text-center text-sm font-bold text-[#1E3A5F]"
+                          className="w-full min-h-[38px] bg-white border border-[#ececec] rounded-xl px-3 py-1 text-center text-sm font-bold text-[#17191c]"
                         />
                       </div>
                     </div>
@@ -262,12 +262,12 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                         max={Math.round(originStock)}
                         value={quantityToMove}
                         onChange={e => setQuantityToMove(e.target.value)}
-                        className="flex-1 min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3 py-1.5 text-center text-sm font-bold text-[#1E3A5F]"
+                        className="flex-1 min-h-[40px] bg-white border border-[#ececec] rounded-xl px-3 py-1.5 text-center text-sm font-bold text-[#17191c]"
                       />
                       <button
                         type="button"
                         onClick={() => setQuantityToMove(String(Math.round(originStock)))}
-                        className="px-3 min-h-[40px] text-[11px] uppercase tracking-wider text-[#1E3A5F] bg-[#E8B4A0]/20 hover:bg-[#E8B4A0]/30 border border-[#E8B4A0]/40 rounded-xl"
+                        className="px-3 min-h-[40px] text-[11px] uppercase tracking-wider text-[#17191c] bg-[#fbe1d1]/20 hover:bg-[#fbe1d1]/30 border border-[#E8B4A0]/40 rounded-xl"
                       >
                         Todas ({Math.round(originStock)})
                       </button>
@@ -277,8 +277,8 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
 
                 {/* Selección de Destino */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#1E3A5F] mb-1.5">
-                    UBICACIÓN DE DESTINO <span className="text-[#E8B4A0]">*</span>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#17191c] mb-1.5">
+                    UBICACIÓN DE DESTINO <span className="text-[#5d2a1a]">*</span>
                   </label>
                   <div className="flex items-center gap-2.5 w-full">
                     <div className="flex-1 min-w-0">
@@ -296,23 +296,23 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setScannerOpen(true)}
-                      className="inline-flex items-center gap-1.5 px-4 min-h-[44px] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] border border-[#CBD5E1] hover:border-[#1E3A5F] rounded-xl text-xs uppercase tracking-wider shrink-0 active:scale-95 transition-all shadow-xs cursor-pointer font-medium"
+                      className="inline-flex items-center gap-1.5 px-4 min-h-[44px] bg-white hover:bg-[#fafafb] text-[#17191c] border border-[#CBD5E1] hover:border-[#17191c] rounded-xl text-xs uppercase tracking-wider shrink-0 active:scale-95 transition-all shadow-xs cursor-pointer font-medium"
                       title="Escanear ubicación"
                     >
-                      <Camera className="w-4 h-4 text-[#1E3A5F]" />
+                      <Camera className="w-4 h-4 text-[#17191c]" />
                       <span>Escanear</span>
                     </button>
                   </div>
                   {selectedLocation && (
-                    <p className="text-[11px] text-[#1E3A5F] font-medium mt-1.5 flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5 text-[#E8B4A0]" /> Destino: {selectedLocation.name} ({selectedLocation.code})
+                    <p className="text-[11px] text-[#17191c] font-medium mt-1.5 flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5 text-[#5d2a1a]" /> Destino: {selectedLocation.name} ({selectedLocation.code})
                     </p>
                   )}
                 </div>
 
                 {/* Motivo */}
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-[#1E3A5F] mb-1.5">
+                  <label className="block text-xs uppercase tracking-wider text-[#17191c] mb-1.5">
                     MOTIVO DEL TRASLADO (OPCIONAL)
                   </label>
                   <input
@@ -320,19 +320,19 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                     value={reason}
                     onChange={e => setReason(e.target.value)}
                     placeholder="Ej: Reorganización de vitrina, reposición..."
-                    className="w-full min-h-[42px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-xs text-[#1E3A5F]"
+                    className="w-full min-h-[42px] bg-white border border-[#ececec] rounded-xl px-4 py-2 text-xs text-[#17191c]"
                   />
                 </div>
               </>
             )}
 
-            <div className="pt-3 border-t border-[#E5E7EB] max-md:border-0 flex max-md:flex-col-reverse justify-end gap-2.5">
+            <div className="pt-3 border-t border-[#ececec] max-md:border-0 flex max-md:flex-col-reverse justify-end gap-2.5">
               <CancelButton onClick={onClose} />
               {availableOrigins.length > 0 && (
                 <button
                   type="submit"
                   disabled={isSubmitting || !selectedLocationId || !fromLocationId}
-                  className="min-h-[44px] inline-flex items-center gap-2 px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50"
+                  className="min-h-[44px] inline-flex items-center gap-2 px-6 bg-[#17191c] hover:bg-black text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50"
                 >
                   {isSubmitting ? (
                     <>
@@ -341,7 +341,7 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
                     </>
                   ) : (
                     <>
-                      <Check className="w-4 h-4 text-[#E8B4A0]" />
+                      <Check className="w-4 h-4 text-[#5d2a1a]" />
                       <span>Confirmar Traslado</span>
                     </>
                   )}

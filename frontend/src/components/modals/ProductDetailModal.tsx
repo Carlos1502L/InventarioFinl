@@ -137,35 +137,35 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
-        <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-4xl my-auto overflow-hidden flex flex-col max-h-[94vh] shadow-xl">
+        <div className="mobile-dark-modal bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-4xl my-auto overflow-hidden flex flex-col max-h-[94vh] shadow-xl">
           {/* =========================================================
               HEADER // MODAL HEADER
              ========================================================= */}
-          <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[#E5E7EB] bg-white sticky top-0 z-20">
+          <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[#ececec] bg-white sticky top-0 z-20">
             <div className="min-w-0">
               <div className="md:hidden mb-1">
                 <h3 className="text-lg font-bold tracking-tight text-neutral-900 truncate">{product.name}</h3>
                 <p className="text-xs text-neutral-500">SKU {product.code} · {formatStockDisplay(product)}</p>
               </div>
               <div className="hidden md:flex flex-wrap items-center gap-2">
-                <span className="font-mono text-xs uppercase tracking-wider text-[#1E3A5F] px-3 py-1 rounded-full border border-[#1E3A5F]/30 bg-[#F8F9FA]">
+                <span className="font-mono text-xs uppercase tracking-wider text-[#17191c] px-3 py-1 rounded-full border border-[#1E3A5F]/30 bg-[#fafafb]">
                   REF // {product.code}
                 </span>
-                <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#1E3A5F] text-white flex items-center gap-1">
-                  <Layers className="w-3 h-3 text-[#E8B4A0]" />
+                <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#17191c] text-white flex items-center gap-1">
+                  <Layers className="w-3 h-3 text-[#5d2a1a]" />
                   {product.unit_type === 'BOX' ? `CAJA (${product.units_per_box || 1} UND)` : 'UNIDAD'}
                 </span>
                 {isInactive ? (
-                  <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#1E3A5F] text-white">
+                  <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#17191c] text-white">
                     ESTADO // RETIRADO
                   </span>
                 ) : isLowStock ? (
-                  <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#E8B4A0] text-[#1E3A5F] border border-[#1E3A5F]/15 font-bold flex items-center gap-1.5 shadow-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#1E3A5F] animate-ping" />
+                  <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#fbe1d1] text-[#17191c] border border-[#1E3A5F]/15 font-bold flex items-center gap-1.5 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#17191c] animate-ping" />
                     ESTADO // STOCK CRÍTICO
                   </span>
                 ) : (
-                  <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full border border-[#E5E7EB] text-[#1E3A5F] bg-[#F8F9FA]">
+                  <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full border border-[#ececec] text-[#17191c] bg-[#fafafb]">
                     ESTADO // ACTIVO
                   </span>
                 )}
@@ -175,23 +175,23 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setRestockModalOpen(true)}
-                className="mobile-header-tab min-h-[38px] max-md:min-h-0 max-md:h-8 max-md:px-3 max-md:bg-neutral-100 max-md:text-neutral-800 max-md:border-0 px-3.5 rounded-full bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow-sm"
+                className="mobile-header-tab min-h-[38px] max-md:min-h-0 max-md:h-8 max-md:px-3 max-md:bg-neutral-100 max-md:text-neutral-800 max-md:border-0 px-3.5 rounded-full bg-[#17191c] hover:bg-black text-white text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow-sm"
                 title="Añadir más existencias (Reingreso de Stock)"
               >
-                <Plus className="w-3.5 h-3.5 text-[#E8B4A0] max-md:text-neutral-800" />
+                <Plus className="w-3.5 h-3.5 text-[#5d2a1a] max-md:text-neutral-800" />
                 <span className="hidden sm:inline">REINGRESO</span>
               </button>
               <button
                 onClick={() => onEdit(product)}
-                className="mobile-header-tab min-h-[38px] max-md:min-h-0 max-md:h-8 max-md:px-3 max-md:bg-neutral-100 max-md:text-neutral-800 max-md:border-0 px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors bg-white shadow-sm"
+                className="mobile-header-tab min-h-[38px] max-md:min-h-0 max-md:h-8 max-md:px-3 max-md:bg-neutral-100 max-md:text-neutral-800 max-md:border-0 px-4 rounded-full border border-[#ececec] hover:border-[#17191c] text-[#17191c] text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors bg-white shadow-sm"
                 title="Modificar especificación técnica"
               >
-                <Edit className="w-3.5 h-3.5 text-[#1E3A5F] max-md:text-neutral-800" />
+                <Edit className="w-3.5 h-3.5 text-[#17191c] max-md:text-neutral-800" />
                 <span className="hidden sm:inline">EDITAR</span>
               </button>
               <button
                 onClick={onClose}
-                className="min-h-[38px] min-w-[38px] rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] text-[#1E3A5F] flex items-center justify-center transition-colors bg-white shadow-sm"
+                className="min-h-[38px] min-w-[38px] rounded-full border border-[#ececec] hover:border-[#17191c] text-[#17191c] flex items-center justify-center transition-colors bg-white shadow-sm"
                 title="Cerrar ficha"
               >
                 <X className="w-4 h-4" />
@@ -216,12 +216,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   type="button"
                   onClick={handleReactivateProduct}
                   disabled={isReactivating}
-                  className="shrink-0 min-h-[38px] px-5 bg-[#1E3A5F] hover:bg-[#152a45] text-white rounded-full flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                  className="shrink-0 min-h-[38px] px-5 bg-[#17191c] hover:bg-black text-white rounded-full flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                 >
                   {isReactivating ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                   ) : (
-                    <RotateCcw className="w-3.5 h-3.5 text-[#E8B4A0]" />
+                    <RotateCcw className="w-3.5 h-3.5 text-[#5d2a1a]" />
                   )}
                   <span>REACTIVAR ÍTEM</span>
                 </button>
@@ -232,7 +232,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
               {/* COLUMNA IZQUIERDA: GALERÍA */}
               <div className="space-y-3">
-                <div className="relative aspect-square sm:aspect-[4/3] bg-[#F8F9FA] border border-[#E5E7EB] rounded-2xl flex items-center justify-center overflow-hidden">
+                <div className="relative aspect-square sm:aspect-[4/3] bg-[#fafafb] border border-[#ececec] rounded-2xl flex items-center justify-center overflow-hidden">
                   {photos.length > 0 ? (
                     <img
                       src={photos[activePhotoIdx]}
@@ -242,9 +242,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       decoding="async"
                     />
                   ) : (
-                    <div className="text-center p-6 font-mono text-[#616161]">
-                      <Package className="w-12 h-12 stroke-[1] text-[#1E3A5F]/30 mx-auto mb-2" />
-                      <p className="text-[10px] uppercase tracking-widest text-[#616161]">
+                    <div className="text-center p-6 font-mono text-[#777b86]">
+                      <Package className="w-12 h-12 stroke-[1] text-[#17191c]/30 mx-auto mb-2" />
+                      <p className="text-[10px] uppercase tracking-widest text-[#777b86]">
                         SIN MUESTRA FOTOGRÁFICA REGISTRADA
                       </p>
                     </div>
@@ -255,16 +255,16 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     <div className="absolute inset-x-2 bottom-2 flex items-center justify-between pointer-events-none">
                       <button
                         onClick={() => setActivePhotoIdx(prev => (prev > 0 ? prev - 1 : photos.length - 1))}
-                        className="pointer-events-auto min-h-[36px] min-w-[36px] rounded-full bg-white/90 backdrop-blur-sm border border-[#E5E7EB] hover:bg-[#1E3A5F] hover:text-white text-[#1E3A5F] flex items-center justify-center transition-all shadow-sm"
+                        className="pointer-events-auto min-h-[36px] min-w-[36px] rounded-full bg-white/90 backdrop-blur-sm border border-[#ececec] hover:bg-[#17191c] hover:text-white text-[#17191c] flex items-center justify-center transition-all shadow-sm"
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </button>
-                      <span className="font-mono text-[10px] px-3 py-1 rounded-full bg-[#1E3A5F] text-white">
+                      <span className="font-mono text-[10px] px-3 py-1 rounded-full bg-[#17191c] text-white">
                         {activePhotoIdx + 1} / {photos.length}
                       </span>
                       <button
                         onClick={() => setActivePhotoIdx(prev => (prev < photos.length - 1 ? prev + 1 : 0))}
-                        className="pointer-events-auto min-h-[36px] min-w-[36px] rounded-full bg-white/90 backdrop-blur-sm border border-[#E5E7EB] hover:bg-[#1E3A5F] hover:text-white text-[#1E3A5F] flex items-center justify-center transition-all shadow-sm"
+                        className="pointer-events-auto min-h-[36px] min-w-[36px] rounded-full bg-white/90 backdrop-blur-sm border border-[#ececec] hover:bg-[#17191c] hover:text-white text-[#17191c] flex items-center justify-center transition-all shadow-sm"
                       >
                         <ChevronRight className="w-4 h-4" />
                       </button>
@@ -282,7 +282,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         className={`w-16 h-16 rounded-xl border flex-shrink-0 transition-all p-0.5 bg-white overflow-hidden ${
                           activePhotoIdx === i
                             ? 'border-[#1E3A5F] ring-2 ring-[#1E3A5F]/20'
-                            : 'border-[#E5E7EB] opacity-60 hover:opacity-100'
+                            : 'border-[#ececec] opacity-60 hover:opacity-100'
                         }`}
                       >
                         <img src={url} alt={`Muestra ${i + 1}`} className="w-full h-full object-cover rounded-lg" loading="lazy" decoding="async" />
@@ -292,12 +292,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 )}
 
                 {/* Código de Identificación */}
-                <div className="border border-[#E5E7EB] rounded-xl p-3 bg-[#F8F9FA] font-mono text-xs flex items-center justify-between">
+                <div className="border border-[#ececec] rounded-xl p-3 bg-[#fafafb] font-mono text-xs flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-[#616161] uppercase tracking-wider block">
+                    <span className="text-[10px] text-[#777b86] uppercase tracking-wider block">
                       CÓDIGO DE IDENTIFICACIÓN
                     </span>
-                    <span className="text-[#1E3A5F] font-semibold uppercase tracking-wider">{product.code}</span>
+                    <span className="text-[#17191c] font-semibold uppercase tracking-wider">{product.code}</span>
                   </div>
 
                 </div>
@@ -306,37 +306,37 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {/* COLUMNA DERECHA: ESPECIFICACIONES TÉCNICAS */}
               <div className="space-y-5">
                 <div>
-                  <p className="font-mono text-[10px] text-[#E8B4A0] uppercase tracking-[0.2em] mb-1 font-medium">
+                  <p className="font-mono text-[10px] text-[#5d2a1a] uppercase tracking-[0.2em] mb-1 font-medium">
                     FICHA TÉCNICA // {product.categories?.name || 'MERCANCÍA GENERAL'}
                   </p>
-                  <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-[#1E3A5F]">
+                  <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-[#17191c]">
                     {product.name}
                   </h2>
                   {product.description && (
-                    <p className="text-xs text-[#616161] mt-2 font-light leading-relaxed uppercase border-l-2 border-[#E8B4A0] pl-3 py-0.5">
+                    <p className="text-xs text-[#777b86] mt-2 font-light leading-relaxed uppercase border-l-2 border-[#E8B4A0] pl-3 py-0.5">
                       {product.description}
                     </p>
                   )}
                 </div>
 
                 {/* Matriz de Parámetros Técnicos */}
-                <div className="mobile-flat-section border border-[#E5E7EB] rounded-2xl overflow-hidden divide-y divide-[#E5E7EB] max-md:divide-neutral-100 font-mono text-xs shadow-sm">
+                <div className="mobile-flat-section border border-[#ececec] rounded-2xl overflow-hidden divide-y divide-[#E5E7EB] max-md:divide-neutral-100 font-mono text-xs shadow-sm">
                   {/* Precio Unitario */}
                   <div className="mobile-flat-row p-3.5 flex items-center justify-between bg-white">
-                    <span className="text-[10px] text-[#616161] uppercase tracking-wider">
+                    <span className="text-[10px] text-[#777b86] uppercase tracking-wider">
                       PRECIO DE SALIDA
                     </span>
-                    <span className="text-base sm:text-lg font-bold tabular-nums text-[#1E3A5F]">
+                    <span className="text-base sm:text-lg font-bold tabular-nums text-[#17191c]">
                       {formatCurrency(product.price, currentInventory?.currency)}
                     </span>
                   </div>
 
                   {/* Unidad de Medida */}
                   <div className="mobile-flat-row p-3.5 flex items-center justify-between bg-white">
-                    <span className="text-[10px] text-[#616161] uppercase tracking-wider">
+                    <span className="text-[10px] text-[#777b86] uppercase tracking-wider">
                       UNIDAD DE MEDIDA
                     </span>
-                    <span className="text-[#1E3A5F] font-bold uppercase">
+                    <span className="text-[#17191c] font-bold uppercase">
                       {product.unit_type === 'BOX'
                         ? `CAJA (1 caja = ${product.units_per_box || 1} unidades)`
                         : 'UNIDAD (UND)'}
@@ -345,20 +345,20 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
                   {/* Stock Actual y Alerta */}
                   <div className="mobile-flat-row p-3.5 flex items-center justify-between bg-white">
-                    <span className="text-[10px] text-[#616161] uppercase tracking-wider">
+                    <span className="text-[10px] text-[#777b86] uppercase tracking-wider">
                       VOLUMEN EN ALMACÉN
                     </span>
                     <div className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <span className="text-base font-bold tabular-nums text-[#1E3A5F]">
+                        <span className="text-base font-bold tabular-nums text-[#17191c]">
                           {formatStockDisplay(product)}
                         </span>
-                        <span className="text-[10px] text-[#616161] uppercase">
+                        <span className="text-[10px] text-[#777b86] uppercase">
                           (MÍN: {product.min_stock || 1})
                         </span>
                       </div>
                       {boxBreakdown.isBox && boxBreakdown.breakdownLabel && (
-                        <span className="text-[10px] text-[#616161] block">
+                        <span className="text-[10px] text-[#777b86] block">
                           {boxBreakdown.breakdownLabel}
                         </span>
                       )}
@@ -367,10 +367,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
                   {/* Valuación Total del Ítem */}
                   <div className="mobile-flat-row p-3.5 flex items-center justify-between bg-white">
-                    <span className="text-[10px] text-[#616161] uppercase tracking-wider">
+                    <span className="text-[10px] text-[#777b86] uppercase tracking-wider">
                       VALOR TOTAL DE EXISTENCIAS
                     </span>
-                    <span className="text-sm font-bold tabular-nums text-[#1E3A5F]">
+                    <span className="text-sm font-bold tabular-nums text-[#17191c]">
                       {formatCurrency(totalItemValuation, currentInventory?.currency)}
                     </span>
                   </div>
@@ -378,14 +378,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   {/* Distribución Física Multi-Ubicación */}
                   <div className="mobile-flat-row p-3.5 bg-white space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-[#616161] uppercase tracking-wider">
+                      <span className="text-[10px] text-[#777b86] uppercase tracking-wider">
                         DISTRIBUCIÓN FÍSICA // ALMACENES
                       </span>
                       {getPendingLocationStock(product) > 0.0001 && onAssignLocation && (
                         <button
                           type="button"
                           onClick={() => onAssignLocation(product)}
-                          className="mobile-inline-btn text-[10px] font-bold uppercase text-[#1E3A5F] bg-[#E8B4A0]/30 hover:bg-[#E8B4A0]/50 px-2.5 py-0.5 rounded-full transition-colors"
+                          className="mobile-inline-btn text-[10px] font-bold uppercase text-[#17191c] bg-[#fbe1d1]/30 hover:bg-[#fbe1d1]/50 px-2.5 py-0.5 rounded-full transition-colors"
                         >
                           + Asignar Ubicación
                         </button>
@@ -398,24 +398,24 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         .map(pl => (
                           <div
                             key={pl.id}
-                            className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-xs"
+                            className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#fafafb] border border-[#ececec] text-xs"
                           >
-                            <span className="text-[#1E3A5F] font-bold uppercase flex items-center gap-1.5">
-                              <MapPin className="w-3.5 h-3.5 text-[#1E3A5F]" />
+                            <span className="text-[#17191c] font-bold uppercase flex items-center gap-1.5">
+                              <MapPin className="w-3.5 h-3.5 text-[#17191c]" />
                               {pl.locations?.name || 'Estante'} [{pl.locations?.code || 'LOC'}]
                             </span>
-                            <span className="font-bold text-[#1E3A5F]">
+                            <span className="font-bold text-[#17191c]">
                               {formatLocationQuantity(pl.quantity, product)}
                             </span>
                           </div>
                         ))}
 
                       {getPendingLocationStock(product) > 0.0001 && (
-                        <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#E8B4A0]/20 border border-[#E8B4A0] text-xs">
-                          <span className="text-[#1E3A5F] font-bold uppercase">
+                        <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#fbe1d1]/20 border border-[#E8B4A0] text-xs">
+                          <span className="text-[#17191c] font-bold uppercase">
                             Sin Ubicación Asignada / En Recepción
                           </span>
-                          <span className="font-bold text-[#1E3A5F]">
+                          <span className="font-bold text-[#17191c]">
                             {formatLocationQuantity(getPendingLocationStock(product), product)}
                           </span>
                         </div>
@@ -425,10 +425,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
                   {/* Categoría y Subcategoría */}
                   <div className="mobile-flat-row p-3.5 flex items-center justify-between bg-white">
-                    <span className="text-[10px] text-[#616161] uppercase tracking-wider">
+                    <span className="text-[10px] text-[#777b86] uppercase tracking-wider">
                       CLASIFICACIÓN TÉCNICA
                     </span>
-                    <span className="text-[#1E3A5F] uppercase font-bold">
+                    <span className="text-[#17191c] uppercase font-bold">
                       {product.categories?.name || 'GENERAL'}
                       {product.subcategories?.name && ` // ${product.subcategories.name}`}
                     </span>
@@ -440,7 +440,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <div className="flex flex-col sm:flex-row gap-2">
                     <button
                       onClick={() => onMove(product)}
-                      className="mobile-primary-btn flex-1 min-h-[44px] px-5 rounded-full border border-[#1E3A5F] hover:bg-[#1E3A5F] hover:text-white text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                      className="mobile-primary-btn flex-1 min-h-[44px] px-5 rounded-full border border-[#1E3A5F] hover:bg-[#17191c] hover:text-white text-[#17191c] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                     >
                       <ArrowRightLeft className="w-3.5 h-3.5" />
                       <span>TRASLADAR UBICACIÓN</span>
@@ -449,7 +449,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     {!isInactive ? (
                       <button
                         onClick={() => onWithdraw(product)}
-                        className="flex-1 min-h-[44px] px-5 rounded-full max-md:rounded-2xl border border-[#E5E7EB] hover:border-[#1E3A5F] text-[#616161] hover:text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] bg-white shadow-sm"
+                        className="flex-1 min-h-[44px] px-5 rounded-full max-md:rounded-2xl border border-[#ececec] hover:border-[#17191c] text-[#777b86] hover:text-[#17191c] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] bg-white shadow-sm"
                       >
                         <Archive className="w-3.5 h-3.5" />
                         <span>DESCONTAR / MERMA</span>
@@ -458,7 +458,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       <button
                         onClick={handleReactivateProduct}
                         disabled={isReactivating}
-                        className="flex-1 min-h-[44px] px-5 rounded-full max-md:rounded-2xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm"
+                        className="flex-1 min-h-[44px] px-5 rounded-full max-md:rounded-2xl bg-[#17191c] hover:bg-black text-white text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm"
                       >
                         {isReactivating ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -477,13 +477,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 VARIACIONES ASOCIADAS (SI APLICA)
                ========================================================= */}
             {relatedVariants.length > 0 && (
-              <div className="border border-[#E5E7EB] rounded-2xl p-4 sm:p-5 space-y-3 bg-[#ffffff] shadow-sm">
+              <div className="border border-[#ececec] rounded-2xl p-4 sm:p-5 space-y-3 bg-[#ffffff] shadow-sm">
                 <div className="flex items-center justify-between font-mono">
-                  <span className="text-xs uppercase tracking-wider text-[#1E3A5F] flex items-center gap-1.5 font-medium">
-                    <GitBranch className="w-4 h-4 text-[#1E3A5F]" />
+                  <span className="text-xs uppercase tracking-wider text-[#17191c] flex items-center gap-1.5 font-medium">
+                    <GitBranch className="w-4 h-4 text-[#17191c]" />
                     VARIANTES REGISTRADAS DE LA FAMILIA ({relatedVariants.length})
                   </span>
-                  <span className="text-[10px] text-[#616161] uppercase">TOCA PARA CAMBIAR DE FICHA</span>
+                  <span className="text-[10px] text-[#777b86] uppercase">TOCA PARA CAMBIAR DE FICHA</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono">
@@ -494,27 +494,27 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         key={v.id}
                         type="button"
                         onClick={() => onSelectProduct?.(v)}
-                        className="p-3 border border-[#E5E7EB] hover:border-[#1E3A5F] rounded-xl bg-white hover:bg-[#F8F9FA] text-left transition-all active:scale-[0.98] flex items-center justify-between group shadow-sm"
+                        className="p-3 border border-[#ececec] hover:border-[#17191c] rounded-xl bg-white hover:bg-[#fafafb] text-left transition-all active:scale-[0.98] flex items-center justify-between group shadow-sm"
                       >
                         <div className="min-w-0 pr-2">
-                          <p className="text-xs uppercase tracking-wide text-[#1E3A5F] group-hover:underline truncate font-bold">
+                          <p className="text-xs uppercase tracking-wide text-[#17191c] group-hover:underline truncate font-bold">
                             {v.name}
                           </p>
-                          <span className="text-[10px] text-[#616161] uppercase tracking-wider block mt-0.5">
+                          <span className="text-[10px] text-[#777b86] uppercase tracking-wider block mt-0.5">
                             REF: {v.code}
                           </span>
                         </div>
                         <div className="text-right shrink-0">
-                          <span className="text-xs font-light tabular-nums text-[#1E3A5F] block">
+                          <span className="text-xs font-light tabular-nums text-[#17191c] block">
                             {formatCurrency(v.price, currentInventory?.currency)}
                           </span>
                           <span
                             className={`text-[10px] ${
                               vInactive
-                                ? 'text-[#616161]'
+                                ? 'text-[#777b86]'
                                 : v.stock < (v.min_stock !== undefined && v.min_stock !== null ? v.min_stock : 1)
-                                  ? 'text-[#1E3A5F] bg-[#E8B4A0] px-2 py-0.5 rounded-full font-bold border border-[#1E3A5F]/15'
-                                  : 'text-[#1E3A5F]'
+                                  ? 'text-[#17191c] bg-[#fbe1d1] px-2 py-0.5 rounded-full font-bold border border-[#1E3A5F]/15'
+                                  : 'text-[#17191c]'
                             }`}
                           >
                             {vInactive ? 'BAJA' : formatStockDisplay(v)}

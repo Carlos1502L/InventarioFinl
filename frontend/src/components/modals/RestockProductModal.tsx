@@ -151,18 +151,18 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="mobile-dark-modal bg-white border border-[#E5E7EB] rounded-2xl w-full max-w-md overflow-hidden shadow-xl flex flex-col">
+      <div className="mobile-dark-modal bg-white border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-md overflow-hidden shadow-xl flex flex-col">
         {/* Cabecera */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] bg-white">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#E8B4A0]/25 text-[#1E3A5F] border border-[#E8B4A0] flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#fbe1d1]/25 text-[#17191c] border border-[#E8B4A0] flex items-center justify-center flex-shrink-0">
               <Barcode className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-widest text-[#E8B4A0] block font-bold">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#5d2a1a] block font-bold">
                 REINGRESO DE EXISTENCIAS // {isBox ? 'MODO CAJA' : 'MODO UNIDAD'}
               </span>
-              <h4 className="font-bold text-[#1E3A5F] text-sm sm:text-base uppercase tracking-tight">
+              <h4 className="font-bold text-[#17191c] text-sm sm:text-base uppercase tracking-tight">
                 Producto Existente
               </h4>
             </div>
@@ -170,7 +170,7 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -178,7 +178,7 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
 
         {/* Cuerpo del Modal */}
         <form onSubmit={handleConfirmRestock} className="p-6 space-y-4 font-mono">
-          <p className="mobile-flat-section text-xs text-[#1E3A5F] font-sans font-medium bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl p-3">
+          <p className="mobile-flat-section text-xs text-[#17191c] font-sans font-medium bg-[#fafafb] border border-[#ececec] rounded-xl p-3">
             El producto ya existe en el sistema. ¿Deseas añadir más existencias?
           </p>
 
@@ -190,28 +190,28 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
           )}
 
           {/* Ficha Resumen del Producto */}
-          <div className="mobile-flat-row p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] text-xs space-y-1.5">
+          <div className="mobile-flat-row p-4 bg-[#fafafb] rounded-xl border border-[#ececec] text-xs space-y-1.5">
             <div className="flex items-center justify-between gap-2">
-              <p className="font-bold text-[#1E3A5F] text-sm uppercase truncate">{product.name}</p>
-              <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#1E3A5F] text-white uppercase shrink-0">
+              <p className="font-bold text-[#17191c] text-sm uppercase truncate">{product.name}</p>
+              <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#17191c] text-white uppercase shrink-0">
                 {isBox ? 'CAJA (BOX)' : 'UNIDAD (UNIT)'}
               </span>
             </div>
-            <p className="text-[#616161]">
-              SKU / REF: <strong className="text-[#1E3A5F]">{product.code}</strong>
+            <p className="text-[#777b86]">
+              SKU / REF: <strong className="text-[#17191c]">{product.code}</strong>
             </p>
-            <div className="flex items-center justify-between pt-1 border-t border-[#E5E7EB]/80">
-              <span className="text-[#616161]">Stock actual:</span>
+            <div className="flex items-center justify-between pt-1 border-t border-[#ececec]/80">
+              <span className="text-[#777b86]">Stock actual:</span>
               <div className="text-right">
-                <strong className="text-[#1E3A5F] text-sm">{formatStockDisplay(product)}</strong>
+                <strong className="text-[#17191c] text-sm">{formatStockDisplay(product)}</strong>
                 {isBox && currentBreakdown.breakdownLabel && (
-                  <span className="block text-[10px] text-[#616161]">{currentBreakdown.breakdownLabel}</span>
+                  <span className="block text-[10px] text-[#777b86]">{currentBreakdown.breakdownLabel}</span>
                 )}
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[#616161]">Precio unitario:</span>
-              <strong className="text-[#1E3A5F]">{formatCurrency(product.price, currentInventory?.currency)}</strong>
+              <span className="text-[#777b86]">Precio unitario:</span>
+              <strong className="text-[#17191c]">{formatCurrency(product.price, currentInventory?.currency)}</strong>
             </div>
           </div>
 
@@ -219,8 +219,8 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
           {!isBox ? (
             /* FLUJO TIPO UNIT */
             <div className="space-y-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
-                Unidades a añadir: <span className="text-[#E8B4A0]">*</span>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#17191c]">
+                Unidades a añadir: <span className="text-[#5d2a1a]">*</span>
               </label>
               <input
                 type="number"
@@ -229,11 +229,11 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
                 value={unitsToAdd}
                 onChange={e => setUnitsToAdd(e.target.value)}
                 required
-                className="w-full min-h-[44px] bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-4 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                className="w-full min-h-[44px] bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-4 py-2 text-sm font-mono text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
               />
-              <div className="p-3 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl flex items-center justify-between text-xs">
-                <span className="text-[#616161]">Nuevo Stock Resultante:</span>
-                <strong className="text-[#1E3A5F] text-sm">
+              <div className="p-3 bg-[#fafafb] border border-[#ececec] rounded-xl flex items-center justify-between text-xs">
+                <span className="text-[#777b86]">Nuevo Stock Resultante:</span>
+                <strong className="text-[#17191c] text-sm">
                   {currentStock} + {Math.max(0, parseInt(unitsToAdd, 10) || 0)} = {calculation.newStock} und
                 </strong>
               </div>
@@ -241,16 +241,16 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
           ) : (
             /* FLUJO TIPO BOX (INTERFAZ DUAL COMBINABLE) */
             <div className="space-y-3">
-              <div className="px-3 py-2 rounded-xl bg-[#1E3A5F]/5 border border-[#1E3A5F]/15 flex items-center justify-between text-xs text-[#1E3A5F]">
+              <div className="px-3 py-2 rounded-xl bg-[#17191c]/5 border border-[#1E3A5F]/15 flex items-center justify-between text-xs text-[#17191c]">
                 <span className="flex items-center gap-1.5 font-semibold">
-                  <Layers className="w-3.5 h-3.5 text-[#1E3A5F]" />
+                  <Layers className="w-3.5 h-3.5 text-[#17191c]" />
                   Equivalencia: 1 caja = {unitsPerBox} unidades
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E3A5F] mb-1">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#17191c] mb-1">
                     Cajas a ingresar:
                   </label>
                   <input
@@ -260,12 +260,12 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
                     value={boxesToAdd}
                     onChange={e => setBoxesToAdd(e.target.value)}
                     placeholder="0"
-                    className="w-full min-h-[44px] bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3.5 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                    className="w-full min-h-[44px] bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3.5 py-2 text-sm font-mono text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1E3A5F] mb-1">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#17191c] mb-1">
                     Unidades sueltas a ingresar:
                   </label>
                   <input
@@ -275,27 +275,27 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
                     value={looseUnitsToAdd}
                     onChange={e => setLooseUnitsToAdd(e.target.value)}
                     placeholder="0"
-                    className="w-full min-h-[44px] bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3.5 py-2 text-sm font-mono text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                    className="w-full min-h-[44px] bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3.5 py-2 text-sm font-mono text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
                   />
                 </div>
               </div>
 
               {/* Resumen de Conversión Consolidada */}
-              <div className="p-3.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl space-y-1.5 text-xs">
+              <div className="p-3.5 bg-[#fafafb] border border-[#ececec] rounded-xl space-y-1.5 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-[#616161]">Ingreso consolidado (Δ Cajas):</span>
-                  <strong className="text-[#1E3A5F]">
+                  <span className="text-[#777b86]">Ingreso consolidado (Δ Cajas):</span>
+                  <strong className="text-[#17191c]">
                     +{formatCleanDecimal(calculation.deltaStock, 2)} {calculation.deltaStock === 1 ? 'caja' : 'cajas'}
                   </strong>
                 </div>
-                <div className="flex items-center justify-between pt-1 border-t border-[#E5E7EB]">
-                  <span className="text-[#616161]">Nuevo Stock Total:</span>
+                <div className="flex items-center justify-between pt-1 border-t border-[#ececec]">
+                  <span className="text-[#777b86]">Nuevo Stock Total:</span>
                   <div className="text-right">
-                    <strong className="text-[#1E3A5F] text-sm">
+                    <strong className="text-[#17191c] text-sm">
                       {formatCleanDecimal(calculation.newStock, 2)} {calculation.newStock === 1 ? 'caja' : 'cajas'}
                     </strong>
                     {previewNewBreakdown.breakdownLabel && (
-                      <span className="block text-[10px] text-[#616161]">
+                      <span className="block text-[10px] text-[#777b86]">
                         ({previewNewBreakdown.breakdownLabel})
                       </span>
                     )}
@@ -310,7 +310,7 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting || calculation.deltaStock <= 0}
-              className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 px-5 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-semibold rounded-full shadow-sm active:scale-95 disabled:opacity-50 transition-all"
+              className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 px-5 bg-[#17191c] hover:bg-black text-white text-xs uppercase tracking-wider font-semibold rounded-full shadow-sm active:scale-95 disabled:opacity-50 transition-all"
             >
               {isSubmitting ? (
                 <>
@@ -319,7 +319,7 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4 text-[#E8B4A0]" />
+                  <Plus className="w-4 h-4 text-[#5d2a1a]" />
                   <span>
                     Sumar +{isBox ? `${formatCleanDecimal(calculation.deltaStock, 2)} cajas` : `${calculation.deltaStock} und`} al Stock
                   </span>
@@ -327,7 +327,7 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
               )}
             </button>
 
-            <div className="flex max-md:flex-col items-center justify-between gap-2 pt-2 border-t border-[#E5E7EB] max-md:border-0">
+            <div className="flex max-md:flex-col items-center justify-between gap-2 pt-2 border-t border-[#ececec] max-md:border-0">
               {onViewDetails ? (
                 <button
                   type="button"
@@ -335,7 +335,7 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
                     onClose();
                     onViewDetails(product);
                   }}
-                  className="inline-flex items-center gap-1.5 text-xs text-[#1E3A5F] hover:underline font-medium"
+                  className="inline-flex items-center gap-1.5 text-xs text-[#17191c] hover:underline font-medium"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   <span>Ver ficha técnica</span>
@@ -347,7 +347,7 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
                     onUseCodeAnyway(product.code);
                     onClose();
                   }}
-                  className="text-xs text-[#616161] hover:text-[#1E3A5F] transition-colors"
+                  className="text-xs text-[#777b86] hover:text-[#17191c] transition-colors"
                 >
                   Usar código de todas formas
                 </button>

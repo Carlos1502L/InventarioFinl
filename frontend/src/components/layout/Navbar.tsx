@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, Users, LogOut, MapPin, Tag, Camera } from 'lucide-react';
+import { ChevronDown, Users, LogOut, Camera } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { TabType } from './BottomNav';
 
@@ -13,7 +13,6 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  activeTab,
   onOpenInventorySelector,
   onOpenCollaborators,
   onQuickScan
@@ -48,14 +47,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   return (
-    <header className="hidden md:block sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E5E7EB] transition-colors lg:pl-[250px] pt-[env(safe-area-inset-top,0px)]">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-4">
+    <header className="hidden md:block sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#ececec] transition-colors lg:pl-[260px] pt-[env(safe-area-inset-top,0px)]">
+      <div className="max-w-[1440px] mx-auto px-6 sm:px-8 h-16 flex items-center justify-between gap-4">
         
         {/* Lado Izquierdo: Saludo Usuario Desktop / Logo Móvil */}
         <div className="flex items-center gap-3">
           {/* Logo en Móvil (Visible solo en < lg) */}
           <div className="flex lg:hidden items-center gap-2">
-            <div className="relative w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] overflow-hidden flex items-center justify-center flex-shrink-0 shadow-xs">
+            <div className="relative w-9 h-9 rounded-xl bg-white border border-[#ececec] overflow-hidden flex items-center justify-center flex-shrink-0 shadow-xs">
               <img src="/logo.png" alt="Stockly" className="w-full h-full object-cover" loading="lazy" decoding="async" />
               <span
                 className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-white transition-colors ${
@@ -66,50 +65,49 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <button
               onClick={onOpenInventorySelector}
-              className="flex items-center gap-1.5 px-3 py-1 bg-[#F8F9FA] border border-[#E5E7EB] rounded-full text-left max-w-[160px] sm:max-w-xs"
+              className="flex items-center gap-1.5 px-3 py-1 bg-[#f2f2f3] border-0 rounded-full text-left max-w-[160px] sm:max-w-xs cursor-pointer"
             >
-              <span className="text-xs font-normal uppercase text-[#1E3A5F] truncate block">
+              <span className="text-xs font-medium text-[#17191c] truncate block">
                 {currentInventory?.name || 'Seleccionar...'}
               </span>
-              <ChevronDown className="w-3.5 h-3.5 text-[#616161] flex-shrink-0" />
+              <ChevronDown className="w-3.5 h-3.5 text-[#777b86] flex-shrink-0" />
             </button>
           </div>
 
-          {/* Saludo Dinámico según la hora al Usuario Logueado (Desktop >= lg) */}
-          <div className="hidden lg:flex items-center gap-2">
+          {/* Saludo Dinámico Editorial en Desktop (>= lg) */}
+          <div className="hidden lg:flex items-center gap-2.5">
             <span
               className={`w-2 h-2 rounded-full shrink-0 transition-colors ${
                 isOnline ? 'bg-emerald-500' : 'bg-amber-500'
               }`}
               title={isOnline ? 'Conectado a la nube' : 'Modo fuera de línea'}
             />
-            <h2 className="text-base sm:text-lg font-bold text-[#1E3A5F] tracking-tight leading-none">
-              {getTimeBasedGreeting()}: <span className="font-semibold text-[#1E3A5F]">{displayName}</span>
+            <h2 className="text-xl font-serif font-normal text-[#17191c] tracking-tight leading-none">
+              {getTimeBasedGreeting()}, <span className="italic font-serif">{displayName}</span>
             </h2>
           </div>
         </div>
 
         {/* Lado Derecho: Acciones Contextuales y Perfil */}
-        <div className="flex items-center gap-2.5 font-mono text-xs">
-          
+        <div className="flex items-center gap-3 text-xs">
           {/* Botón de Colaboradores */}
           <button
             onClick={onOpenCollaborators}
-            className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 min-h-[36px] min-w-[36px] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] text-xs uppercase tracking-wider rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] transition-colors shadow-sm"
+            className="inline-flex items-center justify-center gap-2 px-4 min-h-[38px] bg-[#f2f2f3] hover:bg-[#e8e8ea] text-[#17191c] text-xs font-medium rounded-full border-0 transition-colors cursor-pointer"
             title="Equipo y Colaboradores"
           >
-            <Users className="w-3.5 h-3.5 stroke-[1.5]" />
-            <span className="hidden sm:inline">EQUIPO</span>
+            <Users className="w-3.5 h-3.5 stroke-[1.8]" />
+            <span className="hidden sm:inline">Equipo</span>
           </button>
 
           {/* Escáner Móvil Rápido */}
           {onQuickScan && (
             <button
               onClick={onQuickScan}
-              className="lg:hidden min-h-[36px] px-3 rounded-full bg-white hover:bg-[#F8F9FA] border border-[#CBD5E1] hover:border-[#1E3A5F] text-[#1E3A5F] flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider transition-all active:scale-95 shadow-xs cursor-pointer"
+              className="lg:hidden min-h-[38px] px-4 rounded-full bg-[#fbe1d1] text-[#5d2a1a] hover:bg-[#f8d4bf] flex items-center justify-center gap-1.5 text-xs font-medium transition-all active:scale-95 cursor-pointer"
               title="Escanear"
             >
-              <Camera className="w-3.5 h-3.5 text-[#1E3A5F]" />
+              <Camera className="w-3.5 h-3.5" />
               <span>Escanear</span>
             </button>
           )}
@@ -118,7 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="lg:hidden flex items-center gap-1">
             <button
               onClick={() => signOut()}
-              className="min-h-[36px] min-w-[36px] rounded-full border border-[#E5E7EB] text-[#616161] hover:text-[#1E3A5F] flex items-center justify-center bg-white"
+              className="min-h-[36px] min-w-[36px] rounded-full border border-[#ececec] text-[#777b86] hover:text-[#17191c] flex items-center justify-center bg-white cursor-pointer"
               title={`Cerrar Sesión (${user?.email})`}
             >
               <LogOut className="w-3.5 h-3.5" />

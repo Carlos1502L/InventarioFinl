@@ -493,16 +493,16 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in select-none">
-        <div className="mobile-dark-modal bg-white dark:bg-zinc-900 border border-[#E5E7EB] dark:border-zinc-800 rounded-t-[2.5rem] sm:rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[85dvh] font-sans">
+        <div className="mobile-dark-modal bg-white dark:bg-zinc-900 border border-[#ececec] dark:border-zinc-800 rounded-t-[2.5rem] sm:rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[85dvh] font-sans">
           
           {/* Cabecera Fija */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#1E3A5F]/10 dark:bg-white/10 text-[#1E3A5F] dark:text-zinc-100 flex items-center justify-center shadow-xs">
+              <div className="w-10 h-10 rounded-2xl bg-[#17191c]/10 dark:bg-white/10 text-[#17191c] dark:text-zinc-100 flex items-center justify-center shadow-xs">
                 <History className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-semibold tracking-tight text-[#1E3A5F] dark:text-white">
+                <h3 className="text-base font-semibold tracking-tight text-[#17191c] dark:text-white">
                   Auditoría & Trazabilidad
                 </h3>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">
@@ -524,7 +524,7 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
           </div>
 
           {/* Bloque Fijo de Herramientas: Buscador Plano y Botón de Escáner al Mismo Nivel */}
-          <div className="p-4 sm:p-5 border-b border-[#E5E7EB] dark:border-zinc-800 bg-[#F8F9FA]/60 dark:bg-zinc-900/60 shrink-0 space-y-3">
+          <div className="p-4 sm:p-5 border-b border-[#ececec] dark:border-zinc-800 bg-[#fafafb]/60 dark:bg-zinc-900/60 shrink-0 space-y-3">
             <div className="flex items-center gap-2.5">
               
               {/* Input de Búsqueda Plano */}
@@ -568,9 +568,9 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
                 onClick={() => setScannerOpen(true)}
                 title="Escanear código de barras con la cámara"
                 aria-label="Escanear código de barras"
-                className="h-11 px-3.5 rounded-2xl bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] border border-[#CBD5E1] hover:border-[#1E3A5F] flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-95 shrink-0 cursor-pointer shadow-xs"
+                className="h-11 px-3.5 rounded-2xl bg-white hover:bg-[#fafafb] text-[#17191c] border border-[#CBD5E1] hover:border-[#17191c] flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-95 shrink-0 cursor-pointer shadow-xs"
               >
-                <Camera className="w-4 h-4 text-[#1E3A5F] stroke-[1.75]" />
+                <Camera className="w-4 h-4 text-[#17191c] stroke-[1.75]" />
                 <span>Escanear</span>
               </button>
             </div>
@@ -585,7 +585,7 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
 
             {/* Desplegable de Sugerencias de Autocompletado */}
             {isSearchingInput && matchingProducts.length > 0 && !selectedProduct && (
-              <div className="bg-white dark:bg-zinc-800 border border-[#E5E7EB] dark:border-zinc-700 rounded-2xl shadow-xl overflow-hidden divide-y divide-[#E5E7EB] dark:divide-zinc-700/60 max-h-48 overflow-y-auto z-30">
+              <div className="bg-white dark:bg-zinc-800 border border-[#ececec] dark:border-zinc-700 rounded-2xl shadow-xl overflow-hidden divide-y divide-[#E5E7EB] dark:divide-zinc-700/60 max-h-48 overflow-y-auto z-30">
                 {matchingProducts.map(prod => (
                   <button
                     key={prod.id}
@@ -601,7 +601,7 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
                         REF: {prod.code || prod.sku || 'SIN SKU'}
                       </p>
                     </div>
-                    <span className="text-[11px] font-medium text-[#1E3A5F] dark:text-sky-300 shrink-0 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-900">
+                    <span className="text-[11px] font-medium text-[#17191c] dark:text-sky-300 shrink-0 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-900">
                       Stock: {prod.stock}
                     </span>
                   </button>
@@ -613,7 +613,7 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
             {selectedProduct && (
               <div className="flex items-center justify-between gap-2.5 px-3.5 py-2 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/80 text-xs">
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <div className="w-7 h-7 rounded-lg bg-[#1E3A5F]/10 dark:bg-white/10 text-[#1E3A5F] dark:text-zinc-200 flex items-center justify-center shrink-0">
+                  <div className="w-7 h-7 rounded-lg bg-[#17191c]/10 dark:bg-white/10 text-[#17191c] dark:text-zinc-200 flex items-center justify-center shrink-0">
                     <Package className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -640,7 +640,7 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
           <div className="flex-1 overflow-y-auto overscroll-contain max-h-[60dvh] p-4 sm:p-5 space-y-3 bg-white dark:bg-zinc-900">
             {showDebouncedLoading ? (
               <div className="flex flex-col items-center justify-center py-12 text-zinc-400 space-y-2">
-                <Loader2 className="w-5 h-5 animate-spin text-[#1E3A5F] dark:text-zinc-300" />
+                <Loader2 className="w-5 h-5 animate-spin text-[#17191c] dark:text-zinc-300" />
                 <span className="text-xs font-mono uppercase tracking-wider">
                   Consultando Kardex...
                 </span>
@@ -722,7 +722,7 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
           </div>
 
           {/* Pie del Modal con contador de eventos y botón cerrar perfectamente centrados */}
-          <div className="px-5 sm:px-6 py-3.5 border-t border-[#E5E7EB] dark:border-zinc-800 bg-[#F8F9FA]/90 dark:bg-zinc-900/90 flex items-center justify-center shrink-0 min-h-[56px]">
+          <div className="px-5 sm:px-6 py-3.5 border-t border-[#ececec] dark:border-zinc-800 bg-[#fafafb]/90 dark:bg-zinc-900/90 flex items-center justify-center shrink-0 min-h-[56px]">
             <CancelButton
               onClick={onClose}
               label="Cerrar"

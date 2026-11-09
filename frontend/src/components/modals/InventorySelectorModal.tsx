@@ -95,18 +95,18 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-lg overflow-hidden shadow-xl flex flex-col">
+      <div className="mobile-dark-modal bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-lg overflow-hidden shadow-xl flex flex-col">
         {/* Cabecera */}
-        <div className="px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-[#ececec] bg-[#ffffff] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center">
-              <Layers className="w-5 h-5 text-[#1E3A5F]" />
+            <div className="w-10 h-10 rounded-full bg-[#17191c]/10 text-[#17191c] flex items-center justify-center">
+              <Layers className="w-5 h-5 text-[#17191c]" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-[#1E3A5F] uppercase tracking-tight">
+              <h2 className="text-base font-bold text-[#17191c] uppercase tracking-tight">
                 Espacios de Inventario
               </h2>
-              <p className="text-[11px] text-[#616161]">
+              <p className="text-[11px] text-[#777b86]">
                 Selecciona tu depósito de trabajo o crea uno nuevo
               </p>
             </div>
@@ -114,7 +114,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
           {currentInventory && (
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -144,38 +144,38 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                     }}
                     className={`mobile-flat-row w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group ${
                       isSelected
-                        ? 'bg-[#E8B4A0]/10 border-[#1E3A5F] ring-1 ring-[#1E3A5F] mobile-card-active'
-                        : 'bg-white border-[#E5E7EB] hover:border-[#1E3A5F] hover:bg-[#F8F9FA]'
+                        ? 'bg-[#fbe1d1]/10 border-[#1E3A5F] ring-1 ring-[#1E3A5F] mobile-card-active'
+                        : 'bg-white border-[#ececec] hover:border-[#17191c] hover:bg-[#fafafb]'
                     }`}
                   >
                     <div className="min-w-0 flex-1 pr-3 space-y-1">
                       <div className="flex items-center gap-2 min-w-0">
-                        <h4 className="font-bold text-[#1E3A5F] text-sm group-hover:text-[#1E3A5F] transition-colors uppercase truncate">
+                        <h4 className="font-bold text-[#17191c] text-sm group-hover:text-[#17191c] transition-colors uppercase truncate">
                           {inv.name}
                         </h4>
                         <span
                           className={`shrink-0 text-[9px] uppercase px-2 py-0.5 rounded-full tracking-wider flex items-center gap-1 ${
                             isOwner
-                              ? 'bg-[#1E3A5F] text-white'
-                              : 'bg-[#F8F9FA] text-[#616161] border border-[#E5E7EB]'
+                              ? 'bg-[#17191c] text-white'
+                              : 'bg-[#fafafb] text-[#777b86] border border-[#ececec]'
                           }`}
                         >
                           {isOwner ? <Shield className="w-2.5 h-2.5" /> : <Users className="w-2.5 h-2.5" />}
                           {isOwner ? 'Dueño' : 'Colaborador'}
                         </span>
                       </div>
-                      <span className="text-[10px] text-[#616161] block truncate">
+                      <span className="text-[10px] text-[#777b86] block truncate">
                         MONEDA // {inv.currency || 'USD'}{inv.description ? ` · ${inv.description}` : ''}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
                       {isSelected ? (
-                        <div className="w-8 h-8 rounded-full bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center shadow-sm">
+                        <div className="w-8 h-8 rounded-full bg-[#17191c] text-[#5d2a1a] flex items-center justify-center shadow-sm">
                           <CheckCircle className="w-4 h-4" />
                         </div>
                       ) : (
-                        <div className="w-8 h-8 rounded-full text-[#616161] group-hover:text-[#1E3A5F] flex items-center justify-center transition-colors">
+                        <div className="w-8 h-8 rounded-full text-[#777b86] group-hover:text-[#17191c] flex items-center justify-center transition-colors">
                           <ArrowRight className="w-4 h-4" />
                         </div>
                       )}
@@ -187,17 +187,17 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsCreatingNew(true)}
-                className="w-full mt-2 min-h-[44px] p-3 border-2 border-dashed border-[#E5E7EB] hover:border-[#1E3A5F] rounded-2xl text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-[#F8F9FA] transition-all flex items-center justify-center gap-2"
+                className="w-full mt-2 min-h-[44px] p-3 border-2 border-dashed border-[#ececec] hover:border-[#17191c] rounded-2xl text-xs uppercase tracking-wider text-[#17191c] hover:bg-[#fafafb] transition-all flex items-center justify-center gap-2"
               >
-                <Plus className="w-4 h-4 text-[#E8B4A0]" /> Crear Nuevo Depósito
+                <Plus className="w-4 h-4 text-[#5d2a1a]" /> Crear Nuevo Depósito
               </button>
             </>
           ) : (
             /* Formulario de Nuevo Inventario */
             <form onSubmit={handleCreateInventory} className="space-y-4">
               <div>
-                <label className="block text-xs uppercase tracking-wider text-[#1E3A5F] mb-1">
-                  Nombre del Depósito <span className="text-[#E8B4A0]">*</span>
+                <label className="block text-xs uppercase tracking-wider text-[#17191c] mb-1">
+                  Nombre del Depósito <span className="text-[#5d2a1a]">*</span>
                 </label>
                 <input
                   type="text"
@@ -205,12 +205,12 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                   onChange={e => setNewInvName(e.target.value)}
                   placeholder="Ej: Depósito Central, Vitrina 1..."
                   required
-                  className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm text-[#1E3A5F] placeholder:text-[#616161]/50 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                  className="w-full min-h-[44px] bg-white border border-[#ececec] rounded-xl px-4 py-2 text-sm text-[#17191c] placeholder:text-[#777b86]/50 focus:outline-none focus:ring-1 focus:ring-[#17191c]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs uppercase tracking-wider text-[#1E3A5F] mb-1">
+                <label className="block text-xs uppercase tracking-wider text-[#17191c] mb-1">
                   Descripción (Opcional)
                 </label>
                 <input
@@ -218,12 +218,12 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                   value={newInvDesc}
                   onChange={e => setNewInvDesc(e.target.value)}
                   placeholder="Ej: Stock de accesorios finos..."
-                  className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm text-[#1E3A5F] placeholder:text-[#616161]/50 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                  className="w-full min-h-[44px] bg-white border border-[#ececec] rounded-xl px-4 py-2 text-sm text-[#17191c] placeholder:text-[#777b86]/50 focus:outline-none focus:ring-1 focus:ring-[#17191c]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs uppercase tracking-wider text-[#1E3A5F] mb-1">
+                <label className="block text-xs uppercase tracking-wider text-[#17191c] mb-1">
                   Moneda Predeterminada
                 </label>{/*
                 </label>
@@ -241,7 +241,7 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                   ]}
                 />
                 <select className="hidden">{/*
-                  className="w-full min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-sm text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                  className="w-full min-h-[44px] bg-white border border-[#ececec] rounded-xl px-3.5 py-2 text-sm text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
                 >
                   <option value="PEN">Soles Peruanos (S/ PEN)</option>
                   <option value="USD">Dólar Estadounidense ($ USD)</option>
@@ -256,9 +256,9 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="min-h-[44px] inline-flex items-center gap-2 px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50 transition-all active:scale-95"
+                  className="min-h-[44px] inline-flex items-center gap-2 px-6 bg-[#17191c] hover:bg-black text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50 transition-all active:scale-95"
                 >
-                  {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <Plus className="w-3.5 h-3.5 text-[#E8B4A0]" />}
+                  {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <Plus className="w-3.5 h-3.5 text-[#5d2a1a]" />}
                   Crear e Ingresar
                 </button>
               </div>

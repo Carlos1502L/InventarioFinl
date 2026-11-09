@@ -442,7 +442,7 @@ export const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen max-md:fixed max-md:inset-0 max-md:h-[100dvh] max-md:w-full max-md:overflow-hidden md:overflow-visible md:h-auto bg-white md:bg-[#EAEFF5] text-[#1E3A5F] flex flex-col font-normal selection:bg-[#1E3A5F] selection:text-white transition-colors duration-200">
+    <div className="min-h-screen max-md:fixed max-md:inset-0 max-md:h-[100dvh] max-md:w-full max-md:overflow-hidden md:overflow-visible md:h-auto bg-white md:bg-[#fafafb] text-[#17191c] flex flex-col font-normal selection:bg-[#fbe1d1] selection:text-[#5d2a1a] transition-colors duration-200">
       {/* Sidebar Lateral Fijo Desktop (>= 1024px) - Carga condicional reactiva */}
       {isDesktop && (
         <Suspense fallback={null}>
@@ -478,7 +478,7 @@ export const AppContent: React.FC = () => {
       )}
 
       {/* Contenedor Principal Responsive con offset para el Sidebar en Desktop y safe area en móvil */}
-      <main id="main-content" className="flex-1 max-w-[1600px] w-full mx-auto px-0 pt-0 md:px-6 md:pt-5 lg:pl-[266px] pb-0 md:pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-12 max-md:h-full max-md:overflow-hidden md:overflow-visible">
+      <main id="main-content" className="flex-1 max-w-[1600px] w-full mx-auto px-0 pt-0 md:px-8 md:pt-6 lg:pl-[280px] pb-0 md:pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-16 max-md:h-full max-md:overflow-hidden md:overflow-visible">
         {/* Banner de Invitaciones Pendientes */}
         <div className="px-4 md:px-0">
           <PendingInvitationsBanner />

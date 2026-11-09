@@ -352,23 +352,23 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       {/* =========================================================
           VISTA DE ESCRITORIO (>= 768px / hidden md:block)
          ========================================================= */}
-      <div className="hidden md:block space-y-6 pb-28 sm:pb-12 max-w-4xl mx-auto font-normal text-[#1E3A5F]">
+      <div className="hidden md:block space-y-6 pb-28 sm:pb-12 max-w-4xl mx-auto font-normal text-[#17191c]">
       {/* 1. Cabecera Editorial */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white border border-[#ececec] rounded-3xl p-5 sm:p-6 shadow-steep-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
-            PREFERENCES // CONTROL PANEL
+          <span className="text-[10px]  tracking-widest text-[#5d2a1a]  block">
+            Centro de control & preferencias
           </span>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F] uppercase">
-            Configuración del Sistema
+          <h1 className="text-3xl sm:text-4xl font-serif font-normal tracking-tight text-[#17191c] ">
+            Configuración & <span className="italic font-serif">preferencias</span>
           </h1>
-          <p className="text-xs text-[#616161] font-light mt-0.5">
+          <p className="text-xs text-[#777b86] font-light mt-0.5">
             Estructura de catálogo, delimitación física, pasarelas de cobro y gobernanza del equipo.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="px-3.5 py-1.5 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] font-mono text-xs uppercase">
+          <span className="px-3.5 py-1.5 rounded-full bg-[#fafafb] border border-[#ececec] text-[#17191c]  text-xs ">
             v2.4
           </span>
         </div>
@@ -377,33 +377,33 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       {/* =========================================================
           BLOQUE 1: IDENTIDAD DEL DEPÓSITO ACTIVO
          ========================================================= */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+      <div className="bg-white border border-[#ececec] rounded-3xl p-5 sm:p-6 shadow-steep-subtle space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center flex-shrink-0 shadow-sm">
+            <div className="w-12 h-12 rounded-3xl bg-[#17191c] text-[#5d2a1a] flex items-center justify-center flex-shrink-0 shadow-steep-subtle">
               <Layers className="w-6 h-6 stroke-[1.5]" />
             </div>
             <div>
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[10px] font-mono uppercase tracking-widest text-[#E8B4A0]">
+                <span className="text-[10px]   tracking-widest text-[#5d2a1a]">
                   DEPÓSITO ACTIVO
                 </span>
-                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] flex items-center gap-1">
+                <span className="text-[10px]   px-2 py-0.5 rounded-full bg-[#fafafb] border border-[#ececec] text-[#17191c] flex items-center gap-1">
                   {currentInventory?.inventory_type === 'PERSONAL' ? (
                     <>
-                      <User className="w-3 h-3 text-[#E8B4A0]" /> Personal
+                      <User className="w-3 h-3 text-[#5d2a1a]" /> Personal
                     </>
                   ) : (
                     <>
-                      <Briefcase className="w-3 h-3 text-[#E8B4A0]" /> Negocio
+                      <Briefcase className="w-3 h-3 text-[#5d2a1a]" /> Negocio
                     </>
                   )}
                 </span>
               </div>
-              <h2 className="font-bold text-xl text-[#1E3A5F] uppercase tracking-tight">
+              <h2 className="font-bold text-xl text-[#17191c]  tracking-tight">
                 {currentInventory?.name || 'SIN SELECCIONAR'}
               </h2>
-              <p className="text-xs text-[#616161] font-light">
+              <p className="text-xs text-[#777b86] font-light">
                 {currentInventory?.description || 'Sin notas descriptivas del depósito.'}
               </p>
             </div>
@@ -412,14 +412,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setEditInventoryMode('info')}
-              className="px-4 py-2 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs uppercase tracking-wider rounded-full transition-all active:scale-95 flex items-center gap-1.5 font-mono shadow-xs"
+              className="px-4 py-2 bg-[#fafafb] hover:bg-white text-[#17191c] border border-[#ececec] text-xs  tracking-wider rounded-full transition-all active:scale-95 flex items-center gap-1.5  shadow-steep-subtle"
             >
-              <Sliders className="w-3.5 h-3.5 text-[#1E3A5F]" />
+              <Sliders className="w-3.5 h-3.5 text-[#17191c]" />
               <span>{isOwner ? 'Editar Información' : 'Información de Inventario'}</span>
             </button>
             <button
               onClick={onOpenInventorySelector}
-              className="px-4 py-2 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-full shadow-xs transition-all active:scale-95 font-medium cursor-pointer"
+              className="px-4 py-2 bg-[#17191c] hover:bg-black text-white text-xs  tracking-wider rounded-full shadow-steep-subtle transition-all active:scale-95 font-medium cursor-pointer"
             >
               Cambiar
             </button>
@@ -427,22 +427,22 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
 
         {/* Metadatos en Fila */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-[#E5E7EB] text-xs font-mono text-[#616161]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-[#ececec] text-xs  text-[#777b86]">
           <div>
-            <span className="text-[10px] uppercase block">Moneda de Manifiesto:</span>
-            <span className="text-[#1E3A5F] font-medium">{currentInventory?.currency || 'PEN'}</span>
+            <span className="text-[10px]  block">Moneda de Manifiesto:</span>
+            <span className="text-[#17191c] font-medium">{currentInventory?.currency || 'PEN'}</span>
           </div>
           <div>
-            <span className="text-[10px] uppercase block">Tasa Operativa:</span>
-            <span className="text-[#1E3A5F] font-medium font-mono">{Number(currentInventory?.exchange_rate || 1.000).toFixed(3)}</span>
+            <span className="text-[10px]  block">Tasa Operativa:</span>
+            <span className="text-[#17191c] font-medium ">{Number(currentInventory?.exchange_rate || 1.000).toFixed(3)}</span>
           </div>
           <div>
-            <span className="text-[10px] uppercase block">Nivel de Acceso:</span>
-            <span className="text-[#1E3A5F] font-medium uppercase">{currentInventory?.role || 'owner'}</span>
+            <span className="text-[10px]  block">Nivel de Acceso:</span>
+            <span className="text-[#17191c] font-medium ">{currentInventory?.role || 'owner'}</span>
           </div>
           <div>
-            <span className="text-[10px] uppercase block">Fecha de Alta:</span>
-            <span className="text-[#1E3A5F]">{formatDate(currentInventory?.created_at)}</span>
+            <span className="text-[10px]  block">Fecha de Alta:</span>
+            <span className="text-[#17191c]">{formatDate(currentInventory?.created_at)}</span>
           </div>
         </div>
       </div>
@@ -453,45 +453,45 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       {isBusiness && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 px-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#E8B4A0]" />
-            <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#1E3A5F]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#fbe1d1]" />
+            <h3 className="text-xs  font-bold  tracking-widest text-[#17191c]">
               01 // OPERACIONES & PAGOS
             </h3>
           </div>
 
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs divide-y divide-[#E5E7EB]">
+          <div className="bg-white border border-[#ececec] rounded-3xl overflow-hidden shadow-steep-subtle divide-y divide-[#E5E7EB]">
             {/* Pasarela Yape / Plin */}
             <button
               onClick={() => setEditInventoryMode('payments')}
-              className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#F8F9FA]/60 transition-colors text-left group"
+              className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#fafafb]/60 transition-colors text-left group"
             >
               <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
-                  <QrCode className="w-5 h-5 text-[#1E3A5F]" />
+                <div className="w-10 h-10 rounded-xl bg-[#fafafb] border border-[#ececec] text-[#17191c] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
+                  <QrCode className="w-5 h-5 text-[#17191c]" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Método de Pago</h4>
-                  <p className="text-xs text-[#616161] font-light">Configura tus códigos QR y números asociados para el cobro ágil a clientes</p>
+                  <h4 className="font-bold text-sm text-[#17191c] ">Método de Pago</h4>
+                  <p className="text-xs text-[#777b86] font-light">Configura tus códigos QR y números asociados para el cobro ágil a clientes</p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-[#616161] group-hover:text-[#1E3A5F] transition-colors" />
+              <ChevronRight className="w-4 h-4 text-[#777b86] group-hover:text-[#17191c] transition-colors" />
             </button>
 
             {/* Cupones de Descuento */}
             <button
               onClick={() => setCouponsOpen(true)}
-              className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#F8F9FA]/60 transition-colors text-left group"
+              className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#fafafb]/60 transition-colors text-left group"
             >
               <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
-                  <Ticket className="w-5 h-5 text-[#1E3A5F]" />
+                <div className="w-10 h-10 rounded-xl bg-[#fafafb] border border-[#ececec] text-[#17191c] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
+                  <Ticket className="w-5 h-5 text-[#17191c]" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Cupones de Descuento Promocionales</h4>
-                  <p className="text-xs text-[#616161] font-light">Crea y audita códigos de descuento por porcentaje o monto fijo</p>
+                  <h4 className="font-bold text-sm text-[#17191c] ">Cupones de Descuento Promocionales</h4>
+                  <p className="text-xs text-[#777b86] font-light">Crea y audita códigos de descuento por porcentaje o monto fijo</p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-[#616161] group-hover:text-[#1E3A5F] transition-colors" />
+              <ChevronRight className="w-4 h-4 text-[#777b86] group-hover:text-[#17191c] transition-colors" />
             </button>
           </div>
         </div>
@@ -502,62 +502,62 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
          ========================================================= */}
       <div className="space-y-3">
         <div className="flex items-center gap-2 px-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#E8B4A0]" />
-          <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#1E3A5F]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#fbe1d1]" />
+          <h3 className="text-xs  font-bold  tracking-widest text-[#17191c]">
             02 // ESTRUCTURA & LOGÍSTICA
           </h3>
         </div>
 
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs divide-y divide-[#E5E7EB]">
+        <div className="bg-white border border-[#ececec] rounded-3xl overflow-hidden shadow-steep-subtle divide-y divide-[#E5E7EB]">
           {/* Categorías y Subcategorías */}
           <button
             onClick={onOpenCategories}
-            className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#F8F9FA]/60 transition-colors text-left group"
+            className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#fafafb]/60 transition-colors text-left group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
-                <Tag className="w-5 h-5 text-[#1E3A5F]" />
+              <div className="w-10 h-10 rounded-xl bg-[#fafafb] border border-[#ececec] text-[#17191c] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
+                <Tag className="w-5 h-5 text-[#17191c]" />
               </div>
               <div>
-                <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Categorías & Subcategorías Dinámicas</h4>
-                <p className="text-xs text-[#616161] font-light">Organización taxonómica, familias de artículos y paleta de distinción</p>
+                <h4 className="font-bold text-sm text-[#17191c] ">Categorías & Subcategorías Dinámicas</h4>
+                <p className="text-xs text-[#777b86] font-light">Organización taxonómica, familias de artículos y paleta de distinción</p>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-[#616161] group-hover:text-[#1E3A5F] transition-colors" />
+            <ChevronRight className="w-4 h-4 text-[#777b86] group-hover:text-[#17191c] transition-colors" />
           </button>
 
           {/* Gestión de Ubicaciones Físicas */}
           <button
             onClick={onOpenLocations}
-            className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#F8F9FA]/60 transition-colors text-left group"
+            className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#fafafb]/60 transition-colors text-left group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
-                <MapPin className="w-5 h-5 text-[#1E3A5F]" />
+              <div className="w-10 h-10 rounded-xl bg-[#fafafb] border border-[#ececec] text-[#17191c] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
+                <MapPin className="w-5 h-5 text-[#17191c]" />
               </div>
               <div>
-                <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Ubicaciones Físicas & Almacenes</h4>
-                <p className="text-xs text-[#616161] font-light">Estructura espacial de pasillos, estanterías, depósitos y secciones</p>
+                <h4 className="font-bold text-sm text-[#17191c] ">Ubicaciones Físicas & Almacenes</h4>
+                <p className="text-xs text-[#777b86] font-light">Estructura espacial de pasillos, estanterías, depósitos y secciones</p>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-[#616161] group-hover:text-[#1E3A5F] transition-colors" />
+            <ChevronRight className="w-4 h-4 text-[#777b86] group-hover:text-[#17191c] transition-colors" />
           </button>
 
           {/* Imprimir Ubicaciones */}
           <button
             onClick={() => setBatchLocationsOpen(true)}
-            className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#F8F9FA]/60 transition-colors text-left group"
+            className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#fafafb]/60 transition-colors text-left group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
-                <Printer className="w-5 h-5 text-[#1E3A5F]" />
+              <div className="w-10 h-10 rounded-xl bg-[#fafafb] border border-[#ececec] text-[#17191c] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
+                <Printer className="w-5 h-5 text-[#17191c]" />
               </div>
               <div>
-                <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Impresión de Rótulos & Códigos QR</h4>
-                <p className="text-xs text-[#616161] font-light">Generación de credenciales físicas para estanterías (formato estándar 85.6 × 53.9 mm)</p>
+                <h4 className="font-bold text-sm text-[#17191c] ">Impresión de Rótulos & Códigos QR</h4>
+                <p className="text-xs text-[#777b86] font-light">Generación de credenciales físicas para estanterías (formato estándar 85.6 × 53.9 mm)</p>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-[#616161] group-hover:text-[#1E3A5F] transition-colors" />
+            <ChevronRight className="w-4 h-4 text-[#777b86] group-hover:text-[#17191c] transition-colors" />
           </button>
         </div>
       </div>
@@ -567,28 +567,28 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
          ========================================================= */}
       <div className="space-y-3">
         <div className="flex items-center gap-2 px-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#E8B4A0]" />
-          <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#1E3A5F]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#fbe1d1]" />
+          <h3 className="text-xs  font-bold  tracking-widest text-[#17191c]">
             03 // GOBERNANZA & APLICACIÓN
           </h3>
         </div>
 
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs divide-y divide-[#E5E7EB]">
+        <div className="bg-white border border-[#ececec] rounded-3xl overflow-hidden shadow-steep-subtle divide-y divide-[#E5E7EB]">
           {/* Equipo y Colaboradores */}
           <button
             onClick={onOpenCollaborators}
-            className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#F8F9FA]/60 transition-colors text-left group"
+            className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-[#fafafb]/60 transition-colors text-left group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
-                <Users className="w-5 h-5 text-[#1E3A5F]" />
+              <div className="w-10 h-10 rounded-xl bg-[#fafafb] border border-[#ececec] text-[#17191c] flex items-center justify-center group-hover:border-[#E8B4A0] transition-colors">
+                <Users className="w-5 h-5 text-[#17191c]" />
               </div>
               <div>
-                <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Equipo & Colaboradores</h4>
-                <p className="text-xs text-[#616161] font-light">Invitaciones por correo, asignación de roles y control de privilegios</p>
+                <h4 className="font-bold text-sm text-[#17191c] ">Equipo & Colaboradores</h4>
+                <p className="text-xs text-[#777b86] font-light">Invitaciones por correo, asignación de roles y control de privilegios</p>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-[#616161] group-hover:text-[#1E3A5F] transition-colors" />
+            <ChevronRight className="w-4 h-4 text-[#777b86] group-hover:text-[#17191c] transition-colors" />
           </button>
         </div>
 
@@ -598,8 +598,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         {isOwner && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 px-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#E8B4A0]" />
-              <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#1E3A5F]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#fbe1d1]" />
+              <h3 className="text-xs  font-bold  tracking-widest text-[#17191c]">
                 04 // COPIAS DE SEGURIDAD & RESTAURACIÓN
               </h3>
             </div>
@@ -614,17 +614,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         )}
 
         {/* Tarjeta de Aplicación PWA */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs space-y-3">
+        <div className="bg-white border border-[#ececec] rounded-3xl p-5 sm:p-6 shadow-steep-subtle space-y-3">
           <div className="flex items-center gap-2.5">
-            <Smartphone className="w-5 h-5 text-[#1E3A5F]" />
-            <h4 className="font-bold text-sm text-[#1E3A5F] uppercase">Aplicación Web Progresiva (PWA Móvil)</h4>
+            <Smartphone className="w-5 h-5 text-[#17191c]" />
+            <h4 className="font-bold text-sm text-[#17191c] ">Aplicación Web Progresiva (PWA Móvil)</h4>
           </div>
-          <p className="text-xs text-[#616161] leading-relaxed font-light">
+          <p className="text-xs text-[#777b86] leading-relaxed font-light">
             Esta plataforma está optimizada para smartphones Android e iOS. Puedes instalarla en la pantalla de inicio de tu dispositivo para obtener experiencia a pantalla completa y acceso rápido a la cámara escáner.
           </p>
-          <div className="p-3.5 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] text-[11px] text-[#616161] space-y-1 font-mono">
-            <div className="flex items-center gap-1.5 text-[#1E3A5F] font-medium">
-              <Info className="w-3.5 h-3.5 text-[#E8B4A0]" /> GUÍA DE INSTALACIÓN RÁPIDA:
+          <div className="p-3.5 bg-[#fafafb] rounded-xl border border-[#ececec] text-[11px] text-[#777b86] space-y-1 ">
+            <div className="flex items-center gap-1.5 text-[#17191c] font-medium">
+              <Info className="w-3.5 h-3.5 text-[#5d2a1a]" /> GUÍA DE INSTALACIÓN RÁPIDA:
             </div>
             <p><strong>iOS (Safari):</strong> Toca "Compartir" y selecciona "Añadir a la pantalla de inicio".</p>
             <p><strong>Android (Chrome):</strong> Toca el menú de 3 puntos y selecciona "Instalar aplicación".</p>
@@ -632,16 +632,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
 
         {/* Sesión de Usuario & Cierre */}
-        <div className="p-4 sm:p-5 bg-white border border-[#E5E7EB] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+        <div className="p-4 sm:p-5 bg-white border border-[#ececec] rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-steep-subtle">
           <div>
-            <span className="text-[10px] font-mono uppercase tracking-widest text-[#E8B4A0] block">
+            <span className="text-[10px]   tracking-widest text-[#5d2a1a] block">
               SESIÓN AUTENTICADA
             </span>
-            <p className="text-xs font-mono text-[#1E3A5F] mt-0.5">{user?.email}</p>
+            <p className="text-xs  text-[#17191c] mt-0.5">{user?.email}</p>
           </div>
           <button
             onClick={() => signOut()}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#F8F9FA] hover:bg-rose-50 text-rose-700 hover:text-rose-800 border border-[#E5E7EB] hover:border-rose-300 rounded-full text-xs uppercase tracking-wider font-mono transition-all active:scale-95 shadow-xs"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#fafafb] hover:bg-rose-50 text-rose-700 hover:text-rose-800 border border-[#ececec] hover:border-rose-300 rounded-full text-xs  tracking-wider  transition-all active:scale-95 shadow-steep-subtle"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Cerrar Sesión</span>
@@ -654,39 +654,39 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         <div className="space-y-3 pt-2">
           <div className="flex items-center gap-2 px-1">
             <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-            <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#1E3A5F]">
+            <h3 className="text-xs  font-bold  tracking-widest text-[#17191c]">
               05 // ZONA DE PELIGRO
             </h3>
           </div>
 
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs divide-y divide-[#E5E7EB]">
+          <div className="bg-white border border-[#ececec] rounded-3xl overflow-hidden shadow-steep-subtle divide-y divide-[#E5E7EB]">
             <button
               type="button"
               onClick={() => setDeleteAccountModalOpen(true)}
               className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-rose-50/30 transition-colors text-left group cursor-pointer"
             >
               <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] text-rose-600 flex items-center justify-center group-hover:border-rose-300 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-[#fafafb] border border-[#ececec] text-rose-600 flex items-center justify-center group-hover:border-rose-300 transition-colors">
                   <Trash2 className="w-5 h-5 text-rose-600" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-[#1E3A5F] group-hover:text-rose-600 transition-colors uppercase">
+                  <h4 className="font-bold text-sm text-[#17191c] group-hover:text-rose-600 transition-colors ">
                     Eliminar Cuenta
                   </h4>
-                  <p className="text-xs text-[#616161] font-light">
+                  <p className="text-xs text-[#777b86] font-light">
                     Cierre definitivo de cuenta, baja de depósitos propios y purga irreversible de datos
                   </p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-[#616161] group-hover:text-rose-600 transition-colors" />
+              <ChevronRight className="w-4 h-4 text-[#777b86] group-hover:text-rose-600 transition-colors" />
             </button>
           </div>
         </div>
 
         {/* Pie Legal y Enlaces a Términos y Privacidad (RF-LEGAL-001) */}
-        <div className="pt-4 pb-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#616161] font-mono border-t border-[#E5E7EB]">
+        <div className="pt-4 pb-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#777b86]  border-t border-[#ececec]">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-[#1E3A5F]">STOCKLY</span>
+            <span className="font-bold text-[#17191c]">STOCKLY</span>
             <span>·</span>
             <span>v2.4.0</span>
           </div>
@@ -698,7 +698,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 window.history.pushState({}, '', '/terms');
                 window.dispatchEvent(new PopStateEvent('popstate'));
               }}
-              className="text-[#1E3A5F] hover:underline font-medium"
+              className="text-[#17191c] hover:underline font-medium"
             >
               Términos de Servicio
             </a>
@@ -710,7 +710,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 window.history.pushState({}, '', '/privacy');
                 window.dispatchEvent(new PopStateEvent('popstate'));
               }}
-              className="text-[#1E3A5F] hover:underline font-medium"
+              className="text-[#17191c] hover:underline font-medium"
             >
               Política de Privacidad
             </a>
