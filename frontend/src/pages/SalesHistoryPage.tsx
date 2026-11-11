@@ -460,102 +460,100 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
       {/* =========================================================
           VISTA DE ESCRITORIO (>= 768px / hidden md:block) - Ui CLINICAL BLUEPRINT
          ========================================================= */}
-      <div className="hidden md:block space-y-6 pb-28 sm:pb-12 max-w-7xl mx-auto font-normal text-[#0a0a0a]">
-      {/* 1. Cabecera Editorial */}
-      <div className="bg-white border border-[#e5e5e5] rounded-3xl p-6 shadow-ui-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <span className="text-xs uppercase tracking-[0.05em] text-[#737373] font-medium block mb-1">
-            Auditoría y Archivo de Operaciones
-          </span>
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-[-0.04em] text-[#0a0a0a]">
-            Historial de Ventas
+      <div className="hidden md:block space-y-5 pb-28 sm:pb-12 max-w-[1440px] mx-auto font-sans text-slate-900">
+      {/* 1. Cabecera Directa */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-1">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-slate-900">
+            Historial de ventas
           </h1>
-          <p className="text-xs text-[#737373] mt-1">
-            Consulta, auditoría de transacciones y exportación oficial de comprobantes.
+          <p className="text-xs text-slate-500 mt-1">
+            Auditoría de comprobantes emitidos y exportación financiera.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleExportCSV}
             disabled={filteredSales.length === 0}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#f5f5f5] hover:bg-[#ebebeb] text-[#0a0a0a] border border-[#e5e5e5] text-xs font-medium rounded-[18px] transition-all disabled:opacity-40 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 min-h-[38px] bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 text-xs font-medium rounded-xl transition-[background-color,border-color,transform] duration-150 active:scale-[0.97] disabled:opacity-45 cursor-pointer"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-[#0a0a0a]" />
+            <FileSpreadsheet className="w-3.5 h-3.5" />
             <span>CSV</span>
           </button>
           <button
             onClick={handleExportPDF}
             disabled={filteredSales.length === 0}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0a0a0a] hover:bg-[#262626] text-[#fafafa] text-xs font-medium rounded-[18px] transition-all disabled:opacity-40 shadow-ui-subtle cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 min-h-[38px] bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-xl transition-[background-color,transform] duration-150 active:scale-[0.97] disabled:opacity-45 cursor-pointer"
           >
-            <FileText className="w-3.5 h-3.5 text-[#fafafa]" />
-            <span>PDF</span>
+            <FileText className="w-3.5 h-3.5" />
+            <span>Exportar PDF</span>
           </button>
         </div>
       </div>
 
       {/* 2. KPIs y Métricas Resumen */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="p-6 bg-white border border-[#e5e5e5] rounded-3xl shadow-ui-subtle">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.05em] text-[#737373] font-medium mb-1.5">
-            <DollarSign className="w-3.5 h-3.5 text-[#0a0a0a]" /> Recaudación Total
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-ui-card desktop-hover-lift">
+          <div className="flex items-center justify-between text-xs font-medium text-slate-500 mb-2">
+            <span>Recaudación total</span>
+            <DollarSign className="w-4 h-4 text-slate-400" />
           </div>
-          <p className="text-2xl sm:text-3xl font-semibold text-[#0a0a0a] tracking-tight tabular-nums">
+          <p className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-[-0.02em] tabular-nums truncate">
             {formatCurrency(totalRevenue, currentInventory?.currency)}
           </p>
         </div>
 
-        <div className="p-6 bg-white border border-[#e5e5e5] rounded-3xl shadow-ui-subtle">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.05em] text-[#737373] font-medium mb-1.5">
-            <Receipt className="w-3.5 h-3.5 text-[#0a0a0a]" /> Ventas Concretadas
+        <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-ui-card desktop-hover-lift">
+          <div className="flex items-center justify-between text-xs font-medium text-slate-500 mb-2">
+            <span>Ventas concretadas</span>
+            <Receipt className="w-4 h-4 text-slate-400" />
           </div>
-          <p className="text-2xl sm:text-3xl font-semibold text-[#0a0a0a] tracking-tight tabular-nums">
-            {approvedTicketsCount} <span className="text-xs text-[#737373] font-normal">tickets</span>
+          <p className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-[-0.02em] tabular-nums">
+            {approvedTicketsCount} <span className="text-xs text-slate-500 font-normal">tickets</span>
           </p>
         </div>
 
-        <div className="p-6 bg-white border border-[#e5e5e5] rounded-3xl shadow-ui-subtle">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.05em] text-[#737373] font-medium mb-1.5">
-            <TrendingUp className="w-3.5 h-3.5 text-[#0a0a0a]" /> Unidades Despachadas
+        <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-ui-card desktop-hover-lift">
+          <div className="flex items-center justify-between text-xs font-medium text-slate-500 mb-2">
+            <span>Unidades despachadas</span>
+            <TrendingUp className="w-4 h-4 text-slate-400" />
           </div>
-          <p className="text-2xl sm:text-3xl font-semibold text-[#0a0a0a] tracking-tight tabular-nums">
-            {totalUnitsSold} <span className="text-xs text-[#737373] font-normal">uds</span>
+          <p className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-[-0.02em] tabular-nums">
+            {totalUnitsSold} <span className="text-xs text-slate-500 font-normal">und</span>
           </p>
         </div>
       </div>
 
       {/* 3. Filtros de Fecha y Búsqueda */}
-      <div className="p-5 bg-white border border-[#e5e5e5] rounded-3xl shadow-ui-subtle space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-          {/* Búsqueda por Ticket / Cliente / Vendedor */}
+      <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-ui-card">
+        <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-[#737373] absolute left-3.5 top-3.5" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
             <input
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Buscar por ticket, cliente, correo o método..."
-              className="w-full bg-[#f5f5f5] focus:bg-white border border-[#e5e5e5] focus:border-[#0a0a0a] rounded-[18px] pl-10 pr-3.5 py-2.5 text-xs text-[#0a0a0a] placeholder:text-[#737373] focus:outline-none transition-all"
+              className="w-full min-h-[40px] bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-slate-900 rounded-xl pl-10 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none transition-[background-color,border-color] duration-150"
             />
           </div>
 
-          {/* Rango de Fechas */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-[#f5f5f5] border border-[#e5e5e5] rounded-[18px] px-3.5 py-2 text-xs text-[#0a0a0a]">
-              <Calendar className="w-3.5 h-3.5 text-[#737373]" />
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 min-h-[40px] bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900">
+              <Calendar className="w-3.5 h-3.5 text-slate-500" />
               <input
                 type="date"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
-                className="bg-transparent text-[#0a0a0a] text-xs focus:outline-none"
+                className="bg-transparent text-slate-900 font-mono text-xs focus:outline-none"
               />
-              <span className="text-[#737373]">a</span>
+              <span className="text-slate-400">&rarr;</span>
               <input
                 type="date"
                 value={endDate}
                 onChange={e => setEndDate(e.target.value)}
-                className="bg-transparent text-[#0a0a0a] text-xs focus:outline-none"
+                className="bg-transparent text-slate-900 font-mono text-xs focus:outline-none"
               />
             </div>
             {(startDate || endDate !== todayStr || searchTerm) && (
@@ -565,7 +563,7 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
                   setEndDate(todayStr);
                   setSearchTerm('');
                 }}
-                className="text-xs text-[#737373] hover:text-[#0a0a0a] px-2 transition-colors cursor-pointer font-medium"
+                className="min-h-[40px] px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs text-slate-700 transition-colors cursor-pointer font-medium"
               >
                 Limpiar
               </button>
@@ -575,21 +573,21 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
       </div>
 
       {/* 4. Tabla de Ventas */}
-      <div className="bg-white border border-[#e5e5e5] rounded-3xl overflow-hidden shadow-ui-subtle">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-ui-card">
         {loading ? (
           <div className="p-6">
             <SalesHistorySkeleton />
           </div>
         ) : filteredSales.length === 0 ? (
-          <div className="py-16 text-center text-xs text-[#737373] space-y-1">
-            <Receipt className="w-10 h-10 mx-auto stroke-1 text-[#737373]/30 mb-2" />
-            <p className="text-[#0a0a0a] font-semibold">No se encontraron ventas registradas</p>
-            <p className="text-[11px] text-[#737373]">Las operaciones liquidadas en el Punto de Venta aparecerán aquí.</p>
+          <div className="py-16 text-center text-xs text-slate-500 space-y-1">
+            <Receipt className="w-9 h-9 mx-auto stroke-[1.2] text-slate-300 mb-2" />
+            <p className="text-slate-900 font-semibold">No se encontraron ventas registradas</p>
+            <p className="text-[11px] text-slate-500">Las operaciones liquidadas en el Punto de Venta aparecerán aquí.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#fafafa] text-[#737373] font-medium uppercase tracking-[0.05em] text-[11px] border-b border-[#e5e5e5]">
+              <thead className="bg-slate-50 text-slate-500 font-semibold text-[11px] border-b border-slate-200">
                 <tr>
                   <th className="p-3.5">Ticket</th>
                   <th className="p-3.5">Fecha</th>
@@ -600,35 +598,35 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
                   <th className="p-3.5 text-center">Acción</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e5e5e5]">
+              <tbody className="divide-y divide-slate-100">
                 {filteredSales.map((s) => (
                   <tr
                     key={s.id}
                     onClick={() => setSelectedSale(s)}
-                    className="hover:bg-[#fafafa] cursor-pointer transition-colors"
+                    className="hover:bg-slate-50/70 cursor-pointer transition-colors duration-150"
                   >
-                    <td className="p-3.5 font-semibold text-[#0a0a0a]">
+                    <td className="p-3.5 font-mono font-semibold text-slate-900 whitespace-nowrap">
                       #{s.id.slice(0, 8).toUpperCase()}
                     </td>
-                    <td className="p-3.5 text-[#737373] text-[11px]">
+                    <td className="p-3.5 text-slate-500 text-[11px] tabular-nums whitespace-nowrap">
                       {formatDate(s.created_at)}
                     </td>
-                    <td className="p-3.5 font-medium text-[#0a0a0a]">
+                    <td className="p-3.5 font-medium text-slate-900 truncate max-w-[200px]">
                       {s.customer_name || 'Consumidor Final'}
                     </td>
                     <td className="p-3.5">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-[14px] text-[10px] font-medium bg-[#f5f5f5] text-[#0a0a0a] border border-[#e5e5e5]">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md font-mono text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                         {s.payment_method}
                       </span>
                     </td>
-                    <td className="p-3.5 text-[#737373] truncate max-w-[160px] text-[11px]">
+                    <td className="p-3.5 text-slate-500 truncate max-w-[160px] text-[11px]">
                       {s.seller_email}
                     </td>
-                    <td className={`p-3.5 text-right font-semibold tabular-nums ${isSaleRejected(s) ? 'text-[#e7000b]' : 'text-[#0a0a0a]'}`}>
+                    <td className={`p-3.5 text-right font-semibold tabular-nums ${isSaleRejected(s) ? 'text-red-600' : 'text-slate-900'}`}>
                       {formatCurrency(s.total_amount, currentInventory?.currency)}
                     </td>
                     <td className="p-3.5 text-center">
-                      <button className="p-1 text-[#737373] hover:text-[#0a0a0a] transition-colors cursor-pointer">
+                      <button className="p-1 text-slate-400 hover:text-slate-900 transition-colors cursor-pointer">
                         <ChevronRight className="w-4 h-4" />
                       </button>
                     </td>
@@ -643,49 +641,51 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
 
       {/* Modal de Detalle de Venta */}
       {selectedSale && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="mobile-dark-modal bg-white border border-[#E5E7EB] rounded-2xl w-full max-w-lg overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between p-4 border-b border-[#E5E7EB] bg-white">
-              <div className="flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-[#E8B4A0]" />
-                <h3 className="font-bold text-[#1E3A5F] uppercase tracking-tight text-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
+          <div className="mobile-dark-modal bg-white border border-slate-200 rounded-2xl w-full max-w-lg lg:max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh] font-sans">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-white">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-800 flex items-center justify-center">
+                  <Receipt className="w-4 h-4" />
+                </div>
+                <h3 className="font-mono font-semibold text-slate-900 tracking-tight text-sm">
                   Ticket #{selectedSale.id.slice(0, 8).toUpperCase()}
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedSale(null)}
-                className="w-8 h-8 rounded-full border border-[#E5E7EB] text-[#616161] hover:text-[#1E3A5F] flex items-center justify-center transition-colors"
+                className="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="p-5 overflow-y-auto space-y-4">
-              <div className="mobile-flat-section grid grid-cols-2 gap-2 p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] text-xs font-mono">
+              <div className="mobile-flat-section grid grid-cols-2 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
                 <div>
-                  <span className="text-[10px] text-[#616161] block uppercase">Fecha:</span>
-                  <span className="text-[#1E3A5F]">{new Date(selectedSale.created_at).toLocaleString()}</span>
+                  <span className="text-[11px] text-slate-500 block">Fecha</span>
+                  <span className="font-mono text-slate-900 font-medium tabular-nums">{new Date(selectedSale.created_at).toLocaleString()}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-[#616161] block uppercase">Método:</span>
-                  <span className="text-[#1E3A5F] font-medium">{selectedSale.payment_method}</span>
+                  <span className="text-[11px] text-slate-500 block">Método</span>
+                  <span className="font-mono text-slate-900 font-semibold">{selectedSale.payment_method}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-[#616161] block uppercase">Cliente:</span>
-                  <span className="text-[#1E3A5F]">{selectedSale.customer_name || 'Consumidor Final'}</span>
+                  <span className="text-[11px] text-slate-500 block">Cliente</span>
+                  <span className="text-slate-900 font-medium">{selectedSale.customer_name || 'Consumidor Final'}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-[#616161] block uppercase">Contacto:</span>
-                  <span className="text-[#1E3A5F]">{selectedSale.customer_contact || 'Sin registrar'}</span>
+                  <span className="text-[11px] text-slate-500 block">Contacto</span>
+                  <span className="font-mono text-slate-900">{selectedSale.customer_contact || 'Sin registrar'}</span>
                 </div>
-                <div className="col-span-2 pt-2 border-t border-[#E5E7EB]">
-                  <span className="text-[10px] text-[#616161] block uppercase">Vendedor:</span>
-                  <span className="text-[#1E3A5F]">{selectedSale.seller_email}</span>
+                <div className="col-span-2 pt-2 border-t border-slate-200">
+                  <span className="text-[11px] text-slate-500 block">Vendedor</span>
+                  <span className="font-mono text-slate-900">{selectedSale.seller_email}</span>
                 </div>
                 {selectedSale.notes && (
-                  <div className="col-span-2 pt-2 border-t border-[#E5E7EB]">
-                    <span className="text-[10px] text-[#616161] block uppercase">Notas / Cupón:</span>
-                    <span className="text-[#1E3A5F]">
+                  <div className="col-span-2 pt-2 border-t border-slate-200">
+                    <span className="text-[11px] text-slate-500 block">Notas / Cupón</span>
+                    <span className="text-slate-900">
                       {formatStockShortageNotes(selectedSale.notes, selectedSale.items)}
                     </span>
                   </div>
@@ -694,24 +694,24 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
 
               {/* Ítems vendidos */}
               <div className="space-y-2">
-                <span className="text-[11px] uppercase font-mono tracking-wider text-[#616161] block">
-                  Ítems Vendidos ({selectedSale.items?.length || 0})
+                <span className="text-xs font-semibold text-slate-700 block">
+                  Ítems vendidos ({selectedSale.items?.length || 0})
                 </span>
-                <div className="mobile-flat-section divide-y divide-[#E5E7EB] border border-[#E5E7EB] rounded-xl overflow-hidden">
+                <div className="mobile-flat-section divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
                   {selectedSale.items?.map((it) => {
                     const hasFormattedBreakdown = (it.product_name || '').includes('·');
                     return (
-                      <div key={it.id} className="mobile-flat-row p-3 flex items-center justify-between text-xs">
-                        <div>
-                          <p className="font-bold text-[#1E3A5F] uppercase">{it.product_name}</p>
-                          <p className="text-[10px] text-[#616161] font-mono mt-0.5">
-                            <span className="font-semibold">{it.product_code}</span>
+                      <div key={it.id} className="mobile-flat-row p-3 flex items-center justify-between text-xs gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900 truncate">{it.product_name}</p>
+                          <p className="text-[11px] text-slate-500 font-mono mt-0.5 tabular-nums">
+                            <span className="font-semibold text-slate-700">{it.product_code}</span>
                             {hasFormattedBreakdown
-                              ? ` • P. Unit: ${formatCurrency(it.unit_price, currentInventory?.currency)}`
-                              : ` • ${it.quantity} uds × ${formatCurrency(it.unit_price, currentInventory?.currency)}`}
+                              ? ` · P. Unit: ${formatCurrency(it.unit_price, currentInventory?.currency)}`
+                              : ` · ${it.quantity} und × ${formatCurrency(it.unit_price, currentInventory?.currency)}`}
                           </p>
                         </div>
-                        <span className="font-mono font-bold text-[#1E3A5F]">
+                        <span className="font-mono font-semibold tabular-nums text-slate-900 shrink-0">
                           {formatCurrency(it.subtotal, currentInventory?.currency)}
                         </span>
                       </div>
@@ -721,9 +721,9 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
               </div>
 
               {/* Total final */}
-              <div className="mobile-flat-row flex items-center justify-between p-4 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-mono">
-                <span className="text-xs uppercase tracking-wider text-[#616161] font-bold">TOTAL LIQUIDADO:</span>
-                <span className={`text-lg font-bold ${isSaleRejected(selectedSale) ? 'text-red-600' : 'text-emerald-600'}`}>
+              <div className="mobile-flat-row flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                <span className="text-xs text-slate-600 font-semibold">Total liquidado</span>
+                <span className={`text-lg font-semibold tabular-nums ${isSaleRejected(selectedSale) ? 'text-red-600' : 'text-emerald-700'}`}>
                   {formatCurrency(selectedSale.total_amount, currentInventory?.currency)}
                 </span>
               </div>

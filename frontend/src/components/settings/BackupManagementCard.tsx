@@ -703,63 +703,60 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
 
   return (
     <>
-      <div className={`bg-white border border-[#E5E7EB] rounded-2xl shadow-xs overflow-hidden font-sans ${className}`}>
+      <div className={`bg-white border border-slate-200 rounded-2xl shadow-ui-card overflow-hidden font-sans ${className}`}>
         
         {/* Cabecera Principal del Módulo */}
-        <div className="p-5 sm:p-6 border-b border-[#E5E7EB] bg-[#F8F9FA]/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-5 sm:p-6 border-b border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center shrink-0 shadow-xs">
-              <Database className="w-5 h-5 stroke-[1.5]" />
+            <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0">
+              <Database className="w-5 h-5 stroke-[1.75]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono uppercase tracking-widest text-[#E8B4A0]">
-                  PROTECCIÓN & GOBERNANZA DE DATOS
-                </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-mono font-medium">
+                <h2 className="text-sm sm:text-base font-semibold text-slate-900 tracking-tight">
+                  Copias de seguridad (Backups)
+                </h2>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-mono font-semibold">
                   <ShieldCheck className="w-3 h-3 text-emerald-600" /> OWNER
                 </span>
               </div>
-              <h2 className="text-base sm:text-lg font-bold text-[#1E3A5F] tracking-tight">
-                Módulo de Copias de Seguridad (Backups)
-              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Exportación cifrada JSON, respaldos automáticos y restauración atómica.
+              </p>
             </div>
           </div>
 
           {loadingSettings && (
-            <div className="flex items-center gap-2 text-xs text-[#616161]">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1E3A5F]" />
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-700" />
               <span>Cargando configuración...</span>
             </div>
           )}
         </div>
 
         {/* Contenido en 3 Bloques Ordenados */}
-        <div className="divide-y divide-[#E5E7EB]">
+        <div className="divide-y divide-slate-200">
 
-          {/* =================================================================
-              BLOQUE A: Respaldo Manual Inmediato (con Verificación OTP y RF-2)
-             ================================================================= */}
+          {/* BLOQUE A: Respaldo Manual */}
           <div className="p-5 sm:p-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center shrink-0 font-mono text-xs font-bold">
+            <div className="flex items-center gap-2.5">
+              <div className="w-6 h-6 rounded-md bg-slate-100 border border-slate-200 text-slate-800 flex items-center justify-center shrink-0 font-mono text-xs font-semibold">
                 A
               </div>
               <div>
-                <h3 className="text-sm font-bold text-[#1E3A5F] tracking-tight">
-                  Respaldo Manual Inmediato
+                <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
+                  Respaldo manual inmediato
                 </h3>
-                <p className="text-xs text-[#616161]">
+                <p className="text-xs text-slate-500">
                   Exporta todos los datos relacionales en formato JSON y despáchalos al correo destino tras validación OTP.
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
-              {/* Input y Estado de Verificación */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2 min-w-0">
-                  <label className="text-xs font-semibold text-[#1E3A5F] truncate min-w-0 shrink">
+                  <label className="text-xs font-medium text-slate-700 truncate min-w-0 shrink">
                     Correo de destino
                   </label>
                   {isEmailVerified && (
@@ -770,7 +767,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                       <button
                         type="button"
                         onClick={handleResetVerification}
-                        className="text-[11px] text-neutral-400 hover:text-neutral-700 cursor-pointer underline font-medium shrink-0"
+                        className="text-[11px] text-slate-500 hover:text-slate-900 cursor-pointer underline font-medium shrink-0"
                       >
                         Cambiar
                       </button>
@@ -779,8 +776,8 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 w-full min-w-0">
-                  <div className="flex-1 min-w-0 h-11 bg-neutral-100 rounded-xl px-3.5 flex items-center gap-2.5 border border-transparent focus-within:ring-1 focus-within:ring-[#1E3A5F]">
-                    <Mail className="w-4 h-4 text-[#616161] shrink-0 pointer-events-none" />
+                  <div className="flex-1 min-w-0 h-10 bg-slate-50 rounded-xl px-3.5 flex items-center gap-2.5 border border-slate-200 focus-within:bg-white focus-within:border-slate-900 transition-[background-color,border-color] duration-150">
+                    <Mail className="w-4 h-4 text-slate-400 shrink-0 pointer-events-none" />
                     <input
                       type="text"
                       inputMode="email"
@@ -797,8 +794,8 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                       readOnly={isEmailVerified}
                       className={`w-full flex-1 min-w-0 bg-transparent text-xs font-medium focus:outline-none truncate border-none p-0 shadow-none ${
                         isEmailVerified
-                          ? 'text-neutral-600 cursor-not-allowed'
-                          : 'text-[#1E3A5F]'
+                          ? 'text-slate-600 cursor-not-allowed'
+                          : 'text-slate-900'
                       }`}
                     />
                   </div>
@@ -808,12 +805,12 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                       type="button"
                       onClick={handleSendOtp}
                       disabled={isSendingOtp || isExporting || !manualEmail.trim()}
-                      className="h-11 px-3.5 rounded-xl border border-[#1E3A5F] bg-white hover:bg-[#1E3A5F]/5 text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0 shadow-xs"
+                      className="h-10 px-3.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-900 text-xs font-semibold flex items-center justify-center gap-1.5 transition-[background-color,border-color,transform] duration-150 active:scale-[0.97] cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
                       {isSendingOtp ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1E3A5F]" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-700" />
                       ) : (
-                        <KeyRound className="w-3.5 h-3.5 text-[#1E3A5F]" />
+                        <KeyRound className="w-3.5 h-3.5 text-slate-700" />
                       )}
                       <span>{otpSent ? 'Reenviar' : 'Validar'}</span>
                     </button>
@@ -821,33 +818,32 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                 </div>
               </div>
 
-              {/* Formulario OTP minimalista en línea */}
               {otpSent && !isEmailVerified && (
-                <div className="flex items-center gap-2 pt-0.5 animate-in fade-in">
+                <div className="flex items-center gap-2 pt-0.5">
                   <input
                     type="text"
                     maxLength={6}
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     placeholder="Código 6 dígitos"
-                    className="w-36 h-9 px-3 text-center font-mono text-xs font-bold tracking-widest bg-white border border-[#1E3A5F]/30 focus:border-[#1E3A5F] rounded-lg text-[#1E3A5F] focus:outline-none shadow-2xs"
+                    className="w-36 h-9 px-3 text-center font-mono text-xs font-semibold tracking-widest bg-white border border-slate-300 focus:border-slate-900 rounded-lg text-slate-900 focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={handleVerifyOtp}
                     disabled={isVerifyingOtp || otpCode.trim().length !== 6}
-                    className="h-9 px-3.5 rounded-lg bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-2xs"
+                    className="h-9 px-3.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1 transition-[background-color,transform] duration-150 active:scale-[0.97] disabled:opacity-50 cursor-pointer"
                   >
-                    {isVerifyingOtp ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3 text-[#E8B4A0]" />}
+                    {isVerifyingOtp ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
                     <span>Verificar</span>
                   </button>
-                  <span className="text-[11px] text-neutral-400 pl-1">
+                  <span className="text-[11px] text-slate-500 pl-1 font-mono tabular-nums">
                     {otpCooldown > 0 ? `${otpCooldown}s` : (
                       <button
                         type="button"
                         onClick={handleSendOtp}
                         disabled={isSendingOtp}
-                        className="text-[#1E3A5F] underline hover:text-black cursor-pointer font-medium"
+                        className="text-slate-900 underline hover:text-slate-700 cursor-pointer font-sans font-medium"
                       >
                         Reenviar
                       </button>
@@ -856,32 +852,31 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                 </div>
               )}
 
-              {/* Botones de Acción: Generar y Enviar vs Descargar Local */}
-              <div className="flex items-center gap-3 pt-2">
+              <div className="flex items-center gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={handleExportAndSend}
                   disabled={!isEmailVerified || isExporting || isDownloading}
-                  className={`flex-1 h-11 px-4 rounded-xl text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer ${
+                  className={`flex-1 h-10 px-4 rounded-xl text-white text-xs font-semibold flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 active:scale-[0.98] cursor-pointer ${
                     isEmailVerified
-                      ? 'bg-[#1E3A5F] hover:bg-[#152a45]'
-                      : 'bg-neutral-300 text-neutral-500 cursor-not-allowed opacity-60'
+                      ? 'bg-slate-900 hover:bg-slate-800'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   }`}
                   title={
                     !isEmailVerified
                       ? 'Debes verificar tu correo mediante código OTP antes de despachar el respaldo.'
-                      : 'Generar y Enviar'
+                      : 'Generar y enviar'
                   }
                 >
                   {isExporting ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       <span>Generando y enviando...</span>
                     </>
                   ) : (
                     <>
-                      <Send className="w-3.5 h-3.5 text-[#E8B4A0]" />
-                      <span>Generar y Enviar</span>
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Generar y enviar</span>
                     </>
                   )}
                 </button>
@@ -890,18 +885,18 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                   type="button"
                   onClick={handleDownloadDirectly}
                   disabled={isExporting || isDownloading}
-                  className="h-11 px-4 rounded-xl border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-95 shrink-0 cursor-pointer disabled:opacity-50"
+                  className="h-10 px-4 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold flex items-center justify-center gap-2 transition-[background-color,border-color,transform] duration-150 active:scale-[0.97] shrink-0 cursor-pointer disabled:opacity-50"
                   title="Descargar copia local (.json)"
                 >
                   {isDownloading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
+                      <Loader2 className="w-4 h-4 animate-spin text-slate-700" />
                       <span>Descargando...</span>
                     </>
                   ) : (
                     <>
-                      <Download className="w-4 h-4 text-[#1E3A5F]" />
-                      <span>Descargar Backup</span>
+                      <Download className="w-4 h-4 text-slate-700" />
+                      <span>Descargar JSON</span>
                     </>
                   )}
                 </button>
@@ -909,26 +904,23 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
             </div>
           </div>
 
-          {/* =================================================================
-              BLOQUE B: Programación Automática de Respaldos
-             ================================================================= */}
-          <div className="p-5 sm:p-6 space-y-4 bg-[#F8F9FA]/40">
+          {/* BLOQUE B: Programación Automática */}
+          <div className="p-5 sm:p-6 space-y-4 bg-slate-50/40">
             <div className="flex items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center shrink-0 font-mono text-xs font-bold">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-md bg-slate-100 border border-slate-200 text-slate-800 flex items-center justify-center shrink-0 font-mono text-xs font-semibold">
                   B
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-[#1E3A5F] tracking-tight">
-                    Programación Automática de Respaldos
+                  <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
+                    Programación automática
                   </h3>
-                  <p className="text-xs text-[#616161]">
+                  <p className="text-xs text-slate-500">
                     Envío recurrente y autónomo sin necesidad de abrir la aplicación.
                   </p>
                 </div>
               </div>
 
-              {/* Switch de Activación */}
               <Switch
                 checked={isScheduled}
                 onChange={setIsScheduled}
@@ -937,13 +929,12 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
             </div>
 
             {isScheduled ? (
-              <div className="space-y-4 pt-2 border-t border-[#E5E7EB]/80 animate-in fade-in">
+              <div className="space-y-4 pt-3 border-t border-slate-200">
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                   
-                  {/* Correo Fijo de Destino con Validación Minimalista */}
                   <div className="sm:col-span-6 space-y-1.5">
                     <div className="flex items-center justify-between gap-2 min-w-0">
-                      <label className="text-xs font-semibold text-[#1E3A5F] truncate min-w-0 shrink">
+                      <label className="text-xs font-medium text-slate-700 truncate min-w-0 shrink">
                         Correo de destino
                       </label>
                       {isScheduledEmailVerified && (
@@ -954,7 +945,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                           <button
                             type="button"
                             onClick={handleResetScheduledVerification}
-                            className="text-[11px] text-neutral-400 hover:text-neutral-700 cursor-pointer underline font-medium shrink-0"
+                            className="text-[11px] text-slate-500 hover:text-slate-900 cursor-pointer underline font-medium shrink-0"
                           >
                             Cambiar
                           </button>
@@ -963,8 +954,8 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2 w-full min-w-0">
-                      <div className="flex-1 min-w-0 h-11 bg-neutral-100 rounded-xl px-3.5 flex items-center gap-2.5 border border-transparent focus-within:ring-1 focus-within:ring-[#1E3A5F]">
-                        <Mail className="w-4 h-4 text-[#616161] shrink-0 pointer-events-none" />
+                      <div className="flex-1 min-w-0 h-10 bg-white rounded-xl px-3.5 flex items-center gap-2.5 border border-slate-200 focus-within:border-slate-900 transition-colors">
+                        <Mail className="w-4 h-4 text-slate-400 shrink-0 pointer-events-none" />
                         <input
                           type="text"
                           inputMode="email"
@@ -981,8 +972,8 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                           readOnly={isScheduledEmailVerified}
                           className={`w-full flex-1 min-w-0 bg-transparent text-xs font-medium focus:outline-none truncate border-none p-0 shadow-none ${
                             isScheduledEmailVerified
-                              ? 'text-neutral-600 cursor-not-allowed'
-                              : 'text-[#1E3A5F]'
+                              ? 'text-slate-600 cursor-not-allowed'
+                              : 'text-slate-900'
                           }`}
                         />
                       </div>
@@ -992,12 +983,12 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                           type="button"
                           onClick={handleSendScheduledOtp}
                           disabled={isSendingScheduledOtp || !scheduledEmail.trim()}
-                          className="h-11 px-3.5 rounded-xl border border-[#1E3A5F] bg-white hover:bg-[#1E3A5F]/5 text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0 shadow-xs"
+                          className="h-10 px-3.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-900 text-xs font-semibold flex items-center justify-center gap-1.5 transition-[background-color,border-color,transform] duration-150 active:scale-[0.97] cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0"
                         >
                           {isSendingScheduledOtp ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1E3A5F]" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-700" />
                           ) : (
-                            <KeyRound className="w-3.5 h-3.5 text-[#1E3A5F]" />
+                            <KeyRound className="w-3.5 h-3.5 text-slate-700" />
                           )}
                           <span>{scheduledOtpSent ? 'Reenviar' : 'Validar'}</span>
                         </button>
@@ -1005,31 +996,31 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                     </div>
 
                     {scheduledOtpSent && !isScheduledEmailVerified && (
-                      <div className="flex items-center gap-2 pt-0.5 animate-in fade-in">
+                      <div className="flex items-center gap-2 pt-0.5">
                         <input
                           type="text"
                           maxLength={6}
                           value={scheduledOtpCode}
                           onChange={(e) => setScheduledOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                           placeholder="Código 6 dígitos"
-                          className="w-36 h-9 px-3 text-center font-mono text-xs font-bold tracking-widest bg-white border border-[#1E3A5F]/30 focus:border-[#1E3A5F] rounded-lg text-[#1E3A5F] focus:outline-none shadow-2xs"
+                          className="w-36 h-9 px-3 text-center font-mono text-xs font-semibold tracking-widest bg-white border border-slate-300 focus:border-slate-900 rounded-lg text-slate-900 focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={handleVerifyScheduledOtp}
                           disabled={isVerifyingScheduledOtp || scheduledOtpCode.trim().length !== 6}
-                          className="h-9 px-3.5 rounded-lg bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-2xs"
+                          className="h-9 px-3.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1 transition-[background-color,transform] duration-150 active:scale-[0.97] disabled:opacity-50 cursor-pointer"
                         >
-                          {isVerifyingScheduledOtp ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3 text-[#E8B4A0]" />}
+                          {isVerifyingScheduledOtp ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
                           <span>Verificar</span>
                         </button>
-                        <span className="text-[11px] text-neutral-400 pl-1">
+                        <span className="text-[11px] text-slate-500 pl-1 font-mono tabular-nums">
                           {scheduledOtpCooldown > 0 ? `${scheduledOtpCooldown}s` : (
                             <button
                               type="button"
                               onClick={handleSendScheduledOtp}
                               disabled={isSendingScheduledOtp}
-                              className="text-[#1E3A5F] underline hover:text-black cursor-pointer font-medium"
+                              className="text-slate-900 underline hover:text-slate-700 cursor-pointer font-sans font-medium"
                             >
                               Reenviar
                             </button>
@@ -1039,19 +1030,18 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                     )}
                   </div>
 
-                  {/* Selector de Frecuencia con Cápsulas de selección con capa visual centrada y selector nativo superpuesto */}
+                  {/* Selector de Frecuencia */}
                   <div className="sm:col-span-6 space-y-1.5">
-                    <label className="text-xs font-semibold text-[#1E3A5F] block">
-                      Frecuencia de Envío
+                    <label className="text-xs font-medium text-slate-700 block">
+                      Frecuencia de envío
                     </label>
                     <div className="grid grid-cols-2 gap-2">
-                      {/* Campo 1: Predeterminado (Diario, Semanal, Quincenal) */}
                       <div className="relative w-full">
                         <div
-                          className={`w-full min-h-[44px] px-3.5 py-2 rounded-2xl flex items-center justify-between gap-1.5 transition-all pointer-events-none select-none ${
+                          className={`w-full min-h-[40px] px-3 py-2 rounded-xl flex items-center justify-between gap-1.5 transition-colors pointer-events-none select-none ${
                             frequencyOption !== 'custom'
-                              ? 'bg-neutral-100 border border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
-                              : 'bg-neutral-50 border border-neutral-200/60 text-neutral-500 font-medium'
+                              ? 'bg-white border border-slate-900 text-slate-900 font-semibold'
+                              : 'bg-white border border-slate-200 text-slate-500 font-medium'
                           }`}
                         >
                           <span className="flex-1 text-center text-xs leading-snug truncate">
@@ -1065,7 +1055,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                           </span>
                           <ChevronDown
                             className={`w-3.5 h-3.5 shrink-0 transition-colors ${
-                              frequencyOption !== 'custom' ? 'text-[#1E3A5F]' : 'text-neutral-400'
+                              frequencyOption !== 'custom' ? 'text-slate-900' : 'text-slate-400'
                             }`}
                           />
                         </div>
@@ -1089,13 +1079,12 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                         </select>
                       </div>
 
-                      {/* Campo 2: Personalizado (Abre el scroll wheel / menú nativo para desplazar días) */}
                       <div className="relative w-full">
                         <div
-                          className={`w-full min-h-[44px] px-3.5 py-2 rounded-2xl flex items-center justify-between gap-1.5 transition-all pointer-events-none select-none ${
+                          className={`w-full min-h-[40px] px-3 py-2 rounded-xl flex items-center justify-between gap-1.5 transition-colors pointer-events-none select-none ${
                             frequencyOption === 'custom'
-                              ? 'bg-neutral-100 border border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
-                              : 'bg-neutral-50 border border-neutral-200/60 text-neutral-500 font-medium'
+                              ? 'bg-white border border-slate-900 text-slate-900 font-semibold'
+                              : 'bg-white border border-slate-200 text-slate-500 font-medium'
                           }`}
                         >
                           <span className="flex-1 text-center text-xs leading-snug truncate">
@@ -1105,7 +1094,7 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                           </span>
                           <ChevronDown
                             className={`w-3.5 h-3.5 shrink-0 transition-colors ${
-                              frequencyOption === 'custom' ? 'text-[#1E3A5F]' : 'text-neutral-400'
+                              frequencyOption === 'custom' ? 'text-slate-900' : 'text-slate-400'
                             }`}
                           />
                         </div>
@@ -1142,69 +1131,66 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-                  {/* Hora de Envío: Centrado visualmente junto al recuadro de hora */}
                   <div className="sm:col-span-6 flex items-center justify-start sm:justify-center gap-2.5 h-10 px-1">
-                    <label className="text-xs font-semibold text-[#1E3A5F] flex items-center gap-1.5 shrink-0">
-                      <Clock className="w-3.5 h-3.5 text-[#E8B4A0]" />
+                    <label className="text-xs font-medium text-slate-700 flex items-center gap-1.5 shrink-0">
+                      <Clock className="w-3.5 h-3.5 text-slate-500" />
                       <span>Hora de envío (24h)</span>
                     </label>
                     <input
                       type="time"
                       value={executionTime || '02:00'}
                       onChange={(e) => setExecutionTime(e.target.value || '02:00')}
-                      className="w-20 h-7.5 px-1.5 bg-neutral-50 border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-lg text-xs font-mono font-bold text-[#1E3A5F] focus:outline-none shadow-xs text-center shrink-0"
+                      className="w-22 h-8 px-2 bg-white border border-slate-200 focus:border-slate-900 rounded-lg text-xs font-mono font-semibold text-slate-900 focus:outline-none text-center shrink-0 tabular-nums"
                     />
                   </div>
 
-                  {/* Botón Guardar Programación */}
                   <div className="sm:col-span-6">
                     <button
                       type="button"
                       onClick={handleSaveSchedule}
                       disabled={isSavingSettings || (isScheduled && !isScheduledEmailVerified)}
-                      className="w-full h-11 px-4 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer disabled:opacity-50"
+                      className="w-full h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 active:scale-[0.98] cursor-pointer disabled:opacity-50"
                       title={
                         isScheduled && !isScheduledEmailVerified
                           ? 'Debes validar el correo de destino con OTP antes de guardar.'
-                          : 'Guardar Programación'
+                          : 'Guardar programación'
                       }
                     >
                       {isSavingSettings ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
+                          <Loader2 className="w-4 h-4 animate-spin" />
                           <span>Guardando...</span>
                         </>
                       ) : (
                         <>
-                          <Calendar className="w-3.5 h-3.5 text-[#E8B4A0]" />
-                          <span>Guardar Programación</span>
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>Guardar programación</span>
                         </>
                       )}
                     </button>
                   </div>
                 </div>
 
-                {/* Próxima Ejecución */}
                 {nextRunAt && (
                   <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl text-[11px] font-mono text-emerald-800 flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5">
+                    <span className="flex items-center gap-1.5 font-sans">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       Próxima ejecución programada:
                     </span>
-                    <strong className="text-emerald-950 font-bold">
+                    <strong className="text-emerald-950 font-semibold tabular-nums">
                       {new Date(nextRunAt).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' })}
                     </strong>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex items-center justify-between text-xs text-[#616161] pt-1">
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
                 <span>La sincronización periódica está desactivada. Activa el interruptor para configurarla.</span>
                 <button
                   type="button"
                   onClick={handleSaveSchedule}
                   disabled={isSavingSettings}
-                  className="text-xs font-mono text-neutral-500 hover:text-neutral-800 underline cursor-pointer"
+                  className="text-xs text-slate-700 hover:text-slate-900 underline cursor-pointer font-medium"
                 >
                   Guardar estado desactivado
                 </button>
@@ -1212,19 +1198,17 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
             )}
           </div>
 
-          {/* =================================================================
-              BLOQUE C: Restaurar Copia de Seguridad
-             ================================================================= */}
+          {/* BLOQUE C: Restaurar Copia */}
           <div className="p-5 sm:p-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 font-mono text-xs font-bold">
+            <div className="flex items-center gap-2.5">
+              <div className="w-6 h-6 rounded-md bg-red-50 border border-red-200 text-red-600 flex items-center justify-center shrink-0 font-mono text-xs font-semibold">
                 C
               </div>
               <div>
-                <h3 className="text-sm font-bold text-[#1E3A5F] tracking-tight">
-                  Restaurar Copia de Seguridad
+                <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
+                  Restaurar copia de seguridad
                 </h3>
-                <p className="text-xs text-[#616161]">
+                <p className="text-xs text-slate-500">
                   Carga un archivo <code>.json</code> previo para restaurar atómicamente el catálogo y ventas.
                 </p>
               </div>
@@ -1232,16 +1216,15 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
 
             <div className="p-4 bg-amber-50/60 border border-amber-200/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="space-y-0.5 text-xs text-amber-900">
-                <p className="font-semibold flex items-center gap-1 text-amber-800">
+                <p className="font-semibold flex items-center gap-1.5 text-amber-800">
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                   Operación destructiva protegida
                 </p>
                 <p className="text-amber-800/90 text-[11px]">
-                  Requiere validación estricta de estructura y confirmación con la palabra clave RESTAURAR.
+                  Requiere validación de estructura y confirmación con la palabra clave RESTAURAR.
                 </p>
               </div>
 
-              {/* Botón Estilizado para Seleccionar Archivo */}
               <div>
                 <input
                   type="file"
@@ -1253,10 +1236,10 @@ export const BackupManagementCard: React.FC<BackupManagementCardProps> = ({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="h-11 px-4 rounded-xl border border-rose-300 hover:border-rose-500 bg-white hover:bg-rose-50/50 text-rose-700 text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer whitespace-nowrap"
+                  className="h-10 px-4 rounded-xl border border-red-300 hover:border-red-400 bg-white hover:bg-red-50 text-red-700 text-xs font-semibold flex items-center justify-center gap-2 transition-[background-color,border-color,transform] duration-150 active:scale-[0.97] cursor-pointer whitespace-nowrap"
                 >
-                  <FileJson className="w-4 h-4 text-rose-600" />
-                  <span>Seleccionar Archivo de Backup (.json)</span>
+                  <FileJson className="w-4 h-4 text-red-600" />
+                  <span>Seleccionar archivo (.json)</span>
                 </button>
               </div>
             </div>

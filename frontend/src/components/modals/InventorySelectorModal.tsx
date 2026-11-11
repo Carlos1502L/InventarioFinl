@@ -142,10 +142,10 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
                       selectInventory(inv);
                       onClose();
                     }}
-                    className={`mobile-flat-row w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group ${
+                    className={`mobile-flat-row w-full text-left p-4 rounded-xl border transition-[background-color,border-color] duration-150 flex items-center justify-between group cursor-pointer ${
                       isSelected
-                        ? 'bg-[#f5f5f5] border-[#1E3A5F] ring-1 ring-[#1E3A5F] mobile-card-active'
-                        : 'bg-white border-[#ececec] hover:border-[#17191c] hover:bg-[#fafafb]'
+                        ? 'bg-slate-50 border-slate-900 ring-1 ring-slate-900/15 mobile-card-active'
+                        : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/70'
                     }`}
                   >
                     <div className="min-w-0 flex-1 pr-3 space-y-1">

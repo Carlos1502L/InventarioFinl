@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { MotionConfig } from 'framer-motion';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './lib/supabase';
 import { Product, Category, Subcategory, Location } from './types/database';
@@ -385,14 +386,14 @@ export const AppContent: React.FC = () => {
           <Loader2 className="w-6 h-6 animate-spin text-white/80" />
         </div>
 
-        {/* Desktop: Indicador editorial de carga */}
-        <div className="hidden md:flex flex-col items-center justify-center space-y-4 text-[#1E3A5F]">
-          <div className="w-12 h-12 rounded-2xl bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center shadow-md animate-pulse">
-            <Layers className="w-6 h-6 stroke-[1.5]" />
+        {/* Desktop: Indicador industrial de carga */}
+        <div className="hidden md:flex flex-col items-center justify-center space-y-3.5 text-slate-900 font-sans">
+          <div className="w-11 h-11 rounded-xl bg-slate-900 text-slate-50 flex items-center justify-center shadow-sm">
+            <Layers className="w-5 h-5 stroke-[1.75]" />
           </div>
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#616161]">
-            <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
-            <span>INICIANDO INVENTARIO...</span>
+          <div className="flex items-center gap-2 text-xs font-medium tracking-tight text-slate-600">
+            <Loader2 className="w-4 h-4 animate-spin text-slate-900" />
+            <span>Iniciando espacio de trabajo...</span>
           </div>
         </div>
       </main>
@@ -442,7 +443,8 @@ export const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen max-md:fixed max-md:inset-0 max-md:h-[100dvh] max-md:w-full max-md:overflow-hidden md:overflow-visible md:h-auto bg-white md:bg-[#f5f5f5] text-[#0a0a0a] flex flex-col font-normal selection:bg-[#0a0a0a] selection:text-[#fafafa] transition-colors duration-200">
+    <MotionConfig reducedMotion="user">
+    <div className="min-h-screen max-md:fixed max-md:inset-0 max-md:h-[100dvh] max-md:w-full max-md:overflow-hidden md:overflow-visible md:h-auto bg-white lg:bg-[#f4f6f8] text-[#0a0a0a] lg:text-slate-900 flex flex-col font-normal selection:bg-slate-900 selection:text-slate-50 transition-colors duration-150">
       {/* Sidebar Lateral Fijo Desktop (>= 1024px) - Carga condicional reactiva */}
       {isDesktop && (
         <Suspense fallback={null}>
@@ -477,8 +479,9 @@ export const AppContent: React.FC = () => {
         </Suspense>
       )}
 
-      {/* Contenedor Principal Responsive con offset para el Sidebar en Desktop y safe area en móvil */}
-      <main id="main-content" className="flex-1 max-w-[1600px] w-full mx-auto px-0 pt-0 md:px-8 md:pt-6 lg:pl-[280px] pb-0 md:pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-16 max-md:h-full max-md:overflow-hidden md:overflow-visible">
+      {/* Contenedor Principal Responsive con offset para el Sidebar en Desktop y alineación exacta con Navbar */}
+      <main id="main-content" className="flex-1 w-full px-0 pt-0 md:pt-6 lg:pl-[260px] pb-0 md:pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-16 max-md:h-full max-md:overflow-hidden md:overflow-visible">
+        <div className="w-full h-full md:max-w-[1440px] md:mx-auto md:px-8">
         {/* Banner de Invitaciones Pendientes */}
         <div className="px-4 md:px-0">
           <PendingInvitationsBanner />
@@ -486,25 +489,25 @@ export const AppContent: React.FC = () => {
 
         {/* Banner si el usuario no tiene inventario activo */}
         {!currentInventory && (
-          <div className="mx-4 md:mx-0 mt-4 md:mt-0 mb-6 p-6 bg-[#ffffff] border border-[#E5E7EB] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm font-mono">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-[#1E3A5F] text-[#E8B4A0] flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-5 h-5 stroke-[1.5]" />
+          <div className="mx-4 md:mx-0 mt-4 md:mt-0 mb-6 p-5 bg-white border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm font-sans">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 text-slate-50 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-5 h-5 stroke-[1.75]" />
               </div>
               <div>
-                <h3 className="text-sm font-light uppercase tracking-wider text-[#1E3A5F]">
-                  INVENTARIO DE TRABAJO NO SELECCIONADO
+                <h3 className="text-sm font-semibold tracking-tight text-slate-900">
+                  Depósito de trabajo no seleccionado
                 </h3>
-                <p className="text-xs text-[#616161] mt-0.5 font-light">
-                  Para comenzar a indexar existencias y mercancía, selecciona o crea tu primer depósito.
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Para comenzar a indexar existencias y operar el punto de venta, selecciona o crea tu primer depósito.
                 </p>
               </div>
             </div>
             <button
               onClick={() => setInventorySelectorOpen(true)}
-              className="w-full sm:w-auto min-h-[44px] px-6 rounded-full bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm"
+              className="w-full sm:w-auto min-h-[38px] px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.97] flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Plus className="w-4 h-4 stroke-[1.5] text-[#E8B4A0]" /> CREAR O SELECCIONAR DEPÓSITO
+              <Plus className="w-4 h-4 stroke-[2]" /> Seleccionar depósito
             </button>
           </div>
         )}
@@ -619,7 +622,7 @@ export const AppContent: React.FC = () => {
 
         {/* VISTA 7: AJUSTES Y CONFIGURACIÓN */}
         {activeTab === 'settings' && (
-          <Suspense fallback={<div className="p-8 text-center text-xs font-mono text-[#616161]">CARGANDO AJUSTES...</div>}>
+          <Suspense fallback={<div className="p-8 text-center text-xs font-mono text-slate-500">Cargando ajustes...</div>}>
           <SettingsPage
             onOpenCategories={() => setCategoriesModalOpen(true)}
             onOpenLocations={() => setLocationsModalOpen(true)}
@@ -629,6 +632,7 @@ export const AppContent: React.FC = () => {
           />
           </Suspense>
         )}
+        </div>
       </main>
 
       {/* =========================================================
@@ -800,6 +804,7 @@ export const AppContent: React.FC = () => {
       {/* Notificación Toast Global Flotante (Zero-UI Alterations) */}
       <ToastNotification />
     </div>
+    </MotionConfig>
   );
 };
 

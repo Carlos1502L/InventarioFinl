@@ -106,7 +106,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#616161] hover:text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -142,24 +142,24 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
 
               {/* Opciones obligatorias */}
               <div className="space-y-2 pt-1">
-                <label className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                <label className={`flex items-start gap-3 p-3 rounded-xl border transition-[background-color,border-color] duration-150 cursor-pointer ${
                   applyConversion 
-                    ? 'bg-white border-[#1E3A5F] ring-1 ring-[#1E3A5F]/20 shadow-2xs' 
-                    : 'bg-white/60 border-neutral-200 hover:bg-white'
+                    ? 'bg-white border-slate-900 ring-1 ring-slate-900/15' 
+                    : 'bg-white/60 border-slate-200 hover:bg-white'
                 }`}>
                   <input
                     type="radio"
                     name="currency_conversion_choice"
                     checked={applyConversion}
                     onChange={() => setApplyConversion(true)}
-                    className="mt-0.5 text-[#1E3A5F] focus:ring-[#1E3A5F]"
+                    className="mt-0.5 accent-slate-900"
                   />
                   <div className="flex-1 space-y-1.5 min-w-0">
-                    <span className="font-semibold text-xs text-neutral-900 block">
+                    <span className="font-semibold text-xs text-slate-900 block">
                       Convertir automáticamente por Tipo de Cambio
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-neutral-600 shrink-0">Tasa de cambio:</span>
+                      <span className="text-[11px] text-slate-600 shrink-0">Tasa de cambio:</span>
                       <input
                         type="number"
                         step="0.001"
@@ -167,10 +167,10 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
                         value={customRate}
                         onChange={(e) => setCustomRate(parseFloat(e.target.value) || 1)}
                         disabled={!applyConversion || isLoading}
-                        className="w-28 h-8 px-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-xs font-mono font-bold text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                        className="w-28 h-8 px-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold tabular-nums text-slate-900 focus:outline-none focus:border-slate-900"
                       />
                     </div>
-                    <p className="text-[10px] text-neutral-600 font-mono bg-neutral-100/70 p-1.5 rounded border border-neutral-200/50">
+                    <p className="text-[10px] text-slate-600 font-mono bg-slate-100 p-1.5 rounded border border-slate-200 tabular-nums">
                       {isDivide ? (
                         <>Precios en {normSource} ÷ {customRate} → {normTarget} (Ej: {normSource === 'PEN' ? 'S/' : ''} {exampleSourceVal}.00 → {normTarget === 'USD' ? '$' : '€'} {exampleConvertedVal})</>
                       ) : (
@@ -180,17 +180,17 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
                   </div>
                 </label>
 
-                <label className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                <label className={`flex items-start gap-3 p-3 rounded-xl border transition-[background-color,border-color] duration-150 cursor-pointer ${
                   !applyConversion 
-                    ? 'bg-white border-[#1E3A5F] ring-1 ring-[#1E3A5F]/20 shadow-2xs' 
-                    : 'bg-white/60 border-neutral-200 hover:bg-white'
+                    ? 'bg-white border-slate-900 ring-1 ring-slate-900/15' 
+                    : 'bg-white/60 border-slate-200 hover:bg-white'
                 }`}>
                   <input
                     type="radio"
                     name="currency_conversion_choice"
                     checked={!applyConversion}
                     onChange={() => setApplyConversion(false)}
-                    className="mt-0.5 text-[#1E3A5F] focus:ring-[#1E3A5F]"
+                    className="mt-0.5 accent-slate-900"
                   />
                   <div>
                     <span className="font-semibold text-xs text-neutral-900 block">

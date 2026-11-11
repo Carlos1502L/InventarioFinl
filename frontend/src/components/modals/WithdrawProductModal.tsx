@@ -304,7 +304,7 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
             ) : (
               /* Descuento por Mermas / Consumo para Productos Tipo Caja (BOX) */
               <div className="space-y-3">
-                <div className="px-3 py-2 rounded-xl bg-[#17191c]/5 border border-[#1E3A5F]/15 flex items-center justify-between text-xs text-[#17191c]">
+                <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs text-slate-800">
                   <span className="flex items-center gap-1.5 font-semibold">
                     <Layers className="w-3.5 h-3.5 text-[#17191c]" />
                     Equivalencia: 1 caja = {unitsPerBox} unidades

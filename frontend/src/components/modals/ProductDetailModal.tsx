@@ -148,25 +148,26 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <p className="text-xs text-neutral-500">SKU {product.code} · {formatStockDisplay(product)}</p>
               </div>
               <div className="hidden md:flex flex-wrap items-center gap-2">
-                <span className="font-mono text-xs uppercase tracking-wider text-[#17191c] px-3 py-1 rounded-full border border-[#1E3A5F]/30 bg-[#fafafb]">
-                  REF // {product.code}
+                <span className="font-mono text-xs text-slate-800 px-2.5 py-1 rounded-md border border-slate-200 bg-slate-50 font-semibold">
+                  {product.code}
                 </span>
-                <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#17191c] text-white flex items-center gap-1">
+                <span className="font-mono text-[10px] px-2.5 py-1 rounded-md bg-slate-900 text-white flex items-center gap-1 font-medium">
                   <Layers className="w-3 h-3 text-white" />
-                  {product.unit_type === 'BOX' ? `CAJA (${product.units_per_box || 1} UND)` : 'UNIDAD'}
+                  {product.unit_type === 'BOX' ? `BOX · ${product.units_per_box || 1} UND` : 'UNIT'}
                 </span>
                 {isInactive ? (
-                  <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#17191c] text-white">
-                    ESTADO // RETIRADO
+                  <span className="text-[11px] px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-600 font-medium">
+                    Retirado
                   </span>
                 ) : isLowStock ? (
-                  <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-[#fee2e2] text-[#e7000b] border border-[#1E3A5F]/15 font-bold flex items-center gap-1.5 shadow-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#17191c] animate-ping" />
-                    ESTADO // STOCK CRÍTICO
+                  <span className="text-[11px] px-2.5 py-1 rounded-md bg-red-50 text-red-700 border border-red-200 font-semibold flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+                    Stock crítico
                   </span>
                 ) : (
-                  <span className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full border border-[#ececec] text-[#17191c] bg-[#fafafb]">
-                    ESTADO // ACTIVO
+                  <span className="text-[11px] px-2.5 py-1 rounded-md border border-emerald-200 text-emerald-700 bg-emerald-50 font-semibold flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Activo
                   </span>
                 )}
               </div>
@@ -279,10 +280,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       <button
                         key={i}
                         onClick={() => setActivePhotoIdx(i)}
-                        className={`w-16 h-16 rounded-xl border flex-shrink-0 transition-all p-0.5 bg-white overflow-hidden ${
+                        className={`w-16 h-16 rounded-xl border flex-shrink-0 transition-[border-color,opacity] duration-150 p-0.5 bg-white overflow-hidden cursor-pointer ${
                           activePhotoIdx === i
-                            ? 'border-[#1E3A5F] ring-2 ring-[#1E3A5F]/20'
-                            : 'border-[#ececec] opacity-60 hover:opacity-100'
+                            ? 'border-slate-900 ring-2 ring-slate-900/15'
+                            : 'border-slate-200 opacity-65 hover:opacity-100'
                         }`}
                       >
                         <img src={url} alt={`Muestra ${i + 1}`} className="w-full h-full object-cover rounded-lg" loading="lazy" decoding="async" />
@@ -306,8 +307,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {/* COLUMNA DERECHA: ESPECIFICACIONES TÉCNICAS */}
               <div className="space-y-5">
                 <div>
-                  <p className="font-mono text-[10px] text-white uppercase tracking-[0.2em] mb-1 font-medium">
-                    FICHA TÉCNICA // {product.categories?.name || 'MERCANCÍA GENERAL'}
+                  <p className="font-mono text-[11px] text-slate-500 mb-1 font-medium">
+                    {product.categories?.name || 'Catálogo general'}
                   </p>
                   <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-[#17191c]">
                     {product.name}
@@ -440,10 +441,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <div className="flex flex-col sm:flex-row gap-2">
                     <button
                       onClick={() => onMove(product)}
-                      className="mobile-primary-btn flex-1 min-h-[44px] px-5 rounded-full border border-[#1E3A5F] hover:bg-[#17191c] hover:text-white text-[#17191c] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                      className="mobile-primary-btn flex-1 min-h-[42px] px-4 rounded-xl border border-slate-900 hover:bg-slate-900 hover:text-white text-slate-900 text-xs font-semibold flex items-center justify-center gap-2 transition-[background-color,color,transform] duration-150 active:scale-[0.97] cursor-pointer"
                     >
                       <ArrowRightLeft className="w-3.5 h-3.5" />
-                      <span>TRASLADAR UBICACIÓN</span>
+                      <span>Trasladar ubicación</span>
                     </button>
 
                     {!isInactive ? (
@@ -513,8 +514,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                               vInactive
                                 ? 'text-[#777b86]'
                                 : v.stock < (v.min_stock !== undefined && v.min_stock !== null ? v.min_stock : 1)
-                                  ? 'text-[#17191c] bg-[#f5f5f5] px-2 py-0.5 rounded-full font-bold border border-[#1E3A5F]/15'
-                                  : 'text-[#17191c]'
+                                  ? 'text-red-700 bg-red-50 px-2 py-0.5 rounded-md font-semibold border border-red-200 tabular-nums'
+                                  : 'text-slate-900 tabular-nums'
                             }`}
                           >
                             {vInactive ? 'BAJA' : formatStockDisplay(v)}

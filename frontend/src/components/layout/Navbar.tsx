@@ -51,7 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   return (
-    <header className="hidden md:block sticky top-0 z-30 bg-[#ffffff]/90 backdrop-blur-md border-b border-[#e5e5e5] transition-colors lg:pl-[260px] pt-[env(safe-area-inset-top,0px)] font-sans">
+    <header className="hidden md:block sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 transition-colors lg:pl-[260px] pt-[env(safe-area-inset-top,0px)] font-sans">
       <div className="max-w-[1440px] mx-auto px-6 sm:px-8 h-14 flex items-center justify-between gap-4">
         
         {/* Lado Izquierdo: Breadcrumb Trail (Ui Design Spec) / Logo Móvil */}
@@ -80,28 +80,50 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Breadcrumb Trail en Desktop (>= lg) */}
           <div className="hidden lg:flex items-center gap-2 text-sm">
-            <span className="text-[#737373] font-normal hover:text-[#0a0a0a] transition-colors">
+            <span className="text-slate-500 font-normal">
               Stockly
             </span>
-            <ChevronRight className="w-3.5 h-3.5 text-[#737373] stroke-[1.5]" />
-            <span className="text-[#0a0a0a] font-medium tracking-tight">
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400 stroke-[1.75]" />
+            <span className="text-slate-900 font-semibold tracking-tight">
               {tabLabels[activeTab] || 'Módulo'}
             </span>
+            {currentInventory?.name && (
+              <span className="hidden xl:inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 font-mono text-[11px] text-slate-600 ml-1 max-w-[180px] truncate">
+                {currentInventory.name}
+              </span>
+            )}
             <span
-              className={`w-1.5 h-1.5 rounded-full ml-1.5 transition-colors ${
-                isOnline ? 'bg-emerald-500' : 'bg-[#e7000b]'
+              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border font-mono text-[10px] font-medium ml-1 transition-colors ${
+                isOnline
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-amber-50 border-amber-200 text-amber-700'
               }`}
               title={isOnline ? 'Conectado a la nube' : 'Modo fuera de línea'}
-            />
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              {isOnline ? 'SYNC' : 'OFFLINE'}
+            </span>
           </div>
         </div>
 
         {/* Lado Derecho: Acciones Contextuales y Perfil */}
-        <div className="flex items-center gap-2.5 text-xs">
-          {/* Botón de Colaboradores (Secondary Ghost Button - 18px radius) */}
+        <div className="flex items-center gap-2 text-xs">
+          {/* Acceso rápido escáner en Desktop */}
+          {onQuickScan && (
+            <button
+              onClick={onQuickScan}
+              className="hidden lg:inline-flex items-center justify-center gap-1.5 px-3 min-h-[34px] bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-medium rounded-xl border border-slate-200 hover:border-slate-300 transition-[background-color,border-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.97] cursor-pointer"
+              title="Escáner rápido"
+            >
+              <Camera className="w-3.5 h-3.5 stroke-[1.8]" />
+              <span>Escanear</span>
+            </button>
+          )}
+
+          {/* Botón de Colaboradores */}
           <button
             onClick={onOpenCollaborators}
-            className="inline-flex items-center justify-center gap-2 px-3.5 min-h-[34px] bg-[#f5f5f5] hover:bg-[#ebebeb] text-[#0a0a0a] text-xs font-medium rounded-[18px] border-0 transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 px-3.5 min-h-[34px] bg-[#f5f5f5] lg:bg-slate-100 hover:bg-[#ebebeb] lg:hover:bg-slate-200/70 text-[#0a0a0a] lg:text-slate-900 text-xs font-medium rounded-[18px] lg:rounded-xl border-0 lg:border lg:border-slate-200/80 transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.97] cursor-pointer"
             title="Equipo y Colaboradores"
           >
             <Users className="w-3.5 h-3.5 stroke-[1.8]" />

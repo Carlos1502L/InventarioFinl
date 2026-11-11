@@ -278,10 +278,10 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                             type="button"
                             onClick={() => setCatColor(c)}
                             style={{ backgroundColor: c }}
-                            className={`w-6 h-6 rounded-full transition-all cursor-pointer ${
+                            className={`w-6 h-6 rounded-full transition-[transform,opacity] duration-150 cursor-pointer ${
                               catColor === c
-                                ? 'ring-2 ring-[#1E3A5F] scale-110 shadow-xs'
-                                : 'opacity-70 hover:opacity-100'
+                                ? 'ring-2 ring-slate-900 ring-offset-1 scale-110'
+                                : 'opacity-75 hover:opacity-100'
                             }`}
                           />
                         ))}

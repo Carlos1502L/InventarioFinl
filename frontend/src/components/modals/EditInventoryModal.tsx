@@ -804,7 +804,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                         <span className="text-[10px] text-slate-400 block uppercase font-mono">
                           Tasa Operativa
                         </span>
-                        <strong className="text-sm font-mono text-[#1E3A5F] dark:text-sky-400 block mt-0.5">
+                        <strong className="text-sm font-mono text-slate-900 tabular-nums block mt-0.5">
                           {Number(inventory.exchange_rate || 1.000).toFixed(3)}
                         </strong>
                       </div>
@@ -885,16 +885,16 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                       type="button"
                       onClick={handleExecuteRecalculate}
                       disabled={isSavingCurrencyOnly || isRecalculating || !isValidRate}
-                      className="w-full h-11 px-4 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer shadow-xs disabled:opacity-50"
+                      className="w-full h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 active:scale-[0.98] cursor-pointer disabled:opacity-50"
                     >
                       {isRecalculating ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
+                          <Loader2 className="w-4 h-4 animate-spin" />
                           <span>Actualizando precios y costos...</span>
                         </>
                       ) : (
                         <>
-                          <RefreshCw className="w-4 h-4 text-[#E8B4A0]" />
+                          <RefreshCw className="w-4 h-4" />
                           <span>Actualizar precios</span>
                         </>
                       )}

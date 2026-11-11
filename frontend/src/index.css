@@ -40,72 +40,75 @@
 
 /* ============================================================================
    DESCANSO VISUAL, ELEVACIÓN DE TARJETAS Y RESALTE TÁCTIL DE BOTONES
+   Scoped exclusively to < 1024px so mobile/tablet remain untouched while desktop
+   runs clean Industrial Slate tokens & GPU-accelerated micro-interactions.
    ============================================================================ */
+@media screen and (max-width: 1023px) {
+  /* 1. Sombras reales y profundas para todos los recuadros/módulos (shadow-xs no existe por defecto en Tailwind v3) */
+  .shadow-xs,
+  .shadow-sm {
+    box-shadow:
+      0 6px 20px -4px rgba(30, 58, 95, 0.09),
+      0 2px 6px -1px rgba(15, 23, 42, 0.05) !important;
+  }
 
-/* 1. Sombras reales y profundas para todos los recuadros/módulos (shadow-xs no existe por defecto en Tailwind v3) */
-.shadow-xs,
-.shadow-sm {
-  box-shadow:
-    0 6px 20px -4px rgba(30, 58, 95, 0.09),
-    0 2px 6px -1px rgba(15, 23, 42, 0.05) !important;
-}
+  /* 2. Recuadros principales de módulos (bg-white + rounded-2xl / rounded-xl) con borde definido y sombra suave */
+  main .bg-white.rounded-2xl:not(.shadow-xl),
+  main .bg-white.rounded-xl:not(.shadow-xl) {
+    border-color: #CBD5E1 !important;
+    box-shadow:
+      0 10px 26px -6px rgba(30, 58, 95, 0.09),
+      0 3px 8px -2px rgba(15, 23, 42, 0.05),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+  }
 
-/* 2. Recuadros principales de módulos (bg-white + rounded-2xl / rounded-xl) con borde definido y sombra suave */
-main .bg-white.rounded-2xl:not(.shadow-xl),
-main .bg-white.rounded-xl:not(.shadow-xl) {
-  border-color: #CBD5E1 !important;
-  box-shadow:
-    0 10px 26px -6px rgba(30, 58, 95, 0.09),
-    0 3px 8px -2px rgba(15, 23, 42, 0.05),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
-}
+  /* 3. Sub-recuadros internos (div con bg-[#F8F9FA]) con tono suave de descanso visual para diferenciarlos del blanco */
+  .bg-white div.bg-\[\#F8F9FA\] {
+    background-color: #F1F5F9 !important;
+    border-color: #CBD5E1 !important;
+  }
 
-/* 3. Sub-recuadros internos (div con bg-[#F8F9FA]) con tono suave de descanso visual para diferenciarlos del blanco */
-.bg-white div.bg-\[\#F8F9FA\] {
-  background-color: #F1F5F9 !important;
-  border-color: #CBD5E1 !important;
-}
+  /* 4. Botones secundarios y de control: relieve táctil tipo botón físico para que destaquen claramente */
+  button.bg-white,
+  button.bg-\[\#F8F9FA\] {
+    border-color: #BAC7D8 !important;
+    box-shadow:
+      0 2px 5px -1px rgba(15, 23, 42, 0.09),
+      0 1px 2px 0 rgba(15, 23, 42, 0.05),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.85),
+      inset 0 -1px 0 0 rgba(15, 23, 42, 0.06) !important;
+    transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  }
 
-/* 4. Botones secundarios y de control: relieve táctil tipo botón físico para que destaquen claramente */
-button.bg-white,
-button.bg-\[\#F8F9FA\] {
-  border-color: #BAC7D8 !important;
-  box-shadow:
-    0 2px 5px -1px rgba(15, 23, 42, 0.09),
-    0 1px 2px 0 rgba(15, 23, 42, 0.05),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.85),
-    inset 0 -1px 0 0 rgba(15, 23, 42, 0.06) !important;
-  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
-}
+  button.bg-\[\#F8F9FA\] {
+    background-color: #F1F5F9 !important;
+  }
 
-button.bg-\[\#F8F9FA\] {
-  background-color: #F1F5F9 !important;
-}
+  button.bg-white:hover:not(:disabled),
+  button.bg-\[\#F8F9FA\]:hover:not(:disabled) {
+    background-color: #FFFFFF !important;
+    border-color: #1E3A5F !important;
+    transform: translateY(-1px);
+    box-shadow:
+      0 6px 14px -3px rgba(30, 58, 95, 0.15),
+      0 2px 5px -1px rgba(15, 23, 42, 0.07) !important;
+  }
 
-button.bg-white:hover:not(:disabled),
-button.bg-\[\#F8F9FA\]:hover:not(:disabled) {
-  background-color: #FFFFFF !important;
-  border-color: #1E3A5F !important;
-  transform: translateY(-1px);
-  box-shadow:
-    0 6px 14px -3px rgba(30, 58, 95, 0.15),
-    0 2px 5px -1px rgba(15, 23, 42, 0.07) !important;
-}
+  /* 5. Botones principales (Navy #1E3A5F) con sombra de profundidad y brillo superior sutil */
+  button.bg-\[\#1E3A5F\] {
+    box-shadow:
+      0 4px 12px -2px rgba(30, 58, 95, 0.3),
+      0 2px 4px -1px rgba(30, 58, 95, 0.16),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.18) !important;
+  }
 
-/* 5. Botones principales (Navy #1E3A5F) con sombra de profundidad y brillo superior sutil */
-button.bg-\[\#1E3A5F\] {
-  box-shadow:
-    0 4px 12px -2px rgba(30, 58, 95, 0.3),
-    0 2px 4px -1px rgba(30, 58, 95, 0.16),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.18) !important;
-}
-
-button.bg-\[\#1E3A5F\]:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow:
-    0 8px 18px -3px rgba(30, 58, 95, 0.36),
-    0 3px 6px -2px rgba(30, 58, 95, 0.2),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
+  button.bg-\[\#1E3A5F\]:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow:
+      0 8px 18px -3px rgba(30, 58, 95, 0.36),
+      0 3px 6px -2px rgba(30, 58, 95, 0.2),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
+  }
 }
 
 /* 6. Inputs y Selectores con contraste claro y descanso visual */
@@ -924,40 +927,168 @@ div:has(> label:empty + span.hidden) {
 
 
 /* ============================================================================
-   UI / SHADCN DESIGN SYSTEM: DESKTOP OVERRIDES (>= 1024px)
-   Clinical blueprint on frosted paper (monochromatic, Geist, 18px/24px radii)
+   STOCKLY INDUSTRIAL WORKBENCH: DESKTOP OVERRIDES (>= 1024px)
+   Cool frosted slate canvas (#f4f6f8), crisp 1px #e2e8f0 hairlines,
+   tabular figures, JetBrains Mono telemetry accents, GPU-only easing.
    ============================================================================ */
+@keyframes desktopModalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes desktopDropdownIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes desktopBackdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media screen and (min-width: 1024px) {
+  :root {
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --duration-fast: 150ms;
+    --duration-ui: 200ms;
+    --surface-canvas: #f4f6f8;
+    --surface-rail: #f8fafc;
+    --surface-panel: #ffffff;
+    --border-hairline: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --ink-primary: #0f172a;
+    --ink-secondary: #475569;
+    --ink-muted: #64748b;
+  }
+
   body {
-    background-color: #f5f5f5;
-    color: #0a0a0a;
+    background-color: #f4f6f8;
+    color: #0f172a;
     font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    letter-spacing: -0.01em;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    letter-spacing: -0.011em;
   }
 
   ::selection {
-    background-color: #0a0a0a;
-    color: #fafafa;
+    background-color: #0f172a;
+    color: #f8fafc;
+  }
+
+  ::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 9999px;
+    border: 1.5px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  [role="button"]:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid #0f172a;
+    outline-offset: 2px;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+    border-color: #0f172a;
+    box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
   }
 
   .ui-card,
   .shadow-steep-subtle,
   .shadow-steep-card {
-    box-shadow: 0 0 0 1px rgba(23, 23, 23, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.06) !important;
+    box-shadow:
+      0 0 0 1px rgba(15, 23, 42, 0.05),
+      0 1px 2px 0 rgba(15, 23, 42, 0.04) !important;
   }
 
-  /* Modals, Floating Windows, Drawers, and Popups (Figma-grade blueprint) */
+  div.fixed.inset-0:has(> .mobile-dark-modal) {
+    animation: desktopBackdropIn 180ms var(--ease-out) both;
+  }
+
   .mobile-dark-modal {
     background-color: #ffffff !important;
-    border-color: #e5e5e5 !important;
-    border-radius: 24px !important;
-    box-shadow: 0 0 0 1px rgba(23, 23, 23, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 16px !important;
+    box-shadow:
+      0 0 0 1px rgba(15, 23, 42, 0.06),
+      0 20px 25px -5px rgba(15, 23, 42, 0.1),
+      0 8px 10px -6px rgba(15, 23, 42, 0.06) !important;
+    animation: desktopModalIn 200ms var(--ease-out) both;
+    transform-origin: center center;
   }
 
-  /* Reset button shadows in desktop to maintain flat tonal contrast */
-  aside button,
-  header button,
-  main .hidden.md\:block button {
-    box-shadow: none !important;
+  .mobile-dropdown-menu {
+    transform-origin: top center;
+    animation: desktopDropdownIn 150ms var(--ease-out) both;
+    border-color: #e2e8f0;
+    box-shadow:
+      0 0 0 1px rgba(15, 23, 42, 0.05),
+      0 10px 24px -4px rgba(15, 23, 42, 0.1),
+      0 4px 6px -2px rgba(15, 23, 42, 0.05);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .desktop-hover-lift {
+      transition:
+        transform 180ms var(--ease-out),
+        border-color 150ms var(--ease-out),
+        box-shadow 180ms var(--ease-out);
+    }
+    .desktop-hover-lift:hover {
+      transform: translateY(-2px);
+      border-color: #cbd5e1;
+      box-shadow:
+        0 4px 12px -2px rgba(15, 23, 42, 0.07),
+        0 2px 4px -1px rgba(15, 23, 42, 0.04);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    div.fixed.inset-0:has(> .mobile-dark-modal),
+    .mobile-dark-modal,
+    .mobile-dropdown-menu {
+      animation: none !important;
+    }
+    .desktop-hover-lift,
+    .desktop-hover-lift:hover {
+      transition: none !important;
+      transform: none !important;
+    }
   }
 }

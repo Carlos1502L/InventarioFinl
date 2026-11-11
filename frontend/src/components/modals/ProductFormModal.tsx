@@ -1160,7 +1160,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           min="0"
                           value={price}
                           onChange={e => handlePriceChange(e.target.value)}
-                          className="w-full min-h-[40px] bg-white border-2 border-[#1E3A5F] rounded-xl px-3 py-2 text-sm font-semibold text-[#17191c] focus:outline-none"
+                          className="w-full min-h-[40px] bg-white border-2 border-slate-900 rounded-xl px-3 py-2 font-mono text-sm font-semibold tabular-nums text-slate-900 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1339,8 +1339,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     {/* Badge de Stock en Vivo sobre la imagen */}
                     <div className="absolute top-2.5 right-2.5">
                       {isStockLow ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#fee2e2] text-[#e7000b] border border-[#1E3A5F]/15 text-[10px] font-mono font-bold shadow-sm">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#17191c] animate-ping"></span>
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-50 text-red-700 border border-red-200 text-[10px] font-mono font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
                           <span>STOCK BAJO ({previewStockText.toUpperCase()})</span>
                         </div>
                       ) : (
