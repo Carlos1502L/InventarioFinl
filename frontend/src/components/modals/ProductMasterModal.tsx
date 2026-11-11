@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeft,
   ArrowRightLeft,
@@ -13,7 +12,7 @@ import {
 import { Category, Location, Product, Subcategory } from '../../types/database';
 import { formatStockDisplay, logAuditAction, supabase } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { useBackdropDismiss, useLatestValue, useModalEscape, useModalMotion } from './modalMotion';
+import { useBackdropDismiss, useModalEscape } from './modalMotion';
 import { ProductDetailView } from './master/ProductDetailView';
 import { ProductRestockView } from './master/ProductRestockView';
 import { ProductEditView } from './master/ProductEditView';
@@ -124,8 +123,7 @@ export const ProductMasterModal: React.FC<ProductMasterModalProps> = ({
     return fromCatalog;
   }, [baseProduct, products]);
 
-  const latestNonNullProduct = useLatestValue(liveProduct);
-  const resolvedProduct = isOpen ? liveProduct : latestNonNullProduct;
+  const resolvedProduct = liveProduct;
   const activeView: ProductModalView =
     !resolvedProduct && view !== 'EDIT' ? 'EDIT' : view;
 
@@ -141,30 +139,8 @@ export const ProductMasterModal: React.FC<ProductMasterModalProps> = ({
   }, [resolvedProduct, products]);
 
   const isBusy = isReactivating || isViewSubmitting || isNestedSubModalOpen;
-  const { shouldReduceMotion, backdropMotion, panelMotion } = useModalMotion();
   useModalEscape(isOpen, onClose, isBusy);
   const backdropDismiss = useBackdropDismiss(onClose, isOpen && !isBusy);
-
-  const viewTransitionMotion = useMemo(
-    () => ({
-      initial: { opacity: 0 },
-      animate: {
-        opacity: 1,
-        transition: {
-          duration: shouldReduceMotion ? 0.06 : 0.14,
-          ease: [0.22, 1, 0.36, 1] as const
-        }
-      },
-      exit: {
-        opacity: 0,
-        transition: {
-          duration: shouldReduceMotion ? 0.05 : 0.09,
-          ease: [0.4, 0, 1, 1] as const
-        }
-      }
-    }),
-    [shouldReduceMotion]
-  );
 
   const goToSubview = (targetView: Exclude<ProductModalView, 'DETAIL'>) => {
     if (activeView === 'DETAIL') {
@@ -264,21 +240,17 @@ export const ProductMasterModal: React.FC<ProductMasterModalProps> = ({
     return null;
   };
 
+  if (!isOpen) return null;
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          key="product-master-backdrop"
-          {...backdropMotion}
-          {...backdropDismiss}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] overflow-y-auto"
-        >
-          <motion.div
-            key="product-master-panel"
-            {...panelMotion}
-            onClick={e => e.stopPropagation()}
-            className={`mobile-dark-modal relative bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl ${VIEW_WIDTH_CLASS[activeView]} lg:transition-[max-width] lg:duration-200 lg:ease-[cubic-bezier(0.22,1,0.36,1)] my-auto overflow-hidden flex flex-col max-h-[94vh] shadow-xl`}
-          >
+    <div
+      {...backdropDismiss}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] overflow-y-auto"
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        className={`mobile-dark-modal relative bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl ${VIEW_WIDTH_CLASS[activeView]} my-auto overflow-hidden flex flex-col max-h-[94vh] shadow-xl`}
+      >
             {/* CABECERA ADAPTATIVA UNIFICADA */}
             <div className="flex items-center justify-between gap-3 p-4 sm:p-5 border-b border-[#ececec] bg-white shrink-0 z-20">
               {activeView === 'DETAIL' && resolvedProduct ? (
@@ -399,130 +371,110 @@ export const ProductMasterModal: React.FC<ProductMasterModalProps> = ({
               )}
             </div>
 
-            {/* CUERPO ADAPTATIVO */}
+            {/* CUERPO DIRECTO SIN ANIMACIÓN DE TRANSICIÓN */}
             <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
-              <AnimatePresence mode="wait" initial={false}>
-                {activeView === 'DETAIL' && resolvedProduct && (
-                  <motion.div
-                    key="DETAIL"
-                    {...viewTransitionMotion}
-                    className="flex flex-col flex-1 min-h-0 w-full"
-                  >
-                    <ProductDetailView
-                      product={resolvedProduct}
-                      currency={currentInventory?.currency}
-                      relatedVariants={relatedVariants}
-                      isReactivating={isReactivating}
-                      onReactivate={handleReactivateProduct}
-                      onSelectProduct={nextProd => {
-                        setOverrideProduct(nextProd);
-                        onSelectProduct?.(nextProd);
-                      }}
-                      onGoToMove={() => goToSubview('MOVE')}
-                      onAssignLocation={prod => onAssignLocation?.(prod)}
-                      onWithdraw={prod => onWithdraw?.(prod)}
-                    />
-                  </motion.div>
-                )}
+              {activeView === 'DETAIL' && resolvedProduct && (
+                <div className="flex flex-col flex-1 min-h-0 w-full">
+                  <ProductDetailView
+                    product={resolvedProduct}
+                    currency={currentInventory?.currency}
+                    relatedVariants={relatedVariants}
+                    isReactivating={isReactivating}
+                    onReactivate={handleReactivateProduct}
+                    onSelectProduct={nextProd => {
+                      setOverrideProduct(nextProd);
+                      onSelectProduct?.(nextProd);
+                    }}
+                    onGoToMove={() => goToSubview('MOVE')}
+                    onAssignLocation={prod => onAssignLocation?.(prod)}
+                    onWithdraw={prod => onWithdraw?.(prod)}
+                  />
+                </div>
+              )}
 
-                {activeView === 'RESTOCK' && resolvedProduct && (
-                  <motion.div
-                    key="RESTOCK"
-                    {...viewTransitionMotion}
-                    className="flex flex-col flex-1 min-h-0 w-full"
-                  >
-                    <ProductRestockView
-                      product={resolvedProduct}
-                      onCancel={handleSubViewCancel}
-                      onViewDetails={() => setView('DETAIL')}
-                      onUseCodeAnyway={
-                        onUseCodeAnyway
-                          ? code => {
-                              onUseCodeAnyway(code);
-                              onClose();
-                            }
-                          : undefined
+              {activeView === 'RESTOCK' && resolvedProduct && (
+                <div className="flex flex-col flex-1 min-h-0 w-full">
+                  <ProductRestockView
+                    product={resolvedProduct}
+                    onCancel={handleSubViewCancel}
+                    onViewDetails={() => setView('DETAIL')}
+                    onUseCodeAnyway={
+                      onUseCodeAnyway
+                        ? code => {
+                            onUseCodeAnyway(code);
+                            onClose();
+                          }
+                        : undefined
+                    }
+                    onSubmittingChange={setIsViewSubmitting}
+                    onSuccess={updatedProd => {
+                      setOverrideProduct(updatedProd);
+                      onRestocked?.();
+                      onUpdated?.();
+                      if (cancelReturnsToDetail) {
+                        setView('DETAIL');
+                      } else {
+                        onClose();
                       }
-                      onSubmittingChange={setIsViewSubmitting}
-                      onSuccess={updatedProd => {
-                        setOverrideProduct(updatedProd);
-                        onRestocked?.();
-                        onUpdated?.();
-                        if (cancelReturnsToDetail) {
-                          setView('DETAIL');
-                        } else {
-                          onClose();
-                        }
-                      }}
-                    />
-                  </motion.div>
-                )}
+                    }}
+                  />
+                </div>
+              )}
 
-                {activeView === 'EDIT' && (
-                  <motion.div
-                    key="EDIT"
-                    {...viewTransitionMotion}
-                    className="flex flex-col flex-1 min-h-0 w-full"
-                  >
-                    <ProductEditView
-                      productToEdit={resolvedProduct}
-                      categories={categories}
-                      subcategories={subcategories}
-                      locations={locations}
-                      products={products}
-                      onCancel={handleSubViewCancel}
-                      onCloseEntireModal={onClose}
-                      onRedirectToStock={onRedirectToStock}
-                      onSwitchToRestockProduct={target => {
-                        setOverrideProduct(target);
-                        setCancelReturnsToDetail(false);
-                        setView('RESTOCK');
-                      }}
-                      onSubmittingChange={setIsViewSubmitting}
-                      onSubModalOpenChange={setIsNestedSubModalOpen}
-                      onSuccess={savedProd => {
-                        onSaved?.(savedProd);
-                        if (resolvedProduct && cancelReturnsToDetail) {
-                          if (savedProd) setOverrideProduct(savedProd);
-                          setView('DETAIL');
-                        } else {
-                          onClose();
-                        }
-                      }}
-                    />
-                  </motion.div>
-                )}
+              {activeView === 'EDIT' && (
+                <div className="flex flex-col flex-1 min-h-0 w-full">
+                  <ProductEditView
+                    productToEdit={resolvedProduct}
+                    categories={categories}
+                    subcategories={subcategories}
+                    locations={locations}
+                    products={products}
+                    onCancel={handleSubViewCancel}
+                    onCloseEntireModal={onClose}
+                    onRedirectToStock={onRedirectToStock}
+                    onSwitchToRestockProduct={target => {
+                      setOverrideProduct(target);
+                      setCancelReturnsToDetail(false);
+                      setView('RESTOCK');
+                    }}
+                    onSubmittingChange={setIsViewSubmitting}
+                    onSubModalOpenChange={setIsNestedSubModalOpen}
+                    onSuccess={savedProd => {
+                      onSaved?.(savedProd);
+                      if (resolvedProduct && cancelReturnsToDetail) {
+                        if (savedProd) setOverrideProduct(savedProd);
+                        setView('DETAIL');
+                      } else {
+                        onClose();
+                      }
+                    }}
+                  />
+                </div>
+              )}
 
-                {activeView === 'MOVE' && resolvedProduct && (
-                  <motion.div
-                    key="MOVE"
-                    {...viewTransitionMotion}
-                    className="flex flex-col flex-1 min-h-0 w-full"
-                  >
-                    <ProductMoveView
-                      product={resolvedProduct}
-                      locations={locations}
-                      onCancel={handleSubViewCancel}
-                      onSubmittingChange={setIsViewSubmitting}
-                      onSubModalOpenChange={setIsNestedSubModalOpen}
-                      onSuccess={() => {
-                        onMoved?.();
-                        onUpdated?.();
-                        if (cancelReturnsToDetail) {
-                          setView('DETAIL');
-                        } else {
-                          onClose();
-                        }
-                      }}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {activeView === 'MOVE' && resolvedProduct && (
+                <div className="flex flex-col flex-1 min-h-0 w-full">
+                  <ProductMoveView
+                    product={resolvedProduct}
+                    locations={locations}
+                    onCancel={handleSubViewCancel}
+                    onSubmittingChange={setIsViewSubmitting}
+                    onSubModalOpenChange={setIsNestedSubModalOpen}
+                    onSuccess={() => {
+                      onMoved?.();
+                      onUpdated?.();
+                      if (cancelReturnsToDetail) {
+                        setView('DETAIL');
+                      } else {
+                        onClose();
+                      }
+                    }}
+                  />
+                </div>
+              )}
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      </div>
+    </div>
   );
 };
 
