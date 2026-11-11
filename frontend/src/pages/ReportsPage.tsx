@@ -13,7 +13,6 @@ import { Product, Category, Subcategory, Location } from '../types/database';
 import { formatCurrency } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { MinimalDropdown } from '../components/ui/MinimalDropdown';
-import jsPDF from 'jspdf';
 
 interface ReportsPageProps {
   products: Product[];
@@ -98,6 +97,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
     try {
       setIsExportingPDF(true);
 
+      const { default: jsPDF } = await import('jspdf');
       const doc = new jsPDF();
       const inventoryTitle = currentInventory.name || 'Reporte de Inventario';
       const currency = currentInventory.currency || 'USD';
@@ -189,103 +189,97 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-28 sm:pb-12 max-w-7xl mx-auto font-normal text-[#1E3A5F]">
-      {/* 1. Cabecera y Resumen de Exportación */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
-              DATA EXPORT // INVENTORY CENSUS & AUDIT
-            </span>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F] uppercase">
-              Reportes & Manifiestos de Stock
-            </h1>
-            <p className="text-xs text-[#616161] font-light mt-0.5">
-              Generación y exportación de auditorías basadas estrictamente en la vista y filtros actuales.
-            </p>
-          </div>
-
-          {/* Botones de Descarga */}
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handleExportPDF}
-              disabled={isExportingPDF || reportProducts.length === 0}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-full shadow-xs disabled:opacity-50 transition-all active:scale-95 font-medium"
-            >
-              {isExportingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8B4A0]" /> : <Download className="w-3.5 h-3.5 text-[#E8B4A0]" />}
-              <span>PDF</span>
-            </button>
-
-            <button
-              onClick={handleExportExcel}
-              disabled={isExportingExcel || reportProducts.length === 0}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs uppercase tracking-wider rounded-full shadow-xs disabled:opacity-50 transition-all active:scale-95 font-mono"
-            >
-              {isExportingExcel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
-              <span>Excel (.xlsx)</span>
-            </button>
-
-            <button
-              onClick={() => handleExportCSV('reporte-inventario')}
-              disabled={isExportingCSV || reportProducts.length === 0}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs uppercase tracking-wider rounded-full shadow-xs disabled:opacity-50 transition-all active:scale-95 font-mono"
-            >
-              {isExportingCSV ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileCode className="w-3.5 h-3.5" />}
-              <span>CSV</span>
-            </button>
-          </div>
+    <div className="space-y-5 pb-28 sm:pb-12 max-w-[1440px] mx-auto font-sans text-slate-900">
+      {/* 1. Cabecera y Exportación */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-1">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-slate-900">
+            Reportes y manifiestos
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Exportación de inventarios basada en los parámetros y filtros aplicados.
+          </p>
         </div>
 
-        {/* Tarjetas de Métricas del Reporte */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-[#E5E7EB]">
-          <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB]">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161] block">
-              Ítems Filtrados
-            </span>
-            <span className="text-xl font-bold text-[#1E3A5F] font-mono mt-0.5 block">
-              {reportProducts.length} ítems
-            </span>
-          </div>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <button
+            onClick={handleExportExcel}
+            disabled={isExportingExcel || reportProducts.length === 0}
+            className="inline-flex items-center gap-1.5 px-3.5 min-h-[38px] bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 text-xs font-medium rounded-xl disabled:opacity-45 transition-[background-color,border-color,transform] duration-150 active:scale-[0.97] cursor-pointer"
+          >
+            {isExportingExcel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
+            <span>Excel (.xlsx)</span>
+          </button>
 
-          <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB]">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161] block">
-              Total de Unidades
-            </span>
-            <span className="text-xl font-bold text-[#1E3A5F] font-mono mt-0.5 block">
-              {totalUnits} uds
-            </span>
-          </div>
+          <button
+            onClick={() => handleExportCSV('reporte-inventario')}
+            disabled={isExportingCSV || reportProducts.length === 0}
+            className="inline-flex items-center gap-1.5 px-3.5 min-h-[38px] bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 text-xs font-medium rounded-xl disabled:opacity-45 transition-[background-color,border-color,transform] duration-150 active:scale-[0.97] cursor-pointer"
+          >
+            {isExportingCSV ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileCode className="w-3.5 h-3.5" />}
+            <span>CSV</span>
+          </button>
 
-          <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] col-span-2 sm:col-span-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161] block">
-              Valorización Total
-            </span>
-            <span className="text-xl font-bold text-[#1E3A5F] font-mono mt-0.5 block">
-              {formatCurrency(totalValuation, currentInventory?.currency)}
-            </span>
-          </div>
+          <button
+            onClick={handleExportPDF}
+            disabled={isExportingPDF || reportProducts.length === 0}
+            className="inline-flex items-center gap-1.5 px-4 min-h-[38px] bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-xl disabled:opacity-45 transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer"
+          >
+            {isExportingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+            <span>Exportar PDF</span>
+          </button>
         </div>
       </div>
 
-      {/* 2. Filtros de Generación */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 space-y-3 shadow-xs">
-        <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EB]">
-          <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F]">
-            Parámetros de Segmentación
+      {/* 1B. Resumen Métricas del Reporte */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-ui-card">
+          <span className="text-xs font-medium text-slate-500 block">
+            Ítems filtrados
+          </span>
+          <span className="text-2xl font-semibold tabular-nums text-slate-900 mt-1 block">
+            {reportProducts.length} <span className="text-xs font-normal text-slate-500">ítems</span>
+          </span>
+        </div>
+
+        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-ui-card">
+          <span className="text-xs font-medium text-slate-500 block">
+            Total unidades
+          </span>
+          <span className="text-2xl font-semibold tabular-nums text-slate-900 mt-1 block">
+            {totalUnits} <span className="text-xs font-normal text-slate-500">und</span>
+          </span>
+        </div>
+
+        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-ui-card">
+          <span className="text-xs font-medium text-slate-500 block">
+            Valorización del reporte
+          </span>
+          <span className="text-2xl font-semibold tabular-nums text-slate-900 mt-1 block truncate">
+            {formatCurrency(totalValuation, currentInventory?.currency)}
+          </span>
+        </div>
+      </div>
+
+      {/* 2. Filtros de Segmentación */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-ui-card">
+        <div className="flex items-center justify-between pb-2.5 border-b border-slate-200">
+          <span className="text-sm font-semibold text-slate-900">
+            Parámetros de segmentación
           </span>
           {hasActiveFilters && (
             <button
               onClick={handleClearFilters}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F8F9FA] hover:bg-white text-[#1E3A5F] border border-[#E5E7EB] text-xs font-mono uppercase rounded-full transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200/70 text-slate-800 border border-slate-200 text-xs font-medium rounded-lg transition-colors cursor-pointer"
             >
-              <RotateCcw className="w-3 h-3 text-[#E8B4A0]" /> Restablecer
+              <RotateCcw className="w-3 h-3" /> Restablecer
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Categoría</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">Categoría</label>
             <MinimalDropdown
               value={filterCategory}
               onChange={(val) => {
@@ -301,7 +295,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Subcategoría</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">Subcategoría</label>
             <MinimalDropdown
               value={filterSubcategory}
               onChange={(val) => {
@@ -316,7 +310,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Ubicación Física</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">Ubicación física</label>
             <MinimalDropdown
               value={filterLocation}
               onChange={(val) => {
@@ -331,7 +325,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Estado de Existencia</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">Estado de existencia</label>
             <MinimalDropdown
               value={filterStatus}
               onChange={(val) => {
@@ -352,7 +346,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
                 setFilterSubcategory('ALL');
                 setCurrentPage(1);
               }}
-              className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+              className="w-full bg-[#ffffff] border border-[#ececec] rounded-xl px-3 py-2 text-xs text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
             >
               <option value="ALL">Todas las Categorías</option>
               {categories.map(c => (
@@ -362,7 +356,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Subcategoría</label>
+            <label className="block text-[10px]   tracking-wider text-[#777b86] mb-1">Subcategoría</label>
             <select
               value={filterSubcategory}
               onChange={e => {
@@ -370,7 +364,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
                 setCurrentPage(1);
               }}
               disabled={filterCategory === 'ALL' || activeSubcategories.length === 0}
-              className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] disabled:opacity-50"
+              className="w-full bg-[#ffffff] border border-[#ececec] rounded-xl px-3 py-2 text-xs text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c] disabled:opacity-50"
             >
               <option value="ALL">Todas las Subcategorías</option>
               {activeSubcategories.map(s => (
@@ -380,14 +374,14 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Ubicación Física</label>
+            <label className="block text-[10px]   tracking-wider text-[#777b86] mb-1">Ubicación Física</label>
             <select
               value={filterLocation}
               onChange={e => {
                 setFilterLocation(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+              className="w-full bg-[#ffffff] border border-[#ececec] rounded-xl px-3 py-2 text-xs text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
             >
               <option value="ALL">Todas las Ubicaciones</option>
               {locations.map(l => (
@@ -397,14 +391,14 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono uppercase tracking-wider text-[#616161] mb-1">Estado de Existencia</label>
+            <label className="block text-[10px]   tracking-wider text-[#777b86] mb-1">Estado de Existencia</label>
             <select
               value={filterStatus}
               onChange={e => {
                 setFilterStatus(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+              className="w-full bg-[#ffffff] border border-[#ececec] rounded-xl px-3 py-2 text-xs text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
             >
               <option value="ALL">Todos los Estados</option>
               <option value="ACTIVE">Activos en Manifiesto</option>
@@ -415,14 +409,14 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         </div>
       </div>
 
-      {/* 3. Tabla Interactiva de Datos con RNF-01 Paginación */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
-        <div className="p-4 border-b border-[#E5E7EB] flex items-center justify-between">
-          <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F]">
-            Previsualización del Manifiesto ({reportProducts.length} registros)
+      {/* 3. Tabla Interactiva de Datos con Paginación */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-ui-card">
+        <div className="px-4 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+          <span className="text-sm font-semibold text-slate-900">
+            Previsualización del manifiesto <span className="font-mono text-xs text-slate-500 font-normal ml-1 tabular-nums">({reportProducts.length})</span>
           </span>
           {hasActiveFilters && (
-            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E8B4A0]/40">
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
               Filtros activos
             </span>
           )}
@@ -431,43 +425,43 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-[#F8F9FA] text-[#1E3A5F] font-mono text-[10px] font-bold uppercase tracking-wider border-b border-[#E5E7EB]">
-                <th className="p-3.5">CÓDIGO</th>
-                <th className="p-3.5">PRODUCTO</th>
-                <th className="p-3.5">CATEGORÍA</th>
-                <th className="p-3.5">UBICACIÓN</th>
-                <th className="p-3.5 text-right">PRECIO</th>
-                <th className="p-3.5 text-right">STOCK</th>
-                <th className="p-3.5 text-right">VALOR TOTAL</th>
-                <th className="p-3.5 text-center">ESTADO</th>
+              <tr className="bg-slate-50 text-slate-500 text-[11px] font-semibold border-b border-slate-200">
+                <th className="p-3.5">SKU</th>
+                <th className="p-3.5">Producto</th>
+                <th className="p-3.5">Categoría</th>
+                <th className="p-3.5">Ubicación</th>
+                <th className="p-3.5 text-right">Precio</th>
+                <th className="p-3.5 text-right">Stock</th>
+                <th className="p-3.5 text-right">Valor total</th>
+                <th className="p-3.5 text-center">Estado</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E5E7EB]">
+            <tbody className="divide-y divide-slate-100">
               {reportProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-12 text-center text-[#616161] font-mono text-xs uppercase">
+                  <td colSpan={8} className="p-12 text-center text-slate-400 text-xs">
                     No hay productos que coincidan con los filtros seleccionados.
                   </td>
                 </tr>
               ) : (
                 paginatedReportProducts.map(p => (
-                  <tr key={p.id} className="hover:bg-[#F8F9FA]/60 transition-colors">
-                    <td className="p-3.5 font-mono font-bold text-[#1E3A5F]">{p.code}</td>
-                    <td className="p-3.5 font-bold text-[#1E3A5F] max-w-[220px] truncate uppercase">{p.name}</td>
-                    <td className="p-3.5 text-[#616161]">{p.categories?.name || 'General'}</td>
-                    <td className="p-3.5 text-[#616161]">{p.locations?.name || '-'}</td>
-                    <td className="p-3.5 text-right text-[#1E3A5F] font-mono font-bold">
+                  <tr key={p.id} className="hover:bg-slate-50/70 transition-colors duration-150">
+                    <td className="p-3.5 font-mono font-medium text-slate-900 whitespace-nowrap">{p.code}</td>
+                    <td title={p.name} className="p-3.5 font-semibold text-slate-900 max-w-[220px] truncate">{p.name}</td>
+                    <td className="p-3.5 text-slate-600">{p.categories?.name || 'General'}</td>
+                    <td className="p-3.5 text-slate-600">{p.locations?.name || '—'}</td>
+                    <td className="p-3.5 text-right text-slate-900 font-semibold tabular-nums">
                       {formatCurrency(p.price, currentInventory?.currency)}
                     </td>
-                    <td className="p-3.5 text-right font-mono font-bold text-[#1E3A5F]">{p.stock}</td>
-                    <td className="p-3.5 text-right font-mono font-bold text-[#1E3A5F]">
+                    <td className="p-3.5 text-right font-semibold tabular-nums text-slate-900">{p.stock}</td>
+                    <td className="p-3.5 text-right font-semibold tabular-nums text-slate-900">
                       {formatCurrency((p.price || 0) * (p.stock || 0), currentInventory?.currency)}
                     </td>
                     <td className="p-3.5 text-center">
-                      <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-full ${
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
                         p.status === 'ACTIVE'
-                          ? 'bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E8B4A0]/40'
-                          : 'bg-rose-50 text-rose-700 border border-rose-200'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-red-50 text-red-700 border-red-200'
                       }`}>
                         {p.status === 'ACTIVE' ? 'Activo' : 'Baja'}
                       </span>
@@ -481,22 +475,22 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
 
         {/* RNF-01: Controles de Paginación en Reportes */}
         {totalPages > 1 && (
-          <div className="p-3.5 border-t border-[#E5E7EB] flex items-center justify-between text-xs font-mono text-[#616161]">
+          <div className="p-3.5 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 tabular-nums">
             <span>
-              Página {currentPage} de {totalPages} ({reportProducts.length} productos)
+              Página <strong className="text-slate-900 font-semibold">{currentPage}</strong> de {totalPages} ({reportProducts.length} productos)
             </span>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded-xl border border-[#E5E7EB] bg-white text-[#1E3A5F] hover:bg-[#F8F9FA] disabled:opacity-40 transition-colors"
+                className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 disabled:opacity-40 transition-colors cursor-pointer"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded-xl border border-[#E5E7EB] bg-white text-[#1E3A5F] hover:bg-[#F8F9FA] disabled:opacity-40 transition-colors"
+                className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 disabled:opacity-40 transition-colors cursor-pointer"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
@@ -507,3 +501,5 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
     </div>
   );
 };
+
+export default ReportsPage;

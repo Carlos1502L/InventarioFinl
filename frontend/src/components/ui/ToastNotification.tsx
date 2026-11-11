@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { CheckCircle2, WifiOff, AlertTriangle } from 'lucide-react';
 
 export interface ToastData {
@@ -36,6 +36,7 @@ export function showAppToast(
  */
 export const ToastNotification: React.FC = () => {
   const [toasts, setToasts] = useState<ToastData[]>([]);
+  const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
     const handleToastEvent = (e: Event) => {
@@ -60,10 +61,14 @@ export const ToastNotification: React.FC = () => {
         {toasts.map((toast) => (
           <motion.div
             key={toast.id}
-            initial={{ opacity: 0, y: -16, scale: 0.95 }}
+            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -16, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -12, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -12, scale: 0.95 }}
+            transition={
+              shouldReduceMotion
+                ? { duration: 0.1 }
+                : { type: 'spring', stiffness: 400, damping: 25 }
+            }
             className="pointer-events-auto bg-neutral-950/90 text-white backdrop-blur-md px-4 py-2.5 rounded-full text-xs font-medium shadow-2xl border border-white/15 flex items-center gap-2.5"
           >
             {toast.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingCart,
   Search,
@@ -17,9 +18,11 @@ import {
   Loader2,
   X,
   Layers,
-  Package
+  Package,
+  Banknote,
+  Smartphone
 } from 'lucide-react';
-import { Product, PaymentMethod, Coupon } from '../types/database';
+import { Product, PaymentMethod, Coupon, Inventory } from '../types/database';
 import {
   supabase,
   formatCurrency,
@@ -29,11 +32,151 @@ import {
   getBoxBreakdown
 } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
+import { matchesAnyField, normalizeText } from '../utils/searchUtils';
 import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import { SuccessCheckModal } from '../components/modals/SuccessCheckModal';
 import { saveSaleLocally, isNetworkOrOfflineError, QueuedSalePayload } from '../services/offlineSync';
 import { showAppToast } from '../components/ui/ToastNotification';
+import { Switch } from '../components/common/Switch';
 import jsPDF from 'jspdf';
+import { useBackdropDismiss, useLatestValue, useModalEscape, useModalMotion } from '../components/modals/modalMotion';
+
+interface QrPaymentModalProps {
+  qrModalType: 'YAPE' | 'PLIN' | null;
+  inventory: Inventory | null;
+  finalTotal: number;
+  copiedText: boolean;
+  onCopyPhone: (phone: string) => void;
+  onClose: () => void;
+}
+
+const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
+  qrModalType,
+  inventory,
+  finalTotal,
+  copiedText,
+  onCopyPhone,
+  onClose
+}) => {
+  const activeType = useLatestValue(qrModalType);
+  const { backdropMotion, panelMotion } = useModalMotion();
+  const backdropDismiss = useBackdropDismiss(onClose, Boolean(qrModalType));
+  useModalEscape(Boolean(qrModalType), onClose);
+
+  return (
+    <AnimatePresence>
+      {qrModalType && activeType && (
+        <motion.div
+          {...backdropMotion}
+          {...backdropDismiss}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4"
+        >
+          <motion.div
+            {...panelMotion}
+            onClick={(e) => e.stopPropagation()}
+            className="mobile-dark-modal bg-white border border-slate-200 rounded-2xl w-full max-w-sm sm:max-w-md p-6 shadow-xl space-y-4 text-center font-sans"
+          >
+            {/* Cabecera */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-slate-900 text-white">
+                  <QrCode className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <h4 className="font-semibold text-slate-900 text-base tracking-tight">
+                    {activeType === 'YAPE' ? 'Cobro con Yape' : 'Cobro con Plin'}
+                  </h4>
+                  <p className="text-[11px] text-slate-500">Presenta el código QR al cliente</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Cuerpo Operativo */}
+            <div className="overflow-y-auto space-y-4">
+              {/* Monto exacto */}
+              <div className="mobile-flat-row p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                <span className="text-[11px] font-medium text-slate-500 block">
+                  Monto exacto a transferir
+                </span>
+                <span className="text-2xl sm:text-3xl font-semibold tabular-nums text-slate-900 block mt-0.5">
+                  {formatCurrency(finalTotal, inventory?.currency)}
+                </span>
+              </div>
+
+              {/* QR Grande */}
+              <div className="flex flex-col items-center justify-center">
+                {((activeType === 'YAPE' && inventory?.yape_qr_url) ||
+                  (activeType === 'PLIN' && inventory?.plin_qr_url)) ? (
+                  <div className="qr-light-surface w-64 h-64 sm:w-72 sm:h-72 p-3 bg-white rounded-2xl border border-slate-200 flex items-center justify-center overflow-hidden">
+                    <img
+                      src={activeType === 'YAPE' ? inventory?.yape_qr_url! : inventory?.plin_qr_url!}
+                      alt={`Código QR ${activeType}`}
+                      className="w-full h-full object-contain"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-64 h-64 p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-500 text-xs space-y-2">
+                    <QrCode className="w-12 h-12 text-slate-300" />
+                    <p className="font-semibold text-xs text-slate-800">
+                      Sin QR cargado para {activeType}
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      Carga la imagen del QR en <strong>Configuración &gt; Pasarela de Pagos</strong>.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Número telefónico */}
+              {((activeType === 'YAPE' && inventory?.yape_phone) ||
+                (activeType === 'PLIN' && inventory?.plin_phone)) && (
+                <div className="mobile-flat-row p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <div className="text-left">
+                    <span className="text-[11px] text-slate-500 block">Número asociado</span>
+                    <span className="text-base font-mono font-semibold text-slate-900">
+                      {activeType === 'YAPE' ? inventory?.yape_phone : inventory?.plin_phone}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onCopyPhone((activeType === 'YAPE' ? inventory?.yape_phone : inventory?.plin_phone)!)}
+                    className="mobile-inline-btn inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    {copiedText ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                    <span>{copiedText ? 'Copiado' : 'Copiar'}</span>
+                  </button>
+                </div>
+              )}
+
+              {inventory?.payment_instructions && (
+                <p className="text-[11px] text-slate-500 italic">
+                  "{inventory.payment_instructions}"
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="mobile-primary-btn w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-xl transition-colors cursor-pointer"
+              >
+                Volver al cobro
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
 
 interface SalesPageProps {
   products: Product[];
@@ -97,13 +240,13 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
   const [qrModalType, setQrModalType] = useState<'YAPE' | 'PLIN' | null>(null);
   const [copiedText, setCopiedText] = useState(false);
 
-  // Búsqueda de Productos para el Carrito
+  // Búsqueda de Productos para el Carrito (RF-SEARCH-016: Tolerancia a acentos)
   const searchResults = useMemo(() => {
-    if (!searchTerm.trim()) return [];
-    const term = searchTerm.toLowerCase().trim();
+    const normTerm = normalizeText(searchTerm);
+    if (!normTerm) return [];
     return products
       .filter(p => (p.status === 'ACTIVE' || !p.status) && Number(p.stock) > 0)
-      .filter(p => p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term))
+      .filter(p => matchesAnyField([p.name, p.code, (p as any).sku], normTerm))
       .slice(0, 6);
   }, [products, searchTerm]);
 
@@ -776,7 +919,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                 onClick={() => setScannerOpen(true)}
                 aria-label="Escanear código para agregar al carrito"
                 title="Escanear código"
-                className="w-12 h-12 flex items-center justify-center bg-black hover:bg-neutral-800 border border-black rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
+                className="w-12 h-12 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
               >
                 <Camera className="w-5 h-5 text-white" />
               </button>
@@ -1062,33 +1205,24 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
               >
                 ¿Información del cliente?
               </label>
-              <button
+              <Switch
                 id="mobile-customer-switch"
-                type="button"
-                role="switch"
-                aria-checked={showCustomerInfo}
-                onClick={() => {
-                  const next = !showCustomerInfo;
+                size="lg"
+                activeColor="bg-neutral-950"
+                checked={showCustomerInfo}
+                onChange={(next) => {
                   setShowCustomerInfo(next);
                   if (!next) {
                     setCustomerName('');
                     setCustomerContact('');
                   }
                 }}
-                className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  showCustomerInfo ? 'bg-neutral-950' : 'bg-neutral-200'
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                    showCustomerInfo ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
+                ariaLabel="¿Información del cliente?"
+              />
             </div>
 
             {showCustomerInfo && (
-              <div className="space-y-2.5 animate-in fade-in duration-150">
+              <div className="space-y-2.5">
                 <input
                   type="text"
                   value={customerName}
@@ -1146,71 +1280,75 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
       </div>
 
       {/* =========================================================
-          VISTA DE ESCRITORIO (>= 768px / hidden md:block)
+          VISTA DE ESCRITORIO (>= 768px / hidden md:block) - Ui CLINICAL BLUEPRINT
          ========================================================= */}
-      <div className="hidden md:block space-y-6 pb-28 sm:pb-12 max-w-7xl mx-auto font-normal text-[#1E3A5F]">
-      {/* 1. Cabecera Editorial */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
-            TERMINAL OPERATIVA // CHECKOUT
-          </span>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F] uppercase">
-            Punto de Venta & Caja
+      <div className="hidden md:block space-y-5 pb-28 sm:pb-12 max-w-[1440px] mx-auto font-sans text-slate-900">
+      {/* 1. Encabezado POS Directo (Sin eyebrow) */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-1">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-slate-900">
+            Punto de venta
           </h1>
-          <p className="text-xs text-[#616161] font-light mt-0.5">
-            Registro ágil de transacciones en unidades o cajas fraccionables, emisión de comprobantes y descuento automático de stock.
+          <p className="text-xs text-slate-500 mt-1">
+            Cobro fraccionable por unidades o cajas, cupones de descuento y emisión de comprobantes.
           </p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium ${
+              isOnline
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-amber-50 border-amber-200 text-amber-700'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+            {isOnline ? 'Terminal conectada' : 'Modo offline activo'}
+          </span>
+          <span className="font-mono text-xs px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 tabular-nums">
+            {products.length} SKUs
+          </span>
         </div>
       </div>
 
       {errorMessage && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center justify-between gap-3 text-xs text-rose-700 animate-in fade-in shadow-xs">
+        <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between gap-3 text-xs text-red-700">
           <div className="flex items-center gap-2.5">
-            <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
-            <span>{errorMessage}</span>
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+            <span className="font-medium">{errorMessage}</span>
           </div>
-          <button onClick={() => setErrorMessage(null)} className="text-rose-500 hover:text-rose-800 p-1">
+          <button
+            type="button"
+            onClick={() => setErrorMessage(null)}
+            className="text-red-700 hover:text-red-900 p-1 rounded-md hover:bg-red-100 transition-colors cursor-pointer"
+          >
             ✕
           </button>
         </div>
       )}
 
       {/* Terminal de Punto de Venta (POS) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Columna Izquierda: Búsqueda y Carrito de Productos */}
-        <div className="lg:col-span-2 space-y-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Columna Izquierda (7/8 cols): Búsqueda Rápida y Orden */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
           {/* Tarjeta de Búsqueda */}
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono uppercase tracking-widest text-[#1E3A5F] font-bold block">
-                  CATÁLOGO ACTIVO
-                </span>
-                <span
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    isOnline ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
-                  }`}
-                  title={isOnline ? 'En línea' : 'Modo fuera de línea'}
-                />
-              </div>
-              <span className="text-xs text-[#616161]">{products.length} ítems indexados</span>
-            </div>
-
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-ui-card space-y-3.5">
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Search className="w-4 h-4 text-[#616161] absolute left-3.5 top-3.5" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  placeholder="Escribe el nombre o SKU del producto..."
-                  className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl pl-10 pr-8 py-2.5 text-xs text-[#1E3A5F] placeholder:text-[#616161]/50 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] focus:border-[#1E3A5F] transition-all"
+                  placeholder="Buscar producto por nombre, SKU o código de barras..."
+                  className="w-full min-h-[40px] bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-slate-900 rounded-xl pl-10 pr-8 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none transition-[background-color,border-color,box-shadow] duration-150"
                 />
                 {searchTerm && (
                   <button
+                    type="button"
                     onClick={() => setSearchTerm('')}
-                    className="absolute right-3 top-3 text-xs text-[#616161] hover:text-[#1E3A5F]"
+                    aria-label="Limpiar búsqueda"
+                    className="absolute right-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-900 p-0.5 rounded hover:bg-slate-200/60 cursor-pointer"
                   >
                     ✕
                   </button>
@@ -1220,16 +1358,17 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
               <button
                 type="button"
                 onClick={() => setScannerOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 whitespace-nowrap shadow-xs"
+                className="inline-flex items-center gap-1.5 px-4 min-h-[40px] bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-medium transition-[background-color,border-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.97] whitespace-nowrap cursor-pointer"
+                title="Escanear código"
               >
-                <Camera className="w-4 h-4 text-[#1E3A5F]" />
+                <Camera className="w-4 h-4 text-slate-700" />
                 <span>Escanear</span>
               </button>
             </div>
 
             {/* Resultados de Búsqueda Desplegables */}
             {searchResults.length > 0 && (
-              <div className="divide-y divide-[#E5E7EB] border border-[#E5E7EB] rounded-xl overflow-hidden bg-[#F8F9FA]/60 animate-in fade-in">
+              <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
                 {searchResults.map(p => {
                   const isBox = p.unit_type === 'BOX' && Number(p.units_per_box) > 0;
                   const breakdown = getBoxBreakdown(p);
@@ -1238,58 +1377,64 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                   return (
                     <div
                       key={p.id}
-                      className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-white transition-colors"
+                      className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-slate-50 transition-colors duration-150"
                     >
-                      <div className="min-w-0 pr-3">
+                      <div className="min-w-0 pr-2 flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-bold text-[#1E3A5F] uppercase truncate">{p.name}</p>
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-mono uppercase bg-[#1E3A5F] text-white shrink-0">
-                            {isBox ? `CAJA (${p.units_per_box} UND)` : 'UNIDAD'}
+                          <p title={p.name} className="text-[13px] font-semibold text-slate-900 truncate">
+                            {p.name}
+                          </p>
+                          <span className={`font-mono px-1.5 py-px rounded text-[10px] font-medium border shrink-0 ${
+                            isBox
+                              ? 'bg-slate-100 border-slate-200 text-slate-700'
+                              : 'bg-slate-50 border-slate-200/80 text-slate-600'
+                          }`}>
+                            {isBox ? `BOX · ${p.units_per_box}u` : 'UNIT'}
                           </span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#616161] font-mono mt-0.5">
-                          <span className="font-semibold">{p.code}</span>
-                          <span>•</span>
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 mt-0.5 tabular-nums">
+                          <span className="font-mono text-slate-700 font-medium">{p.code}</span>
+                          <span>·</span>
                           <span>
-                            Stock: <strong className="text-[#1E3A5F] font-semibold">{formatStockDisplay(p)}</strong>
+                            Stock: <strong className="text-slate-900 font-semibold">{formatStockDisplay(p)}</strong>
                             {isBox && breakdown.breakdownLabel ? ` (${breakdown.breakdownLabel})` : ''}
                           </span>
-                          <span>•</span>
-                          <span className="text-[#1E3A5F] font-bold">
+                          <span>·</span>
+                          <span className="text-slate-900 font-semibold">
                             {formatCurrency(p.price, currentInventory?.currency)}
-                            {isBox ? ` / caja (${formatCurrency(unitPriceEquiv, currentInventory?.currency)} / und)` : ''}
+                            {isBox ? ` / caja (${formatCurrency(unitPriceEquiv, currentInventory?.currency)} / u)` : ''}
                           </span>
                         </div>
                       </div>
 
                       {isBox ? (
-                        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+                        <div className="flex items-center gap-1.5 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
                           {Number(p.stock) >= 1 && (
                             <button
                               type="button"
                               onClick={() => addToCart(p, 'BOX')}
-                              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 px-3 min-h-[38px] bg-[#1E3A5F] hover:bg-[#152a45] text-white text-[11px] font-mono uppercase tracking-wider rounded-xl shadow-xs active:scale-95 transition-all"
+                              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 px-3 min-h-[34px] bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-medium rounded-lg active:scale-[0.97] transition-[background-color,transform] duration-150 cursor-pointer"
                               title="Vender por caja completa"
                             >
-                              <Layers className="w-3.5 h-3.5 text-[#E8B4A0]" /> +1 Caja
+                              <Layers className="w-3.5 h-3.5" /> +1 Caja
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => addToCart(p, 'UNIT')}
-                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 px-3 min-h-[38px] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] border border-[#1E3A5F] text-[11px] font-mono uppercase tracking-wider rounded-xl shadow-xs active:scale-95 transition-all"
+                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 px-3 min-h-[34px] bg-white hover:bg-slate-50 text-slate-900 border border-slate-200 hover:border-slate-300 text-[11px] font-medium rounded-lg active:scale-[0.97] transition-[background-color,border-color,transform] duration-150 cursor-pointer"
                             title="Vender por unidades sueltas"
                           >
-                            <Package className="w-3.5 h-3.5 text-[#1E3A5F]" /> +1 Und
+                            <Package className="w-3.5 h-3.5" /> +1 Und
                           </button>
                         </div>
                       ) : (
                         <button
                           type="button"
                           onClick={() => addToCart(p, 'UNIT')}
-                          className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-3 min-h-[38px] bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-xl shadow-xs active:scale-95 transition-all flex-shrink-0"
+                          className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-3.5 min-h-[34px] bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg active:scale-[0.97] transition-[background-color,transform] duration-150 flex-shrink-0 cursor-pointer"
                         >
-                          <Plus className="w-3.5 h-3.5 text-[#E8B4A0]" /> Añadir
+                          <Plus className="w-3.5 h-3.5" /> Añadir
                         </button>
                       )}
                     </div>
@@ -1299,279 +1444,297 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
             )}
           </div>
 
-          {/* Tabla / Lista de Ítems en el Carrito */}
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
+          {/* Lista de Ítems en la Orden */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-ui-card space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <ShoppingCart className="w-4 h-4 text-[#E8B4A0]" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
-                  Ítems Seleccionados ({cart.length})
+                <ShoppingCart className="w-4 h-4 text-slate-700" />
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Orden actual
                 </h3>
+                <span className="font-mono text-[11px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium tabular-nums">
+                  {cart.length} {cart.length === 1 ? 'ítem' : 'ítems'}
+                </span>
               </div>
               {cart.length > 0 && (
                 <button
+                  type="button"
                   onClick={() => setCart([])}
-                  className="text-xs text-[#616161] hover:text-rose-600 transition-colors uppercase tracking-wider font-mono text-[11px]"
+                  className="text-xs text-slate-500 hover:text-red-600 transition-colors font-medium cursor-pointer"
                 >
-                  Vaciar Carrito
+                  Vaciar carrito
                 </button>
               )}
             </div>
 
             {cart.length === 0 ? (
-              <div className="py-12 text-center text-[#616161] space-y-2 font-mono">
-                <ShoppingCart className="w-10 h-10 mx-auto stroke-1 text-[#1E3A5F]/20" />
-                <p className="text-xs uppercase tracking-wider">El carrito de caja está vacío.</p>
-                <p className="text-[11px] text-[#616161]/70 font-sans">
-                  Busca por nombre/código o utiliza el escáner para sumar productos al ticket.
+              <div className="py-12 text-center text-slate-500 space-y-2">
+                <ShoppingCart className="w-9 h-9 mx-auto stroke-[1.2] text-slate-300" />
+                <p className="text-xs font-semibold text-slate-900">El carrito de caja está vacío</p>
+                <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                  Busca por nombre o SKU arriba o utiliza el escáner para agregar ítems a la orden.
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-[#E5E7EB] max-h-[230px] overflow-y-auto overscroll-contain pr-1">
-                {cart.map(item => {
-                  const isBox = item.product.unit_type === 'BOX' && Number(item.product.units_per_box) > 0;
-                  const upb = Math.max(1, Number(item.product.units_per_box || 1));
-                  const unitPrice = isBox ? item.product.price / upb : item.product.price;
-                  const itemSubtotal = Number((item.product.price * item.quantity).toFixed(2));
-                  const breakdown = getBoxBreakdown(item.product);
+              <div className="divide-y divide-slate-100 max-h-[380px] overflow-y-auto overscroll-contain pr-1">
+                <AnimatePresence initial={false}>
+                  {cart.map(item => {
+                    const isBox = item.product.unit_type === 'BOX' && Number(item.product.units_per_box) > 0;
+                    const upb = Math.max(1, Number(item.product.units_per_box || 1));
+                    const unitPrice = isBox ? item.product.price / upb : item.product.price;
+                    const itemSubtotal = Number((item.product.price * item.quantity).toFixed(2));
+                    const breakdown = getBoxBreakdown(item.product);
 
-                  return (
-                    <div key={item.product.id} className="py-4 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-bold text-[#1E3A5F] uppercase truncate">{item.product.name}</p>
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-mono uppercase bg-[#1E3A5F]/10 text-[#1E3A5F] font-semibold">
-                              {isBox ? `CAJA (1 caja = ${upb} und)` : 'UNIDAD'}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-[#616161] font-mono mt-0.5">
-                            <span className="font-semibold">{item.product.code}</span> •{' '}
-                            <span className="font-semibold">
-                              {formatCurrency(item.product.price, currentInventory?.currency)}
-                              {isBox ? ` / caja (${formatCurrency(unitPrice, currentInventory?.currency)} / und)` : ' / und'}
-                            </span>{' '}
-                            • Disponible: <strong className="text-[#1E3A5F]">{formatStockDisplay(item.product)}</strong>
-                            {isBox && breakdown.breakdownLabel ? ` (${breakdown.breakdownLabel})` : ''}
-                          </p>
-                        </div>
-
-                        {/* Subtotal y Botón Quitar */}
-                        <div className="flex items-center gap-3 shrink-0">
-                          <div className="text-right">
-                            <p className="text-sm font-mono font-bold text-[#1E3A5F]">
-                              {formatCurrency(itemSubtotal, currentInventory?.currency)}
+                    return (
+                      <motion.div
+                        key={item.product.id}
+                        layout
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4, height: 0, overflow: 'hidden' }}
+                        transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] }}
+                        className="py-3.5 space-y-2.5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p title={item.product.name} className="text-[13px] font-semibold text-slate-900 truncate">
+                                {item.product.name}
+                              </p>
+                              <span className={`font-mono px-1.5 py-px rounded text-[10px] font-medium border shrink-0 ${
+                                isBox
+                                  ? 'bg-slate-100 border-slate-200 text-slate-700'
+                                  : 'bg-slate-50 border-slate-200/80 text-slate-500'
+                              }`}>
+                                {isBox ? `BOX · ${upb}u` : 'UNIT'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-0.5 tabular-nums">
+                              <span className="font-mono text-slate-700 font-medium">{item.product.code}</span> ·{' '}
+                              <span className="font-semibold text-slate-800">
+                                {formatCurrency(item.product.price, currentInventory?.currency)}
+                                {isBox ? ` / caja (${formatCurrency(unitPrice, currentInventory?.currency)} / u)` : ' / u'}
+                              </span>{' '}
+                              · Disp: <strong className="text-slate-800 font-medium">{formatStockDisplay(item.product)}</strong>
+                              {isBox && breakdown.breakdownLabel ? ` (${breakdown.breakdownLabel})` : ''}
                             </p>
-                            <span className="text-[10px] font-mono text-[#616161] block">
-                              {isBox
-                                ? `Descuenta: ${formatCleanDecimal(item.quantity, 2)} ${item.quantity === 1 ? 'caja' : 'cajas'}`
-                                : `Descuenta: ${item.quantity} und`}
-                            </span>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => removeFromCart(item.product.id)}
-                            className="p-1.5 text-[#616161] hover:text-rose-600 transition-colors"
-                            title="Quitar ítem"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
 
-                      {/* Controles de Cantidad según Tipo (UNIT vs BOX fraccionable) */}
-                      {!isBox ? (
-                        <div className="flex items-center justify-between bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-3.5 py-2 font-mono text-xs">
-                          <span className="text-[11px] text-[#616161] uppercase">Cantidad (Unidades):</span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => updateUnitCartQuantity(item.product.id, item.quantity - 1)}
-                              className="w-7 h-7 rounded-lg bg-white border border-[#E5E7EB] flex items-center justify-center text-[#1E3A5F] hover:border-[#1E3A5F] transition-colors"
-                            >
-                              <Minus className="w-3.5 h-3.5" />
-                            </button>
-                            <input
-                              type="number"
-                              min="1"
-                              max={item.product.stock}
-                              step="1"
-                              value={item.quantity}
-                              onChange={e => updateUnitCartQuantity(item.product.id, parseInt(e.target.value, 10) || 1)}
-                              className="w-16 h-7 text-center bg-white border border-[#E5E7EB] rounded-lg text-xs font-mono font-bold text-[#1E3A5F] focus:outline-none focus:border-[#1E3A5F]"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => updateUnitCartQuantity(item.product.id, item.quantity + 1)}
-                              className="w-7 h-7 rounded-lg bg-white border border-[#E5E7EB] flex items-center justify-center text-[#1E3A5F] hover:border-[#1E3A5F] transition-colors"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                            <span className="text-[11px] text-[#616161]">und</span>
-                          </div>
-                        </div>
-                      ) : (
-                        /* Selector Dual para Producto tipo CAJA: Cajas completas + Unidades sueltas */
-                        <div className="p-3 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs">
-                          {/* Control de Cajas */}
-                          <div className="flex items-center justify-between bg-white border border-[#E5E7EB] rounded-lg px-3 py-2">
-                            <div>
-                              <span className="text-[10px] font-bold uppercase text-[#1E3A5F] block">Cajas a vender</span>
-                              <span className="text-[10px] text-[#616161]">
-                                {formatCurrency(item.product.price, currentInventory?.currency)} / caja
+                          {/* Subtotal y Botón Quitar */}
+                          <div className="flex items-center gap-2.5 shrink-0">
+                            <div className="text-right">
+                              <p className="text-sm font-semibold text-slate-900 tabular-nums">
+                                {formatCurrency(itemSubtotal, currentInventory?.currency)}
+                              </p>
+                              <span className="text-[10px] font-mono text-slate-500 block tabular-nums">
+                                {isBox
+                                  ? `-${formatCleanDecimal(item.quantity, 2)} ${item.quantity === 1 ? 'caja' : 'cajas'}`
+                                  : `-${item.quantity} und`}
                               </span>
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => removeFromCart(item.product.id)}
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-150 cursor-pointer"
+                              title="Quitar ítem"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Controles planos de Cantidad según Tipo (UNIT vs BOX fraccionable) */}
+                        {!isBox ? (
+                          <div className="flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-xl px-3.5 py-2 text-xs">
+                            <span className="text-[11px] text-slate-600 font-medium">Cantidad (unidades)</span>
                             <div className="flex items-center gap-1.5">
                               <button
                                 type="button"
-                                onClick={() =>
-                                  updateBoxCartAmounts(item.product.id, Math.max(0, item.boxes - 1), item.looseUnits)
-                                }
-                                className="w-7 h-7 rounded-lg bg-[#F8F9FA] border border-[#E5E7EB] flex items-center justify-center text-[#1E3A5F] hover:border-[#1E3A5F]"
+                                onClick={() => updateUnitCartQuantity(item.product.id, item.quantity - 1)}
+                                className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-800 hover:bg-slate-100 active:scale-[0.95] transition-[background-color,transform] duration-150 cursor-pointer"
                               >
                                 <Minus className="w-3.5 h-3.5" />
                               </button>
                               <input
                                 type="number"
-                                min="0"
-                                step="any"
-                                value={item.boxes}
-                                onChange={e =>
-                                  updateBoxCartAmounts(
-                                    item.product.id,
-                                    parseFloat(e.target.value) || 0,
-                                    item.looseUnits
-                                  )
-                                }
-                                className="w-16 h-7 text-center bg-white border border-[#E5E7EB] rounded-lg text-xs font-mono font-bold text-[#1E3A5F] focus:outline-none focus:border-[#1E3A5F]"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => updateBoxCartAmounts(item.product.id, item.boxes + 1, item.looseUnits)}
-                                className="w-7 h-7 rounded-lg bg-[#F8F9FA] border border-[#E5E7EB] flex items-center justify-center text-[#1E3A5F] hover:border-[#1E3A5F]"
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Control de Unidades Sueltas */}
-                          <div className="flex items-center justify-between bg-white border border-[#E5E7EB] rounded-lg px-3 py-2">
-                            <div>
-                              <span className="text-[10px] font-bold uppercase text-[#1E3A5F] block">
-                                Unidades sueltas
-                              </span>
-                              <span className="text-[10px] text-[#616161]">
-                                {formatCurrency(unitPrice, currentInventory?.currency)} / und
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  updateBoxCartAmounts(item.product.id, item.boxes, Math.max(0, item.looseUnits - 1))
-                                }
-                                className="w-7 h-7 rounded-lg bg-[#F8F9FA] border border-[#E5E7EB] flex items-center justify-center text-[#1E3A5F] hover:border-[#1E3A5F]"
-                              >
-                                <Minus className="w-3.5 h-3.5" />
-                              </button>
-                              <input
-                                type="number"
-                                min="0"
+                                min="1"
+                                max={item.product.stock}
                                 step="1"
-                                value={item.looseUnits}
-                                onChange={e =>
-                                  updateBoxCartAmounts(
-                                    item.product.id,
-                                    item.boxes,
-                                    parseInt(e.target.value, 10) || 0
-                                  )
-                                }
-                                className="w-16 h-7 text-center bg-white border border-[#E5E7EB] rounded-lg text-xs font-mono font-bold text-[#1E3A5F] focus:outline-none focus:border-[#1E3A5F]"
+                                value={item.quantity}
+                                onChange={e => updateUnitCartQuantity(item.product.id, parseInt(e.target.value, 10) || 1)}
+                                className="w-16 h-7 text-center font-mono tabular-nums bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
                               />
                               <button
                                 type="button"
-                                onClick={() => updateBoxCartAmounts(item.product.id, item.boxes, item.looseUnits + 1)}
-                                className="w-7 h-7 rounded-lg bg-[#F8F9FA] border border-[#E5E7EB] flex items-center justify-center text-[#1E3A5F] hover:border-[#1E3A5F]"
+                                onClick={() => updateUnitCartQuantity(item.product.id, item.quantity + 1)}
+                                className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-800 hover:bg-slate-100 active:scale-[0.95] transition-[background-color,transform] duration-150 cursor-pointer"
                               >
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        ) : (
+                          /* Selector Dual plano para Producto tipo CAJA */
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            <div className="flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2">
+                              <div className="min-w-0 pr-2">
+                                <span className="text-[11px] font-semibold text-slate-800 block">Cajas</span>
+                                <span className="text-[10px] text-slate-500 tabular-nums">
+                                  {formatCurrency(item.product.price, currentInventory?.currency)} / caja
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateBoxCartAmounts(item.product.id, Math.max(0, item.boxes - 1), item.looseUnits)
+                                  }
+                                  className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-800 hover:bg-slate-100 active:scale-[0.95] transition-[background-color,transform] duration-150 cursor-pointer"
+                                >
+                                  <Minus className="w-3.5 h-3.5" />
+                                </button>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="any"
+                                  value={item.boxes}
+                                  onChange={e =>
+                                    updateBoxCartAmounts(
+                                      item.product.id,
+                                      parseFloat(e.target.value) || 0,
+                                      item.looseUnits
+                                    )
+                                  }
+                                  className="w-14 h-7 text-center font-mono tabular-nums bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => updateBoxCartAmounts(item.product.id, item.boxes + 1, item.looseUnits)}
+                                  className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-800 hover:bg-slate-100 active:scale-[0.95] transition-[background-color,transform] duration-150 cursor-pointer"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2">
+                              <div className="min-w-0 pr-2">
+                                <span className="text-[11px] font-semibold text-slate-800 block">Unidades sueltas</span>
+                                <span className="text-[10px] text-slate-500 tabular-nums">
+                                  {formatCurrency(unitPrice, currentInventory?.currency)} / und
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateBoxCartAmounts(item.product.id, item.boxes, Math.max(0, item.looseUnits - 1))
+                                  }
+                                  className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-800 hover:bg-slate-100 active:scale-[0.95] transition-[background-color,transform] duration-150 cursor-pointer"
+                                >
+                                  <Minus className="w-3.5 h-3.5" />
+                                </button>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="1"
+                                  value={item.looseUnits}
+                                  onChange={e =>
+                                    updateBoxCartAmounts(
+                                      item.product.id,
+                                      item.boxes,
+                                      parseInt(e.target.value, 10) || 0
+                                    )
+                                  }
+                                  className="w-14 h-7 text-center font-mono tabular-nums bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:border-slate-900"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => updateBoxCartAmounts(item.product.id, item.boxes, item.looseUnits + 1)}
+                                  className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-800 hover:bg-slate-100 active:scale-[0.95] transition-[background-color,transform] duration-150 cursor-pointer"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
               </div>
             )}
           </div>
         </div>
 
-        {/* Columna Derecha: Resumen de Cobro y Checkout */}
-        <div className="space-y-4">
-          <form onSubmit={handleProcessSale} className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-[#E5E7EB]">
-              <Receipt className="w-4 h-4 text-[#E8B4A0]" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
-                Liquidación de Ticket
-              </h3>
+        {/* Columna Derecha (4/5 cols): Liquidación de Ticket Sticky */}
+        <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+          <form onSubmit={handleProcessSale} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-ui-card space-y-4 sticky top-20">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-slate-700" />
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Resumen de cobro
+                </h3>
+              </div>
+              <span className="font-mono text-[10px] text-slate-500">
+                {currentInventory?.currency || 'PEN'}
+              </span>
             </div>
 
             {/* Total Destacado y Desglose */}
-            <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] space-y-2 font-mono">
-              <div className="flex items-center justify-between text-xs text-[#616161]">
-                <span>Subtotal ({cartTotalItemsCount} {cartTotalItemsCount === 1 ? 'ítem' : 'ítems'}):</span>
-                <span className="text-[#1E3A5F]">
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>Subtotal ({cartTotalItemsCount} {cartTotalItemsCount === 1 ? 'ítem' : 'ítems'})</span>
+                <span className="text-slate-900 font-medium tabular-nums">
                   {formatCurrency(cartSubtotal, currentInventory?.currency)}
                 </span>
               </div>
 
               {appliedCoupon && (
-                <div className="flex items-center justify-between text-xs text-[#1E3A5F]">
-                  <span className="flex items-center gap-1">
-                    <Tag className="w-3.5 h-3.5 text-[#E8B4A0]" /> Descuento ({appliedCoupon.code}):
+                <div className="flex items-center justify-between text-xs text-emerald-700">
+                  <span className="flex items-center gap-1 font-medium">
+                    <Tag className="w-3.5 h-3.5" /> Cupón <span className="font-mono">{appliedCoupon.code}</span>
                   </span>
-                  <span className="text-[#E8B4A0] font-medium">
+                  <span className="font-semibold tabular-nums">
                     -{formatCurrency(discountAmount, currentInventory?.currency)}
                   </span>
                 </div>
               )}
 
-              <div className="flex items-center justify-between pt-2 border-t border-[#E5E7EB]">
-                <span className="text-xs uppercase tracking-wider text-[#1E3A5F] font-bold">TOTAL COBRO:</span>
-                <span className="text-2xl font-bold text-[#1E3A5F]">
+              <div className="flex items-baseline justify-between pt-2.5 border-t border-slate-200">
+                <span className="text-xs font-semibold text-slate-600">Total a cobrar</span>
+                <span className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-[-0.03em] tabular-nums">
                   {formatCurrency(finalTotal, currentInventory?.currency)}
                 </span>
               </div>
             </div>
 
-            {/* Cupón de Descuento (Opcional) */}
-            <div className="space-y-2 pt-1 border-t border-[#E5E7EB]">
-              <label className="block text-[11px] uppercase tracking-wider font-medium text-[#1E3A5F]">
-                Cupón Promocional
+            {/* Cupón de Descuento */}
+            <div className="space-y-1.5 pt-1">
+              <label className="block text-xs font-medium text-slate-600">
+                Cupón promocional
               </label>
 
               {appliedCoupon ? (
-                <div className="p-2.5 bg-[#F8F9FA] border border-[#E8B4A0] rounded-xl flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-mono">
-                    <Sparkles className="w-4 h-4 text-[#E8B4A0]" />
-                    <div>
-                      <span className="text-xs text-[#1E3A5F] font-semibold">
-                        {appliedCoupon.code}
-                      </span>
-                      <span className="text-[11px] text-[#616161] ml-1.5">
-                        ({appliedCoupon.discount_type === 'PERCENTAGE' ? `-${appliedCoupon.discount_value}%` : `-${formatCurrency(appliedCoupon.discount_value, currentInventory?.currency)}`})
-                      </span>
-                    </div>
+                <div className="px-3 py-2 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                    <span className="font-mono text-xs text-emerald-900 font-semibold">
+                      {appliedCoupon.code}
+                    </span>
+                    <span className="text-[11px] text-emerald-700 tabular-nums">
+                      ({appliedCoupon.discount_type === 'PERCENTAGE' ? `-${appliedCoupon.discount_value}%` : `-${formatCurrency(appliedCoupon.discount_value, currentInventory?.currency)}`})
+                    </span>
                   </div>
                   <button
                     type="button"
                     onClick={handleRemoveCoupon}
-                    className="p-1 text-[#616161] hover:text-rose-600 rounded-lg transition-colors"
+                    className="p-1 text-emerald-700 hover:text-red-600 rounded-md transition-colors cursor-pointer"
                     title="Quitar cupón"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ) : (
@@ -1581,13 +1744,13 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
                     value={couponCodeInput}
                     onChange={e => setCouponCodeInput(e.target.value.toUpperCase())}
                     placeholder="Código (Ej: DESC10)"
-                    className="flex-1 bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs font-mono uppercase text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                    className="flex-1 min-h-[38px] bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3 py-1.5 font-mono text-xs text-slate-900 placeholder:font-sans placeholder:text-slate-400 outline-none transition-[background-color,border-color] duration-150"
                   />
                   <button
                     type="button"
                     onClick={handleApplyCoupon}
                     disabled={couponLoading || !couponCodeInput.trim()}
-                    className="px-3.5 py-2 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider rounded-xl transition-all disabled:opacity-50 active:scale-95 whitespace-nowrap shadow-xs"
+                    className="px-3.5 min-h-[38px] bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-xl transition-[background-color,transform] duration-150 disabled:opacity-45 active:scale-[0.97] whitespace-nowrap cursor-pointer"
                   >
                     {couponLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Aplicar'}
                   </button>
@@ -1595,129 +1758,132 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
               )}
 
               {couponMessage && (
-                <p className={`text-[11px] font-mono ${couponMessage.type === 'success' ? 'text-[#1E3A5F]' : 'text-rose-600'}`}>
+                <p className={`text-[11px] font-medium ${couponMessage.type === 'success' ? 'text-emerald-700' : 'text-red-600'}`}>
                   {couponMessage.text}
                 </p>
               )}
             </div>
 
-            {/* Método de Pago */}
-            <div className="pt-2 border-t border-[#E5E7EB]">
-              <label className="block text-[11px] uppercase tracking-wider font-medium text-[#1E3A5F] mb-2">
-                Método de Pago <span className="text-[#E8B4A0]">*</span>
+            {/* Método de Pago (Lucide icons, sin emojis Unicode) */}
+            <div className="pt-2 border-t border-slate-200">
+              <label className="block text-xs font-medium text-slate-600 mb-2">
+                Método de pago
               </label>
 
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: 'CASH', label: 'Efectivo', icon: '💵' },
-                  { id: 'YAPE', label: 'Yape', icon: '🟣' },
-                  { id: 'PLIN', label: 'Plin', icon: '🔵' }
-                ].map(m => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => {
-                      setPaymentMethod(m.id as PaymentMethod);
-                      if (m.id === 'YAPE') setQrModalType('YAPE');
-                      if (m.id === 'PLIN') setQrModalType('PLIN');
-                    }}
-                    className={`p-2.5 rounded-xl text-xs uppercase tracking-wider border flex flex-col items-center justify-center gap-1 transition-all ${
-                      paymentMethod === m.id
-                        ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-sm ring-2 ring-[#E8B4A0]'
-                        : 'bg-[#F8F9FA] border-[#E5E7EB] text-[#1E3A5F] hover:bg-white'
-                    }`}
-                  >
-                    <span className="text-base">{m.icon}</span>
-                    <span className="font-mono text-[11px]">{m.label}</span>
-                  </button>
-                ))}
+                  { id: 'CASH', label: 'Efectivo', Icon: Banknote },
+                  { id: 'YAPE', label: 'Yape', Icon: QrCode },
+                  { id: 'PLIN', label: 'Plin', Icon: Smartphone }
+                ].map(m => {
+                  const IconComponent = m.Icon;
+                  const active = paymentMethod === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        setPaymentMethod(m.id as PaymentMethod);
+                        if (m.id === 'YAPE') setQrModalType('YAPE');
+                        if (m.id === 'PLIN') setQrModalType('PLIN');
+                      }}
+                      className={`py-2.5 px-2 rounded-xl text-xs border flex flex-col items-center justify-center gap-1 transition-[background-color,border-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.97] cursor-pointer ${
+                        active
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900'
+                      }`}
+                    >
+                      <IconComponent className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-600'}`} />
+                      <span className="text-[11px] font-medium">{m.label}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               {(paymentMethod === 'YAPE' || paymentMethod === 'PLIN') && (
                 <button
                   type="button"
                   onClick={() => setQrModalType(paymentMethod)}
-                  className="w-full mt-2 py-2 px-3 bg-[#E8B4A0]/20 hover:bg-[#E8B4A0]/30 text-[#1E3A5F] border border-[#E8B4A0]/50 rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
+                  className="w-full mt-2 py-2 px-3 bg-slate-100 hover:bg-slate-200/70 text-slate-900 border border-slate-200 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
                 >
-                  <QrCode className="w-4 h-4 text-[#1E3A5F]" /> Ver QR para Cliente ({paymentMethod})
+                  <QrCode className="w-3.5 h-3.5 text-slate-700" /> Mostrar QR {paymentMethod}
                 </button>
               )}
             </div>
 
             {/* Switch: ¿Información del cliente? y Detalle de la venta */}
-            <div className="space-y-3 pt-2 border-t border-[#E5E7EB]">
+            <div className="space-y-3 pt-2 border-t border-slate-200">
               <div className="flex items-center justify-between">
                 <label
                   htmlFor="desktop-customer-switch"
-                  className="text-[11px] uppercase tracking-wider font-medium text-[#1E3A5F] cursor-pointer select-none"
+                  className="text-xs font-medium text-slate-600 cursor-pointer select-none"
                 >
-                  ¿Información del cliente?
+                  Datos del cliente
                 </label>
-                <button
+                <Switch
                   id="desktop-customer-switch"
-                  type="button"
-                  role="switch"
-                  aria-checked={showCustomerInfo}
-                  onClick={() => {
-                    const next = !showCustomerInfo;
+                  size="md"
+                  activeColor="bg-slate-900"
+                  checked={showCustomerInfo}
+                  onChange={(next) => {
                     setShowCustomerInfo(next);
                     if (!next) {
                       setCustomerName('');
                       setCustomerContact('');
                     }
                   }}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    showCustomerInfo ? 'bg-[#1E3A5F]' : 'bg-[#E5E7EB]'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                      showCustomerInfo ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
+                  ariaLabel="¿Información del cliente?"
+                />
               </div>
 
-              {showCustomerInfo && (
-                <div className="space-y-2 animate-in fade-in duration-150">
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-wider text-[#616161] mb-1">
-                      Nombre del cliente
-                    </label>
-                    <input
-                      type="text"
-                      value={customerName}
-                      onChange={e => setCustomerName(e.target.value)}
-                      placeholder="Ej: Juan Pérez"
-                      className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
-                    />
-                  </div>
+              <AnimatePresence initial={false}>
+                {showCustomerInfo && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] }}
+                    className="space-y-2.5 overflow-hidden"
+                  >
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                        Nombre completo
+                      </label>
+                      <input
+                        type="text"
+                        value={customerName}
+                        onChange={e => setCustomerName(e.target.value)}
+                        placeholder="Ej: Juan Pérez"
+                        className="w-full min-h-[36px] bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3 py-1.5 text-xs text-slate-900 outline-none transition-[background-color,border-color] duration-150"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-wider text-[#616161] mb-1">
-                      Número de teléfono
-                    </label>
-                    <input
-                      type="tel"
-                      value={customerContact}
-                      onChange={e => setCustomerContact(e.target.value)}
-                      placeholder="Ej: 999888777"
-                      className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
-                    />
-                  </div>
-                </div>
-              )}
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                        Teléfono
+                      </label>
+                      <input
+                        type="tel"
+                        value={customerContact}
+                        onChange={e => setCustomerContact(e.target.value)}
+                        placeholder="Ej: 999888777"
+                        className="w-full min-h-[36px] bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3 py-1.5 font-mono text-xs text-slate-900 placeholder:font-sans outline-none transition-[background-color,border-color] duration-150"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[#616161] mb-1">
-                  Detalle de la venta
+                <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                  Notas de despacho o ticket
                 </label>
                 <textarea
                   value={saleNotes}
                   onChange={e => setSaleNotes(e.target.value)}
-                  placeholder="Detalles de entrega, despacho, etc..."
+                  placeholder="Detalles de entrega, referencia o comprobante..."
                   rows={2}
-                  className="w-full bg-[#ffffff] border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs text-[#1E3A5F] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F]"
+                  className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 outline-none transition-[background-color,border-color] duration-150"
                 />
               </div>
             </div>
@@ -1726,17 +1892,17 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
             <button
               type="submit"
               disabled={isProcessingSale || cart.length === 0}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm active:scale-95 disabled:opacity-50 transition-all"
+              className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl active:scale-[0.98] disabled:opacity-45 transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] cursor-pointer"
             >
               {isProcessingSale ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
-                  <span>Validando Stock y Registrando...</span>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Procesando operación...</span>
                 </>
               ) : (
                 <>
-                  <CheckCircle className="w-4 h-4 text-[#E8B4A0]" />
-                  <span>Confirmar Venta y Cobro</span>
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Confirmar venta y cobro</span>
                 </>
               )}
             </button>
@@ -1746,107 +1912,14 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
       </div>
 
       {/* MODAL DE PAGO YAPE / PLIN */}
-      {qrModalType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="mobile-dark-modal bg-white border border-[#E5E7EB] rounded-2xl w-full max-w-sm sm:max-w-md p-6 shadow-xl space-y-4 text-center">
-            {/* Cabecera */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-[#1E3A5F] text-[#E8B4A0]">
-                  <QrCode className="w-5 h-5" />
-                </div>
-                <div className="text-left">
-                  <h4 className="font-light text-[#1E3A5F] text-base uppercase tracking-tight">
-                    {qrModalType === 'YAPE' ? 'Pagar con Yape' : 'Pagar con Plin'}
-                  </h4>
-                  <p className="text-[11px] text-[#616161] font-mono">Presenta el código al cliente</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setQrModalType(null)}
-                className="w-8 h-8 rounded-full border border-[#E5E7EB] text-[#616161] hover:text-[#1E3A5F] flex items-center justify-center"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Cuerpo Operativo */}
-            <div className="overflow-y-auto space-y-4">
-              {/* Monto exacto */}
-              <div className="mobile-flat-row p-3 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB]">
-                <span className="text-[10px] uppercase font-mono tracking-widest text-[#616161] block">
-                  MONTO EXACTO A TRANSFERIR
-                </span>
-                <span className="text-2xl sm:text-3xl font-light max-md:font-bold text-[#1E3A5F]">
-                  {formatCurrency(finalTotal, currentInventory?.currency)}
-                </span>
-              </div>
-
-              {/* QR Grande */}
-              <div className="flex flex-col items-center justify-center">
-                {((qrModalType === 'YAPE' && currentInventory?.yape_qr_url) ||
-                  (qrModalType === 'PLIN' && currentInventory?.plin_qr_url)) ? (
-                  <div className="qr-light-surface w-64 h-64 sm:w-72 sm:h-72 p-3 bg-white rounded-2xl shadow-sm border border-[#E5E7EB] flex items-center justify-center overflow-hidden">
-                    <img
-                      src={qrModalType === 'YAPE' ? currentInventory?.yape_qr_url! : currentInventory?.plin_qr_url!}
-                      alt={`Código QR ${qrModalType}`}
-                      className="w-full h-full object-contain"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-64 h-64 p-6 bg-[#F8F9FA] rounded-2xl border-2 border-dashed border-[#E5E7EB] flex flex-col items-center justify-center text-[#616161] text-xs space-y-2">
-                    <QrCode className="w-12 h-12 text-[#1E3A5F]/20" />
-                    <p className="font-mono uppercase text-[11px] text-[#1E3A5F]">
-                      Sin QR cargado para {qrModalType}
-                    </p>
-                    <p className="text-[11px] text-[#616161]">
-                      Carga la imagen del QR en <strong>Ajustes &gt; Pasarela de Pagos</strong>.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Número telefónico */}
-              {((qrModalType === 'YAPE' && currentInventory?.yape_phone) ||
-                (qrModalType === 'PLIN' && currentInventory?.plin_phone)) && (
-                <div className="mobile-flat-row p-3 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] flex items-center justify-between font-mono">
-                  <div className="text-left">
-                    <span className="text-[10px] text-[#616161] block uppercase">Número asociado</span>
-                    <span className="text-base font-light max-md:font-semibold text-[#1E3A5F]">
-                      {qrModalType === 'YAPE' ? currentInventory?.yape_phone : currentInventory?.plin_phone}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => copyPaymentPhone((qrModalType === 'YAPE' ? currentInventory?.yape_phone : currentInventory?.plin_phone)!)}
-                    className="mobile-inline-btn inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#E5E7EB] rounded-xl text-xs uppercase tracking-wider text-[#1E3A5F] hover:bg-[#F8F9FA] transition-colors"
-                  >
-                    {copiedText ? <Check className="w-4 h-4 text-[#E8B4A0]" /> : <Copy className="w-4 h-4" />}
-                    <span>{copiedText ? 'Copiado' : 'Copiar'}</span>
-                  </button>
-                </div>
-              )}
-
-              {currentInventory?.payment_instructions && (
-                <p className="text-[11px] text-[#616161] italic font-light">
-                  "{currentInventory.payment_instructions}"
-                </p>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setQrModalType(null)}
-                className="mobile-primary-btn w-full py-2.5 bg-[#1E3A5F] hover:bg-[#152a45] text-white uppercase tracking-wider text-xs rounded-xl transition-colors font-mono"
-              >
-                Listo // Volver al Cobro
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <QrPaymentModal
+        qrModalType={qrModalType}
+        inventory={currentInventory}
+        finalTotal={finalTotal}
+        copiedText={copiedText}
+        onCopyPhone={copyPaymentPhone}
+        onClose={() => setQrModalType(null)}
+      />
 
       {/* Modal Minimalista de Confirmación de Cobro (Auto-dismiss 1.5s) */}
       <SuccessCheckModal
@@ -1878,3 +1951,5 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
     </>
   );
 };
+
+export default SalesPage;

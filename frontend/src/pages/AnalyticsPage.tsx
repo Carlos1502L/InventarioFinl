@@ -80,136 +80,127 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
   }, [products, categories, locations]);
 
   return (
-    <div className="space-y-6 pb-28 sm:pb-12 max-w-7xl mx-auto font-normal text-[#1E3A5F]">
-      {/* 1. Cabecera Editorial */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <span className="text-[10px] font-mono tracking-widest text-[#E8B4A0] uppercase block">
-            STOCK TELEMETRY // SPATIAL & METRIC AUDIT
-          </span>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1E3A5F] uppercase">
-            Telemetría de Stock & Métricas
+    <div className="space-y-6 pb-28 sm:pb-12 max-w-[1440px] mx-auto font-sans text-slate-900">
+      {/* 1. Cabecera Industrial */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-1">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-slate-900">
+            Métricas y análisis
           </h1>
-          <p className="text-xs text-[#616161] font-light mt-0.5">
-            Valorización integral, distribución espacial por almacén y estado de contingencia del catálogo.
+          <p className="text-xs text-slate-500 mt-1">
+            Valorización integral, ocupación por almacén y salud del inventario activo.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="px-3.5 py-1.5 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] font-mono text-xs uppercase">
-            {locations.length} depósitos // {categories.length} categorías
-          </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="font-mono text-xs px-3 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 tabular-nums">
+            {locations.length} ubicaciones · {categories.length} categorías
+          </span>
         </div>
       </div>
 
       {/* 2. Tarjetas de Resumen KPI 4x1 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Valor Total Activo */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-ui-card desktop-hover-lift flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161]">
-              Valor Total Activo
-            </span>
-            <DollarSign className="w-4 h-4 text-[#E8B4A0]" />
+            <span className="text-xs font-medium text-slate-500">Valor total activo</span>
+            <DollarSign className="w-4 h-4 text-slate-400" />
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-[#1E3A5F] font-mono mt-1">
-            {formatCurrency(stats.totalValuation, currentInventory?.currency)}
-          </p>
-          <span className="text-[10px] font-mono text-[#616161] block">En existencias activas</span>
+          <div className="mt-3">
+            <p className="text-2xl font-semibold tabular-nums text-slate-900 tracking-[-0.02em] truncate">
+              {formatCurrency(stats.totalValuation, currentInventory?.currency)}
+            </p>
+            <span className="text-xs text-slate-500 block mt-1">En existencias activas</span>
+          </div>
         </div>
 
-        {/* Total Unidades */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-1">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-ui-card desktop-hover-lift flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161]">
-              Unidades Físicas
-            </span>
-            <Package className="w-4 h-4 text-[#E8B4A0]" />
+            <span className="text-xs font-medium text-slate-500">Unidades físicas</span>
+            <Package className="w-4 h-4 text-slate-400" />
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-[#1E3A5F] font-mono mt-1">
-            {stats.totalUnits.toLocaleString()} <span className="text-xs font-normal text-[#616161]">uds</span>
-          </p>
-          <span className="text-[10px] font-mono text-[#616161] block">En {stats.activeCount} SKUs únicos</span>
+          <div className="mt-3">
+            <p className="text-2xl font-semibold tabular-nums text-slate-900 tracking-[-0.02em]">
+              {stats.totalUnits.toLocaleString()} <span className="text-xs font-normal text-slate-500">und</span>
+            </p>
+            <span className="text-xs text-slate-500 block mt-1 tabular-nums">En {stats.activeCount} SKUs únicos</span>
+          </div>
         </div>
 
-        {/* Alerta de Stock Bajo con Dot Nude #E8B4A0 */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-1">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-ui-card desktop-hover-lift flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161]">
-              Stock Bajo / Alerta
+            <span className="text-xs font-medium text-slate-500">Stock bajo y agotados</span>
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+              stats.lowStockCount > 0 || stats.outOfStockCount > 0
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${stats.lowStockCount > 0 || stats.outOfStockCount > 0 ? 'bg-red-600' : 'bg-emerald-500'}`} />
+              {stats.lowStockCount > 0 || stats.outOfStockCount > 0 ? 'Atención' : 'Estable'}
             </span>
-            <span className="w-2.5 h-2.5 rounded-full bg-[#E8B4A0] shadow-sm animate-pulse" />
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-[#1E3A5F] font-mono mt-1">
-            {stats.lowStockCount} <span className="text-xs font-normal text-[#616161]">ítems</span>
-          </p>
-          <span className="text-[10px] font-mono text-rose-600 block">
-            {stats.outOfStockCount} productos agotados (0 uds)
-          </span>
+          <div className="mt-3">
+            <p className="text-2xl font-semibold tabular-nums text-slate-900 tracking-[-0.02em]">
+              {stats.lowStockCount} <span className="text-xs font-normal text-slate-500">ítems</span>
+            </p>
+            <span className="text-xs text-red-600 font-medium block mt-1 tabular-nums">
+              {stats.outOfStockCount} productos sin existencias
+            </span>
+          </div>
         </div>
 
-        {/* Ubicaciones Físicas */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs space-y-1">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-ui-card desktop-hover-lift flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#616161]">
-              Ubicaciones Físicas
-            </span>
-            <MapPin className="w-4 h-4 text-[#E8B4A0]" />
+            <span className="text-xs font-medium text-slate-500">Ubicaciones físicas</span>
+            <MapPin className="w-4 h-4 text-slate-400" />
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-[#1E3A5F] font-mono mt-1">
-            {locations.length} <span className="text-xs font-normal text-[#616161]">espacios</span>
-          </p>
-          <span className="text-[10px] font-mono text-[#616161] block">Con rótulos y códigos QR</span>
+          <div className="mt-3">
+            <p className="text-2xl font-semibold tabular-nums text-slate-900 tracking-[-0.02em]">
+              {locations.length} <span className="text-xs font-normal text-slate-500">espacios</span>
+            </p>
+            <span className="text-xs text-slate-500 block mt-1">Con rótulos y código QR</span>
+          </div>
         </div>
       </div>
 
-      {/* 3. Gráficos de Distribución (Almacenes y Categorías) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Distribución y Ocupación por Almacén / Ubicación */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
-            <div>
-              <span className="text-[10px] font-mono uppercase tracking-widest text-[#E8B4A0] block">
-                OCUPACIÓN FÍSICA
-              </span>
-              <h3 className="font-bold text-base text-[#1E3A5F] uppercase tracking-tight">
-                Distribución por Ubicación
-              </h3>
-            </div>
-            <span className="text-xs font-mono text-[#616161]">
-              Volumen de unidades
-            </span>
+      {/* 3. Gráficos de Distribución */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-ui-card space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+            <h3 className="font-semibold text-sm text-slate-900">
+              Distribución por ubicación
+            </h3>
+            <span className="text-xs text-slate-500">Volumen de unidades</span>
           </div>
 
           <div className="space-y-4">
             {stats.locationStats.length === 0 ? (
-              <div className="text-center py-8 text-xs font-mono text-[#616161] uppercase">
+              <div className="text-center py-8 text-xs text-slate-400">
                 No hay ubicaciones registradas
               </div>
             ) : (
               stats.locationStats.map((loc) => (
-                <div key={loc.id} className="space-y-1.5 font-mono">
+                <div key={loc.id} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-[#1E3A5F] uppercase">{loc.name}</span>
-                      <span className="text-[10px] text-[#616161] font-semibold px-1.5 py-0.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-full">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-semibold text-slate-900 truncate">{loc.name}</span>
+                      <span className="font-mono text-[10px] text-slate-600 font-medium px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded">
                         {loc.code}
                       </span>
                     </div>
-                    <span className="text-[#1E3A5F]">
+                    <span className="font-mono font-medium text-slate-900 tabular-nums shrink-0">
                       {loc.units} uds ({loc.percent}%)
                     </span>
                   </div>
 
-                  {/* Barra de Progreso Minimalista */}
-                  <div className="w-full h-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[#1E3A5F] rounded-full transition-all duration-500"
+                      className="h-full bg-slate-900 rounded-full transition-[width] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]"
                       style={{ width: `${Math.max(loc.percent, 3)}%` }}
                     />
                   </div>
 
-                  <div className="flex items-center justify-between text-[10px] text-[#616161]">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 tabular-nums">
                     <span>{loc.productsCount} SKUs asignados</span>
                     <span>{formatCurrency(loc.valuation, currentInventory?.currency)}</span>
                   </div>
@@ -219,54 +210,43 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
           </div>
         </div>
 
-        {/* Valorización por Categoría */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
-            <div>
-              <span className="text-[10px] font-mono uppercase tracking-widest text-[#E8B4A0] block">
-                PARTICIPACIÓN FINANCIERA
-              </span>
-              <h3 className="font-bold text-base text-[#1E3A5F] uppercase tracking-tight">
-                Valorización por Categoría
-              </h3>
-            </div>
-            <span className="text-xs font-mono text-[#616161]">
-              Capital inmovilizado
-            </span>
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-ui-card space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+            <h3 className="font-semibold text-sm text-slate-900">
+              Valorización por categoría
+            </h3>
+            <span className="text-xs text-slate-500">Capital inmovilizado</span>
           </div>
 
           <div className="space-y-4">
             {stats.categoryStats.length === 0 ? (
-              <div className="text-center py-8 text-xs font-mono text-[#616161] uppercase">
+              <div className="text-center py-8 text-xs text-slate-400">
                 No hay categorías registradas
               </div>
             ) : (
               stats.categoryStats.map((cat) => (
-                <div key={cat.id} className="space-y-1.5 font-mono">
+                <div key={cat.id} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: cat.color || '#E8B4A0' }}
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: cat.color || '#0f172a' }}
                       />
-                      <span className="font-bold text-[#1E3A5F] uppercase">{cat.name}</span>
+                      <span className="font-semibold text-slate-900 truncate">{cat.name}</span>
                     </div>
-                    <span className="text-[#1E3A5F]">
+                    <span className="font-mono font-medium text-slate-900 tabular-nums shrink-0">
                       {formatCurrency(cat.valuation, currentInventory?.currency)} ({cat.percent}%)
                     </span>
                   </div>
 
-                  {/* Barra de Progreso */}
-                  <div className="w-full h-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[#E8B4A0] rounded-full transition-all duration-500"
-                      style={{
-                        width: `${Math.max(cat.percent, 3)}%`
-                      }}
+                      className="h-full bg-slate-700 rounded-full transition-[width] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]"
+                      style={{ width: `${Math.max(cat.percent, 3)}%` }}
                     />
                   </div>
 
-                  <div className="flex items-center justify-between text-[10px] text-[#616161]">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 tabular-nums">
                     <span>{cat.units} unidades físicas</span>
                     <span>{cat.productsCount} SKUs</span>
                   </div>
@@ -279,3 +259,5 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({
     </div>
   );
 };
+
+export default AnalyticsPage;

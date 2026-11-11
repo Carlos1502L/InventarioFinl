@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 export interface MinimalDropdownOption {
   value: string;
@@ -26,6 +27,7 @@ export const MinimalDropdown: React.FC<MinimalDropdownProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -33,13 +35,21 @@ export const MinimalDropdown: React.FC<MinimalDropdownProps> = ({
         setIsOpen(false);
       }
     };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        event.stopPropagation();
+        setIsOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('touchstart', handleClickOutside);
+    window.addEventListener('keydown', handleEscape, true);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
+      window.removeEventListener('keydown', handleEscape, true);
     };
-  }, []);
+  }, [isOpen]);
 
   useEffect(() => {
     if (disabled && isOpen) {
@@ -51,72 +61,92 @@ export const MinimalDropdown: React.FC<MinimalDropdownProps> = ({
   const hasRealSelection = Boolean(selectedOption && selectedOption.value !== '');
 
   return (
-    <div ref={containerRef} className={`relative w-full ${className}`}>
+    <div
+      ref={containerRef}
+      data-dropdown-open={isOpen && !disabled ? 'true' : undefined}
+      className={`relative w-full ${className}`}
+    >
       <button
         type="button"
         disabled={disabled}
         onClick={() => {
           if (!disabled) setIsOpen((prev) => !prev);
         }}
-        className="mobile-dropdown-trigger w-full flex items-center justify-between bg-neutral-50 border border-neutral-200/60 rounded-2xl py-3 px-4 text-sm text-neutral-800 font-medium hover:bg-neutral-100/60 transition-colors disabled:opacity-50 disabled:pointer-events-none text-left font-sans normal-case tracking-normal"
+        className="mobile-dropdown-trigger w-full flex items-center justify-between bg-neutral-50 lg:bg-slate-50 border border-neutral-200/60 lg:border-slate-200 rounded-2xl lg:rounded-xl py-3 lg:py-2.5 px-4 lg:px-3.5 text-sm lg:text-xs text-neutral-800 lg:text-slate-900 font-medium hover:bg-neutral-100/60 lg:hover:bg-slate-100 lg:hover:border-slate-300 transition-[background-color,border-color] duration-150 disabled:opacity-50 disabled:pointer-events-none text-left font-sans normal-case tracking-normal cursor-pointer"
       >
         {hasRealSelection && selectedOption ? (
           <span className="truncate">
             {selectedOption.label}
             {selectedOption.badge && (
-              <span className="text-xs text-neutral-400 font-normal ml-2">
+              <span className="text-xs lg:text-[11px] font-mono text-neutral-400 lg:text-slate-500 font-normal ml-2">
                 {selectedOption.badge}
               </span>
             )}
           </span>
         ) : (
-          <span className="truncate text-neutral-400 font-normal">
+          <span className="truncate text-neutral-400 lg:text-slate-400 font-normal">
             {selectedOption ? selectedOption.label : placeholder}
           </span>
         )}
         <ChevronDown
-          className={`w-4 h-4 text-neutral-400 shrink-0 ml-2 transition-transform duration-200 ${
+          className={`w-4 h-4 text-neutral-400 lg:text-slate-500 shrink-0 ml-2 transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] ${
             isOpen ? 'rotate-180' : ''
           }`}
         />
       </button>
 
-      {isOpen && !disabled && (
-        <div className="mobile-dropdown-menu absolute left-0 right-0 top-full mt-2 z-50 bg-white rounded-2xl border border-neutral-200/80 shadow-xl p-1.5 overflow-hidden max-h-60 overflow-y-auto overscroll-contain font-sans normal-case tracking-normal">
-          {options.length === 0 ? (
-            <div className="px-3 py-2.5 text-xs text-neutral-400 text-center">
-              Sin opciones disponibles
-            </div>
-          ) : (
-            options.map((opt) => {
-              const isSelected = opt.value === value;
-              return (
-                <button
-                  key={opt.value || '__empty__'}
-                  type="button"
-                  onClick={() => {
-                    onChange(opt.value);
-                    setIsOpen(false);
-                  }}
-                  className={`mobile-dropdown-option w-full rounded-xl px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950 transition-colors flex items-center justify-between cursor-pointer text-left ${
-                    isSelected ? 'bg-neutral-100/80 font-semibold text-neutral-950' : ''
-                  }`}
-                >
-                  <div className="truncate pr-2">
-                    <span>{opt.label}</span>
-                    {opt.badge && (
-                      <span className="text-xs text-neutral-400 font-normal ml-2">
-                        {opt.badge}
-                      </span>
-                    )}
-                  </div>
-                  {isSelected && <Check className="w-4 h-4 text-neutral-950 shrink-0" />}
-                </button>
-              );
-            })
-          )}
-        </div>
-      )}
+      <AnimatePresence>
+        {isOpen && !disabled && (
+          <motion.div
+            key="minimal-dropdown-menu"
+            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -2 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={
+              shouldReduceMotion
+                ? { opacity: 0, transition: { duration: 0.08 } }
+                : { opacity: 0, y: -2, transition: { duration: 0.1, ease: [0.4, 0, 1, 1] } }
+            }
+            transition={{
+              duration: shouldReduceMotion ? 0.08 : 0.14,
+              ease: [0.22, 1, 0.36, 1]
+            }}
+            className="mobile-dropdown-menu absolute left-0 right-0 top-full mt-2 z-50 bg-white rounded-2xl lg:rounded-xl border border-neutral-200/80 lg:border-slate-200 shadow-xl p-1.5 overflow-hidden max-h-60 overflow-y-auto overscroll-contain font-sans normal-case tracking-normal origin-top"
+          >
+            {options.length === 0 ? (
+              <div className="px-3 py-2.5 text-xs text-neutral-400 lg:text-slate-500 text-center">
+                Sin opciones disponibles
+              </div>
+            ) : (
+              options.map((opt) => {
+                const isSelected = opt.value === value;
+                return (
+                  <button
+                    key={opt.value || '__empty__'}
+                    type="button"
+                    onClick={() => {
+                      onChange(opt.value);
+                      setIsOpen(false);
+                    }}
+                    className={`mobile-dropdown-option w-full rounded-xl lg:rounded-lg px-3 py-2.5 lg:py-2 text-sm lg:text-xs text-neutral-700 lg:text-slate-700 hover:bg-neutral-100 lg:hover:bg-slate-100 hover:text-neutral-950 lg:hover:text-slate-900 transition-colors duration-150 flex items-center justify-between cursor-pointer text-left ${
+                      isSelected ? 'bg-neutral-100/80 lg:bg-slate-100 font-semibold text-neutral-950 lg:text-slate-900' : ''
+                    }`}
+                  >
+                    <div className="truncate pr-2">
+                      <span>{opt.label}</span>
+                      {opt.badge && (
+                        <span className="text-xs lg:text-[11px] font-mono text-neutral-400 lg:text-slate-500 font-normal ml-2">
+                          {opt.badge}
+                        </span>
+                      )}
+                    </div>
+                    {isSelected && <Check className="w-4 h-4 text-neutral-950 lg:text-slate-900 shrink-0" />}
+                  </button>
+                );
+              })
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

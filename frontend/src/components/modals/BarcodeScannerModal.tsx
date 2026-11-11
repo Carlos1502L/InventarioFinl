@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { X, Camera, RefreshCw, AlertCircle, Volume2, CheckCircle2 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useModalEscape, useModalMotion } from './modalMotion';
 
 interface BarcodeScannerModalProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
   const [recentScansCount, setRecentScansCount] = useState<number>(0);
   const lastScanRef = useRef<{ code: string; time: number } | null>(null);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<any>(null);
   const elementId = 'interactive-barcode-scanner';
 
   // Sonido de feedback al escanear exitosamente (Web Audio API)
@@ -79,6 +80,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
         retries++;
       }
 
+      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
       const html5QrCode = new Html5Qrcode(elementId, {
         formatsToSupport: [
           Html5QrcodeSupportedFormats.QR_CODE,
@@ -195,7 +197,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
     }
 
     // Inicializar cámaras disponibles
-    Html5Qrcode.getCameras()
+    import('html5-qrcode').then(({ Html5Qrcode }) => Html5Qrcode.getCameras())
       .then((devices) => {
         if (devices && devices.length > 0) {
           setCameras(devices);
@@ -222,129 +224,145 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  const { backdropMotion, panelMotion, tabContentMotion } = useModalMotion();
+  useModalEscape(isOpen, () => {
+    stopScanner();
+    onClose();
+  });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] animate-in fade-in">
-      <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-md overflow-hidden shadow-xl flex flex-col font-mono">
-        {/* Cabecera */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center">
-              <Camera className="w-5 h-5 text-[#1E3A5F]" />
-            </div>
-            <div>
-              <h3 className="font-light text-[#1E3A5F] text-base uppercase tracking-tight">{title}</h3>
-              <p className="text-[11px] text-[#616161]">
-                {continuous ? 'Modo Escaneo Continuo Activo' : 'Escáner Óptico de Alta Velocidad'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              stopScanner();
-              onClose();
-            }}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          {...backdropMotion}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
+        >
+          <motion.div
+            {...panelMotion}
+            className="mobile-dark-modal bg-white border border-slate-200 rounded-2xl w-full max-w-md lg:max-w-lg overflow-hidden shadow-xl flex flex-col font-sans"
           >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Visor de Cámara */}
-        <div className="overflow-y-auto max-md:space-y-4">
-          <div className="mobile-camera-visor relative bg-black flex items-center justify-center min-h-[280px]">
-            <div id={elementId} className="w-full h-full overflow-hidden" />
-
-            {/* Guía visual de enfoque rectangular horizontal superpuesta */}
-            {isScanning && !errorMsg && (
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
-                <div className="w-[88%] max-w-[320px] h-32 sm:h-36 border-2 border-dashed border-[#E8B4A0] max-md:border-white/60 rounded-2xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]">
-                  {/* Esquinas resaltadas */}
-                  <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-[#1E3A5F] max-md:border-white rounded-tl" />
-                  <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-[#1E3A5F] max-md:border-white rounded-tr" />
-                  <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-[#1E3A5F] max-md:border-white rounded-bl" />
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-[#1E3A5F] max-md:border-white rounded-br" />
-                  {/* Línea de escaneo láser horizontal animada */}
-                  <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 h-0.5 bg-gradient-to-r from-transparent via-[#E8B4A0] max-md:via-emerald-400 to-transparent animate-pulse shadow-[0_0_8px_#E8B4A0] max-md:shadow-[0_0_8px_#10b981]" />
-                  <div className="absolute -bottom-7 inset-x-0 text-center text-[10px] text-white/90 font-mono tracking-wider font-semibold">
-                    {continuous ? 'ESCANEA SUCESIVAMENTE SIN CERRAR' : 'APUNTA AL CÓDIGO DE BARRAS O QR'}
-                  </div>
+            {/* Cabecera */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 flex items-center justify-center">
+                  <Camera className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900 text-sm tracking-tight">{title}</h3>
+                  <p className="text-[11px] text-slate-500">
+                    {continuous ? 'Modo escaneo continuo activo' : 'Escáner óptico de alta velocidad'}
+                  </p>
                 </div>
               </div>
-            )}
-
-            {/* Mensaje de Error */}
-            {errorMsg && (
-              <div className="absolute inset-0 bg-[#1E3A5F]/95 max-md:bg-neutral-950/95 flex flex-col items-center justify-center p-6 text-center z-10">
-                <AlertCircle className="w-12 h-12 text-[#E8B4A0] mb-3" />
-                <p className="text-sm text-white mb-4">{errorMsg}</p>
-                <button
-                  onClick={() => startScanner(selectedCameraId)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-[#1E3A5F] mobile-pill-active text-xs font-semibold rounded-xl shadow transition-all active:scale-95"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" /> Reintentar Conexión
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Banner de último código escaneado (en modo continuo) */}
-          {continuous && lastScannedCode && (
-            <div className="mx-4 mt-3 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900 animate-in fade-in slide-in-from-top-1">
-              <div className="flex items-center gap-2 min-w-0">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="truncate">Código: <b>{lastScannedCode}</b></span>
-              </div>
-              <span className="px-2 py-0.5 bg-emerald-200 text-emerald-800 rounded text-[10px] font-bold">
-                +{recentScansCount}
-              </span>
-            </div>
-          )}
-
-          {/* Controles y Selector de Cámara */}
-          <div className="mobile-flat-section p-4 bg-[#F8F9FA] border-t border-[#E5E7EB] space-y-3">
-            <p className="text-xs text-[#616161] text-center">{instructions}</p>
-
-            {cameras.length > 1 && (
-              <div className="mobile-flat-section flex items-center gap-3 justify-between text-xs text-[#1E3A5F] bg-white p-2.5 rounded-xl border border-[#E5E7EB]">
-                <span className="text-[#616161]">Cámara:</span>
-                <select
-                  value={selectedCameraId}
-                  onChange={(e) => {
-                    setSelectedCameraId(e.target.value);
-                    startScanner(e.target.value);
-                  }}
-                  className="bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] text-xs rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-[#1E3A5F] outline-none"
-                >
-                  {cameras.map((cam, idx) => (
-                    <option key={cam.id} value={cam.id}>
-                      {cam.label || `Cámara ${idx + 1}`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div className="flex items-center justify-center gap-2 text-[11px] text-[#616161]">
-              <Volume2 className="w-3 h-3 text-[#1E3A5F]" /> Señal háptica y auditiva al detectar
-            </div>
-
-            {continuous && (
               <button
-                type="button"
                 onClick={() => {
                   stopScanner();
                   onClose();
                 }}
-                className="w-full min-h-[44px] py-2.5 rounded-xl bg-[#1E3A5F] hover:bg-[#172E4C] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98]"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
               >
-                <span>Terminar Escaneo ({recentScansCount} leídos)</span>
+                <X className="w-4 h-4" />
               </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+            </div>
+
+            {/* Visor de Cámara */}
+            <div className="overflow-y-auto max-md:space-y-4">
+              <div className="mobile-camera-visor relative bg-black flex items-center justify-center min-h-[280px]">
+                <div id={elementId} className="w-full h-full overflow-hidden" />
+
+                {/* Guía visual de enfoque rectangular */}
+                {isScanning && !errorMsg && (
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
+                    <div className="w-[88%] max-w-[320px] h-32 sm:h-36 border border-dashed border-white/50 rounded-xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]">
+                      <div className="absolute -top-0.5 -left-0.5 w-5 h-5 border-t-2 border-l-2 border-white" />
+                      <div className="absolute -top-0.5 -right-0.5 w-5 h-5 border-t-2 border-r-2 border-white" />
+                      <div className="absolute -bottom-0.5 -left-0.5 w-5 h-5 border-b-2 border-l-2 border-white" />
+                      <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 border-b-2 border-r-2 border-white" />
+                      <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_8px_#10b981]" />
+                      <div className="absolute -bottom-7 inset-x-0 text-center text-[10px] text-white/90 font-mono tracking-wider font-semibold">
+                        {continuous ? 'ESCANEA SUCESIVAMENTE SIN CERRAR' : 'APUNTA AL CÓDIGO DE BARRAS O QR'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mensaje de Error */}
+                {errorMsg && (
+                  <div className="absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center p-6 text-center z-10">
+                    <AlertCircle className="w-10 h-10 text-amber-400 mb-3" />
+                    <p className="text-sm text-white mb-4">{errorMsg}</p>
+                    <button
+                      onClick={() => startScanner(selectedCameraId)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-white text-slate-900 mobile-pill-active text-xs font-semibold rounded-xl shadow transition-transform active:scale-[0.97] cursor-pointer"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" /> Reintentar conexión
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <AnimatePresence>
+                {continuous && lastScannedCode && (
+                  <motion.div
+                    {...tabContentMotion}
+                    className="mx-4 mt-3 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="truncate font-mono">Código: <b>{lastScannedCode}</b></span>
+                    </div>
+                    <span className="px-2 py-0.5 bg-emerald-200 text-emerald-800 rounded font-mono text-[10px] font-bold">
+                      +{recentScansCount}
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Controles y Selector de Cámara */}
+              <div className="mobile-flat-section p-4 bg-slate-50 border-t border-slate-200 space-y-3">
+                <p className="text-xs text-slate-500 text-center">{instructions}</p>
+
+                {cameras.length > 1 && (
+                  <div className="mobile-flat-section flex items-center gap-3 justify-between text-xs text-slate-900 bg-white p-2.5 rounded-xl border border-slate-200">
+                    <span className="text-slate-500">Cámara:</span>
+                    <select
+                      value={selectedCameraId}
+                      onChange={(e) => {
+                        setSelectedCameraId(e.target.value);
+                        startScanner(e.target.value);
+                      }}
+                      className="bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-lg px-2.5 py-1 focus:border-slate-900 outline-none"
+                    >
+                      {cameras.map((cam, idx) => (
+                        <option key={cam.id} value={cam.id}>
+                          {cam.label || `Cámara ${idx + 1}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-center gap-2 text-[11px] text-slate-500">
+                  <Volume2 className="w-3 h-3 text-slate-700" /> Señal háptica y auditiva al detectar
+                </div>
+
+                {continuous && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopScanner();
+                      onClose();
+                    }}
+                    className="w-full min-h-[42px] py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 active:scale-[0.98] cursor-pointer"
+                  >
+                    <span>Terminar escaneo ({recentScansCount} leídos)</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

@@ -12,4 +12,6 @@ export { LocationsManagementModal } from './LocationsManagementModal';
 export { MoveProductModal } from './MoveProductModal';
 export { ProductDetailModal } from './ProductDetailModal';
 export { ProductFormModal } from './ProductFormModal';
+export { ProductMasterModal } from './ProductMasterModal';
+export type { ProductModalView } from './ProductMasterModal';
 export { WithdrawProductModal } from './WithdrawProductModal';

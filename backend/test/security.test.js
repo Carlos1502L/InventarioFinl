@@ -4,10 +4,15 @@ import { createAuditLogSchema } from '../src/schemas/auditSchemas.js';
 import { inviteCollaboratorSchema } from '../src/schemas/collaboratorSchemas.js';
 import { reportQuerySchema } from '../src/schemas/reportSchemas.js';
 import {
+  exportBackupSchema,
   exportAndSendBackupSchema,
   saveBackupSettingsSchema,
-  restoreBackupSchema
+  restoreBackupSchema,
+  recalculatePricesSchema,
+  sendVerificationCodeSchema,
+  verifyCodeSchema
 } from '../src/schemas/backupSchemas.js';
+import { otpService } from '../src/services/otpService.js';
 
 test('Zod DTO Security: createAuditLogSchema', async (t) => {
   await t.test('debe rechazar un inventory_id que no sea UUID', () => {
@@ -70,13 +75,25 @@ test('Zod DTO Security: reportQuerySchema', async (t) => {
 });
 
 test('Zod DTO Security: Backup Schemas', async (t) => {
-  await t.test('exportAndSendBackupSchema debe validar UUID y correo', () => {
-    const invalid = { inventory_id: 'not-uuid', target_email: 'not-an-email' };
+  await t.test('exportBackupSchema debe validar UUID únicamente para descarga directa', () => {
+    assert.equal(exportBackupSchema.safeParse({ inventory_id: 'not-uuid' }).success, false);
+    assert.equal(exportBackupSchema.safeParse({ inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' }).success, true);
+  });
+
+  await t.test('exportAndSendBackupSchema debe validar UUID, correo y verification_token', () => {
+    const invalidWithoutToken = {
+      inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      target_email: 'propietario@empresa.com'
+    };
+    assert.equal(exportAndSendBackupSchema.safeParse(invalidWithoutToken).success, false);
+
+    const invalid = { inventory_id: 'not-uuid', target_email: 'not-an-email', verification_token: '123' };
     assert.equal(exportAndSendBackupSchema.safeParse(invalid).success, false);
 
     const valid = {
       inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-      target_email: 'propietario@empresa.com'
+      target_email: 'propietario@empresa.com',
+      verification_token: 'valid.token.signature.123456789'
     };
     assert.equal(exportAndSendBackupSchema.safeParse(valid).success, true);
   });
@@ -101,6 +118,52 @@ test('Zod DTO Security: Backup Schemas', async (t) => {
     assert.equal(parsed.success, true);
   });
 
+  await t.test('sendVerificationCodeSchema y verifyCodeSchema deben validar correo y código de 6 dígitos', () => {
+    assert.equal(sendVerificationCodeSchema.safeParse({ inventory_id: 'bad', email: 'bad' }).success, false);
+    assert.equal(sendVerificationCodeSchema.safeParse({
+      inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      email: 'owner@test.com'
+    }).success, true);
+
+    assert.equal(verifyCodeSchema.safeParse({
+      inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      email: 'owner@test.com',
+      code: '12345' // Menos de 6 dígitos
+    }).success, false);
+
+    assert.equal(verifyCodeSchema.safeParse({
+      inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      email: 'owner@test.com',
+      code: '123456'
+    }).success, true);
+  });
+
+  await t.test('otpService debe generar, validar código y firmar token seguro', () => {
+    const invId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+    const email = 'propietario@empresa.com';
+    const code = otpService.generateOtp(invId, email);
+
+    assert.equal(typeof code, 'string');
+    assert.equal(code.length, 6);
+
+    // Verificación errónea
+    const badVerify = otpService.verifyOtp(invId, email, '000000');
+    assert.equal(badVerify.success, false);
+
+    // Verificación correcta
+    const goodVerify = otpService.verifyOtp(invId, email, code);
+    assert.equal(goodVerify.success, true);
+    assert.equal(typeof goodVerify.verification_token, 'string');
+
+    // Validación del token generado
+    const tokenCheck = otpService.verifyToken(invId, email, goodVerify.verification_token);
+    assert.equal(tokenCheck.valid, true);
+
+    // Validación con otro correo debe fallar
+    const wrongEmailCheck = otpService.verifyToken(invId, 'otro@empresa.com', goodVerify.verification_token);
+    assert.equal(wrongEmailCheck.valid, false);
+  });
+
   await t.test('restoreBackupSchema debe exigir versión 1.0 estricta y data válida', () => {
     const invalidVersion = {
       inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
@@ -120,8 +183,22 @@ test('Zod DTO Security: Backup Schemas', async (t) => {
         exported_at: new Date().toISOString(),
         source_inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
         data: { categories: [], locations: [], products: [], product_locations: [], sales: [] }
+      },
+      currency_conversion: {
+        enabled: true,
+        rate: 3.5,
+        operation: 'DIVIDE',
+        source_currency: 'PEN',
+        target_currency: 'USD'
       }
     };
     assert.equal(restoreBackupSchema.safeParse(valid).success, true);
+  });
+
+  await t.test('recalculatePricesSchema debe validar UUID y tasa de cambio positiva mayor a 0', () => {
+    assert.equal(recalculatePricesSchema.safeParse({ inventory_id: 'not-uuid', new_exchange_rate: 3.75 }).success, false);
+    assert.equal(recalculatePricesSchema.safeParse({ inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', new_exchange_rate: -1 }).success, false);
+    assert.equal(recalculatePricesSchema.safeParse({ inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', new_exchange_rate: 0 }).success, false);
+    assert.equal(recalculatePricesSchema.safeParse({ inventory_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', new_exchange_rate: 3.8, currency: 'USD' }).success, true);
   });
 });

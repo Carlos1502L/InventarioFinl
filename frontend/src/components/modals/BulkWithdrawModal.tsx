@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   X,
   PackageMinus,
@@ -27,6 +28,8 @@ import {
 } from '../../services/offlineSync';
 import { showAppToast } from '../ui/ToastNotification';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
+import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
+import { useModalEscape, useModalMotion } from './modalMotion';
 
 export interface BulkWithdrawalSelectedItem {
   product: Product;
@@ -67,21 +70,20 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Filtrado reactivo de búsqueda en catálogo
+  // Filtrado reactivo de búsqueda en catálogo (RF-SEARCH-016: Tolerancia a acentos)
   const searchResults = useMemo(() => {
-    if (!searchTerm.trim()) return [];
-    const term = searchTerm.trim().toLowerCase();
+    const norm = normalizeText(searchTerm);
+    if (!norm) return [];
     return products
       .filter(p =>
         p.status === 'ACTIVE' &&
-        (p.name.toLowerCase().includes(term) ||
-          p.code.toLowerCase().includes(term) ||
-          (p.description && p.description.toLowerCase().includes(term)))
+        matchesAnyField([p.name, p.code, (p as any).sku, p.description], norm)
       )
       .slice(0, 8);
   }, [searchTerm, products]);
 
-  if (!isOpen) return null;
+  const { backdropMotion, panelMotion, tabContentMotion } = useModalMotion();
+  useModalEscape(isOpen, onClose, isSubmitting || scannerOpen);
 
   // Helper para recalcular deltaStock
   const computeDelta = (product: Product, boxes: number, units: number): number => {
@@ -330,36 +332,44 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in fade-in">
-        <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col font-sans">
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            {...backdropMotion}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          >
+            <motion.div
+              {...panelMotion}
+              className="mobile-dark-modal bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col font-sans"
+            >
           {/* 1. CABECERA DEL MODAL */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] bg-[#ffffff] shrink-0">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] bg-[#ffffff] shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
                 <PackageMinus className="w-5 h-5 text-rose-600" />
               </div>
               <div>
-                <h3 className="font-bold text-[#1E3A5F] text-base uppercase tracking-tight">
+                <h3 className="font-bold text-[#17191c] text-base uppercase tracking-tight">
                   Salida Masiva de Mercadería
                 </h3>
-                <p className="text-xs text-[#616161]">
+                <p className="text-xs text-[#777b86]">
                   Escaneo rápido y descuento de stock en lote
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[#616161] hover:text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[#777b86] hover:text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* 2. ÁREA DE CAPTURA RÁPIDA (BÚSQUEDA ANCHA A LA IZQUIERDA + ESCÁNER PEQUEÑO A LA DERECHA AL MISMO NIVEL) */}
-          <div className="p-4 sm:p-6 pb-2 border-b border-[#E5E7EB] bg-[#F8F9FA]/80 shrink-0 space-y-3">
+          <div className="p-4 sm:p-6 pb-2 border-b border-[#ececec] bg-[#fafafb]/80 shrink-0 space-y-3">
             <div className="flex items-center gap-2.5 w-full">
               <div className="relative flex-1 min-w-0">
-                <Search className="w-4 h-4 text-[#616161] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Search className="w-4 h-4 text-[#777b86] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={searchTerm}
@@ -368,7 +378,7 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
                     setIsSearching(true);
                   }}
                   placeholder="Buscar producto por nombre o SKU..."
-                  className="w-full h-11 bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl pl-10 pr-9 text-xs font-mono uppercase text-[#1E3A5F] placeholder-[#616161] focus:outline-none transition-colors shadow-xs"
+                  className="w-full h-11 bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl pl-10 pr-9 text-xs font-mono uppercase text-[#17191c] placeholder-[#616161] focus:outline-none transition-colors shadow-xs"
                 />
                 {searchTerm && (
                   <button
@@ -377,63 +387,69 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
                       setSearchTerm('');
                       setIsSearching(false);
                     }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#616161] hover:text-[#1E3A5F] p-1"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#777b86] hover:text-[#17191c] p-1"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
 
-              {/* Botón Escáner Continuo: En móvil negro con cámara blanca, en escritorio estándar */}
+              {/* Botón Escáner Continuo al lado de la barra de búsqueda */}
               <button
                 type="button"
                 onClick={() => setScannerOpen(true)}
                 title="Abrir escáner continuo de cámara"
                 aria-label="Escanear con cámara"
-                className="w-11 h-11 flex items-center justify-center bg-black md:bg-white hover:bg-neutral-800 md:hover:bg-[#F8F9FA] border border-black md:border-[#E5E7EB] md:hover:border-[#1E3A5F] rounded-xl text-white md:text-[#1E3A5F] active:scale-95 transition-all shadow-sm shrink-0"
+                className="h-11 px-3.5 flex items-center justify-center gap-1.5 bg-white hover:bg-[#fafafb] text-[#17191c] border border-[#CBD5E1] hover:border-[#17191c] rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer"
               >
-                <Camera className="w-5 h-5 text-white md:text-[#1E3A5F]" />
+                <Camera className="w-4 h-4 text-[#17191c]" />
+                <span>Escanear</span>
               </button>
             </div>
 
             {/* Resultados de Búsqueda Desplegables */}
-            {isSearching && searchResults.length > 0 && (
-              <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-lg max-h-48 overflow-y-auto divide-y divide-[#E5E7EB] animate-in fade-in">
+            <AnimatePresence>
+              {isSearching && searchResults.length > 0 && (
+                <motion.div
+                  {...tabContentMotion}
+                  className="bg-white border border-[#ececec] rounded-xl shadow-lg max-h-48 overflow-y-auto divide-y divide-[#E5E7EB]"
+                >
                 {searchResults.map(p => {
                   const alreadySelected = selectedItems.has(p.id);
                   return (
                     <div
                       key={p.id}
                       onClick={() => handleAddProduct(p)}
-                      className="p-2.5 px-4 flex items-center justify-between hover:bg-[#F8F9FA] cursor-pointer transition-colors"
+                      className="p-2.5 px-4 flex items-center justify-between hover:bg-[#fafafb] cursor-pointer transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         {p.images && p.images[0] ? (
                           <img
                             src={p.images[0]}
                             alt={p.name}
-                            className="w-9 h-9 rounded-lg object-cover border border-[#E5E7EB] shrink-0"
+                            className="w-9 h-9 rounded-lg object-cover border border-[#ececec] shrink-0"
                           />
                         ) : (
                           <div className="w-9 h-9 rounded-lg bg-[#E5E7EB] flex items-center justify-center shrink-0">
-                            <Package className="w-4 h-4 text-[#616161]" />
+                            <Package className="w-4 h-4 text-[#777b86]" />
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold text-[#1E3A5F] truncate">{p.name}</p>
-                          <p className="text-[10px] text-[#616161] font-mono">
+                          <p className="text-xs font-semibold text-[#17191c] truncate">{p.name}</p>
+                          <p className="text-[10px] text-[#777b86] font-mono">
                             SKU: {p.code} • Stock: {formatStockDisplay(p)}
                           </p>
                         </div>
                       </div>
-                      <span className="text-[11px] font-mono text-[#1E3A5F] bg-[#F8F9FA] px-2 py-1 rounded border border-[#E5E7EB] shrink-0">
+                      <span className="text-[11px] font-mono text-[#17191c] bg-[#fafafb] px-2 py-1 rounded border border-[#ececec] shrink-0">
                         {alreadySelected ? 'Sumar (+)' : 'Agregar (+)'}
                       </span>
                     </div>
                   );
                 })}
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* 3. LISTA DINÁMICA DE PRODUCTOS SELECCIONADOS (SOLO NOMBRE Y CONTROLES AL LADO) */}
@@ -446,15 +462,15 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
             )}
 
             {isListEmpty ? (
-              <div className="py-12 flex flex-col items-center justify-center text-center text-[#616161] space-y-3">
-                <div className="w-14 h-14 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] flex items-center justify-center text-[#616161]">
+              <div className="py-12 flex flex-col items-center justify-center text-center text-[#777b86] space-y-3">
+                <div className="w-14 h-14 rounded-full bg-[#fafafb] border border-[#ececec] flex items-center justify-center text-[#777b86]">
                   <PackageMinus className="w-7 h-7 stroke-[1.25]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[#1E3A5F]">
+                  <p className="text-sm font-semibold text-[#17191c]">
                     No hay productos seleccionados
                   </p>
-                  <p className="text-xs max-w-sm mt-1 text-[#616161]">
+                  <p className="text-xs max-w-sm mt-1 text-[#777b86]">
                     Usa la barra de búsqueda o el botón de cámara para agregar productos al lote.
                   </p>
                 </div>
@@ -473,16 +489,16 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
                       className={`p-3 px-3.5 rounded-xl border flex items-center justify-between gap-3 transition-all ${
                         isExceeded
                           ? 'bg-rose-50 border-rose-300'
-                          : 'bg-white border-[#E5E7EB] hover:border-[#1E3A5F]/40 shadow-sm'
+                          : 'bg-white border-[#ececec] hover:border-[#17191c]/40 shadow-sm'
                       }`}
                     >
                       {/* Solo Nombre de Producto y Disponibilidad */}
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-xs font-semibold text-[#1E3A5F] truncate">
+                        <h4 className="text-xs font-semibold text-[#17191c] truncate">
                           {prod.name}
                         </h4>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[10px] font-mono text-[#616161]">
+                          <span className="text-[10px] font-mono text-[#777b86]">
                             Disp: {formatStockDisplay(prod)}
                           </span>
                           {isExceeded && (
@@ -498,70 +514,70 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
                         {isBox ? (
                           <div className="flex items-center gap-1.5">
                             {/* Cajas */}
-                            <div className="flex items-center border border-[#E5E7EB] rounded-lg overflow-hidden bg-[#F8F9FA]">
+                            <div className="flex items-center border border-[#ececec] rounded-lg overflow-hidden bg-[#fafafb]">
                               <button
                                 type="button"
                                 onClick={() => handleUpdateItem(prod.id, -1, 0)}
-                                className="w-7 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#1E3A5F] active:scale-95"
+                                className="w-7 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#17191c] active:scale-95"
                                 title="Restar caja"
                               >
                                 <Minus className="w-3 h-3" />
                               </button>
-                              <span className="w-8 text-center font-mono text-xs font-semibold text-[#1E3A5F]">
+                              <span className="w-8 text-center font-mono text-xs font-semibold text-[#17191c]">
                                 {item.quantityBoxes}
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleUpdateItem(prod.id, 1, 0)}
-                                className="w-7 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#1E3A5F] active:scale-95"
+                                className="w-7 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#17191c] active:scale-95"
                                 title="Sumar caja"
                               >
                                 <Plus className="w-3 h-3" />
                               </button>
                             </div>
-                            <span className="text-[10px] font-mono text-[#616161]">caj</span>
+                            <span className="text-[10px] font-mono text-[#777b86]">caj</span>
 
                             {/* Unidades Sueltas */}
-                            <div className="flex items-center border border-[#E5E7EB] rounded-lg overflow-hidden bg-[#F8F9FA]">
+                            <div className="flex items-center border border-[#ececec] rounded-lg overflow-hidden bg-[#fafafb]">
                               <button
                                 type="button"
                                 onClick={() => handleUpdateItem(prod.id, 0, -1)}
-                                className="w-6 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#1E3A5F] active:scale-95"
+                                className="w-6 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#17191c] active:scale-95"
                                 title="Restar unidad suelta"
                               >
                                 <Minus className="w-2.5 h-2.5" />
                               </button>
-                              <span className="w-6 text-center font-mono text-[11px] font-semibold text-[#1E3A5F]">
+                              <span className="w-6 text-center font-mono text-[11px] font-semibold text-[#17191c]">
                                 {item.quantityUnits}
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleUpdateItem(prod.id, 0, 1)}
-                                className="w-6 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#1E3A5F] active:scale-95"
+                                className="w-6 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#17191c] active:scale-95"
                                 title="Sumar unidad suelta"
                               >
                                 <Plus className="w-2.5 h-2.5" />
                               </button>
                             </div>
-                            <span className="text-[10px] font-mono text-[#616161]">und</span>
+                            <span className="text-[10px] font-mono text-[#777b86]">und</span>
                           </div>
                         ) : (
-                          <div className="flex items-center border border-[#E5E7EB] rounded-lg overflow-hidden bg-[#F8F9FA]">
+                          <div className="flex items-center border border-[#ececec] rounded-lg overflow-hidden bg-[#fafafb]">
                             <button
                               type="button"
                               onClick={() => handleUpdateItem(prod.id, 0, -1)}
-                              className="w-7 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#1E3A5F] active:scale-95"
+                              className="w-7 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#17191c] active:scale-95"
                               title="Descontar 1 unidad"
                             >
                               <Minus className="w-3 h-3" />
                             </button>
-                            <span className="w-10 text-center font-mono text-xs font-semibold text-[#1E3A5F]">
+                            <span className="w-10 text-center font-mono text-xs font-semibold text-[#17191c]">
                               {item.quantityUnits}
                             </span>
                             <button
                               type="button"
                               onClick={() => handleUpdateItem(prod.id, 0, 1)}
-                              className="w-7 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#1E3A5F] active:scale-95"
+                              className="w-7 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#17191c] active:scale-95"
                               title="Sumar 1 unidad"
                             >
                               <Plus className="w-3 h-3" />
@@ -573,7 +589,7 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
                         <button
                           type="button"
                           onClick={() => handleRemoveItem(prod.id)}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-[#616161] hover:text-rose-600 hover:bg-rose-50 transition-colors ml-1"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-[#777b86] hover:text-rose-600 hover:bg-rose-50 transition-colors ml-1"
                           title="Eliminar de la lista"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -587,16 +603,16 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
 
             {/* 4. METADATA DE LA SALIDA (MOTIVO COMO SELECTOR DESPLEGABLE Y NOTAS) */}
             {!isListEmpty && (
-              <div className="pt-4 border-t border-[#E5E7EB] space-y-3">
+              <div className="pt-4 border-t border-[#ececec] space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[#1E3A5F] mb-1.5 uppercase font-mono">
+                  <label className="block text-xs font-semibold text-[#17191c] mb-1.5 uppercase font-mono">
                     Motivo de la Salida:
                   </label>
                   <div className="relative">
                     <select
                       value={reason}
                       onChange={e => setReason(e.target.value)}
-                      className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3.5 py-2.5 text-xs text-[#1E3A5F] font-medium appearance-none cursor-pointer pr-10 shadow-sm focus:outline-none transition-colors"
+                      className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3.5 py-2.5 text-xs text-[#17191c] font-medium appearance-none cursor-pointer pr-10 shadow-sm focus:outline-none transition-colors"
                     >
                       {REASON_OPTIONS.map(r => (
                         <option key={r} value={r}>
@@ -604,12 +620,12 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="w-4 h-4 text-[#616161] absolute right-3.5 top-3 pointer-events-none" />
+                    <ChevronDown className="w-4 h-4 text-[#777b86] absolute right-3.5 top-3 pointer-events-none" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#1E3A5F] mb-1.5 uppercase font-mono">
+                  <label className="block text-xs font-semibold text-[#17191c] mb-1.5 uppercase font-mono">
                     Notas adicionales (opcional):
                   </label>
                   <input
@@ -617,7 +633,7 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
                     placeholder="Ej. Salida autorizada para showroom, merma de embalaje..."
-                    className="w-full bg-white border border-[#E5E7EB] focus:border-[#1E3A5F] rounded-xl px-3.5 py-2.5 text-xs text-[#1E3A5F] placeholder-[#616161] focus:outline-none transition-colors shadow-sm"
+                    className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3.5 py-2.5 text-xs text-[#17191c] placeholder-[#616161] focus:outline-none transition-colors shadow-sm"
                   />
                 </div>
               </div>
@@ -625,7 +641,7 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
           </div>
 
           {/* 5. BOTÓN DE ACCIÓN INFERIOR */}
-          <div className="p-4 sm:p-6 border-t border-[#E5E7EB] bg-[#ffffff] shrink-0">
+          <div className="p-4 sm:p-6 border-t border-[#ececec] bg-[#ffffff] shrink-0">
             <button
               type="button"
               onClick={handleConfirmWithdrawal}
@@ -649,8 +665,10 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
               )}
             </button>
           </div>
-        </div>
-      </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Escáner Continuo de Cámara */}
       <BarcodeScannerModal

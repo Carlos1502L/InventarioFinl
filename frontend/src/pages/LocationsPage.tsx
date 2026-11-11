@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import {
   MapPin,
   Barcode,
@@ -16,7 +17,8 @@ import {
   Loader2,
   CheckCircle2,
   Inbox,
-  ChevronDown
+  ChevronDown,
+  X
 } from 'lucide-react';
 import { Product, Location } from '../types/database';
 import {
@@ -28,8 +30,10 @@ import {
   formatLocationQuantity
 } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
+import { matchesAnyField, normalizeText } from '../utils/searchUtils';
 import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import { MinimalDropdown } from '../components/ui/MinimalDropdown';
+import { showAppToast } from '../components/ui/ToastNotification';
 
 export type LocationSubTab = 'assign' | 'consult' | 'move';
 
@@ -47,6 +51,7 @@ interface LocationsPageProps {
   onRefresh: () => void;
   initialSubTab?: LocationSubTab;
   initialProduct?: Product | null;
+  onClearInitialProduct?: () => void;
 }
 
 export const LocationsPage: React.FC<LocationsPageProps> = ({
@@ -54,7 +59,8 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
   locations,
   onRefresh,
   initialSubTab = 'assign',
-  initialProduct = null
+  initialProduct = null,
+  onClearInitialProduct
 }) => {
   const { currentInventory, user } = useAuth();
 
@@ -131,6 +137,11 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
   const [moveAlert, setMoveAlert] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [isMovingStock, setIsMovingStock] = useState(false);
 
+  // Estados para búsqueda de Ubicación de Destino (Campo de búsqueda en vez de select)
+  const moveDestSearchRef = useRef<HTMLDivElement>(null);
+  const [moveDestSearchQuery, setMoveDestSearchQuery] = useState('');
+  const [isMoveDestSearchOpen, setIsMoveDestSearchOpen] = useState(false);
+
   // ============================================================================
   // ESTADOS DEL ESCÁNER DE CÁMARA
   // ============================================================================
@@ -139,15 +150,132 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
     'assignProduct' | 'assignLocation' | 'consultProduct' | 'moveProduct' | 'moveDestination'
   >('assignProduct');
 
-  // Sincronizar producto inicial si viene desde otra vista
+  const decomposeBoxQty = (qty: number, upb: number) => {
+    const totalUnits = Math.round(qty * upb);
+    return {
+      boxes: Math.floor(totalUnits / upb),
+      looseUnits: totalUnits % upb
+    };
+  };
+
+  // Limpiar búsquedas al desmontar el componente (cambio de módulo general)
+  useEffect(() => {
+    return () => {
+      setConsultQuery('');
+      setConsultedProductId(null);
+      setConsultAlert(null);
+      setMoveScanQuery('');
+      setMoveProductId(null);
+      setMoveFromLocationId('');
+      setMoveToLocationId('');
+      setMoveDestSearchQuery('');
+      setMoveAlert(null);
+      setIsMoveDestSearchOpen(false);
+      setAssignScanCode('');
+      setAssignAlert(null);
+    };
+  }, []);
+
+  // Cierre de dropdown al hacer clic fuera del buscador de destino
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moveDestSearchRef.current && !moveDestSearchRef.current.contains(e.target as Node)) {
+        setIsMoveDestSearchOpen(false);
+        const sel = locations.find(l => l.id === moveToLocationId);
+        if (sel) {
+          setMoveDestSearchQuery(`${sel.name} (${sel.code})`);
+        } else if (!moveToLocationId) {
+          setMoveDestSearchQuery('');
+        }
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [locations, moveToLocationId]);
+
+  // Sincronizar producto inicial si viene desde otra vista (ej: botón "+ Asignar Ubicación")
   useEffect(() => {
     if (initialProduct) {
+      const freshProd = products.find(p => p.id === initialProduct.id) || initialProduct;
+      const pendingStock = getPendingLocationStock(freshProd);
+
+      // Si tiene stock pendiente de ubicar, agregarlo directamente a la lista temporal de productos por ubicar
+      if (pendingStock > 0.0001) {
+        const isBox = freshProd.unit_type === 'BOX' && Number(freshProd.units_per_box) > 0;
+        const upb = Number(freshProd.units_per_box || 1);
+        const assignQty = pendingStock;
+        const breakdown = isBox ? decomposeBoxQty(assignQty, upb) : { boxes: assignQty, looseUnits: 0 };
+
+        setBatchItems(prev => {
+          const existingIdx = prev.findIndex(i => i.product.id === freshProd.id);
+          if (existingIdx >= 0) {
+            return prev.map((item, idx) =>
+              idx === existingIdx
+                ? {
+                    ...item,
+                    product: freshProd,
+                    quantity: assignQty,
+                    boxes: breakdown.boxes,
+                    looseUnits: breakdown.looseUnits,
+                    maxPending: pendingStock
+                  }
+                : item
+            );
+          }
+          return [
+            ...prev,
+            {
+              product: freshProd,
+              quantity: assignQty,
+              boxes: breakdown.boxes,
+              looseUnits: breakdown.looseUnits,
+              maxPending: pendingStock
+            }
+          ];
+        });
+        setAssignAlert(null);
+      } else {
+        setAssignAlert({
+          type: 'error',
+          message: `El producto "${freshProd.name}" no tiene unidades pendientes por ubicar.`
+        });
+      }
+
       setConsultedProductId(initialProduct.id);
       setMoveProductId(initialProduct.id);
-      const firstLocWithStock = (initialProduct.product_locations || []).find(pl => Number(pl.quantity || 0) > 0);
+      const firstLocWithStock = (freshProd.product_locations || []).find(pl => Number(pl.quantity || 0) > 0);
       setMoveFromLocationId(firstLocWithStock?.location_id || '');
+      setMoveToLocationId('');
+      setMoveDestSearchQuery('');
+
+      if (onClearInitialProduct) {
+        onClearInitialProduct();
+      }
     }
   }, [initialProduct]);
+
+  // Manejador centralizado para alternar pestañas y limpiar búsquedas
+  const handleTabSwitch = (newTab: LocationSubTab) => {
+    setSubTab(newTab);
+    setConsultQuery('');
+    setConsultedProductId(null);
+    setConsultAlert(null);
+    setMoveScanQuery('');
+    setMoveProductId(null);
+    setMoveFromLocationId('');
+    setMoveToLocationId('');
+    setMoveDestSearchQuery('');
+    setMoveAlert(null);
+    setIsMoveDestSearchOpen(false);
+  };
+
+  // Limpiar consulta manual en la pestaña Consultar
+  const handleClearConsult = () => {
+    setConsultQuery('');
+    setConsultedProductId(null);
+    setConsultAlert(null);
+    setTimeout(() => consultInputRef.current?.focus(), 50);
+  };
 
   // Autofocus ergonómico al cambiar de pestaña
   useEffect(() => {
@@ -187,14 +315,6 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
   // ============================================================================
   // LÓGICA DEL MÓDULO 2: "ASIGNAR UBICACIÓN"
   // ============================================================================
-
-  const decomposeBoxQty = (qty: number, upb: number) => {
-    const totalUnits = Math.round(qty * upb);
-    return {
-      boxes: Math.floor(totalUnits / upb),
-      looseUnits: totalUnits % upb
-    };
-  };
 
   /**
    * Agrega o incrementa (+1) un producto en la lista temporal de asignación validando estrictamente Stock Pendiente
@@ -438,7 +558,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
   // Coincidencias en vivo al escribir en el buscador de "Asignar Ubicación" (solo productos con unidades pendientes de asignar)
   const assignSuggestions = useMemo(() => {
-    const term = assignScanCode.trim().toLowerCase();
+    const term = normalizeText(assignScanCode);
     if (!term) return [];
     return products
       .filter(p => {
@@ -446,7 +566,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
         const inBatchQty = batchItems.find(b => b.product.id === p.id)?.quantity || 0;
         const remainingPending = getPendingLocationStock(p) - inBatchQty;
         if (remainingPending <= 0.0001) return false;
-        return p.code.toLowerCase().includes(term) || p.name.toLowerCase().includes(term);
+        return matchesAnyField([p.code, p.name], term);
       })
       .slice(0, 6);
   }, [products, assignScanCode, batchItems]);
@@ -461,26 +581,21 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
   // Coincidencias en vivo al escribir en el buscador de "Consultar Ubicación" (vacío si no se escribe nada)
   const consultSuggestions = useMemo(() => {
-    const term = consultQuery.trim().toLowerCase();
+    const term = normalizeText(consultQuery);
     if (!term) return [];
     return products
-      .filter(
-        p =>
-          p.code.toLowerCase().includes(term) ||
-          p.name.toLowerCase().includes(term) ||
-          (p.description && p.description.toLowerCase().includes(term))
-      )
+      .filter(p => matchesAnyField([p.code, p.name, p.description], term))
       .slice(0, 6);
   }, [products, consultQuery]);
 
   const handleConsultSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const raw = consultQuery.trim().toLowerCase();
+    const raw = normalizeText(consultQuery);
     if (!raw) return;
 
-    // 1. Coincidencia exacta por código o nombre
+    // 1. Coincidencia exacta por código o nombre (insensible a tildes)
     const exact = products.find(
-      p => p.code.toLowerCase() === raw || p.name.toLowerCase() === raw
+      p => normalizeText(p.code) === raw || normalizeText(p.name) === raw
     );
     if (exact) {
       setConsultedProductId(exact.id);
@@ -490,12 +605,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       return;
     }
 
-    // 2. Coincidencia parcial por código o nombre
+    // 2. Coincidencia parcial por código o nombre (RF-SEARCH-016)
     const partialMatches = products.filter(
-      p =>
-        p.code.toLowerCase().includes(raw) ||
-        p.name.toLowerCase().includes(raw) ||
-        (p.description && p.description.toLowerCase().includes(raw))
+      p => matchesAnyField([p.code, p.name, p.description], raw)
     );
 
     if (partialMatches.length > 0) {
@@ -518,18 +630,17 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
     [products, moveProductId]
   );
 
-  // Coincidencias en vivo al escribir en el buscador de "Mover Ubicación" (solo productos con stock ubicado)
+  // Coincidencias en vivo al escribir en el buscador de "Mover Ubicación" (RF-SEARCH-016)
   const moveSuggestions = useMemo(() => {
-    const term = moveScanQuery.trim().toLowerCase();
+    const term = normalizeText(moveScanQuery);
     if (!term) return [];
     return products
       .filter(
         p =>
           p.status === 'ACTIVE' &&
-          getAssignedLocationStock(p) > 0.0001 &&
-          (p.code.toLowerCase().includes(term) || p.name.toLowerCase().includes(term))
+          matchesAnyField([p.code, p.name], term)
       )
-      .slice(0, 6);
+      .slice(0, 8);
   }, [products, moveScanQuery]);
 
   // Ubicaciones de origen donde el producto seleccionado tiene stock actual > 0
@@ -549,17 +660,41 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
     return locations.filter(loc => loc.id !== moveFromLocationId);
   }, [locations, moveFromLocationId]);
 
+  // Sugerencias de Ubicación Destino según lo que escribe el usuario (Búsqueda en lugar de select)
+  const moveDestSuggestions = useMemo(() => {
+    const term = normalizeText(moveDestSearchQuery);
+    const candidates = locations.filter(loc => loc.id !== moveFromLocationId);
+    if (!term) return candidates.slice(0, 10);
+    return candidates.filter(loc =>
+      matchesAnyField([loc.name, loc.code, loc.description], term)
+    );
+  }, [locations, moveFromLocationId, moveDestSearchQuery]);
+
   // Seleccionar producto a trasladar por escáner o clic
   const selectProductForMove = (prod: Product, preferredOriginId?: string) => {
+    const origins = (prod.product_locations || []).filter(pl => Number(pl.quantity || 0) > 0.0001);
+
+    if (origins.length === 0) {
+      setMoveAlert({
+        type: 'error',
+        message: 'Producto sin ubicación, asígnelo antes de mover'
+      });
+      showAppToast('Producto sin ubicación, asígnelo antes de mover', 'warning', 3500);
+      setMoveProductId(null);
+      setMoveScanQuery('');
+      return;
+    }
+
     setMoveProductId(prod.id);
     setMoveAlert(null);
-    const origins = (prod.product_locations || []).filter(pl => Number(pl.quantity || 0) > 0.0001);
+    setMoveScanQuery('');
     const chosenOrigin =
       preferredOriginId && origins.some(o => o.location_id === preferredOriginId)
         ? preferredOriginId
         : origins[0]?.location_id || '';
     setMoveFromLocationId(chosenOrigin);
     setMoveToLocationId('');
+    setMoveDestSearchQuery('');
 
     const originEntry = origins.find(o => o.location_id === chosenOrigin);
     const avail = Number(originEntry?.quantity || 0);
@@ -583,15 +718,15 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
   const handleMoveScanSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const raw = moveScanQuery.trim().toLowerCase();
+    const raw = normalizeText(moveScanQuery);
     if (!raw) return;
 
     let matched = products.find(
-      p => p.code.toLowerCase() === raw || p.name.toLowerCase() === raw
+      p => normalizeText(p.code) === raw || normalizeText(p.name) === raw
     );
     if (!matched) {
       const partial = products.filter(
-        p => p.code.toLowerCase().includes(raw) || p.name.toLowerCase().includes(raw)
+        p => matchesAnyField([p.code, p.name], raw)
       );
       if (partial.length > 0) matched = partial[0];
     }
@@ -605,6 +740,19 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       return;
     }
 
+    const origins = (matched.product_locations || []).filter(pl => Number(pl.quantity || 0) > 0.0001);
+    if (origins.length === 0) {
+      setMoveAlert({
+        type: 'error',
+        message: 'Producto sin ubicación, asígnelo antes de mover'
+      });
+      showAppToast('Producto sin ubicación, asígnelo antes de mover', 'warning', 3500);
+      setMoveProductId(null);
+      setMoveScanQuery('');
+      moveScanInputRef.current?.focus();
+      return;
+    }
+
     selectProductForMove(matched);
     setMoveScanQuery('');
   };
@@ -614,6 +762,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
     setMoveFromLocationId(locId);
     if (moveToLocationId === locId) {
       setMoveToLocationId('');
+      setMoveDestSearchQuery('');
     }
     const found = moveAvailableOrigins.find(pl => pl.location_id === locId);
     const avail = Number(found?.quantity || 0);
@@ -702,6 +851,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       setMoveProductId(null);
       setMoveFromLocationId('');
       setMoveToLocationId('');
+      setMoveDestSearchQuery('');
       setMoveQuantity('1');
       setMoveBoxes(1);
       setMoveLooseUnits(0);
@@ -787,6 +937,8 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
           });
         } else {
           setMoveToLocationId(foundLoc.id);
+          setMoveDestSearchQuery(`${foundLoc.name} (${foundLoc.code})`);
+          setIsMoveDestSearchOpen(false);
           setMoveAlert(null);
         }
       } else {
@@ -859,7 +1011,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setSubTab(tab.id)}
+                  onClick={() => handleTabSwitch(tab.id)}
                   className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
                     active
                       ? 'bg-white text-neutral-950 shadow-sm'
@@ -898,7 +1050,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       setCameraScanTarget('assignProduct');
                       setCameraScannerOpen(true);
                     }}
-                    className="w-12 h-12 flex items-center justify-center bg-black hover:bg-neutral-800 border border-black rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
+                    className="w-12 h-12 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
                     aria-label="Cámara"
                   >
                     <Camera className="w-5 h-5 text-white" />
@@ -1120,9 +1272,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     }}
                     title="Escanear código o QR de ubicación"
                     aria-label="Escanear ubicación destino"
-                    className="py-3 px-4 rounded-2xl bg-neutral-50 border border-neutral-200/60 text-neutral-800 hover:bg-neutral-100/60 flex items-center justify-center gap-1.5 text-xs font-semibold shrink-0 active:scale-95 transition-all"
+                    className="py-3 px-4 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white flex items-center justify-center gap-1.5 text-xs font-semibold shrink-0 active:scale-95 transition-all shadow-xs cursor-pointer"
                   >
-                    <Camera className="w-4 h-4" />
+                    <Camera className="w-4 h-4 text-white" />
                     <span>Escanear</span>
                   </button>
                 </div>
@@ -1153,15 +1305,25 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
               {/* SUB-CAPA 2A: Barra Fija de Herramientas / Buscador */}
               <div className="shrink-0 w-full bg-white px-5 pt-4 pb-2 space-y-2">
                 <form onSubmit={handleConsultSearchSubmit} className="flex items-center gap-2.5">
-                  <div className="flex-1 min-w-0 flex items-center gap-3 bg-neutral-50 border border-neutral-200/60 rounded-2xl px-4 py-3.5 focus-within:border-neutral-950 focus-within:bg-white transition-all">
+                  <div className="flex-1 min-w-0 flex items-center gap-3 bg-neutral-50 border border-neutral-200/60 rounded-2xl px-4 py-3.5 focus-within:border-neutral-950 focus-within:bg-white transition-all relative">
                     <Search className="w-5 h-5 text-neutral-400 shrink-0" />
                     <input
                       type="text"
                       value={consultQuery}
                       onChange={(e) => setConsultQuery(e.target.value)}
                       placeholder="Buscar producto por código o nombre..."
-                      className="w-full bg-transparent border-0 outline-none ring-0 p-0 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-0"
+                      className="w-full bg-transparent border-0 outline-none ring-0 p-0 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-0 pr-6"
                     />
+                    {(consultQuery || consultedProductId) && (
+                      <button
+                        type="button"
+                        onClick={handleClearConsult}
+                        className="text-neutral-400 hover:text-neutral-700 p-1"
+                        aria-label="Limpiar búsqueda"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -1169,7 +1331,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       setCameraScanTarget('consultProduct');
                       setCameraScannerOpen(true);
                     }}
-                    className="w-12 h-12 flex items-center justify-center bg-black hover:bg-neutral-800 border border-black rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
+                    className="w-12 h-12 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
                     aria-label="Cámara"
                   >
                     <Camera className="w-5 h-5 text-white" />
@@ -1219,13 +1381,23 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                   </p>
                 ) : (
                 <div className="space-y-4">
-                  <div className="pb-4 border-b border-neutral-100">
-                    <h2 className="text-base font-semibold text-neutral-900">
-                      {consultedProduct.name}
-                    </h2>
-                    <p className="text-xs text-neutral-400 mt-0.5">
-                      SKU {consultedProduct.code} · Total: {formatStockDisplay(consultedProduct)}
-                    </p>
+                  <div className="pb-4 border-b border-neutral-100 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-base font-semibold text-neutral-900">
+                        {consultedProduct.name}
+                      </h2>
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        SKU {consultedProduct.code} · Total: {formatStockDisplay(consultedProduct)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleClearConsult}
+                      className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors"
+                      title="Cerrar consulta"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
 
                   <div className="divide-y divide-neutral-100">
@@ -1325,7 +1497,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       setCameraScanTarget('moveProduct');
                       setCameraScannerOpen(true);
                     }}
-                    className="w-12 h-12 flex items-center justify-center bg-black hover:bg-neutral-800 border border-black rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
+                    className="w-12 h-12 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl text-white active:scale-95 transition-all shrink-0 shadow-sm"
                     aria-label="Cámara"
                   >
                     <Camera className="w-5 h-5 text-white" />
@@ -1390,16 +1562,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                         {moveSelectedProduct.name}
                       </p>
                       <p className="text-xs text-neutral-400">
-                        SKU {moveSelectedProduct.code}
+                        SKU {moveSelectedProduct.code} · Total: {formatStockDisplay(moveSelectedProduct)}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setMoveProductId(null)}
-                      className="text-xs text-neutral-400 hover:text-neutral-900"
-                    >
-                      Cambiar
-                    </button>
                   </div>
 
                   {/* Origen */}
@@ -1470,48 +1635,62 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     </div>
                   </div>
 
-                  {/* Destino */}
+                  {/* Destino (Buscador en vez de select) */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-neutral-500 block">
                       Ubicación de destino
                     </label>
                     <div className="flex items-center gap-2.5 w-full">
-                      <div ref={moveDestDropdownRef} className="relative w-full flex-1 min-w-0">
-                        <button
-                          type="button"
-                          onClick={() => setIsMoveDestDropdownOpen((prev) => !prev)}
-                          className="w-full flex items-center justify-between bg-neutral-50 border border-neutral-200/60 rounded-2xl py-3 px-4 text-sm text-neutral-800 font-medium hover:bg-neutral-100/60 transition-colors"
-                        >
-                          {(() => {
-                            const selectedDest = moveAvailableDestinations.find((loc) => loc.id === moveToLocationId);
-                            return selectedDest ? (
-                              <span className="truncate">
-                                {selectedDest.name}
-                                <span className="text-xs text-neutral-400 font-normal ml-2">
-                                  {selectedDest.code}
-                                </span>
-                              </span>
-                            ) : (
-                              <span className="truncate text-neutral-400 font-normal">
-                                Seleccionar destino...
-                              </span>
-                            );
-                          })()}
-                          <ChevronDown
-                            className={`w-4 h-4 text-neutral-400 shrink-0 ml-2 transition-transform duration-200 ${
-                              isMoveDestDropdownOpen ? 'rotate-180' : ''
-                            }`}
+                      <div ref={moveDestSearchRef} className="relative w-full flex-1 min-w-0">
+                        <div className="relative flex items-center">
+                          <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 pointer-events-none" />
+                          <input
+                            type="text"
+                            value={moveDestSearchQuery}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setMoveDestSearchQuery(val);
+                              setIsMoveDestSearchOpen(true);
+                              const exact = moveAvailableDestinations.find(
+                                (l) =>
+                                  normalizeText(l.code) === normalizeText(val) ||
+                                  normalizeText(l.name) === normalizeText(val) ||
+                                  normalizeText(`${l.name} (${l.code})`) === normalizeText(val)
+                              );
+                              if (exact) {
+                                setMoveToLocationId(exact.id);
+                              } else {
+                                setMoveToLocationId('');
+                              }
+                            }}
+                            onFocus={() => setIsMoveDestSearchOpen(true)}
+                            placeholder="Buscar estante o código destino..."
+                            className="w-full bg-neutral-50 border border-neutral-200/60 rounded-2xl py-3 pl-10 pr-9 text-sm text-neutral-800 placeholder:text-neutral-400 focus:bg-white focus:border-neutral-950 focus:outline-none transition-all"
                           />
-                        </button>
+                          {moveDestSearchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMoveDestSearchQuery('');
+                                setMoveToLocationId('');
+                                setIsMoveDestSearchOpen(true);
+                              }}
+                              className="absolute right-3 p-1 text-neutral-400 hover:text-neutral-700 rounded-full"
+                              aria-label="Limpiar destino"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
 
-                        {isMoveDestDropdownOpen && (
+                        {isMoveDestSearchOpen && (
                           <div className="absolute left-0 right-0 top-full mt-2 z-30 bg-white rounded-2xl border border-neutral-200/80 shadow-xl p-1.5 overflow-hidden max-h-60 overflow-y-auto">
-                            {moveAvailableDestinations.length === 0 ? (
+                            {moveDestSuggestions.length === 0 ? (
                               <div className="px-3 py-2.5 text-xs text-neutral-400 text-center">
-                                No hay ubicaciones disponibles
+                                No hay ubicaciones destino coincidentes
                               </div>
                             ) : (
-                              moveAvailableDestinations.map((loc) => {
+                              moveDestSuggestions.map((loc) => {
                                 const isSelected = moveToLocationId === loc.id;
                                 return (
                                   <button
@@ -1519,7 +1698,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                                     type="button"
                                     onClick={() => {
                                       setMoveToLocationId(loc.id);
-                                      setIsMoveDestDropdownOpen(false);
+                                      setMoveDestSearchQuery(`${loc.name} (${loc.code})`);
+                                      setIsMoveDestSearchOpen(false);
+                                      setMoveAlert(null);
                                     }}
                                     className={`w-full rounded-xl px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950 transition-colors flex items-center justify-between cursor-pointer text-left ${
                                       isSelected ? 'bg-neutral-100/80 font-semibold text-neutral-950' : ''
@@ -1547,9 +1728,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                         }}
                         title="Escanear código o QR de ubicación destino"
                         aria-label="Escanear ubicación destino"
-                        className="py-3 px-4 rounded-2xl bg-neutral-50 border border-neutral-200/60 text-neutral-800 hover:bg-neutral-100/60 flex items-center justify-center gap-1.5 text-xs font-semibold shrink-0 active:scale-95 transition-all"
+                        className="py-3 px-4 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white flex items-center justify-center gap-1.5 text-xs font-semibold shrink-0 active:scale-95 transition-all shadow-xs cursor-pointer"
                       >
-                        <Camera className="w-4 h-4" />
+                        <Camera className="w-4 h-4 text-white" />
                         <span>Escanear</span>
                       </button>
                     </div>
@@ -1619,136 +1800,122 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       </div>
 
       {/* ========================================================================
-          VISTA DE ESCRITORIO (>= 768px / hidden md:block)
+          VISTA DE ESCRITORIO (>= 768px / hidden md:block) - INDUSTRIAL WORKBENCH
          ======================================================================== */}
-      <div className="hidden md:block space-y-6 pb-28 lg:pb-16 max-w-[1440px] mx-auto text-[#1E3A5F]">
+      <div className="hidden md:block space-y-5 pb-28 lg:pb-16 max-w-[1440px] mx-auto text-slate-900 font-sans">
       {/* ========================================================================
-          CABECERA Y SELECTOR DE LOS 4 SUB-MÓDULOS DE UBICACIÓN
+          CABECERA Y SELECTOR SEGMENTADO DE SUB-MÓDULOS
          ======================================================================== */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="w-2 h-2 rounded-full bg-[#E8B4A0] inline-block" />
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#616161]">
-                WAREHOUSE SPATIAL ENGINE // LOGÍSTICA MULTI-UBICACIÓN
-              </p>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1E3A5F] uppercase">
-              GESTIÓN DE UBICACIONES & RECEPCIÓN
-            </h1>
-            <p className="text-xs text-[#616161] mt-0.5">
-              Asignación por lotes con validación de stock pendiente, consulta multi-ubicación y traslado atómico entre estantes.
-            </p>
-          </div>
-
-          {/* Indicadores rápidos */}
-          <div className="flex flex-wrap items-center gap-2.5 font-mono text-xs">
-            <div className="px-3.5 py-2 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] flex items-center gap-2">
-              <Inbox className="w-4 h-4 text-[#E8B4A0]" />
-              <span>
-                EN RECEPCIÓN (SIN UBICAR):{' '}
-                <strong className="text-[#1E3A5F]">{globalSummary.skusWithPending} SKUs</strong>
-              </span>
-            </div>
-            <div className="px-3.5 py-2 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-[#1E3A5F]" />
-              <span>
-                ESTANTES ACTIVOS: <strong className="text-[#1E3A5F]">{globalSummary.totalLocations}</strong>
-              </span>
-            </div>
-          </div>
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 pt-1">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-slate-900">
+            Gestión de ubicaciones
+          </h1>
+          <p className="text-xs text-slate-500 mt-1 max-w-2xl">
+            Asignación por lotes con validación de saldo pendiente, consulta multi-estante y traslado atómico.
+          </p>
         </div>
 
-        {/* Pestañas de los 3 Módulos de Ubicación */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-[#E5E7EB] font-mono text-xs">
-          <button
-            type="button"
-            onClick={() => setSubTab('assign')}
-            className={`min-h-[44px] px-4 py-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${
-              subTab === 'assign'
-                ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-sm'
-                : 'bg-[#F8F9FA] text-[#1E3A5F] border-[#E5E7EB] hover:border-[#1E3A5F]'
-            }`}
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <Barcode className={`w-4 h-4 shrink-0 ${subTab === 'assign' ? 'text-[#E8B4A0]' : 'text-[#1E3A5F]'}`} />
-              <div className="truncate">
-                <span className="text-[9px] uppercase tracking-widest block opacity-75">01 // LOTE</span>
-                <span className="font-bold uppercase tracking-wider truncate block">ASIGNAR UBICACIÓN</span>
-              </div>
-            </div>
-            {globalSummary.skusWithPending > 0 && (
-              <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                  subTab === 'assign' ? 'bg-[#E8B4A0] text-[#1E3A5F]' : 'bg-[#1E3A5F] text-white'
-                }`}
-              >
-                {globalSummary.skusWithPending}
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSubTab('consult')}
-            className={`min-h-[44px] px-4 py-2.5 rounded-xl border text-left transition-all flex items-center gap-2.5 ${
-              subTab === 'consult'
-                ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-sm'
-                : 'bg-[#F8F9FA] text-[#1E3A5F] border-[#E5E7EB] hover:border-[#1E3A5F]'
-            }`}
-          >
-            <Search className={`w-4 h-4 shrink-0 ${subTab === 'consult' ? 'text-[#E8B4A0]' : 'text-[#1E3A5F]'}`} />
-            <div className="truncate">
-              <span className="text-[9px] uppercase tracking-widest block opacity-75">02 // MAPA</span>
-              <span className="font-bold uppercase tracking-wider truncate block">CONSULTAR UBICACIÓN</span>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSubTab('move')}
-            className={`min-h-[44px] px-4 py-2.5 rounded-xl border text-left transition-all flex items-center gap-2.5 ${
-              subTab === 'move'
-                ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-sm'
-                : 'bg-[#F8F9FA] text-[#1E3A5F] border-[#E5E7EB] hover:border-[#1E3A5F]'
-            }`}
-          >
-            <ArrowRightLeft className={`w-4 h-4 shrink-0 ${subTab === 'move' ? 'text-[#E8B4A0]' : 'text-[#1E3A5F]'}`} />
-            <div className="truncate">
-              <span className="text-[9px] uppercase tracking-widest block opacity-75">03 // TRASLADO</span>
-              <span className="font-bold uppercase tracking-wider truncate block">MOVER UBICACIÓN</span>
-            </div>
-          </button>
+        {/* Indicadores rápidos */}
+        <div className="flex flex-wrap items-center gap-2 text-xs shrink-0">
+          <div className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 flex items-center gap-2">
+            <Inbox className="w-3.5 h-3.5 text-slate-600" />
+            <span className="text-slate-600">
+              Por ubicar:{' '}
+              <strong className="font-mono text-slate-900 font-semibold tabular-nums">{globalSummary.skusWithPending}</strong>
+            </span>
+          </div>
+          <div className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 flex items-center gap-2">
+            <MapPin className="w-3.5 h-3.5 text-slate-600" />
+            <span className="text-slate-600">
+              Estantes:{' '}
+              <strong className="font-mono text-slate-900 font-semibold tabular-nums">{globalSummary.totalLocations}</strong>
+            </span>
+          </div>
         </div>
       </div>
 
+      {/* Pestañas Segmented Tab Bar con Indicador Spring */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 p-1 bg-slate-100 border border-slate-200 rounded-xl text-xs">
+        {[
+          {
+            id: 'assign' as const,
+            label: 'Asignar por lote',
+            Icon: Barcode,
+            badge: globalSummary.skusWithPending > 0 ? globalSummary.skusWithPending : null
+          },
+          {
+            id: 'consult' as const,
+            label: 'Consultar distribución',
+            Icon: Search,
+            badge: null
+          },
+          {
+            id: 'move' as const,
+            label: 'Mover ubicación',
+            Icon: ArrowRightLeft,
+            badge: null
+          }
+        ].map((tab) => {
+          const active = subTab === tab.id;
+          const TabIcon = tab.Icon;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => handleTabSwitch(tab.id)}
+              className={`relative min-h-[40px] px-4 py-2 rounded-lg text-left transition-colors duration-150 flex items-center justify-between cursor-pointer ${
+                active
+                  ? 'text-white font-semibold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 font-medium'
+              }`}
+            >
+              {active && (
+                <motion.div
+                  layoutId="locations-active-tab"
+                  transition={{ type: 'spring', stiffness: 520, damping: 40, mass: 0.7 }}
+                  className="absolute inset-0 bg-slate-900 rounded-lg shadow-xs pointer-events-none"
+                />
+              )}
+              <div className="relative z-10 flex items-center gap-2 min-w-0">
+                <TabIcon className="w-4 h-4 shrink-0" />
+                <span className="truncate">{tab.label}</span>
+              </div>
+              {tab.badge !== null && (
+                <span
+                  className={`relative z-10 font-mono px-1.5 py-px rounded text-[10px] font-semibold tabular-nums ${
+                    active ? 'bg-white/20 text-white' : 'bg-slate-900 text-white'
+                  }`}
+                >
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {/* ========================================================================
-          MÓDULO 2: "ASIGNAR UBICACIÓN" (PROCESAMIENTO POR LOTES Y VALIDACIÓN)
+          MÓDULO 1: "ASIGNAR UBICACIÓN" (PROCESAMIENTO POR LOTES Y VALIDACIÓN)
          ======================================================================== */}
       {subTab === 'assign' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* Columna Izquierda (8 cols): Escáner + Tabla Acumulativa Temporal */}
           <div className="lg:col-span-8 space-y-4">
             {/* Barra de Escaneo con Autofocus Permanente */}
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-[#E8B4A0] block">
-                    ENTRADA DE ESCÁNER EN ALMACÉN (AUTOFOCUS ACTIVO)
-                  </span>
-                  <h2 className="text-base font-bold uppercase text-[#1E3A5F]">
-                    Escanear o Digitar Producto por Ubicar
-                  </h2>
-                </div>
-                <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] text-[#616161]">
-                  LECTOR BARCODE + ENTER
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-ui-card space-y-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Escanear o buscar producto por ubicar
+                </h2>
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-600">
+                  Barcode + Enter
                 </span>
               </div>
 
-              <form onSubmit={handleAssignScanSubmit} className="flex flex-col sm:flex-row gap-2.5">
+              <form onSubmit={handleAssignScanSubmit} className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
-                  <Barcode className="w-4 h-4 text-[#1E3A5F] absolute left-4 top-3.5 pointer-events-none" />
+                  <Barcode className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
                   <input
                     ref={assignScanInputRef}
                     type="text"
@@ -1756,12 +1923,12 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     value={assignScanCode}
                     onChange={e => setAssignScanCode(e.target.value)}
                     placeholder="Escanea el código de barras (Enter) o escribe código / nombre..."
-                    className="w-full min-h-[46px] bg-[#F8F9FA] focus:bg-white border-2 border-[#1E3A5F] rounded-xl pl-11 pr-4 py-2.5 text-xs sm:text-sm font-mono text-[#1E3A5F] placeholder:text-[#616161]/60 focus:outline-none transition-all"
+                    className="w-full min-h-[40px] bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-slate-900 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none transition-[background-color,border-color] duration-150"
                   />
 
                   {/* Coincidencias desplegables al escribir */}
                   {assignSuggestions.length > 0 && (
-                    <div className="mt-1.5 bg-white border border-[#1E3A5F] rounded-xl shadow-lg divide-y divide-[#E5E7EB] overflow-hidden z-20 relative">
+                    <div className="mt-1.5 bg-white border border-slate-200 rounded-xl shadow-lg divide-y divide-slate-100 overflow-hidden z-20 relative">
                       {assignSuggestions.map(prod => {
                         const inBatchQty = batchItems.find(b => b.product.id === prod.id)?.quantity || 0;
                         const remainingPending = Math.max(0, getPendingLocationStock(prod) - inBatchQty);
@@ -1774,16 +1941,16 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                               setAssignScanCode('');
                               assignScanInputRef.current?.focus();
                             }}
-                            className="w-full px-3.5 py-2.5 text-left hover:bg-[#F8F9FA] transition-colors flex items-center justify-between gap-3 font-mono text-xs"
+                            className="w-full px-3.5 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center justify-between gap-3 text-xs cursor-pointer"
                           >
-                            <div className="min-w-0">
-                              <span className="font-bold text-[#1E3A5F] mr-2">[{prod.code}]</span>
-                              <span className="text-[#1E3A5F] uppercase font-medium truncate">
+                            <div className="min-w-0 truncate">
+                              <span className="font-mono font-semibold text-slate-700 mr-2">{prod.code}</span>
+                              <span className="font-medium text-slate-900">
                                 {prod.name}
                               </span>
                             </div>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 bg-[#E8B4A0]/35 text-[#1E3A5F]">
-                              Por ubicar: {formatLocationQuantity(remainingPending, prod)}
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium tabular-nums shrink-0 bg-slate-100 text-slate-800 border border-slate-200">
+                              Pend: {formatLocationQuantity(remainingPending, prod)}
                             </span>
                           </button>
                         );
@@ -1794,9 +1961,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                 <div className="flex items-center gap-2 self-start w-full sm:w-auto">
                   <button
                     type="submit"
-                    className="flex-1 sm:flex-initial min-h-[46px] px-5 bg-[#1E3A5F] hover:bg-[#152a45] text-white rounded-xl text-xs font-mono uppercase tracking-wider font-semibold transition-all flex items-center justify-center gap-1.5"
+                    className="flex-1 sm:flex-initial min-h-[40px] px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-medium transition-[background-color,transform] duration-150 active:scale-[0.97] flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Plus className="w-4 h-4 text-[#E8B4A0]" />
+                    <Plus className="w-4 h-4" />
                     <span>Agregar (+1)</span>
                   </button>
                   <button
@@ -1805,11 +1972,11 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       setCameraScanTarget('assignProduct');
                       setCameraScannerOpen(true);
                     }}
-                    className="min-h-[46px] px-4 bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all"
-                    title="Usar cámara como escáner"
+                    className="min-h-[40px] px-3.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-[background-color,border-color,transform] duration-150 active:scale-[0.97] cursor-pointer"
+                    title="Escanear código de barras o QR"
                   >
-                    <Camera className="w-4 h-4" />
-                    <span>Cámara</span>
+                    <Camera className="w-4 h-4 text-slate-700" />
+                    <span>Escanear</span>
                   </button>
                 </div>
               </form>
@@ -1817,26 +1984,24 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
               {/* Alertas de Validación de Stock Pendiente o Éxito */}
               {assignAlert && (
                 <div
-                  className={`p-3.5 rounded-xl border text-xs font-mono flex items-start justify-between gap-3 animate-in fade-in ${
+                  className={`p-3.5 rounded-xl border text-xs flex items-start justify-between gap-3 ${
                     assignAlert.type === 'error'
-                      ? 'bg-rose-50 border-rose-200 text-rose-800'
-                      : assignAlert.type === 'success'
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                        : 'bg-amber-50 border-amber-200 text-amber-800'
+                      ? 'bg-red-50 border-red-200 text-red-700'
+                      : 'bg-emerald-50 border-emerald-200 text-emerald-800'
                   }`}
                 >
                   <div className="flex items-start gap-2">
                     {assignAlert.type === 'success' ? (
                       <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
                     ) : (
-                      <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                      <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
                     )}
-                    <span>{assignAlert.message}</span>
+                    <span className="font-medium">{assignAlert.message}</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setAssignAlert(null)}
-                    className="text-[10px] uppercase underline shrink-0"
+                    className="text-[11px] font-medium underline shrink-0 cursor-pointer"
                   >
                     Cerrar
                   </button>
@@ -1845,13 +2010,16 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
             </div>
 
             {/* Tabla Temporal Acumulativa */}
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-sm">
-              <div className="px-5 py-4 border-b border-[#E5E7EB] flex items-center justify-between bg-[#F8F9FA]">
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-ui-card">
+              <div className="px-4 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
                 <div className="flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-[#1E3A5F]" />
-                  <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1E3A5F]">
-                    LISTA TEMPORAL ACUMULATIVA DE ASIGNACIÓN ({batchItems.length} SKUs)
+                  <Layers className="w-4 h-4 text-slate-700" />
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Lote temporal de asignación
                   </h3>
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 tabular-nums">
+                    {batchItems.length} SKUs
+                  </span>
                 </div>
                 {batchItems.length > 0 && (
                   <button
@@ -1860,7 +2028,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       setBatchItems([]);
                       assignScanInputRef.current?.focus();
                     }}
-                    className="text-[10px] font-mono uppercase text-rose-600 hover:underline"
+                    className="text-xs text-slate-500 hover:text-red-600 cursor-pointer font-medium transition-colors"
                   >
                     Vaciar lista
                   </button>
@@ -1868,292 +2036,172 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
               </div>
 
               {batchItems.length === 0 ? (
-                <div className="p-10 text-center space-y-2 font-mono">
-                  <Barcode className="w-8 h-8 text-[#616161]/40 mx-auto" />
-                  <p className="text-xs uppercase text-[#1E3A5F] font-bold">
-                    SIN PRODUCTOS EN EL LOTE TEMPORAL
+                <div className="p-10 text-center space-y-2">
+                  <Barcode className="w-8 h-8 text-slate-300 mx-auto" />
+                  <p className="text-xs text-slate-900 font-semibold">
+                    Sin productos en el lote temporal
                   </p>
-                  <p className="text-[11px] text-[#616161] max-w-md mx-auto">
-                    Escanea el código de barras de los productos recién ingresados o haz clic sobre los artículos en recepción para acumularlos aquí.
+                  <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                    Escanea el código de barras de los productos recién ingresados o agrega artículos por ubicar para acumularlos aquí.
                   </p>
                 </div>
               ) : (
-                <>
-                  {/* Vista Móvil (< md): Tarjetas Táctiles sin Scroll Horizontal */}
-                  <div className="md:hidden divide-y divide-[#E5E7EB] font-mono text-xs">
-                    {batchItems.map(item => {
-                      const isBox =
-                        item.product.unit_type === 'BOX' && Number(item.product.units_per_box) > 0;
-                      const upb = Number(item.product.units_per_box || 1);
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500">
+                        <th className="p-3.5">SKU</th>
+                        <th className="p-3.5">Producto</th>
+                        <th className="p-3.5 text-center">Cantidad a asignar</th>
+                        <th className="p-3.5 text-right">Pendiente máx.</th>
+                        <th className="p-3.5 text-center">Quitar</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {batchItems.map(item => {
+                        const isBox =
+                          item.product.unit_type === 'BOX' && Number(item.product.units_per_box) > 0;
+                        const upb = Number(item.product.units_per_box || 1);
 
-                      return (
-                        <div key={item.product.id} className="p-4 space-y-3 bg-white">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <span className="text-[10px] font-bold text-[#616161] uppercase block">
-                                CÓDIGO: {item.product.code}
-                              </span>
-                              <span className="text-sm font-bold text-[#1E3A5F] uppercase block truncate">
+                        return (
+                          <tr key={item.product.id} className="hover:bg-slate-50/70 transition-colors duration-150">
+                            <td className="p-3.5 font-mono font-medium text-slate-900 whitespace-nowrap">
+                              {item.product.code}
+                            </td>
+                            <td className="p-3.5 min-w-0 max-w-[240px]">
+                              <span title={item.product.name} className="font-semibold text-slate-900 block truncate">
                                 {item.product.name}
                               </span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveBatchItem(item.product.id)}
-                              className="p-2 rounded-xl text-[#616161] hover:text-rose-600 bg-[#F8F9FA] border border-[#E5E7EB]"
-                              title="Quitar de la lista"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-
-                          <div className="flex items-center justify-between text-[11px] bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-3 py-2">
-                            <span className="text-[#616161]">Stock Pendiente Máx.:</span>
-                            <span className="font-bold text-[#1E3A5F]">
-                              {formatLocationQuantity(item.maxPending, item.product)}
-                            </span>
-                          </div>
-
-                          {isBox ? (
-                            <div className="grid grid-cols-2 gap-2.5 pt-1">
-                              <div className="bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl p-2.5 flex items-center justify-between">
-                                <span className="text-[10px] text-[#616161] uppercase font-bold">Cajas:</span>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={item.boxes}
-                                  onChange={e =>
-                                    handleUpdateBatchBoxBreakdown(
-                                      item.product.id,
-                                      parseInt(e.target.value, 10) || 0,
-                                      item.looseUnits
-                                    )
-                                  }
-                                  className="w-16 h-8 text-center font-bold text-[#1E3A5F] bg-white border border-[#E5E7EB] rounded-lg text-xs"
-                                />
-                              </div>
-                              <div className="bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl p-2.5 flex items-center justify-between">
-                                <span className="text-[10px] text-[#616161] uppercase font-bold">Und:</span>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={upb - 1}
-                                  value={item.looseUnits}
-                                  onChange={e =>
-                                    handleUpdateBatchBoxBreakdown(
-                                      item.product.id,
-                                      item.boxes,
-                                      parseInt(e.target.value, 10) || 0
-                                    )
-                                  }
-                                  className="w-16 h-8 text-center font-bold text-[#1E3A5F] bg-white border border-[#E5E7EB] rounded-lg text-xs"
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-between bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-3 py-2">
-                              <span className="text-[11px] font-bold text-[#1E3A5F] uppercase">
-                                Cantidad a asignar:
+                              <span className="text-[11px] text-slate-500 block tabular-nums">
+                                Total: {formatStockDisplay(item.product)} · Ubicado:{' '}
+                                {formatLocationQuantity(getAssignedLocationStock(item.product), item.product)}
                               </span>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleUpdateBatchItemQuantity(item.product.id, item.quantity - 1)
-                                  }
-                                  disabled={item.quantity <= 1}
-                                  className="w-9 h-9 rounded-xl border border-[#E5E7EB] bg-white text-[#1E3A5F] font-bold disabled:opacity-40"
-                                >
-                                  -
-                                </button>
-                                <input
-                                  type="number"
-                                  min={1}
-                                  max={item.maxPending}
-                                  value={item.quantity}
-                                  onChange={e =>
-                                    handleUpdateBatchItemQuantity(
-                                      item.product.id,
-                                      parseInt(e.target.value, 10) || 1
-                                    )
-                                  }
-                                  className="w-16 h-9 text-center font-bold text-[#1E3A5F] bg-white border border-[#1E3A5F] rounded-xl text-xs"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleUpdateBatchItemQuantity(item.product.id, item.quantity + 1)
-                                  }
-                                  className="w-9 h-9 rounded-xl border border-[#E5E7EB] bg-white text-[#1E3A5F] font-bold"
-                                >
-                                  +
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Vista Escritorio (>= md): Tabla Completa */}
-                  <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs font-mono">
-                      <thead>
-                        <tr className="bg-white border-b border-[#E5E7EB] text-[10px] uppercase tracking-wider text-[#616161]">
-                          <th className="p-3.5">CÓDIGO</th>
-                          <th className="p-3.5">NOMBRE DEL PRODUCTO</th>
-                          <th className="p-3.5 text-center">CANTIDAD A ASIGNAR</th>
-                          <th className="p-3.5 text-right">STOCK PENDIENTE MÁX.</th>
-                          <th className="p-3.5 text-center">QUITAR</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#E5E7EB]">
-                        {batchItems.map(item => {
-                          const isBox =
-                            item.product.unit_type === 'BOX' && Number(item.product.units_per_box) > 0;
-                          const upb = Number(item.product.units_per_box || 1);
-
-                          return (
-                            <tr key={item.product.id} className="hover:bg-[#F8F9FA]/70 transition-colors">
-                              <td className="p-3.5 font-bold text-[#1E3A5F] whitespace-nowrap">
-                                {item.product.code}
-                              </td>
-                              <td className="p-3.5">
-                                <span className="font-bold text-[#1E3A5F] uppercase block">
-                                  {item.product.name}
-                                </span>
-                                <span className="text-[10px] text-[#616161] block">
-                                  Stock Total: {formatStockDisplay(item.product)} | Ya ubicado:{' '}
-                                  {formatLocationQuantity(getAssignedLocationStock(item.product), item.product)}
-                                </span>
-                              </td>
-                              <td className="p-3.5">
-                                {isBox ? (
-                                  <div className="flex flex-col items-center gap-1.5">
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex items-center gap-1 bg-[#F8F9FA] border border-[#E5E7EB] rounded-lg px-2 py-1">
-                                        <span className="text-[9px] text-[#616161] uppercase">Cajas:</span>
-                                        <input
-                                          type="number"
-                                          min={0}
-                                          value={item.boxes}
-                                          onChange={e =>
-                                            handleUpdateBatchBoxBreakdown(
-                                              item.product.id,
-                                              parseInt(e.target.value, 10) || 0,
-                                              item.looseUnits
-                                            )
-                                          }
-                                          className="w-12 text-center font-bold text-[#1E3A5F] bg-white border border-[#E5E7EB] rounded px-1 py-0.5 text-xs"
-                                        />
-                                      </div>
-                                      <div className="flex items-center gap-1 bg-[#F8F9FA] border border-[#E5E7EB] rounded-lg px-2 py-1">
-                                        <span className="text-[9px] text-[#616161] uppercase">Und:</span>
-                                        <input
-                                          type="number"
-                                          min={0}
-                                          max={upb - 1}
-                                          value={item.looseUnits}
-                                          onChange={e =>
-                                            handleUpdateBatchBoxBreakdown(
-                                              item.product.id,
-                                              item.boxes,
-                                              parseInt(e.target.value, 10) || 0
-                                            )
-                                          }
-                                          className="w-12 text-center font-bold text-[#1E3A5F] bg-white border border-[#E5E7EB] rounded px-1 py-0.5 text-xs"
-                                        />
-                                      </div>
+                            </td>
+                            <td className="p-3.5">
+                              {isBox ? (
+                                <div className="flex flex-col items-center gap-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+                                      <span className="text-[10px] text-slate-500">Cajas:</span>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={item.boxes}
+                                        onChange={e =>
+                                          handleUpdateBatchBoxBreakdown(
+                                            item.product.id,
+                                            parseInt(e.target.value, 10) || 0,
+                                            item.looseUnits
+                                          )
+                                        }
+                                        className="w-12 text-center font-mono tabular-nums font-semibold text-slate-900 bg-white border border-slate-200 rounded px-1 py-0.5 text-xs outline-none focus:border-slate-900"
+                                      />
                                     </div>
-                                    <span className="text-[10px] text-[#1E3A5F] font-semibold">
-                                      = {formatLocationQuantity(item.quantity, item.product)}
-                                    </span>
+                                    <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+                                      <span className="text-[10px] text-slate-500">Und:</span>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        max={upb - 1}
+                                        value={item.looseUnits}
+                                        onChange={e =>
+                                          handleUpdateBatchBoxBreakdown(
+                                            item.product.id,
+                                            item.boxes,
+                                            parseInt(e.target.value, 10) || 0
+                                          )
+                                        }
+                                        className="w-12 text-center font-mono tabular-nums font-semibold text-slate-900 bg-white border border-slate-200 rounded px-1 py-0.5 text-xs outline-none focus:border-slate-900"
+                                      />
+                                    </div>
                                   </div>
-                                ) : (
-                                  <div className="flex items-center justify-center gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleUpdateBatchItemQuantity(item.product.id, item.quantity - 1)
-                                      }
-                                      disabled={item.quantity <= 1}
-                                      className="w-8 h-8 rounded-lg border border-[#E5E7EB] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] font-bold disabled:opacity-40"
-                                    >
-                                      -
-                                    </button>
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      max={item.maxPending}
-                                      value={item.quantity}
-                                      onChange={e =>
-                                        handleUpdateBatchItemQuantity(
-                                          item.product.id,
-                                          parseInt(e.target.value, 10) || 1
-                                        )
-                                      }
-                                      className="w-16 h-8 text-center font-bold text-[#1E3A5F] bg-white border border-[#1E3A5F] rounded-lg text-xs"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleUpdateBatchItemQuantity(item.product.id, item.quantity + 1)
-                                      }
-                                      className="w-8 h-8 rounded-lg border border-[#E5E7EB] bg-white hover:bg-[#F8F9FA] text-[#1E3A5F] font-bold"
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-                                )}
-                              </td>
-                              <td className="p-3.5 text-right">
-                                <span className="px-2.5 py-1 rounded-full bg-[#E8B4A0]/25 text-[#1E3A5F] border border-[#E8B4A0]/50 font-bold text-[11px]">
-                                  {formatLocationQuantity(item.maxPending, item.product)}
-                                </span>
-                              </td>
-                              <td className="p-3.5 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveBatchItem(item.product.id)}
-                                  className="p-1.5 rounded-lg text-[#616161] hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                                  title="Quitar de la lista"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
+                                  <span className="text-[10px] font-mono text-slate-600 font-medium tabular-nums">
+                                    = {formatLocationQuantity(item.quantity, item.product)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleUpdateBatchItemQuantity(item.product.id, item.quantity - 1)
+                                    }
+                                    disabled={item.quantity <= 1}
+                                    className="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-800 font-semibold disabled:opacity-40 cursor-pointer transition-colors"
+                                  >
+                                    -
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={item.maxPending}
+                                    value={item.quantity}
+                                    onChange={e =>
+                                      handleUpdateBatchItemQuantity(
+                                        item.product.id,
+                                        parseInt(e.target.value, 10) || 1
+                                      )
+                                    }
+                                    className="w-14 h-7 text-center font-mono tabular-nums font-semibold text-slate-900 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-slate-900"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleUpdateBatchItemQuantity(item.product.id, item.quantity + 1)
+                                    }
+                                    className="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-800 font-semibold cursor-pointer transition-colors"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-3.5 text-right">
+                              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200 font-mono font-medium text-[11px] tabular-nums">
+                                {formatLocationQuantity(item.maxPending, item.product)}
+                              </span>
+                            </td>
+                            <td className="p-3.5 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveBatchItem(item.product.id)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                title="Quitar de la lista"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           </div>
 
           {/* Columna Derecha (4 cols): Selección de Ubicación Destino y Confirmación por Lote */}
-          <div className="lg:col-span-4 bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm space-y-5 font-mono sticky top-20">
-            <div className="pb-3 border-b border-[#E5E7EB]">
-              <span className="text-[10px] uppercase tracking-widest text-[#E8B4A0] block">
-                CONFIRMACIÓN POR LOTE
-              </span>
-              <h3 className="text-base font-bold text-[#1E3A5F] uppercase">
-                Ubicación Física Destino
+          <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-ui-card space-y-4 sticky top-20">
+            <div className="pb-3 border-b border-slate-200">
+              <h3 className="text-sm font-semibold text-slate-900">
+                Ubicación física destino
               </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Confirmación del lote acumulado hacia el estante.
+              </p>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1.5">
-                Seleccionar Estante / Almacén Destino <span className="text-[#E8B4A0]">*</span>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                Seleccionar estante o zona
               </label>
               <div className="flex gap-2">
                 <div className="relative flex-1 min-w-0">
                   <MinimalDropdown
                     value={targetAssignLocationId}
                     onChange={(val) => setTargetAssignLocationId(val)}
-                    placeholder="Seleccionar estante o zona..."
+                    placeholder="Seleccionar estante..."
                     options={locations.map((loc) => ({
                       value: loc.id,
                       label: loc.name,
@@ -2167,7 +2215,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     setCameraScanTarget('assignLocation');
                     setCameraScannerOpen(true);
                   }}
-                  className="px-3.5 min-h-[44px] bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs uppercase flex items-center gap-1"
+                  className="px-3 min-h-[40px] bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-medium flex items-center gap-1 cursor-pointer transition-colors"
                   title="Escanear código QR del estante destino"
                 >
                   <QrCode className="w-4 h-4" />
@@ -2177,15 +2225,15 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
             </div>
 
             {/* Resumen del Lote */}
-            <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] space-y-2 text-xs">
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-[#616161]">SKUs en lote:</span>
-                <strong className="text-[#1E3A5F]">{batchItems.length} productos</strong>
+                <span className="text-slate-500">SKUs en lote:</span>
+                <strong className="font-mono text-slate-900 font-semibold tabular-nums">{batchItems.length} productos</strong>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[#616161]">Ubicación destino:</span>
-                <strong className="text-[#1E3A5F] truncate max-w-[180px]">
-                  {locations.find(l => l.id === targetAssignLocationId)?.name || 'SIN SELECCIONAR'}
+                <span className="text-slate-500">Ubicación destino:</span>
+                <strong className="text-slate-900 truncate max-w-[180px] font-semibold">
+                  {locations.find(l => l.id === targetAssignLocationId)?.name || 'Sin seleccionar'}
                 </strong>
               </div>
             </div>
@@ -2194,17 +2242,17 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
               type="button"
               onClick={handleConfirmBatchAssignment}
               disabled={isAssigningBatch || batchItems.length === 0 || !targetAssignLocationId}
-              className="w-full min-h-[48px] px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white rounded-xl text-xs uppercase tracking-wider font-bold shadow-sm disabled:opacity-50 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+              className="w-full min-h-[42px] px-5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold disabled:opacity-45 transition-[background-color,transform] duration-150 flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
             >
               {isAssigningBatch ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
-                  <span>PROCESANDO LOTE...</span>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Procesando lote...</span>
                 </>
               ) : (
                 <>
-                  <Check className="w-4 h-4 text-[#E8B4A0]" />
-                  <span>CONFIRMAR Y ASIGNAR UBICACIÓN</span>
+                  <Check className="w-4 h-4" />
+                  <span>Confirmar asignación</span>
                 </>
               )}
             </button>
@@ -2213,26 +2261,19 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       )}
 
       {/* ========================================================================
-          MÓDULO 3: "CONSULTAR UBICACIÓN" (DESGLOSE MULTI-UBICACIÓN)
+          MÓDULO 2: "CONSULTAR UBICACIÓN" (DESGLOSE MULTI-UBICACIÓN)
          ======================================================================== */}
       {subTab === 'consult' && (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Buscador Flexible por Escáner o Nombre / Código */}
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-[#E8B4A0] block">
-                  LOCALIZADOR ESPACIAL MULTI-ALMACÉN
-                </span>
-                <h2 className="text-base font-bold uppercase text-[#1E3A5F]">
-                  Consultar Distribución Física de Producto
-                </h2>
-              </div>
-            </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-ui-card space-y-3.5">
+            <h2 className="text-sm font-semibold text-slate-900">
+              Consultar distribución física de producto
+            </h2>
 
-            <form onSubmit={handleConsultSearchSubmit} className="flex flex-col sm:flex-row gap-2.5">
+            <form onSubmit={handleConsultSearchSubmit} className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
-                <Search className="w-4 h-4 text-[#1E3A5F] absolute left-4 top-3.5 pointer-events-none" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
                 <input
                   ref={consultInputRef}
                   type="text"
@@ -2240,12 +2281,22 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                   value={consultQuery}
                   onChange={e => setConsultQuery(e.target.value)}
                   placeholder="Escanea el código de barras o escribe el nombre / SKU del artículo..."
-                  className="w-full min-h-[46px] bg-[#F8F9FA] focus:bg-white border-2 border-[#1E3A5F] rounded-xl pl-11 pr-4 py-2.5 text-xs sm:text-sm font-mono text-[#1E3A5F] placeholder:text-[#616161]/60 focus:outline-none"
+                  className="w-full min-h-[40px] bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-slate-900 rounded-xl pl-10 pr-9 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none transition-[background-color,border-color] duration-150"
                 />
+                {(consultQuery || consultedProductId) && (
+                  <button
+                    type="button"
+                    onClick={handleClearConsult}
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-900 p-0.5 rounded-md cursor-pointer"
+                    title="Limpiar consulta"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
 
                 {/* Coincidencias desplegables al escribir */}
                 {consultSuggestions.length > 0 && (
-                  <div className="mt-1.5 bg-white border border-[#1E3A5F] rounded-xl shadow-lg divide-y divide-[#E5E7EB] overflow-hidden z-20 relative">
+                  <div className="mt-1.5 bg-white border border-slate-200 rounded-xl shadow-lg divide-y divide-slate-100 overflow-hidden z-20 relative">
                     {consultSuggestions.map(prod => (
                       <button
                         key={prod.id}
@@ -2256,16 +2307,16 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                           setConsultQuery('');
                           consultInputRef.current?.focus();
                         }}
-                        className="w-full px-3.5 py-2.5 text-left hover:bg-[#F8F9FA] transition-colors flex items-center justify-between gap-3 font-mono text-xs"
+                        className="w-full px-3.5 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center justify-between gap-3 text-xs cursor-pointer"
                       >
-                        <div className="min-w-0">
-                          <span className="font-bold text-[#1E3A5F] mr-2">[{prod.code}]</span>
-                          <span className="text-[#1E3A5F] uppercase font-medium truncate">
+                        <div className="min-w-0 truncate">
+                          <span className="font-mono font-semibold text-slate-700 mr-2">{prod.code}</span>
+                          <span className="font-medium text-slate-900">
                             {prod.name}
                           </span>
                         </div>
-                        <span className="px-2 py-0.5 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] text-[10px] font-bold shrink-0">
-                          Stock: {formatLocationQuantity(prod.stock, prod)}
+                        <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-800 text-[10px] font-mono font-medium tabular-nums shrink-0">
+                          {formatLocationQuantity(prod.stock, prod)}
                         </span>
                       </button>
                     ))}
@@ -2275,9 +2326,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
               <div className="flex items-center gap-2 self-start w-full sm:w-auto">
                 <button
                   type="submit"
-                  className="flex-1 sm:flex-initial min-h-[46px] px-5 bg-[#1E3A5F] hover:bg-[#152a45] text-white rounded-xl text-xs font-mono uppercase tracking-wider font-semibold flex items-center justify-center gap-2"
+                  className="flex-1 sm:flex-initial min-h-[40px] px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-medium flex items-center justify-center gap-2 active:scale-[0.97] transition-[background-color,transform] duration-150 cursor-pointer"
                 >
-                  <Search className="w-4 h-4 text-[#E8B4A0]" />
+                  <Search className="w-4 h-4" />
                   <span>Consultar</span>
                 </button>
                 <button
@@ -2286,24 +2337,25 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     setCameraScanTarget('consultProduct');
                     setCameraScannerOpen(true);
                   }}
-                  className="min-h-[46px] px-4 bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5"
+                  className="min-h-[40px] px-3.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-[background-color,border-color,transform] duration-150 active:scale-[0.97] cursor-pointer"
+                  title="Escanear código para consultar"
                 >
-                  <Camera className="w-4 h-4" />
-                  <span>Cámara</span>
+                  <Camera className="w-4 h-4 text-slate-700" />
+                  <span>Escanear</span>
                 </button>
               </div>
             </form>
 
             {consultAlert && (
-              <div className="p-3.5 rounded-xl border bg-rose-50 border-rose-200 text-rose-800 text-xs font-mono flex items-start justify-between gap-3 animate-in fade-in">
+              <div className="p-3.5 rounded-xl border bg-red-50 border-red-200 text-red-700 text-xs flex items-start justify-between gap-3">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
-                  <span>{consultAlert}</span>
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                  <span className="font-medium">{consultAlert}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setConsultAlert(null)}
-                  className="text-[10px] uppercase underline shrink-0"
+                  className="text-[11px] font-medium underline shrink-0 cursor-pointer"
                 >
                   Cerrar
                 </button>
@@ -2313,67 +2365,77 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
           {/* Resultado de Cabecera + Tarjetas de Distribución Física */}
           {!consultedProduct ? (
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-12 text-center space-y-2 font-mono">
-              <MapPin className="w-8 h-8 text-[#616161]/40 mx-auto" />
-              <p className="text-xs uppercase font-bold text-[#1E3A5F]">
-                ESCRIBE O ESCANEA UN ARTÍCULO PARA CONSULTAR SUS UBICACIONES
+            <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center space-y-2 shadow-ui-card">
+              <MapPin className="w-8 h-8 text-slate-300 mx-auto" />
+              <p className="text-xs font-semibold text-slate-900">
+                Escribe o escanea un artículo para consultar sus ubicaciones
               </p>
-              <p className="text-[11px] text-[#616161]">
-                Se mostrará el stock global, el desglose exacto por estantería y el stock pendiente en recepción.
+              <p className="text-[11px] text-slate-500">
+                Se mostrará el stock global, el desglose exacto por estantería y el saldo pendiente en recepción.
               </p>
             </div>
           ) : (
-            <div className="space-y-4 animate-in fade-in">
+            <div className="space-y-4">
               {/* Resultado de Cabecera del Producto */}
-              <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 font-mono">
-                <div className="space-y-1">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-ui-card flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1.5 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#1E3A5F] text-white text-[10px] font-bold uppercase">
-                      CÓDIGO: {consultedProduct.code}
+                    <span className="px-2 py-0.5 rounded-md bg-slate-900 text-white font-mono text-[10px] font-medium">
+                      SKU: {consultedProduct.code}
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] text-[10px] font-bold uppercase">
-                      UNIDAD BASE:{' '}
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-700 font-mono text-[10px] font-medium">
                       {consultedProduct.unit_type === 'BOX'
-                        ? `CAJA (1 CAJA = ${consultedProduct.units_per_box || 1} UNIDADES)`
-                        : 'UNIDAD (UND)'}
+                        ? `BOX · ${consultedProduct.units_per_box || 1} und/caja`
+                        : 'UNIT'}
                     </span>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-[#1E3A5F] uppercase font-sans">
+                  <h3 title={consultedProduct.name} className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight truncate">
                     {consultedProduct.name}
                   </h3>
                 </div>
 
-                <div className="p-4 bg-[#F8F9FA] border border-[#E5E7EB] rounded-2xl text-right shrink-0">
-                  <span className="text-[10px] uppercase tracking-wider text-[#616161] block">
-                    STOCK TOTAL GLOBAL
-                  </span>
-                  <span className="text-2xl font-bold text-[#1E3A5F] block">
-                    {formatLocationQuantity(consultedProduct.stock, consultedProduct)}
-                  </span>
-                  {consultedProduct.unit_type === 'BOX' && getBoxBreakdown(consultedProduct).breakdownLabel && (
-                    <span className="text-[10px] text-[#616161] block">
-                      {getBoxBreakdown(consultedProduct).breakdownLabel}
+                <div className="flex items-center gap-3 self-start md:self-auto shrink-0">
+                  <div className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-right">
+                    <span className="text-[11px] text-slate-500 font-medium block">
+                      Stock global
                     </span>
-                  )}
+                    <span className="text-xl font-semibold tabular-nums text-slate-900 block">
+                      {formatLocationQuantity(consultedProduct.stock, consultedProduct)}
+                    </span>
+                    {consultedProduct.unit_type === 'BOX' && getBoxBreakdown(consultedProduct).breakdownLabel && (
+                      <span className="text-[10px] font-mono text-slate-500 block">
+                        {getBoxBreakdown(consultedProduct).breakdownLabel}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClearConsult}
+                    className="p-2 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+                    title="Cerrar consulta"
+                    aria-label="Cerrar consulta"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
               {/* Tarjetas de Distribución Física Multi-Ubicación */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-mono">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* Tarjeta Destacada si existe Stock Pendiente sin asignar */}
                 {getPendingLocationStock(consultedProduct) > 0.0001 && (
-                  <div className="p-5 rounded-2xl bg-[#E8B4A0]/20 border-2 border-[#E8B4A0] flex flex-col justify-between space-y-4 shadow-xs">
+                  <div className="p-5 rounded-2xl bg-amber-50/40 border border-amber-200 flex flex-col justify-between space-y-4 shadow-ui-card">
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="px-2.5 py-0.5 rounded-full bg-[#1E3A5F] text-[#E8B4A0] text-[10px] font-bold uppercase">
-                          PENDIENTE DE UBICAR
+                        <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-semibold">
+                          Pendiente de ubicar
                         </span>
-                        <Inbox className="w-5 h-5 text-[#1E3A5F]" />
+                        <Inbox className="w-4 h-4 text-amber-700" />
                       </div>
-                      <h4 className="text-sm font-bold text-[#1E3A5F] uppercase pt-1">
-                        Sin Ubicación Asignada / En Recepción
+                      <h4 className="text-sm font-semibold text-slate-900 pt-1">
+                        En recepción (sin estante)
                       </h4>
-                      <p className="text-lg font-bold text-[#1E3A5F]">
+                      <p className="text-lg font-semibold tabular-nums text-slate-900">
                         {formatLocationQuantity(getPendingLocationStock(consultedProduct), consultedProduct)}
                       </p>
                     </div>
@@ -2384,10 +2446,10 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                         handleAddOrIncrementAssignProduct(consultedProduct);
                         setSubTab('assign');
                       }}
-                      className="w-full min-h-[38px] px-4 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider font-bold flex items-center justify-center gap-1.5 transition-all"
+                      className="w-full min-h-[36px] px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer"
                     >
-                      <Plus className="w-3.5 h-3.5 text-[#E8B4A0]" />
-                      <span>Asignar a un Estante</span>
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Asignar a un estante</span>
                     </button>
                   </div>
                 )}
@@ -2398,26 +2460,26 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                   .map((pl, index) => (
                     <div
                       key={pl.id}
-                      className="p-5 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#1E3A5F] flex flex-col justify-between space-y-4 shadow-xs transition-all"
+                      className="p-5 rounded-2xl bg-white border border-slate-200 desktop-hover-lift flex flex-col justify-between space-y-4 shadow-ui-card"
                     >
-                      <div className="space-y-1.5">
+                      <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] uppercase tracking-wider text-[#616161]">
-                            UBICACIÓN #{index + 1}
+                          <span className="font-mono text-[11px] text-slate-500 font-medium">
+                            #{index + 1}
                           </span>
-                          <span className="px-2.5 py-0.5 rounded-md bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] text-[10px] font-bold">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-700 font-mono text-[10px] font-semibold">
                             {pl.locations?.code || 'LOC'}
                           </span>
                         </div>
-                        <h4 className="text-base font-bold text-[#1E3A5F] uppercase flex items-center gap-1.5">
-                          <MapPin className="w-4 h-4 text-[#E8B4A0] shrink-0" />
-                          <span>{pl.locations?.name || 'Estante'}</span>
+                        <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+                          <MapPin className="w-4 h-4 text-slate-600 shrink-0" />
+                          <span className="truncate">{pl.locations?.name || 'Estante'}</span>
                         </h4>
-                        <div className="pt-2 border-t border-[#E5E7EB]">
-                          <span className="text-[10px] text-[#616161] uppercase block">
-                            CANTIDAD DISPONIBLE EN ZONA:
+                        <div className="pt-2 border-t border-slate-100">
+                          <span className="text-[11px] text-slate-500 block">
+                            Disponible en esta zona
                           </span>
-                          <span className="text-lg font-bold text-[#1E3A5F] block">
+                          <span className="text-lg font-semibold tabular-nums text-slate-900 block">
                             {formatLocationQuantity(pl.quantity, consultedProduct)}
                           </span>
                         </div>
@@ -2429,7 +2491,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                           selectProductForMove(consultedProduct, pl.location_id);
                           setSubTab('move');
                         }}
-                        className="w-full min-h-[38px] px-4 rounded-xl bg-[#F8F9FA] hover:bg-[#1E3A5F] text-[#1E3A5F] hover:text-white border border-[#E5E7EB] text-xs uppercase tracking-wider font-semibold flex items-center justify-center gap-1.5 transition-all"
+                        className="w-full min-h-[36px] px-4 rounded-xl bg-slate-100 hover:bg-slate-200/70 text-slate-900 text-xs font-medium flex items-center justify-center gap-1.5 transition-[background-color,transform] duration-150 active:scale-[0.97] cursor-pointer"
                       >
                         <ArrowRightLeft className="w-3.5 h-3.5" />
                         <span>Mover desde esta zona</span>
@@ -2440,7 +2502,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                 {(consultedProduct.product_locations || []).filter(pl => Number(pl.quantity || 0) > 0.0001).length ===
                   0 &&
                   getPendingLocationStock(consultedProduct) <= 0.0001 && (
-                    <div className="col-span-full p-8 bg-white border border-[#E5E7EB] rounded-2xl text-center text-xs text-[#616161]">
+                    <div className="col-span-full p-8 bg-white border border-slate-200 rounded-2xl text-center text-xs text-slate-500 shadow-ui-card">
                       Este producto tiene 0 existencias disponibles actualmente.
                     </div>
                   )}
@@ -2451,37 +2513,32 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       )}
 
       {/* ========================================================================
-          MÓDULO 4: "MOVER UBICACIÓN" (REUBICACIÓN ENTRE ZONAS)
+          MÓDULO 3: "MOVER UBICACIÓN" (REUBICACIÓN ENTRE ZONAS)
          ======================================================================== */}
       {subTab === 'move' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* Búsqueda / Escaneo del Producto a Trasladar */}
-          <div className="lg:col-span-5 bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm space-y-4 font-mono">
-            <div>
-              <span className="text-[10px] uppercase tracking-widest text-[#E8B4A0] block">
-                PASO 1 // SELECCIÓN POR ESCÁNER
-              </span>
-              <h2 className="text-base font-bold text-[#1E3A5F] uppercase">
-                Producto a Trasladar
-              </h2>
-            </div>
+          <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-5 shadow-ui-card space-y-3.5">
+            <h2 className="text-sm font-semibold text-slate-900">
+              Producto a trasladar
+            </h2>
 
             <form onSubmit={handleMoveScanSubmit} className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
-                <Barcode className="w-4 h-4 text-[#1E3A5F] absolute left-3.5 top-3.5 pointer-events-none" />
+                <Barcode className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
                 <input
                   ref={moveScanInputRef}
                   type="text"
                   autoFocus
                   value={moveScanQuery}
                   onChange={e => setMoveScanQuery(e.target.value)}
-                  placeholder="Escanea el código de barras o escribe nombre / código..."
-                  className="w-full min-h-[44px] bg-[#F8F9FA] focus:bg-white border-2 border-[#1E3A5F] rounded-xl pl-10 pr-3 py-2 text-xs text-[#1E3A5F] focus:outline-none"
+                  placeholder="Escanea código de barras o escribe nombre..."
+                  className="w-full min-h-[40px] bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-slate-900 rounded-xl pl-10 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none transition-[background-color,border-color] duration-150"
                 />
 
                 {/* Coincidencias desplegables al escribir */}
                 {moveSuggestions.length > 0 && (
-                  <div className="mt-1.5 bg-white border border-[#1E3A5F] rounded-xl shadow-lg divide-y divide-[#E5E7EB] overflow-hidden z-20 relative">
+                  <div className="mt-1.5 bg-white border border-slate-200 rounded-xl shadow-lg divide-y divide-slate-100 overflow-hidden z-20 relative">
                     {moveSuggestions.map(prod => {
                       const assigned = getAssignedLocationStock(prod);
                       const locCount = (prod.product_locations || []).filter(pl => Number(pl.quantity) > 0).length;
@@ -2493,17 +2550,17 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                             selectProductForMove(prod);
                             setMoveScanQuery('');
                           }}
-                          className="w-full px-3.5 py-2.5 text-left hover:bg-[#F8F9FA] transition-colors flex items-center justify-between gap-2 font-mono text-xs"
+                          className="w-full px-3.5 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center justify-between gap-2 text-xs cursor-pointer"
                         >
-                          <div className="min-w-0">
-                            <span className="font-bold text-[#1E3A5F] mr-1.5">[{prod.code}]</span>
-                            <span className="text-[#1E3A5F] uppercase font-medium truncate">
+                          <div className="min-w-0 truncate">
+                            <span className="font-mono font-semibold text-slate-700 mr-1.5">{prod.code}</span>
+                            <span className="font-medium text-slate-900">
                               {prod.name}
                             </span>
                           </div>
-                          <span className="px-2 py-0.5 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] text-[#1E3A5F] text-[10px] font-bold shrink-0">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-800 text-[10px] font-mono font-medium tabular-nums shrink-0">
                             {assigned > 0.0001
-                              ? `${formatLocationQuantity(assigned, prod)} (${locCount} ${locCount === 1 ? 'zona' : 'zonas'})`
+                              ? `${formatLocationQuantity(assigned, prod)} (${locCount}z)`
                               : 'Sin ubicar'}
                           </span>
                         </button>
@@ -2515,9 +2572,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
               <div className="flex items-center gap-2 self-start w-full sm:w-auto">
                 <button
                   type="submit"
-                  className="flex-1 sm:flex-initial min-h-[44px] px-4 bg-[#1E3A5F] hover:bg-[#152a45] text-white rounded-xl text-xs uppercase tracking-wider font-semibold flex items-center justify-center gap-1.5"
+                  className="flex-1 sm:flex-initial min-h-[40px] px-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 active:scale-[0.97] transition-[background-color,transform] duration-150 cursor-pointer"
                 >
-                  <Search className="w-3.5 h-3.5 text-[#E8B4A0]" />
+                  <Search className="w-3.5 h-3.5" />
                   <span>Buscar</span>
                 </button>
                 <button
@@ -2526,11 +2583,11 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                     setCameraScanTarget('moveProduct');
                     setCameraScannerOpen(true);
                   }}
-                  className="px-3.5 min-h-[44px] bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs uppercase flex items-center justify-center gap-1.5"
-                  title="Escanear con cámara"
+                  className="px-3.5 min-h-[40px] bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-[background-color,border-color,transform] duration-150 active:scale-[0.97] cursor-pointer"
+                  title="Escanear código"
                 >
-                  <Camera className="w-4 h-4" />
-                  <span className="sm:hidden">Cámara</span>
+                  <Camera className="w-4 h-4 text-slate-700" />
+                  <span>Escanear</span>
                 </button>
               </div>
             </form>
@@ -2539,7 +2596,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
               <div
                 className={`p-3.5 rounded-xl border text-xs flex items-start justify-between gap-2 ${
                   moveAlert.type === 'error'
-                    ? 'bg-rose-50 border-rose-200 text-rose-800'
+                    ? 'bg-red-50 border-red-200 text-red-700'
                     : 'bg-emerald-50 border-emerald-200 text-emerald-800'
                 }`}
               >
@@ -2547,14 +2604,14 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                   {moveAlert.type === 'success' ? (
                     <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
                   ) : (
-                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
                   )}
-                  <span>{moveAlert.message}</span>
+                  <span className="font-medium">{moveAlert.message}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setMoveAlert(null)}
-                  className="text-[10px] underline uppercase shrink-0"
+                  className="text-[11px] font-medium underline shrink-0 cursor-pointer"
                 >
                   OK
                 </button>
@@ -2563,39 +2620,39 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
           </div>
 
           {/* Formulario de Traslado entre Origen y Destino */}
-          <div className="lg:col-span-7 bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-sm font-mono">
+          <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl p-5 shadow-ui-card">
             {!moveSelectedProduct ? (
               <div className="py-12 text-center space-y-2">
-                <ArrowRightLeft className="w-8 h-8 text-[#616161]/40 mx-auto" />
-                <p className="text-xs uppercase font-bold text-[#1E3A5F]">
-                  ESCRIBE O ESCANEA UN PRODUCTO PARA INICIAR EL TRASLADO
+                <ArrowRightLeft className="w-8 h-8 text-slate-300 mx-auto" />
+                <p className="text-xs font-semibold text-slate-900">
+                  Escribe o escanea un producto para iniciar el traslado
                 </p>
-                <p className="text-[11px] text-[#616161]">
-                  Podrás elegir la ubicación de origen con su saldo exacto, la cantidad a mover y la ubicación de destino.
+                <p className="text-[11px] text-slate-500">
+                  Podrás elegir la ubicación de origen, la cantidad exacta y el destino.
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleConfirmMove} className="space-y-5">
-                <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB] flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] text-[#616161] uppercase block">
-                      ARTÍCULO SELECCIONADO ({moveSelectedProduct.code})
+              <form onSubmit={handleConfirmMove} className="space-y-4">
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <span className="font-mono text-[11px] text-slate-500 block">
+                      SKU: {moveSelectedProduct.code}
                     </span>
-                    <h3 className="text-base font-bold text-[#1E3A5F] uppercase">
+                    <h3 title={moveSelectedProduct.name} className="text-sm font-semibold text-slate-900 mt-0.5 truncate">
                       {moveSelectedProduct.name}
                     </h3>
                   </div>
-                  <span className="px-3 py-1 rounded-full bg-white border border-[#E5E7EB] text-xs font-bold text-[#1E3A5F]">
-                    Total: {formatStockDisplay(moveSelectedProduct)}
+                  <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 font-mono text-xs font-semibold tabular-nums text-slate-900 shrink-0">
+                    {formatStockDisplay(moveSelectedProduct)}
                   </span>
                 </div>
 
                 {moveAvailableOrigins.length === 0 ? (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-2">
-                    <p className="font-bold uppercase">
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 space-y-2">
+                    <p className="font-semibold">
                       Este producto aún no tiene stock asignado a ninguna ubicación física.
                     </p>
-                    <p>
+                    <p className="text-slate-500">
                       Todo su stock ({formatLocationQuantity(moveSelectedProduct.stock, moveSelectedProduct)}) se encuentra en recepción pendiente de ubicar.
                     </p>
                     <button
@@ -2604,17 +2661,17 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                         handleAddOrIncrementAssignProduct(moveSelectedProduct);
                         setSubTab('assign');
                       }}
-                      className="px-4 py-2 rounded-lg bg-[#1E3A5F] text-white text-xs uppercase font-bold"
+                      className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-medium hover:bg-slate-800 transition-colors cursor-pointer"
                     >
-                      Ir a Asignar Ubicación
+                      Ir a asignar ubicación
                     </button>
                   </div>
                 ) : (
                   <>
-                    {/* 1. Selector de Origen (solo ubicaciones con stock actual > 0) */}
+                    {/* 1. Selector de Origen */}
                     <div>
-                      <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1.5">
-                        1. Ubicación de Origen (Con Saldo Disponible) <span className="text-[#E8B4A0]">*</span>
+                      <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                        1. Ubicación de origen (con saldo disponible)
                       </label>
                       <MinimalDropdown
                         value={moveFromLocationId}
@@ -2628,15 +2685,15 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       />
                     </div>
 
-                    {/* 2. Cantidad a trasladar validada contra el stock de origen */}
+                    {/* 2. Cantidad a trasladar */}
                     {moveFromLocationId && (
-                      <div className="p-4 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl space-y-3">
+                      <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3">
                         <div className="flex items-center justify-between">
-                          <label className="text-xs font-bold text-[#1E3A5F] uppercase tracking-wider">
-                            2. Cantidad a Trasladar <span className="text-[#E8B4A0]">*</span>
+                          <label className="text-xs font-medium text-slate-600">
+                            2. Cantidad a trasladar
                           </label>
-                          <span className="text-[11px] text-[#1E3A5F] font-bold">
-                            Máx en origen: {formatLocationQuantity(moveOriginStock, moveSelectedProduct)}
+                          <span className="font-mono text-[11px] text-slate-900 font-semibold tabular-nums">
+                            Máx: {formatLocationQuantity(moveOriginStock, moveSelectedProduct)}
                           </span>
                         </div>
 
@@ -2644,8 +2701,8 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                         Number(moveSelectedProduct.units_per_box) > 0 ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-[10px] text-[#616161] uppercase mb-1">
-                                Cajas completas a trasladar
+                              <label className="block text-[11px] text-slate-500 mb-1">
+                                Cajas completas
                               </label>
                               <input
                                 type="number"
@@ -2655,12 +2712,12 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                                 onChange={e =>
                                   setMoveBoxes(Math.max(0, parseInt(e.target.value, 10) || 0))
                                 }
-                                className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3 py-1.5 text-sm font-bold text-[#1E3A5F]"
+                                className="w-full min-h-[38px] bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3 py-1.5 font-mono tabular-nums text-sm font-semibold text-slate-900 outline-none"
                               />
                             </div>
                             <div>
-                              <label className="block text-[10px] text-[#616161] uppercase mb-1">
-                                Unidades sueltas a trasladar
+                              <label className="block text-[11px] text-slate-500 mb-1">
+                                Unidades sueltas
                               </label>
                               <input
                                 type="number"
@@ -2670,7 +2727,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                                 onChange={e =>
                                   setMoveLooseUnits(Math.max(0, parseInt(e.target.value, 10) || 0))
                                 }
-                                className="w-full min-h-[40px] bg-white border border-[#E5E7EB] rounded-xl px-3 py-1.5 text-sm font-bold text-[#1E3A5F]"
+                                className="w-full min-h-[38px] bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3 py-1.5 font-mono tabular-nums text-sm font-semibold text-slate-900 outline-none"
                               />
                             </div>
                           </div>
@@ -2684,12 +2741,12 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                               value={moveQuantity}
                               onChange={e => setMoveQuantity(e.target.value)}
                               required
-                              className="flex-1 min-h-[42px] bg-white border border-[#E5E7EB] rounded-xl px-4 py-2 text-sm font-bold text-[#1E3A5F]"
+                              className="flex-1 min-h-[40px] bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3.5 py-2 font-mono tabular-nums text-sm font-semibold text-slate-900 outline-none"
                             />
                             <button
                               type="button"
                               onClick={() => setMoveQuantity(String(Math.round(moveOriginStock)))}
-                              className="min-h-[42px] px-4 rounded-xl bg-[#E8B4A0]/25 hover:bg-[#E8B4A0]/40 text-[#1E3A5F] border border-[#E8B4A0]/50 text-xs uppercase font-bold"
+                              className="min-h-[40px] px-3.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 text-xs font-medium cursor-pointer transition-colors"
                             >
                               Todo ({Math.round(moveOriginStock)})
                             </button>
@@ -2700,21 +2757,91 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
                     {/* 3. Selector de Destino */}
                     <div>
-                      <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1.5">
-                        3. Ubicación de Destino <span className="text-[#E8B4A0]">*</span>
+                      <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                        3. Ubicación de destino
                       </label>
                       <div className="flex gap-2">
-                        <div className="flex-1 min-w-0">
-                          <MinimalDropdown
-                            value={moveToLocationId}
-                            onChange={(val) => setMoveToLocationId(val)}
-                            placeholder="Seleccionar destino..."
-                            options={moveAvailableDestinations.map((loc) => ({
-                              value: loc.id,
-                              label: loc.name,
-                              badge: loc.code
-                            }))}
-                          />
+                        <div ref={moveDestSearchRef} className="relative flex-1 min-w-0">
+                          <div className="relative flex items-center">
+                            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                            <input
+                              type="text"
+                              value={moveDestSearchQuery}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setMoveDestSearchQuery(val);
+                                setIsMoveDestSearchOpen(true);
+                                const exact = moveAvailableDestinations.find(
+                                  (l) =>
+                                    normalizeText(l.code) === normalizeText(val) ||
+                                    normalizeText(l.name) === normalizeText(val) ||
+                                    normalizeText(`${l.name} (${l.code})`) === normalizeText(val)
+                                );
+                                if (exact) {
+                                  setMoveToLocationId(exact.id);
+                                } else {
+                                  setMoveToLocationId('');
+                                }
+                              }}
+                              onFocus={() => setIsMoveDestSearchOpen(true)}
+                              placeholder="Buscar ubicación por nombre o código (ej: Estante B, LOC-02)..."
+                              className="w-full min-h-[40px] bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-slate-900 rounded-xl pl-10 pr-9 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none transition-[background-color,border-color] duration-150"
+                            />
+                            {moveDestSearchQuery && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMoveDestSearchQuery('');
+                                  setMoveToLocationId('');
+                                  setIsMoveDestSearchOpen(true);
+                                }}
+                                className="absolute right-2.5 p-0.5 text-slate-400 hover:text-slate-900 rounded-md cursor-pointer"
+                                aria-label="Limpiar destino"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+
+                          {isMoveDestSearchOpen && (
+                            <div className="mobile-dropdown-menu absolute left-0 right-0 top-full mt-1.5 z-30 bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-slate-100">
+                              {moveDestSuggestions.length === 0 ? (
+                                <div className="p-3 text-xs text-slate-500 text-center">
+                                  No se encontraron ubicaciones destino coincidentes.
+                                </div>
+                              ) : (
+                                moveDestSuggestions.map((loc) => {
+                                  const isSelected = moveToLocationId === loc.id;
+                                  return (
+                                    <button
+                                      key={loc.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setMoveToLocationId(loc.id);
+                                        setMoveDestSearchQuery(`${loc.name} (${loc.code})`);
+                                        setIsMoveDestSearchOpen(false);
+                                        setMoveAlert(null);
+                                      }}
+                                      className={`w-full px-3.5 py-2.5 text-left text-xs flex items-center justify-between gap-2 hover:bg-slate-50 transition-colors cursor-pointer ${
+                                        isSelected ? 'bg-slate-100 font-semibold text-slate-900' : ''
+                                      }`}
+                                    >
+                                      <div className="truncate">
+                                        <span className="font-mono font-semibold text-slate-700 mr-2">{loc.code}</span>
+                                        <span className="text-slate-900">{loc.name}</span>
+                                        {loc.description && (
+                                          <span className="text-[10px] text-slate-500 block truncate font-normal">
+                                            {loc.description}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {isSelected && <Check className="w-4 h-4 text-slate-900 shrink-0" />}
+                                    </button>
+                                  );
+                                })
+                              )}
+                            </div>
+                          )}
                         </div>
                         <button
                           type="button"
@@ -2722,7 +2849,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                             setCameraScanTarget('moveDestination');
                             setCameraScannerOpen(true);
                           }}
-                          className="px-4 min-h-[44px] bg-[#F8F9FA] hover:bg-[#E8B4A0]/20 text-[#1E3A5F] border border-[#E5E7EB] rounded-xl text-xs uppercase flex items-center gap-1.5"
+                          className="px-3.5 min-h-[40px] bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
                           title="Escanear QR de estante destino"
                         >
                           <QrCode className="w-4 h-4" />
@@ -2733,32 +2860,32 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
                     {/* Motivo opcional */}
                     <div>
-                      <label className="block text-xs font-bold text-[#1E3A5F] uppercase tracking-wider mb-1.5">
-                        Motivo / Nota de Auditoría (Opcional)
+                      <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                        Motivo o nota de auditoría (opcional)
                       </label>
                       <input
                         type="text"
                         value={moveReason}
                         onChange={e => setMoveReason(e.target.value)}
                         placeholder="Ej: Reposición de mostrador, reacomodo de pasillo..."
-                        className="w-full min-h-[42px] bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl px-4 py-2 text-xs text-[#1E3A5F]"
+                        className="w-full min-h-[40px] bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 outline-none transition-[background-color,border-color] duration-150"
                       />
                     </div>
 
                     <button
                       type="submit"
                       disabled={isMovingStock || !moveFromLocationId || !moveToLocationId}
-                      className="w-full min-h-[48px] px-6 bg-[#1E3A5F] hover:bg-[#152a45] text-white rounded-xl text-xs uppercase tracking-wider font-bold shadow-sm disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                      className="w-full min-h-[42px] px-5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold disabled:opacity-45 transition-[background-color,transform] duration-150 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
                     >
                       {isMovingStock ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
-                          <span>EJECUTANDO TRASLADO...</span>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Ejecutando traslado...</span>
                         </>
                       ) : (
                         <>
-                          <Check className="w-4 h-4 text-[#E8B4A0]" />
-                          <span>CONFIRMAR TRASLADO</span>
+                          <Check className="w-4 h-4" />
+                          <span>Confirmar traslado</span>
                         </>
                       )}
                     </button>
@@ -2782,3 +2909,5 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
     </>
   );
 };
+
+export default LocationsPage;

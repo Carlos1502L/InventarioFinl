@@ -33,6 +33,8 @@ export interface Inventory {
   name: string;
   description: string | null;
   currency: string;
+  exchange_rate?: number;
+  exchange_rate_updated_at?: string | null;
   owner_id: string;
   inventory_type?: InventoryType; // RF-01.1 vs RF-01.2
   yape_phone?: string | null; // RF-06.3
@@ -119,6 +121,7 @@ export interface Product {
   inventory_id: string;
   name: string;
   code: string;
+  sku?: string;
   description: string | null;
   price: number; // Precio de Venta Final o Precio Base Personal
   cost_price?: number; // RF-01.2: Precio de Costo
@@ -185,6 +188,7 @@ export interface Sale {
   customer_name?: string | null;
   customer_contact?: string | null;
   notes?: string | null;
+  status?: 'COMPLETED' | 'REJECTED_STOCK' | string;
   created_at: string;
   items?: SaleItem[];
 }
