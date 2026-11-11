@@ -29,16 +29,14 @@ const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage'));
 const FirstTimeOnboarding = React.lazy(() => import('./components/inventory/FirstTimeOnboarding'));
 
 // Modales Especializados lazy (descargados bajo demanda solo al abrirse)
-const ProductFormModal = React.lazy(() => import('./components/modals/ProductFormModal').then(m => ({ default: m.ProductFormModal })));
-const ProductDetailModal = React.lazy(() => import('./components/modals/ProductDetailModal').then(m => ({ default: m.ProductDetailModal })));
-const MoveProductModal = React.lazy(() => import('./components/modals/MoveProductModal').then(m => ({ default: m.MoveProductModal })));
+const ProductMasterModal = React.lazy(() => import('./components/modals/ProductMasterModal').then(m => ({ default: m.ProductMasterModal })));
+import type { ProductModalView } from './components/modals/ProductMasterModal';
 const WithdrawProductModal = React.lazy(() => import('./components/modals/WithdrawProductModal').then(m => ({ default: m.WithdrawProductModal })));
 const CategoriesManagementModal = React.lazy(() => import('./components/modals/CategoriesManagementModal').then(m => ({ default: m.CategoriesManagementModal })));
 const LocationsManagementModal = React.lazy(() => import('./components/modals/LocationsManagementModal').then(m => ({ default: m.LocationsManagementModal })));
 const CollaboratorsModal = React.lazy(() => import('./components/modals/CollaboratorsModal').then(m => ({ default: m.CollaboratorsModal })));
 const InventorySelectorModal = React.lazy(() => import('./components/modals/InventorySelectorModal').then(m => ({ default: m.InventorySelectorModal })));
 const BarcodeScannerModal = React.lazy(() => import('./components/modals/BarcodeScannerModal').then(m => ({ default: m.BarcodeScannerModal })));
-const RestockProductModal = React.lazy(() => import('./components/modals/RestockProductModal').then(m => ({ default: m.RestockProductModal })));
 import { ToastNotification, showAppToast } from './components/ui';
 import { LazyModalSlot } from './components/common/LazyModalSlot';
 import { syncAllOfflineDataSilently } from './services/offlineSync';
@@ -109,11 +107,15 @@ export const AppContent: React.FC = () => {
 
   // Estados de Modales
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [productDetailOpen, setProductDetailOpen] = useState(false);
-  const [productFormOpen, setProductFormOpen] = useState(false);
-  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
-  const [moveModalOpen, setMoveModalOpen] = useState(false);
+  const [masterModalOpen, setMasterModalOpen] = useState(false);
+  const [masterModalInitialView, setMasterModalInitialView] = useState<ProductModalView>('DETAIL');
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
+
+  const openProductMasterModal = useCallback((prod: Product | null, view: ProductModalView) => {
+    setSelectedProduct(prod);
+    setMasterModalInitialView(view);
+    setMasterModalOpen(true);
+  }, []);
 
   // Modales de Configuración
   const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
@@ -139,7 +141,6 @@ export const AppContent: React.FC = () => {
 
   // Escáner Rápido Global (Bottom Nav / Sidebar) y Reingreso por Escaneo
   const [quickScanOpen, setQuickScanOpen] = useState(false);
-  const [scannedRestockProduct, setScannedRestockProduct] = useState<Product | null>(null);
   const [stockSearchFilter, setStockSearchFilter] = useState<string>('');
 
   // RNF-PERF-FEEDBACK-004: Aislamiento de Concurrencia y Skeleton Debounced (250ms)
@@ -330,7 +331,7 @@ export const AppContent: React.FC = () => {
     // 1. Buscar si es un producto existente -> Abrir diálogo de Reingreso de Existencias (3.2)
     const matchedProduct = products.find(p => p.code.toLowerCase() === code.toLowerCase());
     if (matchedProduct) {
-      setScannedRestockProduct(matchedProduct);
+      openProductMasterModal(matchedProduct, 'RESTOCK');
       return;
     }
 
@@ -344,8 +345,7 @@ export const AppContent: React.FC = () => {
 
     // 3. Si no existe, preguntar si desea registrarlo
     if (confirm(`CÓDIGO ESCANEADO: "${code}"\nNo figura en el manifiesto. ¿Deseas registrar un nuevo ítem con esta referencia?`)) {
-      setProductToEdit(null);
-      setProductFormOpen(true);
+      openProductMasterModal(null, 'EDIT');
     }
   };
 
@@ -452,10 +452,7 @@ export const AppContent: React.FC = () => {
           <Sidebar
             activeTab={activeTab}
             onChangeTab={setActiveTab}
-            onOpenCreateModal={() => {
-              setProductToEdit(null);
-              setProductFormOpen(true);
-            }}
+            onOpenCreateModal={() => openProductMasterModal(null, 'EDIT')}
             onQuickScan={() => setQuickScanOpen(true)}
             onOpenInventorySelector={() => setInventorySelectorOpen(true)}
             onOpenCategories={() => setCategoriesModalOpen(true)}
@@ -525,15 +522,9 @@ export const AppContent: React.FC = () => {
               onNavigateToStock={() => setActiveTab('inventory')}
               onNavigateToSales={() => setActiveTab('sales')}
               onNavigateToHistory={() => setActiveTab('sales-history')}
-              onSelectProduct={(p: Product) => {
-                setSelectedProduct(p);
-                setProductDetailOpen(true);
-              }}
+              onSelectProduct={(p: Product) => openProductMasterModal(p, 'DETAIL')}
               onQuickScan={() => setQuickScanOpen(true)}
-              onOpenCreateModal={() => {
-                setProductToEdit(null);
-                setProductFormOpen(true);
-              }}
+              onOpenCreateModal={() => openProductMasterModal(null, 'EDIT')}
             />
           </Suspense>
         )}
@@ -546,16 +537,14 @@ export const AppContent: React.FC = () => {
             categories={categories}
             subcategories={subcategories}
             locations={locations}
-            onSelectProduct={(p: Product) => {
-              setSelectedProduct(p);
-              setProductDetailOpen(true);
-            }}
-            onOpenCreateModal={() => {
-              setProductToEdit(null);
-              setProductFormOpen(true);
-            }}
+            onSelectProduct={(p: Product) => openProductMasterModal(p, 'DETAIL')}
+            onOpenCreateModal={() => openProductMasterModal(null, 'EDIT')}
             onOpenLocationsModule={(sub?: LocationSubTab, prod?: Product | null) => openLocationsWorkspace(sub || 'assign', prod || null)}
             onRefresh={fetchInventoryData}
+            onWithdrawProduct={(p: Product) => {
+              setSelectedProduct(p);
+              setWithdrawModalOpen(true);
+            }}
             onBulkWithdrawn={handleBulkWithdrawn}
             loading={showSkeleton}
             initialSearchTerm={stockSearchFilter}
@@ -651,69 +640,39 @@ export const AppContent: React.FC = () => {
          ========================================================= */}
 
       {/* 1. Modal de Creación / Edición de Producto */}
-      <LazyModalSlot open={productFormOpen}>
-          <ProductFormModal
-            isOpen={productFormOpen}
-            onClose={() => setProductFormOpen(false)}
-            onSaved={handleProductSaved}
-            productToEdit={productToEdit}
-            categories={categories}
-            subcategories={subcategories}
-            locations={locations}
-            products={products}
-            onRedirectToStock={(prod) => {
-              setProductFormOpen(false);
-              setStockSearchFilter(prod.code);
-              setActiveTab('inventory');
-              setScannedRestockProduct(prod);
-            }}
-          />
-        </LazyModalSlot>
+      <LazyModalSlot open={masterModalOpen}>
+        <ProductMasterModal
+          isOpen={masterModalOpen}
+          onClose={() => setMasterModalOpen(false)}
+          product={selectedProduct}
+          initialView={masterModalInitialView}
+          categories={categories}
+          subcategories={subcategories}
+          locations={locations}
+          products={products}
+          onSelectProduct={(p) => setSelectedProduct(p)}
+          onSaved={handleProductSaved}
+          onUpdated={fetchInventoryData}
+          onRestocked={fetchInventoryData}
+          onMoved={fetchInventoryData}
+          onAssignLocation={(p) => {
+            setMasterModalOpen(false);
+            openLocationsWorkspace('assign', p);
+          }}
+          onWithdraw={(p) => {
+            setMasterModalOpen(false);
+            setSelectedProduct(p);
+            setWithdrawModalOpen(true);
+          }}
+          onRedirectToStock={(prod) => {
+            setMasterModalOpen(false);
+            setStockSearchFilter(prod.code);
+            setActiveTab('inventory');
+            openProductMasterModal(prod, 'RESTOCK');
+          }}
+        />
+      </LazyModalSlot>
 
-      {/* 2. Modal de Detalle de Producto (Ficha Técnica Suiza) */}
-      <LazyModalSlot open={productDetailOpen}>
-          <ProductDetailModal
-            product={selectedProduct}
-            isOpen={productDetailOpen}
-            onClose={() => setProductDetailOpen(false)}
-            onEdit={(p) => {
-              setProductDetailOpen(false);
-              setProductToEdit(p);
-              setProductFormOpen(true);
-            }}
-            onMove={(p) => {
-              setProductDetailOpen(false);
-              setSelectedProduct(p);
-              setMoveModalOpen(true);
-            }}
-            onAssignLocation={(p) => {
-              setProductDetailOpen(false);
-              openLocationsWorkspace('assign', p);
-            }}
-            onWithdraw={(p) => {
-              setProductDetailOpen(false);
-              setSelectedProduct(p);
-              setWithdrawModalOpen(true);
-            }}
-            locations={locations}
-            allProducts={products}
-            onSelectProduct={(p) => setSelectedProduct(p)}
-            onUpdated={fetchInventoryData}
-          />
-        </LazyModalSlot>
-
-      {/* 3. Modal de Traslado de Ubicación */}
-      <LazyModalSlot open={moveModalOpen}>
-          <MoveProductModal
-            product={selectedProduct}
-            isOpen={moveModalOpen}
-            onClose={() => setMoveModalOpen(false)}
-            onMoved={fetchInventoryData}
-            locations={locations}
-          />
-        </LazyModalSlot>
-
-      {/* 4. Modal de Retiro / Baja de Stock */}
       <LazyModalSlot open={withdrawModalOpen}>
           <WithdrawProductModal
             product={selectedProduct}
@@ -767,21 +726,7 @@ export const AppContent: React.FC = () => {
             instructions="Apunta la cámara al código de barras o QR de cualquier producto o estantería."
           />
         </LazyModalSlot>
-
-      {/* 3.2: Modal de Reingreso de Stock al escanear código existente */}
-      <LazyModalSlot open={Boolean(scannedRestockProduct)}>
-          <RestockProductModal
-            product={scannedRestockProduct}
-            isOpen={Boolean(scannedRestockProduct)}
-            onClose={() => setScannedRestockProduct(null)}
-            onRestocked={fetchInventoryData}
-            onViewDetails={prod => {
-              setScannedRestockProduct(null);
-              setSelectedProduct(prod);
-              setProductDetailOpen(true);
-            }}
-          />
-        </LazyModalSlot>
+
       {/* Notificación Toast Global Flotante (Zero-UI Alterations) */}
       <ToastNotification />
     </div>

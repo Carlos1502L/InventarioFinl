@@ -26,7 +26,7 @@ import {
 } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
-import { RestockProductModal } from '../components/modals/RestockProductModal';
+import { ProductMasterModal } from '../components/modals/ProductMasterModal';
 import { BulkWithdrawModal } from '../components/modals/BulkWithdrawModal';
 import { ProductAuditModal } from '../components/modals/ProductAuditModal';
 import { MinimalDropdown } from '../components/ui/MinimalDropdown';
@@ -43,6 +43,7 @@ interface InventoryPageProps {
   onOpenCreateModal: () => void;
   onOpenLocationsModule?: (subTab?: LocationSubTab, product?: Product) => void;
   onRefresh: () => void;
+  onWithdrawProduct?: (product: Product) => void;
   onBulkWithdrawn?: (withdrawnItems: Array<{ product_id: string; quantity: number }>) => void;
   loading: boolean;
   initialSearchTerm?: string;
@@ -58,6 +59,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
   onOpenCreateModal,
   onOpenLocationsModule,
   onRefresh,
+  onWithdrawProduct,
   onBulkWithdrawn,
   loading,
   initialSearchTerm,
@@ -1028,14 +1030,26 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
       />
 
       {/* 3.2: Modal de Reingreso de Stock cuando se escanea un producto existente */}
-      <RestockProductModal
+      <ProductMasterModal
         product={restockTargetProduct}
+        initialView="RESTOCK"
         isOpen={Boolean(restockTargetProduct)}
         onClose={() => setRestockTargetProduct(null)}
+        categories={categories}
+        subcategories={subcategories}
+        locations={locations}
+        products={products}
         onRestocked={onRefresh}
-        onViewDetails={prod => {
+        onSaved={() => onRefresh()}
+        onMoved={onRefresh}
+        onUpdated={onRefresh}
+        onWithdraw={onWithdrawProduct ? prod => {
           setRestockTargetProduct(null);
-          onSelectProduct(prod);
+          onWithdrawProduct(prod);
+        } : undefined}
+        onAssignLocation={prod => {
+          setRestockTargetProduct(null);
+          onOpenLocationsModule?.('assign', prod);
         }}
       />
       {/* Modal de Salida Masiva de Mercadería (Multi-Withdraw) */}
