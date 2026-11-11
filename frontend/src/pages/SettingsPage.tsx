@@ -5,8 +5,6 @@ import {
   MapPin,
   Users,
   Layers,
-  Smartphone,
-  Info,
   ChevronRight,
   LogOut,
   QrCode,
@@ -25,7 +23,6 @@ import { formatDate } from '../services/supabase';
 import { EditInventoryModal } from '../components/modals/EditInventoryModal';
 import { BatchLocationsPrintModal } from '../components/modals/BatchLocationsPrintModal';
 import { CouponsManagementModal } from '../components/modals/CouponsManagementModal';
-import { BackupManagementCard } from '../components/settings/BackupManagementCard';
 import { BackupManagementModal } from '../components/modals/BackupManagementModal';
 import { DeleteAccountModal } from '../components/modals/DeleteAccountModal';
 
@@ -557,8 +554,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             Gobernanza y aplicación
           </h3>
 
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-ui-card">
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-ui-card divide-y divide-slate-100">
             <button
+              type="button"
               onClick={onOpenCollaborators}
               className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-slate-50 transition-colors duration-150 text-left group cursor-pointer"
             >
@@ -573,58 +571,26 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               </div>
               <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-900 transition-colors shrink-0" />
             </button>
-          </div>
-        </div>
 
-        {/* COPIAS DE SEGURIDAD */}
-        {isOwner && (
-          <div className="space-y-2.5">
-            <h3 className="text-xs font-semibold text-slate-500 px-1">
-              Copias de seguridad y restauración
-            </h3>
-
-            <BackupManagementCard
-              onRestoreCompleted={() => {
-                refreshInventories();
-                if (onRefreshInventoryData) onRefreshInventoryData();
-              }}
-            />
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => setBackupModalOpen(true)}
+                className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-slate-50 transition-colors duration-150 text-left group cursor-pointer"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                    <Database className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="font-semibold text-sm text-slate-900">Copias de seguridad (Backups)</h4>
+                    <p className="text-xs text-slate-500 truncate">Respaldo manual, programación automática y restauración</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-900 transition-colors shrink-0" />
+              </button>
+            )}
           </div>
-        )}
-
-        {/* Tarjeta de Aplicación PWA */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-ui-card space-y-3">
-          <div className="flex items-center gap-2.5">
-            <Smartphone className="w-4 h-4 text-slate-700" />
-            <h4 className="font-semibold text-sm text-slate-900">Aplicación web progresiva (PWA móvil)</h4>
-          </div>
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Instala Stockly en dispositivos Android o iOS para operar en pantalla completa y activar el escáner con cámara nativa.
-          </p>
-          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-600 space-y-1">
-            <div className="flex items-center gap-1.5 text-slate-900 font-medium">
-              <Info className="w-3.5 h-3.5" /> Instalación rápida:
-            </div>
-            <p><strong>iOS (Safari):</strong> Toca "Compartir" y selecciona "Añadir a la pantalla de inicio".</p>
-            <p><strong>Android (Chrome):</strong> Toca el menú de 3 puntos y selecciona "Instalar aplicación".</p>
-          </div>
-        </div>
-
-        {/* Sesión de Usuario & Cierre */}
-        <div className="p-4 sm:p-5 bg-white border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-ui-card">
-          <div>
-            <span className="text-[11px] text-slate-500 font-medium block">
-              Sesión autenticada
-            </span>
-            <p className="text-xs font-mono font-medium text-slate-900 mt-0.5">{user?.email}</p>
-          </div>
-          <button
-            onClick={() => signOut()}
-            className="inline-flex items-center justify-center gap-2 px-4 min-h-[38px] bg-white hover:bg-red-50 text-red-600 border border-slate-200 hover:border-red-200 rounded-xl text-xs font-medium transition-[background-color,border-color,transform] duration-150 active:scale-[0.97] cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Cerrar sesión</span>
-          </button>
         </div>
 
         {/* ZONA DE PELIGRO */}

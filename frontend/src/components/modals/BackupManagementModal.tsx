@@ -754,8 +754,8 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
             </button>
           </div>
 
-          {/* Barra de Pestañas (Píldoras móviles) */}
-          <div className="mobile-tabs-bar">
+          {/* Barra de Pestañas */}
+          <div className="mobile-tabs-bar flex items-center gap-2 px-5 py-3 border-b border-[#E5E7EB] bg-white shrink-0 overflow-x-auto">
             <PillOption
               active={activeTab === 'manual'}
               onClick={() => setActiveTab('manual')}
