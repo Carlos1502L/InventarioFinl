@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useIsDesktop } from '../hooks/useDevice';
 import {
   Package,
@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Briefcase,
   User,
+  X,
   AlertCircle
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -19,13 +20,7 @@ import { useAuth } from '../context/AuthContext';
 const BarcodeScannerModal = React.lazy(() => import('../components/modals/BarcodeScannerModal').then(m => ({ default: m.BarcodeScannerModal })));
 import { isSaleRejected } from '../lib/supabase';
 import { InventoryCardsSkeleton } from '../components/ui/Skeleton';
-import {
-  ModalShell,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  modalPrimaryButtonClass
-} from '../components/modals/ModalShell';
+import { useBackdropDismiss, useLatestValue, useModalEscape, useModalMotion } from '../components/modals/modalMotion';
 
 interface QuickConsultModalProps {
   data: { found: boolean; product?: Product; code: string } | null;
@@ -34,60 +29,97 @@ interface QuickConsultModalProps {
 }
 
 const QuickConsultModal: React.FC<QuickConsultModalProps> = ({ data, currency, onClose }) => {
-  const lastDataRef = useRef(data);
-  if (data) lastDataRef.current = data;
-  const active = data ?? lastDataRef.current;
+  const activeData = useLatestValue(data);
+  const { backdropMotion, panelMotion } = useModalMotion();
+  const backdropDismiss = useBackdropDismiss(onClose, Boolean(data));
+  useModalEscape(Boolean(data), onClose);
 
   return (
-    <ModalShell
-      isOpen={Boolean(data)}
-      onClose={onClose}
-      maxWidth="sm"
-      ariaLabel="Consulta rápida de producto"
-    >
-      {active && (
-        <>
-          <ModalHeader
-            title={active.found && active.product ? active.product.name : 'Producto no existente'}
-            subtitle={`Consulta rápida · Código ${active.code}`}
-            icon={active.found && active.product ? <Package className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-            iconTone={active.found && active.product ? 'indigo' : 'amber'}
-            onClose={onClose}
-          />
-          <ModalBody>
-            {active.found && active.product ? (
-              <div className="rounded-2xl bg-slate-950/60 border border-slate-800/80 divide-y divide-slate-800/80 overflow-hidden">
-                <div className="px-4 py-3.5 flex items-center justify-between gap-3">
-                  <span className="text-xs font-medium text-slate-400">Precio unitario</span>
-                  <span className="font-mono text-base font-bold text-slate-100 tabular-nums">
-                    {formatCurrency(active.product.price, currency)}
-                  </span>
+    <AnimatePresence>
+      {data && activeData && (
+        <motion.div
+          {...backdropMotion}
+          {...backdropDismiss}
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm"
+        >
+          <motion.div
+            {...panelMotion}
+            onClick={(e) => e.stopPropagation()}
+            className="mobile-dark-modal w-full max-w-sm rounded-[1.75rem] max-h-[85vh] flex flex-col overflow-hidden bg-white shadow-2xl"
+          >
+            <div className="bg-white px-5 pt-5 pb-3.5 border-b border-neutral-100 shrink-0 relative">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-lg font-bold tracking-tight text-neutral-900 truncate">
+                    {activeData.found && activeData.product
+                      ? activeData.product.name
+                      : 'Producto no existente'}
+                  </h3>
+                  <p className="text-xs text-neutral-400 font-normal mt-0.5">
+                    Consulta rápida · Código {activeData.code}
+                  </p>
                 </div>
-                <div className="px-4 py-3.5 flex items-center justify-between gap-3">
-                  <span className="text-xs font-medium text-slate-400">Cantidad disponible</span>
-                  <span className="font-mono text-base font-bold text-emerald-300 tabular-nums">
-                    {formatStockDisplay(active.product)}
-                  </span>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-500 hover:text-neutral-900 flex items-center justify-center flex-shrink-0"
+                  aria-label="Cerrar"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white px-5 py-4 pb-6 overflow-y-auto flex-1 overscroll-contain">
+              {activeData.found && activeData.product ? (
+                <div>
+                  <div className="divide-y divide-neutral-100">
+                    <div className="py-3.5 flex items-center justify-between border-b border-neutral-100">
+                      <span className="text-xs font-semibold text-neutral-700">
+                        Precio unitario
+                      </span>
+                      <span className="text-base font-bold text-neutral-900 tabular-nums">
+                        {formatCurrency(activeData.product.price, currency)}
+                      </span>
+                    </div>
+
+                    <div className="py-3.5 flex items-center justify-between border-b border-neutral-100">
+                      <span className="text-xs font-semibold text-neutral-700">
+                        Cantidad disponible
+                      </span>
+                      <span className="text-base font-bold text-neutral-900 tabular-nums">
+                        {formatStockDisplay(activeData.product)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full py-3.5 bg-neutral-950 text-white font-semibold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-transform mt-4 mb-2"
+                  >
+                    Cerrar
+                  </button>
                 </div>
-              </div>
-            ) : (
-              <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 p-4 text-xs sm:text-sm text-amber-100 leading-relaxed">
-                El código <span className="font-mono font-semibold text-white">{active.code}</span> no se encuentra registrado en este inventario.
-              </div>
-            )}
-          </ModalBody>
-          <ModalFooter>
-            <button
-              type="button"
-              onClick={onClose}
-              className={`${modalPrimaryButtonClass} w-full`}
-            >
-              Cerrar
-            </button>
-          </ModalFooter>
-        </>
+              ) : (
+                <div>
+                  <p className="text-sm text-neutral-600 py-3.5 border-b border-neutral-100 leading-relaxed">
+                    El código <span className="font-mono font-semibold text-neutral-900">{activeData.code}</span> no se encuentra registrado en este inventario.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full py-3.5 bg-neutral-950 text-white font-semibold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-transform mt-4 mb-2"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
       )}
-    </ModalShell>
+    </AnimatePresence>
   );
 };
 

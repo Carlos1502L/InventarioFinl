@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
-import { useIsDarkModal } from '../modals/ModalShell';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 export interface MinimalDropdownOption {
   value: string;
@@ -25,9 +25,9 @@ export const MinimalDropdown: React.FC<MinimalDropdownProps> = ({
   disabled = false,
   className = ''
 }) => {
-  const isDarkModal = useIsDarkModal();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -35,20 +35,19 @@ export const MinimalDropdown: React.FC<MinimalDropdownProps> = ({
         setIsOpen(false);
       }
     };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (isOpen && event.key === 'Escape') {
-        event.preventDefault();
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
         event.stopPropagation();
         setIsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('touchstart', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keydown', handleEscape, true);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keydown', handleEscape, true);
     };
   }, [isOpen]);
 
@@ -62,103 +61,92 @@ export const MinimalDropdown: React.FC<MinimalDropdownProps> = ({
   const hasRealSelection = Boolean(selectedOption && selectedOption.value !== '');
 
   return (
-    <div ref={containerRef} className={`relative w-full ${className}`}>
+    <div
+      ref={containerRef}
+      data-dropdown-open={isOpen && !disabled ? 'true' : undefined}
+      className={`relative w-full ${className}`}
+    >
       <button
         type="button"
         disabled={disabled}
-        aria-expanded={isOpen}
         onClick={() => {
           if (!disabled) setIsOpen((prev) => !prev);
         }}
-        className={`w-full min-h-[44px] lg:min-h-[38px] flex items-center justify-between rounded-xl py-2.5 lg:py-2 px-3.5 text-sm lg:text-xs font-medium transition-[background-color,border-color,box-shadow] duration-150 disabled:opacity-50 disabled:pointer-events-none text-left font-sans normal-case tracking-normal cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${
-          isDarkModal
-            ? 'bg-slate-950/75 border border-slate-800 text-slate-100 hover:bg-slate-800/70 hover:border-slate-700'
-            : 'mobile-dropdown-trigger bg-slate-50 border border-slate-200 text-slate-900 hover:bg-slate-100 hover:border-slate-300'
-        }`}
+        className="mobile-dropdown-trigger w-full flex items-center justify-between bg-neutral-50 lg:bg-slate-50 border border-neutral-200/60 lg:border-slate-200 rounded-2xl lg:rounded-xl py-3 lg:py-2.5 px-4 lg:px-3.5 text-sm lg:text-xs text-neutral-800 lg:text-slate-900 font-medium hover:bg-neutral-100/60 lg:hover:bg-slate-100 lg:hover:border-slate-300 transition-[background-color,border-color] duration-150 disabled:opacity-50 disabled:pointer-events-none text-left font-sans normal-case tracking-normal cursor-pointer"
       >
         {hasRealSelection && selectedOption ? (
           <span className="truncate">
             {selectedOption.label}
             {selectedOption.badge && (
-              <span
-                className={`text-[11px] font-mono tabular-nums font-normal ml-2 ${
-                  isDarkModal ? 'text-slate-400' : 'text-slate-500'
-                }`}
-              >
+              <span className="text-xs lg:text-[11px] font-mono text-neutral-400 lg:text-slate-500 font-normal ml-2">
                 {selectedOption.badge}
               </span>
             )}
           </span>
         ) : (
-          <span className={`truncate font-normal ${isDarkModal ? 'text-slate-400' : 'text-slate-400'}`}>
+          <span className="truncate text-neutral-400 lg:text-slate-400 font-normal">
             {selectedOption ? selectedOption.label : placeholder}
           </span>
         )}
         <ChevronDown
-          className={`w-4 h-4 shrink-0 ml-2 transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] ${
-            isDarkModal ? 'text-slate-400' : 'text-slate-500'
-          } ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-neutral-400 lg:text-slate-500 shrink-0 ml-2 transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+            isOpen ? 'rotate-180' : ''
+          }`}
         />
       </button>
 
-      {isOpen && !disabled && (
-        <div
-          className={`mobile-dropdown-menu custom-scrollbar-dark absolute left-0 right-0 top-full mt-1.5 z-50 rounded-xl border p-1.5 max-h-60 overflow-y-auto overscroll-contain font-sans normal-case tracking-normal ${
-            isDarkModal
-              ? 'bg-slate-900 border-slate-700/90 text-slate-200 shadow-[0_20px_40px_-8px_rgba(2,6,23,0.75)]'
-              : 'bg-white border-slate-200 text-slate-800 shadow-xl'
-          }`}
-        >
-          {options.length === 0 ? (
-            <div className="px-3 py-2.5 text-xs text-slate-400 text-center">
-              Sin opciones disponibles
-            </div>
-          ) : (
-            options.map((opt) => {
-              const isSelected = opt.value === value;
-              return (
-                <button
-                  key={opt.value || '__empty__'}
-                  type="button"
-                  onClick={() => {
-                    onChange(opt.value);
-                    setIsOpen(false);
-                  }}
-                  className={`mobile-dropdown-option w-full min-h-[42px] lg:min-h-[34px] rounded-lg px-3 py-2 text-sm lg:text-xs transition-colors duration-150 flex items-center justify-between cursor-pointer text-left ${
-                    isDarkModal
-                      ? isSelected
-                        ? 'bg-slate-800 font-semibold text-white'
-                        : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
-                      : isSelected
-                      ? 'bg-slate-100 font-semibold text-slate-900'
-                      : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                  }`}
-                >
-                  <div className="truncate pr-2">
-                    <span>{opt.label}</span>
-                    {opt.badge && (
-                      <span
-                        className={`text-[11px] font-mono tabular-nums font-normal ml-2 ${
-                          isDarkModal ? 'text-slate-400' : 'text-slate-500'
-                        }`}
-                      >
-                        {opt.badge}
-                      </span>
-                    )}
-                  </div>
-                  {isSelected && (
-                    <Check
-                      className={`w-4 h-4 shrink-0 ${
-                        isDarkModal ? 'text-indigo-400' : 'text-slate-900'
-                      }`}
-                    />
-                  )}
-                </button>
-              );
-            })
-          )}
-        </div>
-      )}
+      <AnimatePresence>
+        {isOpen && !disabled && (
+          <motion.div
+            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -4 }}
+            animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+            exit={
+              shouldReduceMotion
+                ? { opacity: 0, transition: { duration: 0.08 } }
+                : { opacity: 0, scale: 0.97, y: -3, transition: { duration: 0.12, ease: 'easeIn' } }
+            }
+            transition={
+              shouldReduceMotion
+                ? { duration: 0.08 }
+                : { type: 'spring', stiffness: 450, damping: 32, mass: 0.7 }
+            }
+            className="mobile-dropdown-menu absolute left-0 right-0 top-full mt-2 z-50 bg-white rounded-2xl lg:rounded-xl border border-neutral-200/80 lg:border-slate-200 shadow-xl p-1.5 overflow-hidden max-h-60 overflow-y-auto overscroll-contain font-sans normal-case tracking-normal origin-top"
+          >
+            {options.length === 0 ? (
+              <div className="px-3 py-2.5 text-xs text-neutral-400 lg:text-slate-500 text-center">
+                Sin opciones disponibles
+              </div>
+            ) : (
+              options.map((opt) => {
+                const isSelected = opt.value === value;
+                return (
+                  <button
+                    key={opt.value || '__empty__'}
+                    type="button"
+                    onClick={() => {
+                      onChange(opt.value);
+                      setIsOpen(false);
+                    }}
+                    className={`mobile-dropdown-option w-full rounded-xl lg:rounded-lg px-3 py-2.5 lg:py-2 text-sm lg:text-xs text-neutral-700 lg:text-slate-700 hover:bg-neutral-100 lg:hover:bg-slate-100 hover:text-neutral-950 lg:hover:text-slate-900 transition-colors duration-150 flex items-center justify-between cursor-pointer text-left ${
+                      isSelected ? 'bg-neutral-100/80 lg:bg-slate-100 font-semibold text-neutral-950 lg:text-slate-900' : ''
+                    }`}
+                  >
+                    <div className="truncate pr-2">
+                      <span>{opt.label}</span>
+                      {opt.badge && (
+                        <span className="text-xs lg:text-[11px] font-mono text-neutral-400 lg:text-slate-500 font-normal ml-2">
+                          {opt.badge}
+                        </span>
+                      )}
+                    </div>
+                    {isSelected && <Check className="w-4 h-4 text-neutral-950 lg:text-slate-900 shrink-0" />}
+                  </button>
+                );
+              })
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

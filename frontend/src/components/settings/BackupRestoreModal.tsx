@@ -1,15 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Loader2, Database, ShieldAlert, ArrowRightLeft } from 'lucide-react';
+import { X, AlertTriangle, Loader2, Database, ShieldAlert, ArrowRightLeft } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { CancelButton } from '../common/CancelButton';
-import {
-  ModalShell,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  modalFieldInputClass,
-  modalFieldLabelClass,
-  modalDangerButtonClass
-} from '../modals/ModalShell';
+import { useModalEscape, useModalMotion } from '../modals/modalMotion';
 
 export interface CurrencyConversionOptions {
   enabled: boolean;
@@ -65,6 +58,9 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
     }
   }, [isOpen, hasCurrencyMismatch, backupExchangeRate, inventoryExchangeRate]);
 
+  const { backdropMotion, panelMotion, tabContentMotion } = useModalMotion();
+  useModalEscape(isOpen, onClose, isLoading);
+
   const isConfirmed = confirmationText.trim().toUpperCase() === 'RESTAURAR';
 
   // Determinación de operación según par de divisas
@@ -94,160 +90,180 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
     : (exampleSourceVal * (customRate || 1)).toFixed(2);
 
   return (
-    <ModalShell
-      isOpen={isOpen}
-      onClose={onClose}
-      maxWidth="md"
-      disableDismiss={isLoading}
-      onSubmitShortcut={handleConfirm}
-    >
-      <ModalHeader
-        title="Restaurar copia de seguridad"
-        subtitle="Reemplazo total de datos del inventario"
-        icon={<ShieldAlert className="w-4 h-4 lg:w-5 lg:h-5" />}
-        iconTone="rose"
-        onClose={onClose}
-        closeDisabled={isLoading}
-      />
-
-      <ModalBody className="space-y-4 text-xs text-slate-300">
-        {/* Advertencia Wipe & Restore (RF-4.1 & RF-4.2) */}
-        <div className="p-4 bg-rose-500/10 rounded-2xl border border-rose-500/30 leading-relaxed space-y-2">
-          <p className="font-semibold flex items-start gap-2 text-rose-200 text-xs">
-            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-            <span>
-              Esta acción vaciará los datos actuales de este inventario y los reemplazará al 100% con los datos de la copia de seguridad.
-            </span>
-          </p>
-          <div className="space-y-1">
-            <span className="text-[11px] text-slate-400 block">Archivo a procesar:</span>
-            <p className="font-mono font-semibold text-slate-100 bg-slate-950/75 px-2.5 py-1.5 rounded-lg border border-slate-800 truncate">
-              {fileName}
-            </p>
-          </div>
-        </div>
-
-        {/* Detección de Discrepancia de Moneda (RF-3.1) */}
-        {hasCurrencyMismatch && (
-          <div className="p-4 bg-amber-500/10 rounded-2xl border border-amber-500/30 leading-relaxed space-y-3">
-            <div className="flex items-center gap-2 font-semibold text-amber-300 text-xs">
-              <ArrowRightLeft className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Monedas distintas detectadas</span>
-            </div>
-            <p className="text-xs text-slate-200">
-              El respaldo original está en <strong className="font-mono text-white">{normSource}</strong> y este inventario opera en <strong className="font-mono text-white">{normTarget}</strong>.
-            </p>
-
-            <div className="space-y-2">
-              <label
-                className={`flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer ${
-                  applyConversion
-                    ? 'bg-slate-900/90 border-indigo-500/70 ring-1 ring-indigo-500/30'
-                    : 'bg-slate-950/50 border-slate-800 hover:border-slate-700'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="currency_conversion_choice"
-                  checked={applyConversion}
-                  onChange={() => setApplyConversion(true)}
-                  className="mt-0.5 accent-indigo-400"
-                />
-                <div className="flex-1 space-y-2 min-w-0">
-                  <span className="font-semibold text-xs text-slate-100 block">
-                    Convertir automáticamente por tipo de cambio
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-slate-400 shrink-0">Tasa de cambio:</span>
-                    <input
-                      type="number"
-                      step="0.001"
-                      min="0.001"
-                      value={customRate}
-                      onChange={(e) => setCustomRate(parseFloat(e.target.value) || 1)}
-                      disabled={!applyConversion || isLoading}
-                      className="w-28 h-9 px-2.5 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono font-bold tabular-nums text-slate-100 focus:outline-none focus:border-indigo-400"
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-300 font-mono bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800 tabular-nums">
-                    {isDivide ? (
-                      <>Precios en {normSource} ÷ {customRate} → {normTarget} (Ej: {normSource === 'PEN' ? 'S/' : ''} {exampleSourceVal}.00 → {normTarget === 'USD' ? '$' : '€'} {exampleConvertedVal})</>
-                    ) : (
-                      <>Precios en {normSource} × {customRate} → {normTarget} (Ej: {normSource === 'USD' ? '$' : '€'} {exampleSourceVal}.00 → {normTarget === 'PEN' ? 'S/' : ''} {exampleConvertedVal})</>
-                    )}
-                  </p>
-                </div>
-              </label>
-
-              <label
-                className={`flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer ${
-                  !applyConversion
-                    ? 'bg-slate-900/90 border-indigo-500/70 ring-1 ring-indigo-500/30'
-                    : 'bg-slate-950/50 border-slate-800 hover:border-slate-700'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="currency_conversion_choice"
-                  checked={!applyConversion}
-                  onChange={() => setApplyConversion(false)}
-                  className="mt-0.5 accent-indigo-400"
-                />
-                <div>
-                  <span className="font-semibold text-xs text-slate-100 block">
-                    Mantener valores nominales
-                  </span>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Conserva los números brutos del archivo sin conversiones matemáticas.
-                  </p>
-                </div>
-              </label>
-            </div>
-          </div>
-        )}
-
-        {/* Confirmación Crítica mediante la palabra RESTAURAR (RF-4.2) */}
-        <div className="space-y-1.5 pt-1">
-          <label className={modalFieldLabelClass}>
-            Para desbloquear la restauración, escribe{' '}
-            <span className="font-mono font-bold text-rose-300 bg-rose-500/15 px-1.5 py-0.5 rounded border border-rose-500/30">
-              RESTAURAR
-            </span>
-            :
-          </label>
-          <input
-            type="text"
-            value={confirmationText}
-            onChange={(e) => setConfirmationText(e.target.value)}
-            placeholder="Escribe RESTAURAR"
-            disabled={isLoading}
-            className={`${modalFieldInputClass} font-mono tracking-widest uppercase`}
-            autoFocus
-          />
-        </div>
-      </ModalBody>
-
-      <ModalFooter shortcutLabel="para restaurar">
-        <CancelButton onClick={onClose} disabled={isLoading} />
-        <button
-          type="button"
-          onClick={handleConfirm}
-          disabled={!isConfirmed || isLoading}
-          className={modalDangerButtonClass}
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          {...backdropMotion}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Restaurando...</span>
-            </>
-          ) : (
-            <>
-              <Database className="w-4 h-4" />
-              <span>Confirmar y restaurar</span>
-            </>
-          )}
-        </button>
-      </ModalFooter>
-    </ModalShell>
+          <motion.div
+            {...panelMotion}
+            className="mobile-dark-modal bg-white border border-[#E5E7EB] rounded-2xl w-full max-w-lg max-h-[92vh] overflow-hidden shadow-2xl flex flex-col font-sans"
+          >
+            {/* Cabecera Limpia */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-rose-100 bg-rose-50/80 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                  <ShieldAlert className="w-5 h-5 text-rose-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-rose-900 text-base uppercase tracking-tight">
+                    Restaurar Copia de Seguridad
+                  </h3>
+                  <p className="text-xs text-rose-600">Reemplazo total · Acción crítica</p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                disabled={isLoading}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Contenido y Advertencia */}
+            <div className="p-5 space-y-4 text-xs text-neutral-700 overflow-y-auto custom-scrollbar">
+              {/* Advertencia Wipe & Restore (RF-4.1 & RF-4.2) */}
+              <div className="p-3.5 bg-rose-50 rounded-xl border border-rose-200 text-rose-900 leading-relaxed space-y-1.5">
+                <p className="font-semibold flex items-center gap-1.5 text-rose-800 text-xs">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  Esta acción vaciará los datos actuales de este inventario y los reemplazará al 100% con los datos de la copia de seguridad.
+                </p>
+                <p className="text-[11px] text-rose-700">
+                  Archivo a procesar:
+                </p>
+                <p className="font-mono font-bold text-rose-950 bg-white/80 px-2 py-1 rounded border border-rose-200/60 truncate">
+                  {fileName}
+                </p>
+              </div>
+
+              {/* Detección de Discrepancia de Moneda (RF-3.1) */}
+              <AnimatePresence>
+                {hasCurrencyMismatch && (
+                  <motion.div
+                    {...tabContentMotion}
+                    className="p-3.5 bg-amber-50/90 rounded-xl border border-amber-200 text-amber-950 leading-relaxed space-y-2.5"
+                  >
+                    <div className="flex items-center gap-2 font-bold text-amber-800 text-xs">
+                      <ArrowRightLeft className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Monedas distintas detectadas</span>
+                    </div>
+                    <p className="text-xs text-amber-900">
+                      El respaldo original está en <strong>{normSource}</strong> y este inventario opera en <strong>{normTarget}</strong>.
+                    </p>
+
+                    <div className="space-y-2 pt-1">
+                      <label className={`flex items-start gap-3 p-3 rounded-xl border transition-[background-color,border-color] duration-150 cursor-pointer ${
+                        applyConversion
+                          ? 'bg-white border-slate-900 ring-1 ring-slate-900/15'
+                          : 'bg-white/60 border-slate-200 hover:bg-white'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="currency_conversion_choice"
+                          checked={applyConversion}
+                          onChange={() => setApplyConversion(true)}
+                          className="mt-0.5 accent-slate-900"
+                        />
+                        <div className="flex-1 space-y-1.5 min-w-0">
+                          <span className="font-semibold text-xs text-slate-900 block">
+                            Convertir automáticamente por Tipo de Cambio
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-slate-600 shrink-0">Tasa de cambio:</span>
+                            <input
+                              type="number"
+                              step="0.001"
+                              min="0.001"
+                              value={customRate}
+                              onChange={(e) => setCustomRate(parseFloat(e.target.value) || 1)}
+                              disabled={!applyConversion || isLoading}
+                              className="w-28 h-8 px-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold tabular-nums text-slate-900 focus:outline-none focus:border-slate-900"
+                            />
+                          </div>
+                          <p className="text-[10px] text-slate-600 font-mono bg-slate-100 p-1.5 rounded border border-slate-200 tabular-nums">
+                            {isDivide ? (
+                              <>Precios en {normSource} ÷ {customRate} → {normTarget} (Ej: {normSource === 'PEN' ? 'S/' : ''} {exampleSourceVal}.00 → {normTarget === 'USD' ? '$' : '€'} {exampleConvertedVal})</>
+                            ) : (
+                              <>Precios en {normSource} × {customRate} → {normTarget} (Ej: {normSource === 'USD' ? '$' : '€'} {exampleSourceVal}.00 → {normTarget === 'PEN' ? 'S/' : ''} {exampleConvertedVal})</>
+                            )}
+                          </p>
+                        </div>
+                      </label>
+
+                      <label className={`flex items-start gap-3 p-3 rounded-xl border transition-[background-color,border-color] duration-150 cursor-pointer ${
+                        !applyConversion
+                          ? 'bg-white border-slate-900 ring-1 ring-slate-900/15'
+                          : 'bg-white/60 border-slate-200 hover:bg-white'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="currency_conversion_choice"
+                          checked={!applyConversion}
+                          onChange={() => setApplyConversion(false)}
+                          className="mt-0.5 accent-slate-900"
+                        />
+                        <div>
+                          <span className="font-semibold text-xs text-neutral-900 block">
+                            Mantener valores nominales
+                          </span>
+                          <p className="text-[11px] text-neutral-500">
+                            Conserva los números brutos del archivo sin conversiones matemáticas.
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Confirmación Crítica mediante la palabra RESTAURAR (RF-4.2) */}
+              <div className="space-y-1.5 pt-1">
+                <label className="block text-xs font-semibold text-neutral-800">
+                  Para desbloquear la restauración, escribe <span className="font-mono font-bold text-rose-600">RESTAURAR</span>:
+                </label>
+                <input
+                  type="text"
+                  value={confirmationText}
+                  onChange={(e) => setConfirmationText(e.target.value)}
+                  placeholder="Escribe RESTAURAR"
+                  disabled={isLoading}
+                  className="w-full h-11 px-3.5 bg-neutral-100 border border-transparent focus:border-rose-600 focus:bg-white rounded-xl text-sm font-mono tracking-widest text-neutral-900 placeholder:text-neutral-400 focus:outline-none transition-all uppercase"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* Botones de Acción (Stacking en móvil para evitar desbordes) */}
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 px-5 py-4 border-t border-neutral-100 bg-neutral-50/50 shrink-0">
+              <CancelButton onClick={onClose} disabled={isLoading} />
+              <button
+                type="button"
+                onClick={handleConfirm}
+                disabled={!isConfirmed || isLoading}
+                className={`h-11 px-5 rounded-xl text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                  isConfirmed && !isLoading
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-sm active:scale-95 cursor-pointer'
+                    : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                }`}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Restaurando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Database className="w-4 h-4" />
+                    <span>Confirmar y Restaurar</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

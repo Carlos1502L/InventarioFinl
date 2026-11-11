@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   X,
   History,
@@ -15,7 +16,9 @@ import {
   Edit3,
   Trash2,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Filter,
+  RotateCcw
 } from 'lucide-react';
 import { Product, AuditLog } from '../../types/database';
 import { supabase, formatDate } from '../../services/supabase';
@@ -23,13 +26,7 @@ import { useAuth } from '../../context/AuthContext';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { CancelButton } from '../common/CancelButton';
 import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
-import {
-  ModalShell,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  modalFieldInputClass
-} from './ModalShell';
+import { useModalEscape, useModalMotion } from './modalMotion';
 
 interface ProductAuditModalProps {
   isOpen: boolean;
@@ -113,8 +110,8 @@ function formatActionDiff(
       return {
         headline,
         badgeText: 'Creación',
-        badgeColor: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-        icon: <PlusCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+        badgeColor: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+        icon: <PlusCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
       };
     }
 
@@ -124,8 +121,8 @@ function formatActionDiff(
       return {
         headline,
         badgeText: 'Reabastecimiento',
-        badgeColor: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
-        icon: <ArrowUpRight className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+        badgeColor: 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+        icon: <ArrowUpRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
       };
     }
 
@@ -135,8 +132,8 @@ function formatActionDiff(
       return {
         headline,
         badgeText: 'Descuento / Merma',
-        badgeColor: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
-        icon: <TrendingDown className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+        badgeColor: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+        icon: <TrendingDown className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
       };
     }
 
@@ -146,8 +143,8 @@ function formatActionDiff(
       return {
         headline,
         badgeText: 'Traslado',
-        badgeColor: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
-        icon: <ArrowRightLeft className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+        badgeColor: 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+        icon: <ArrowRightLeft className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
       };
     }
 
@@ -157,8 +154,8 @@ function formatActionDiff(
       return {
         headline,
         badgeText: 'Venta',
-        badgeColor: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-        icon: <ShoppingCart className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+        badgeColor: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+        icon: <ShoppingCart className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
       };
     }
 
@@ -168,8 +165,8 @@ function formatActionDiff(
       return {
         headline,
         badgeText: 'Baja',
-        badgeColor: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
-        icon: <Trash2 className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+        badgeColor: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+        icon: <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
       };
     }
 
@@ -181,15 +178,15 @@ function formatActionDiff(
         const hasCategory = !!meta.previous_category || !!meta.new_category;
         const badgeText = hasRename ? 'Renombre' : hasCategory ? 'Categoría' : 'Edición';
         const badgeColor = hasRename
-          ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
+          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
           : hasCategory
-          ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-          : 'bg-slate-800 text-slate-300 border-slate-700';
+          ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+          : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700';
         return {
           headline,
           badgeText,
           badgeColor,
-          icon: <Edit3 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          icon: <Edit3 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
         };
       }
 
@@ -201,9 +198,9 @@ function formatActionDiff(
           headline,
           badgeText: isRename ? 'Renombre' : 'Edición',
           badgeColor: isRename
-            ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
-            : 'bg-slate-800 text-slate-300 border-slate-700',
-          icon: <Edit3 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
+            : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700',
+          icon: <Edit3 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
         };
       }
 
@@ -216,8 +213,8 @@ function formatActionDiff(
         return {
           headline,
           badgeText: 'Renombre',
-          badgeColor: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30',
-          icon: <Edit3 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          badgeColor: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+          icon: <Edit3 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
         };
       }
 
@@ -229,8 +226,8 @@ function formatActionDiff(
         return {
           headline,
           badgeText: 'Categoría',
-          badgeColor: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-          icon: <Edit3 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          badgeColor: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+          icon: <Edit3 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
         };
       }
 
@@ -241,8 +238,8 @@ function formatActionDiff(
           return {
             headline: `Renombró '${olderLog.product_name}' por '${log.product_name}'`,
             badgeText: 'Renombre',
-            badgeColor: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30',
-            icon: <Edit3 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            badgeColor: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+            icon: <Edit3 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
           };
         }
       }
@@ -252,8 +249,8 @@ function formatActionDiff(
         return {
           headline: `Actualización de precio: de S/ ${meta.previous_price} a S/ ${meta.new_price}`,
           badgeText: 'Precio',
-          badgeColor: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-          icon: <Edit3 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          badgeColor: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+          icon: <Edit3 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
         };
       }
 
@@ -264,8 +261,8 @@ function formatActionDiff(
         return {
           headline: `Ajuste de stock: ${diffLabel} unidades (Anterior: ${meta.previous_stock}, Nuevo: ${meta.new_stock})`,
           badgeText: 'Ajuste Stock',
-          badgeColor: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
-          icon: <ArrowRightLeft className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+          badgeColor: 'bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200 dark:border-sky-800',
+          icon: <ArrowRightLeft className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 shrink-0" />
         };
       }
 
@@ -279,8 +276,8 @@ function formatActionDiff(
       return {
         headline,
         badgeText: 'Edición',
-        badgeColor: 'bg-slate-800 text-slate-300 border-slate-700',
-        icon: <Edit3 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+        badgeColor: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700',
+        icon: <Edit3 className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400 shrink-0" />
       };
     }
 
@@ -290,8 +287,8 @@ function formatActionDiff(
       return {
         headline,
         badgeText: log.action_type || 'Registro',
-        badgeColor: 'bg-slate-800 text-slate-300 border-slate-700',
-        icon: <History className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+        badgeColor: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700',
+        icon: <History className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400 shrink-0" />
       };
     }
   }
@@ -493,225 +490,260 @@ export const ProductAuditModal: React.FC<ProductAuditModalProps> = ({
     }
   };
 
+  const { backdropMotion, sheetMotion } = useModalMotion();
+  useModalEscape(isOpen, onClose, scannerOpen);
+
   return (
     <>
-      <ModalShell
-        isOpen={isOpen}
-        onClose={onClose}
-        maxWidth="lg"
-        ariaLabel="Auditoría y trazabilidad de producto"
-      >
-        <ModalHeader
-          title="Auditoría & Trazabilidad"
-          subtitle={
-            selectedProduct
-              ? 'Kardex de movimientos del producto seleccionado'
-              : 'Consulta de trazabilidad por producto'
-          }
-          icon={<History className="w-5 h-5" />}
-          iconTone="indigo"
-          onClose={onClose}
-        />
-
-        {/* Bloque Fijo de Herramientas: Buscador y Botón de Escáner */}
-        <div className="px-4 sm:px-6 py-3.5 border-b border-slate-800/80 bg-slate-950/40 shrink-0 space-y-3">
-          <div className="flex items-center gap-2.5">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => {
-                  const val = e.target.value;
-                  setSearchQuery(val);
-                  setIsSearchingInput(true);
-                  if (!val.trim()) {
-                    setSelectedProduct(null);
-                    setAuditLogs([]);
-                  }
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && matchingProducts.length > 0) {
-                    handleSelectProduct(matchingProducts[0]);
-                  }
-                }}
-                onFocus={() => setIsSearchingInput(true)}
-                placeholder="Buscar por nombre o SKU..."
-                className={`${modalFieldInputClass} pl-10 pr-10`}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={handleClearSelection}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-                  title="Limpiar búsqueda"
-                  aria-label="Limpiar búsqueda"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            {...backdropMotion}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 select-none"
+          >
+            <motion.div
+              {...sheetMotion}
+              className="mobile-dark-modal bg-white dark:bg-zinc-900 border border-[#ececec] dark:border-zinc-800 rounded-t-[2.5rem] sm:rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[85dvh] font-sans"
+            >
+          
+          {/* Cabecera Fija */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#17191c]/10 dark:bg-white/10 text-[#17191c] dark:text-zinc-100 flex items-center justify-center shadow-xs">
+                <History className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold tracking-tight text-[#17191c] dark:text-white">
+                  Auditoría & Trazabilidad
+                </h3>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">
+                  {selectedProduct
+                    ? 'Kardex de movimientos del producto seleccionado'
+                    : 'Consulta de trazabilidad por producto'}
+                </p>
+              </div>
             </div>
 
             <button
               type="button"
-              onClick={() => setScannerOpen(true)}
-              title="Escanear código de barras con la cámara"
-              aria-label="Escanear código de barras"
-              className="min-h-[44px] lg:min-h-[40px] px-3.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-200 border border-indigo-500/30 flex items-center gap-1.5 text-xs font-semibold transition-[background-color,transform] duration-150 active:scale-[0.97] shrink-0 cursor-pointer"
+              onClick={onClose}
+              className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer active:scale-95"
+              aria-label="Cerrar modal"
             >
-              <Camera className="w-4 h-4 text-indigo-300 shrink-0" />
-              <span className="hidden sm:inline">Escanear</span>
+              <X className="w-4 h-4" />
             </button>
           </div>
 
-          {scanNotification && (
-            <div className="px-3.5 py-2 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-xs text-indigo-200 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-indigo-400" />
-              <span className="truncate">{scanNotification}</span>
-            </div>
-          )}
-
-          {isSearchingInput && matchingProducts.length > 0 && !selectedProduct && (
-            <div className="bg-slate-900 border border-slate-700/80 rounded-2xl shadow-xl overflow-hidden divide-y divide-slate-800/80 max-h-48 overflow-y-auto custom-scrollbar-dark">
-              {matchingProducts.map(prod => (
-                <button
-                  key={prod.id}
-                  type="button"
-                  onClick={() => handleSelectProduct(prod)}
-                  className="w-full min-h-[44px] px-4 py-2.5 text-left flex items-center justify-between hover:bg-slate-800/70 transition-colors cursor-pointer"
-                >
-                  <div className="min-w-0 pr-2">
-                    <p className="text-xs font-semibold text-slate-100 truncate">
-                      {prod.name}
-                    </p>
-                    <p className="text-[11px] font-mono text-slate-400 truncate">
-                      REF: {prod.code || prod.sku || 'SIN SKU'}
-                    </p>
-                  </div>
-                  <span className="font-mono text-[11px] font-medium text-sky-300 shrink-0 bg-sky-500/15 px-2.5 py-0.5 rounded-full border border-sky-500/30 tabular-nums">
-                    Stock: {prod.stock}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {selectedProduct && (
-            <div className="flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 text-xs">
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <div className="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 flex items-center justify-center shrink-0">
-                  <Package className="w-4 h-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-slate-100 truncate">
-                    {selectedProduct.name}
-                  </p>
-                  <p className="text-[11px] font-mono text-slate-400 truncate tabular-nums">
-                    REF: {selectedProduct.code || selectedProduct.sku || 'N/A'} · Stock: {selectedProduct.stock}{' '}
-                    {selectedProduct.unit_type === 'BOX' ? 'cajas' : 'und'}
-                  </p>
-                </div>
+          {/* Bloque Fijo de Herramientas: Buscador Plano y Botón de Escáner al Mismo Nivel */}
+          <div className="p-4 sm:p-5 border-b border-[#ececec] dark:border-zinc-800 bg-[#fafafb]/60 dark:bg-zinc-900/60 shrink-0 space-y-3">
+            <div className="flex items-center gap-2.5">
+              
+              {/* Input de Búsqueda Plano */}
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setSearchQuery(val);
+                    setIsSearchingInput(true);
+                    if (!val.trim()) {
+                      setSelectedProduct(null);
+                      setAuditLogs([]);
+                    }
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && matchingProducts.length > 0) {
+                      handleSelectProduct(matchingProducts[0]);
+                    }
+                  }}
+                  onFocus={() => setIsSearchingInput(true)}
+                  placeholder="Buscar por nombre o SKU..."
+                  className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-2xl px-4 h-11 text-sm border-0 focus:outline-none text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 box-border transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={handleClearSelection}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 flex items-center justify-center text-xs hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
+                    title="Limpiar búsqueda"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
 
-              <div className="shrink-0 pl-2">
-                <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 font-mono text-[11px] font-semibold text-slate-200 whitespace-nowrap tabular-nums">
-                  Eventos: {auditLogs.length}
+              {/* Botón de Escáner al Mismo Nivel Horizontal */}
+              <button
+                type="button"
+                onClick={() => setScannerOpen(true)}
+                title="Escanear código de barras con la cámara"
+                aria-label="Escanear código de barras"
+                className="h-11 px-3.5 rounded-2xl bg-white hover:bg-[#fafafb] text-[#17191c] border border-[#CBD5E1] hover:border-[#17191c] flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-95 shrink-0 cursor-pointer shadow-xs"
+              >
+                <Camera className="w-4 h-4 text-[#17191c] stroke-[1.75]" />
+                <span>Escanear</span>
+              </button>
+            </div>
+
+            {/* Notificación tras escaneo */}
+            {scanNotification && (
+              <div className="px-3.5 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-700 dark:text-indigo-300 flex items-center gap-2 animate-in fade-in">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                <span className="truncate">{scanNotification}</span>
+              </div>
+            )}
+
+            {/* Desplegable de Sugerencias de Autocompletado */}
+            {isSearchingInput && matchingProducts.length > 0 && !selectedProduct && (
+              <div className="bg-white dark:bg-zinc-800 border border-[#ececec] dark:border-zinc-700 rounded-2xl shadow-xl overflow-hidden divide-y divide-[#E5E7EB] dark:divide-zinc-700/60 max-h-48 overflow-y-auto z-30">
+                {matchingProducts.map(prod => (
+                  <button
+                    key={prod.id}
+                    type="button"
+                    onClick={() => handleSelectProduct(prod)}
+                    className="w-full px-4 py-2.5 text-left flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                        {prod.name}
+                      </p>
+                      <p className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+                        REF: {prod.code || prod.sku || 'SIN SKU'}
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-medium text-[#17191c] dark:text-sky-300 shrink-0 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-900">
+                      Stock: {prod.stock}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Cápsula de Producto Activo Seleccionado */}
+            {selectedProduct && (
+              <div className="flex items-center justify-between gap-2.5 px-3.5 py-2 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/80 text-xs">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="w-7 h-7 rounded-lg bg-[#17191c]/10 dark:bg-white/10 text-[#17191c] dark:text-zinc-200 flex items-center justify-center shrink-0">
+                    <Package className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                      {selectedProduct.name}
+                    </p>
+                    <p className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+                      REF: {selectedProduct.code || selectedProduct.sku || 'N/A'} • Stock: {selectedProduct.stock} {selectedProduct.unit_type === 'BOX' ? 'cajas' : 'und'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Indicador de registros indexados bajo la barra de búsqueda, a la derecha de la información del producto */}
+                <div className="shrink-0 pl-2">
+                  <span className="inline-flex items-center px-2 py-1 rounded-xl bg-white dark:bg-zinc-700/80 border border-zinc-200 dark:border-zinc-600 font-mono text-[11px] font-semibold text-zinc-800 dark:text-zinc-100 shadow-2xs whitespace-nowrap">
+                    Registro: {auditLogs.length}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Panel de Trazabilidad y Auditoría (Kardex Detallado) con Scroll Independiente */}
+          <div className="flex-1 overflow-y-auto overscroll-contain max-h-[60dvh] p-4 sm:p-5 space-y-3 bg-white dark:bg-zinc-900">
+            {showDebouncedLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-zinc-400 space-y-2">
+                <Loader2 className="w-5 h-5 animate-spin text-[#17191c] dark:text-zinc-300" />
+                <span className="text-xs font-mono uppercase tracking-wider">
+                  Consultando Kardex...
                 </span>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Panel de Trazabilidad y Auditoría (Kardex Detallado) */}
-        <ModalBody className="space-y-3">
-          {showDebouncedLoading ? (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-400 space-y-2.5">
-              <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
-              <span className="text-xs font-mono text-slate-400">
-                Consultando Kardex...
-              </span>
-            </div>
-          ) : !selectedProduct ? (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-slate-800/70 flex items-center justify-center text-slate-400 border border-slate-700/70">
-                <Search className="w-6 h-6 stroke-[1.5]" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-slate-100">
-                  Consulta de trazabilidad
-                </p>
-                <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-                  Escribe el nombre o SKU en la barra de búsqueda, o usa la cámara para escanear el código de barras y auditar su historial.
-                </p>
-              </div>
-            </div>
-          ) : auditLogs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-slate-800/70 flex items-center justify-center text-slate-400 border border-slate-700/70">
-                <History className="w-6 h-6 stroke-[1.5]" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-slate-100">
-                  Sin movimientos registrados
-                </p>
-                <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-                  No se encontraron eventos ni movimientos registrados para{' '}
-                  <strong className="text-slate-200 font-semibold">{selectedProduct.name}</strong>.
-                </p>
-              </div>
-            </div>
-          ) : (
-            auditLogs.map((log, index) => {
-              const diff = formatActionDiff(log, auditLogs, index);
-              const userFullName = resolveUserDisplayName(log, userNamesMap, user);
-
-              return (
-                <div
-                  key={log.id}
-                  className="border border-slate-800/80 bg-slate-950/60 hover:bg-slate-900/75 rounded-2xl p-3.5 space-y-2 transition-colors"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${diff.badgeColor} shrink-0`}
-                    >
-                      {diff.icon}
-                      <span>{diff.badgeText}</span>
-                    </span>
-                    {!selectedProduct && log.product_name && (
-                      <span className="text-xs font-medium text-slate-300 truncate max-w-[180px]">
-                        · {log.product_name}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 text-xs text-slate-400">
-                    <span className="flex items-center gap-1.5 font-medium text-slate-200 text-left min-w-0">
-                      <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <strong className="font-semibold truncate">{userFullName}</strong>
-                    </span>
-                    <span className="flex items-center gap-1 font-mono text-[11px] text-slate-400 shrink-0 text-right tabular-nums">
-                      <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                      {formatDate(log.created_at)}
-                    </span>
-                  </div>
-
-                  <p className="text-xs sm:text-sm font-medium text-slate-200 leading-snug">
-                    {diff.headline}
+            ) : !selectedProduct ? (
+              <div className="flex flex-col items-center justify-center py-14 px-4 text-center space-y-3">
+                <div className="w-14 h-14 rounded-3xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 border border-zinc-200/60 dark:border-zinc-700/60 shadow-xs">
+                  <Search className="w-6 h-6 stroke-[1.5]" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                    Consulta de Trazabilidad
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs leading-relaxed">
+                    Escribe el nombre o SKU en la barra de búsqueda, o usa la cámara para escanear el código de barras y auditar su historial.
                   </p>
                 </div>
-              );
-            })
-          )}
-        </ModalBody>
+              </div>
+            ) : auditLogs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-14 px-4 text-center space-y-3">
+                <div className="w-14 h-14 rounded-3xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 border border-zinc-200/60 dark:border-zinc-700/60">
+                  <History className="w-6 h-6 stroke-[1.5]" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                    Sin movimientos registrados
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs leading-relaxed">
+                    No se encontraron eventos ni movimientos registrados para{' '}
+                    <strong className="text-zinc-700 dark:text-zinc-300 font-semibold">{selectedProduct.name}</strong>.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              auditLogs.map((log, index) => {
+                const diff = formatActionDiff(log, auditLogs, index);
+                const userFullName = resolveUserDisplayName(log, userNamesMap, user);
 
-        <ModalFooter>
-          <CancelButton
-            onClick={onClose}
-            label="Cerrar"
-            className="w-full sm:w-auto sm:min-w-[140px]"
-          />
-        </ModalFooter>
-      </ModalShell>
+                return (
+                  <div
+                    key={log.id}
+                    className="border border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-800/40 rounded-2xl p-3.5 space-y-2 hover:bg-zinc-50 dark:hover:bg-zinc-800/70 transition-colors shadow-2xs"
+                  >
+                    {/* 1. Indicador en la parte superior, ejm "Reabastecimiento", "Precio", "Eliminacion" */}
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${diff.badgeColor} shrink-0`}
+                      >
+                        {diff.icon}
+                        <span>{diff.badgeText}</span>
+                      </span>
+                      {!selectedProduct && log.product_name && (
+                        <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 truncate max-w-[180px]">
+                          • {log.product_name}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 2. Abajo del indicador, "Nombre del responsable" alineado al lado derecho, fecha y hora de la modificación */}
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+                      <span className="flex items-center gap-1.5 font-medium text-zinc-800 dark:text-zinc-200 text-left min-w-0">
+                        <User className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                        <strong className="font-semibold font-sans truncate">{userFullName}</strong>
+                      </span>
+                      <span className="flex items-center gap-1 font-mono text-[10px] text-zinc-400 shrink-0 text-right">
+                        <Clock className="w-3 h-3 text-zinc-400 shrink-0" />
+                        {formatDate(log.created_at)}
+                      </span>
+                    </div>
+
+                    {/* 3. Abajo de ello, Motivo o detalle */}
+                    <p className="text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-200 leading-snug">
+                      {diff.headline}
+                    </p>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Pie del Modal con contador de eventos y botón cerrar perfectamente centrados */}
+          <div className="px-5 sm:px-6 py-3.5 border-t border-[#ececec] dark:border-zinc-800 bg-[#fafafb]/90 dark:bg-zinc-900/90 flex items-center justify-center shrink-0 min-h-[56px]">
+            <CancelButton
+              onClick={onClose}
+              label="Cerrar"
+              className="min-w-[140px] font-sans shadow-xs min-h-[38px] flex items-center justify-center px-6 py-2"
+            />
+          </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modal Secundario de Escáner de Cámara */}
       <BarcodeScannerModal

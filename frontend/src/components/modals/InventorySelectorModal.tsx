@@ -1,19 +1,11 @@
 import React, { useState } from 'react';
+import { X, Layers, Plus, CheckCircle, Shield, Users, ArrowRight, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Layers, Plus, CheckCircle, Shield, Users, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { CancelButton } from '../common/CancelButton';
 import { supabase } from '../../services/supabase';
 import { MinimalDropdown } from '../ui/MinimalDropdown';
-import {
-  ModalShell,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  modalFieldInputClass,
-  modalFieldLabelClass,
-  modalPrimaryButtonClass
-} from './ModalShell';
+import { useModalEscape, useModalMotion } from './modalMotion';
 
 interface InventorySelectorModalProps {
   isOpen: boolean;
@@ -31,6 +23,9 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
   const [newInvCurrency, setNewInvCurrency] = useState('USD');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const { backdropMotion, panelMotion, tabContentMotion } = useModalMotion();
+
+  useModalEscape(isOpen, onClose, !currentInventory || isSubmitting);
 
   const handleCreateInventory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,177 +97,179 @@ export const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
   };
 
   return (
-    <ModalShell
-      isOpen={isOpen}
-      onClose={onClose}
-      maxWidth="lg"
-      disableDismiss={!currentInventory || isSubmitting}
-      formId={isCreatingNew ? 'create-inventory-form' : undefined}
-    >
-      <ModalHeader
-        title="Espacios de inventario"
-        subtitle="Selecciona tu depósito de trabajo o crea uno nuevo"
-        icon={<Layers className="w-4 h-4 lg:w-5 lg:h-5" />}
-        iconTone="indigo"
-        onClose={currentInventory ? onClose : undefined}
-        closeDisabled={isSubmitting}
-      />
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          {...backdropMotion}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+        >
+          <motion.div
+            {...panelMotion}
+            className="mobile-dark-modal bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-lg overflow-hidden shadow-xl flex flex-col"
+          >
+            {/* Cabecera */}
+            <div className="px-6 py-4 border-b border-[#ececec] bg-[#ffffff] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#17191c]/10 text-[#17191c] flex items-center justify-center">
+                  <Layers className="w-5 h-5 text-[#17191c]" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-[#17191c] uppercase tracking-tight">
+                    Espacios de Inventario
+                  </h2>
+                  <p className="text-[11px] text-[#777b86]">
+                    Selecciona tu depósito de trabajo o crea uno nuevo
+                  </p>
+                </div>
+              </div>
+              {currentInventory && (
+                <button
+                  onClick={onClose}
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
 
-      <ModalBody className="space-y-3">
-        {errorMsg && (
-          <div className="p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-200">
-            {errorMsg}
-          </div>
-        )}
+            {/* Lista de Inventarios o Formulario de Creación */}
+            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-3 font-mono">
+              {errorMsg && (
+                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
+                  {errorMsg}
+                </div>
+              )}
 
-        <AnimatePresence mode="wait" initial={false}>
-          {!isCreatingNew ? (
-            <motion.div
-              key="inv-list"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.14 }}
-              className="space-y-2.5"
-            >
-              {(inventories || []).map((inv) => {
-                const isSelected = currentInventory?.id === inv.id;
-                const isOwner = inv.is_owner || inv.role === 'owner';
+              <AnimatePresence mode="wait" initial={false}>
+                {!isCreatingNew ? (
+                  <motion.div key="inventory-list" {...tabContentMotion} className="space-y-3">
+                    {(inventories || []).map((inv) => {
+                      const isSelected = currentInventory?.id === inv.id;
+                      const isOwner = inv.is_owner || inv.role === 'owner';
 
-                return (
-                  <button
-                    key={inv.id}
-                    type="button"
-                    onClick={() => {
-                      selectInventory(inv);
-                      onClose();
-                    }}
-                    className={`w-full min-h-[60px] text-left p-3.5 lg:p-4 rounded-xl border transition-[background-color,border-color,transform] duration-150 active:scale-[0.99] flex items-center justify-between group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${
-                      isSelected
-                        ? 'bg-slate-800/80 border-indigo-500/60 ring-1 ring-indigo-500/25'
-                        : 'bg-slate-950/50 border-slate-800/80 hover:border-slate-700 hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1 pr-3 space-y-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <h4 className="font-semibold text-slate-100 text-sm truncate">
-                          {inv.name}
-                        </h4>
-                        <span
-                          className={`shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${
-                            isOwner
-                              ? 'bg-slate-100 text-slate-950 border-transparent'
-                              : 'bg-slate-800 text-slate-300 border-slate-700'
+                      return (
+                        <button
+                          key={inv.id}
+                          onClick={() => {
+                            selectInventory(inv);
+                            onClose();
+                          }}
+                          className={`mobile-flat-row w-full text-left p-4 rounded-xl border transition-[background-color,border-color] duration-150 flex items-center justify-between group cursor-pointer ${
+                            isSelected
+                              ? 'bg-slate-50 border-slate-900 ring-1 ring-slate-900/15 mobile-card-active'
+                              : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/70'
                           }`}
                         >
-                          {isOwner ? <Shield className="w-2.5 h-2.5" /> : <Users className="w-2.5 h-2.5" />}
-                          {isOwner ? 'Dueño' : 'Colaborador'}
-                        </span>
-                      </div>
-                      <span className="text-[11px] text-slate-400 block truncate">
-                        <span className="font-mono text-slate-300">{inv.currency || 'USD'}</span>
-                        {inv.description ? ` · ${inv.description}` : ''}
-                      </span>
+                          <div className="min-w-0 flex-1 pr-3 space-y-1">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <h4 className="font-bold text-[#17191c] text-sm group-hover:text-[#17191c] transition-colors uppercase truncate">
+                                {inv.name}
+                              </h4>
+                              <span
+                                className={`shrink-0 text-[9px] uppercase px-2 py-0.5 rounded-full tracking-wider flex items-center gap-1 ${
+                                  isOwner
+                                    ? 'bg-[#17191c] text-white'
+                                    : 'bg-[#fafafb] text-[#777b86] border border-[#ececec]'
+                                }`}
+                              >
+                                {isOwner ? <Shield className="w-2.5 h-2.5" /> : <Users className="w-2.5 h-2.5" />}
+                                {isOwner ? 'Dueño' : 'Colaborador'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-[#777b86] block truncate">
+                              MONEDA // {inv.currency || 'USD'}{inv.description ? ` · ${inv.description}` : ''}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {isSelected ? (
+                              <div className="w-8 h-8 rounded-full bg-[#17191c] text-white flex items-center justify-center shadow-sm">
+                                <CheckCircle className="w-4 h-4" />
+                              </div>
+                            ) : (
+                              <div className="w-8 h-8 rounded-full text-[#777b86] group-hover:text-[#17191c] flex items-center justify-center transition-colors">
+                                <ArrowRight className="w-4 h-4" />
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      onClick={() => setIsCreatingNew(true)}
+                      className="w-full mt-2 min-h-[44px] p-3 border-2 border-dashed border-[#ececec] hover:border-[#17191c] rounded-2xl text-xs uppercase tracking-wider text-[#17191c] hover:bg-[#fafafb] transition-all flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-4 h-4 text-white" /> Crear Nuevo Depósito
+                    </button>
+                  </motion.div>
+                ) : (
+                  /* Formulario de Nuevo Inventario */
+                  <motion.form key="inventory-create" {...tabContentMotion} onSubmit={handleCreateInventory} className="space-y-4">
+                    <div>
+                      <label className="block text-xs uppercase tracking-wider text-[#17191c] mb-1">
+                        Nombre del Depósito <span className="text-[#e7000b]">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newInvName}
+                        onChange={e => setNewInvName(e.target.value)}
+                        placeholder="Ej: Depósito Central, Vitrina 1..."
+                        required
+                        className="w-full min-h-[44px] bg-white border border-[#ececec] rounded-xl px-4 py-2 text-sm text-[#17191c] placeholder:text-[#777b86]/50 focus:outline-none focus:ring-1 focus:ring-[#17191c]"
+                      />
                     </div>
 
-                    <div className="flex items-center shrink-0">
-                      {isSelected ? (
-                        <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center shadow-sm">
-                          <CheckCircle className="w-4 h-4" />
-                        </div>
-                      ) : (
-                        <div className="w-8 h-8 rounded-full text-slate-400 group-hover:text-slate-100 flex items-center justify-center transition-colors">
-                          <ArrowRight className="w-4 h-4" />
-                        </div>
-                      )}
+                    <div>
+                      <label className="block text-xs uppercase tracking-wider text-[#17191c] mb-1">
+                        Descripción (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={newInvDesc}
+                        onChange={e => setNewInvDesc(e.target.value)}
+                        placeholder="Ej: Stock de accesorios finos..."
+                        className="w-full min-h-[44px] bg-white border border-[#ececec] rounded-xl px-4 py-2 text-sm text-[#17191c] placeholder:text-[#777b86]/50 focus:outline-none focus:ring-1 focus:ring-[#17191c]"
+                      />
                     </div>
-                  </button>
-                );
-              })}
 
-              <button
-                type="button"
-                onClick={() => setIsCreatingNew(true)}
-                className="w-full mt-2 min-h-[48px] p-3.5 border border-dashed border-slate-700 hover:border-indigo-400/70 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
-              >
-                <Plus className="w-4 h-4 text-indigo-400" />
-                <span>Crear nuevo depósito</span>
-              </button>
-            </motion.div>
-          ) : (
-            <motion.form
-              key="inv-create"
-              id="create-inventory-form"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.14 }}
-              onSubmit={handleCreateInventory}
-              className="space-y-4"
-            >
-              <div>
-                <label className={modalFieldLabelClass}>
-                  Nombre del depósito <span className="text-rose-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={newInvName}
-                  onChange={e => setNewInvName(e.target.value)}
-                  placeholder="Ej: Depósito Central, Vitrina 1..."
-                  required
-                  autoFocus
-                  className={modalFieldInputClass}
-                />
-              </div>
+                    <div>
+                      <label className="block text-xs uppercase tracking-wider text-[#17191c] mb-1">
+                        Moneda Predeterminada
+                      </label>
+                      <MinimalDropdown
+                        value={newInvCurrency}
+                        onChange={(val) => setNewInvCurrency(val)}
+                        options={[
+                          { value: 'PEN', label: 'Soles Peruanos (S/ PEN)' },
+                          { value: 'USD', label: 'Dólar Estadounidense ($ USD)' },
+                          { value: 'EUR', label: 'Euros (€ EUR)' },
+                          { value: 'MXN', label: 'Pesos Mexicanos ($ MXN)' },
+                          { value: 'COP', label: 'Pesos Colombianos ($ COP)' }
+                        ]}
+                      />
+                      <select className="hidden" />
+                    </div>
 
-              <div>
-                <label className={modalFieldLabelClass}>
-                  Descripción (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={newInvDesc}
-                  onChange={e => setNewInvDesc(e.target.value)}
-                  placeholder="Ej: Stock de accesorios finos..."
-                  className={modalFieldInputClass}
-                />
-              </div>
-
-              <div>
-                <label className={modalFieldLabelClass}>
-                  Moneda predeterminada
-                </label>
-                <MinimalDropdown
-                  value={newInvCurrency}
-                  onChange={(val) => setNewInvCurrency(val)}
-                  options={[
-                    { value: 'PEN', label: 'Soles Peruanos (S/ PEN)' },
-                    { value: 'USD', label: 'Dólar Estadounidense ($ USD)' },
-                    { value: 'EUR', label: 'Euros (€ EUR)' },
-                    { value: 'MXN', label: 'Pesos Mexicanos ($ MXN)' },
-                    { value: 'COP', label: 'Pesos Colombianos ($ COP)' }
-                  ]}
-                />
-              </div>
-            </motion.form>
-          )}
-        </AnimatePresence>
-      </ModalBody>
-
-      {isCreatingNew && (
-        <ModalFooter shortcutLabel="para crear">
-          <CancelButton onClick={() => setIsCreatingNew(false)} label="Volver a la lista" disabled={isSubmitting} />
-          <button
-            type="submit"
-            form="create-inventory-form"
-            disabled={isSubmitting || !newInvName.trim()}
-            className={modalPrimaryButtonClass}
-          >
-            {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-            <span>Crear e ingresar</span>
-          </button>
-        </ModalFooter>
+                    <div className="flex max-md:flex-col-reverse justify-end gap-2.5 pt-2">
+                      <CancelButton onClick={() => setIsCreatingNew(false)} label="Volver a la Lista" />
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="min-h-[44px] inline-flex items-center gap-2 px-6 bg-[#17191c] hover:bg-black text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50 transition-all active:scale-95"
+                      >
+                        {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white" /> : <Plus className="w-3.5 h-3.5 text-white" />}
+                        Crear e Ingresar
+                      </button>
+                    </div>
+                  </motion.form>
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        </motion.div>
       )}
-    </ModalShell>
+    </AnimatePresence>
   );
 };

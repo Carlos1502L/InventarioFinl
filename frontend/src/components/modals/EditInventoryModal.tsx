@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  X,
   Settings,
+  DollarSign,
   UserCheck,
   AlertTriangle,
   Trash2,
@@ -25,21 +27,8 @@ import { supabase, uploadProductImage, getApiUrl, formatDate } from '../../servi
 import { useAuth } from '../../context/AuthContext';
 import { MinimalDropdown } from '../ui/MinimalDropdown';
 import { CancelButton } from '../common/CancelButton';
-import { PillOption } from '../common/PillOption';
 import { showAppToast } from '../ui';
-import {
-  ModalShell,
-  ModalHeader,
-  ModalTabsBar,
-  ModalBody,
-  ModalFooter,
-  modalFieldCompactInputClass,
-  modalFieldLabelClass,
-  modalSurfaceCardClass,
-  modalPrimaryButtonClass,
-  modalSecondaryButtonClass,
-  modalDangerButtonClass
-} from './ModalShell';
+import { useLatestValue, useModalEscape, useModalMotion } from './modalMotion';
 
 interface EditInventoryModalProps {
   isOpen: boolean;
@@ -163,7 +152,14 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
     }
   }, [inventory, isOpen, user, mode, isOwner]);
 
-  if (!inventory) return null;
+  const activeInventory = useLatestValue(inventory);
+  const showModal = Boolean(isOpen && activeInventory);
+  const { backdropMotion, panelMotion, tabContentMotion } = useModalMotion();
+  useModalEscape(
+    showModal,
+    onClose,
+    isSavingGeneral || isSavingCurrencyOnly || isRecalculating || isSavingPayments || isTransferring || isDeleting
+  );
 
   const currentRate = Number(inventory?.exchange_rate) || 1.0;
   const parsedNewRate = parseFloat(exchangeRate);
@@ -173,7 +169,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
   // 1. Guardar Cambios Generales de Detalles (Solo Dueño)
   const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isOwner) return;
+    if (!isOwner || !inventory) return;
 
     if (!name.trim()) {
       setFeedbackMsg({ text: 'El nombre del inventario no puede estar vacío.', type: 'error' });
@@ -212,7 +208,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
 
   // 2. Guardar Solo Moneda y Tasa (Sin recalcular catálogo de productos)
   const handleSaveCurrencyOnly = async () => {
-    if (!isOwner) return;
+    if (!isOwner || !inventory) return;
     if (!isValidRate) {
       setFeedbackMsg({ text: 'Ingresa una tasa de cambio numérica válida (ej. 3.750).', type: 'error' });
       return;
@@ -384,7 +380,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
 
   // 4. Subir QR de Yape / Plin
   const handleUploadPaymentQr = async (type: 'yape' | 'plin', file: File) => {
-    if (!isOwner) return;
+    if (!isOwner || !inventory) return;
     try {
       if (type === 'yape') setIsUploadingYape(true);
       else setIsUploadingPlin(true);
@@ -408,7 +404,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
   // Guardar Métodos de Pago
   const handleSavePayments = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isOwner) return;
+    if (!isOwner || !inventory) return;
 
     try {
       setIsSavingPayments(true);
@@ -442,7 +438,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
   // 5. Transferir Propiedad a un Colaborador
   const handleTransferOwnership = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isOwner) return;
+    if (!isOwner || !inventory) return;
 
     if (!selectedNewOwnerId) {
       setFeedbackMsg({ text: 'Selecciona un colaborador para transferir la propiedad.', type: 'error' });
@@ -504,7 +500,7 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
   // 6. Eliminar Inventario con Palabra de Seguridad
   const handleDeleteInventory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isOwner) return;
+    if (!isOwner || !inventory) return;
 
     if (deleteConfirmationInput !== 'DELETE-INVENTORY') {
       setFeedbackMsg({ text: 'Debes escribir exactamente "DELETE-INVENTORY" para confirmar.', type: 'error' });
@@ -546,148 +542,182 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
     }
   };
 
-  const rateLastUpdated = inventory.exchange_rate_updated_at
-    ? formatDate(inventory.exchange_rate_updated_at)
-    : inventory.updated_at
-    ? formatDate(inventory.updated_at)
-    : 'Sin actualizaciones registradas';
-
-  const isBusy = isSavingGeneral || isSavingCurrencyOnly || isRecalculating || isSavingPayments || isTransferring || isDeleting;
-  const activeFormId =
-    mode === 'payments' || activeTab === 'payments'
-      ? isOwner
-        ? 'edit-inv-payments-form'
-        : undefined
-      : activeTab === 'general' && isOwner
-      ? 'edit-inv-general-form'
-      : activeTab === 'transfer' && isOwner && collaborators.length > 0
-      ? 'edit-inv-transfer-form'
-      : activeTab === 'danger' && isOwner
-      ? 'edit-inv-danger-form'
-      : undefined;
-
   return (
-    <ModalShell
-      isOpen={isOpen}
-      onClose={onClose}
-      maxWidth="lg"
-      disableDismiss={isBusy}
-      formId={activeFormId}
-    >
-      <ModalHeader
-        title={
-          mode === 'payments'
-            ? 'Pasarela de pagos'
-            : isOwner
-            ? 'Editar información'
-            : 'Información de inventario'
-        }
-        subtitle={inventory.name}
-        icon={
-          mode === 'payments' ? (
-            <QrCode className="w-4 h-4 lg:w-5 lg:h-5" />
-          ) : isOwner ? (
-            <Settings className="w-4 h-4 lg:w-5 lg:h-5" />
-          ) : (
-            <Info className="w-4 h-4 lg:w-5 lg:h-5" />
-          )
-        }
-        iconTone={mode === 'payments' ? 'emerald' : 'indigo'}
-        onClose={onClose}
-        closeDisabled={isBusy}
-      />
+    <AnimatePresence>
+      {showModal && activeInventory && ((inventory: Inventory) => {
+        const rateLastUpdated = inventory.exchange_rate_updated_at
+          ? formatDate(inventory.exchange_rate_updated_at)
+          : inventory.updated_at
+          ? formatDate(inventory.updated_at)
+          : 'Sin actualizaciones registradas';
 
-      {mode !== 'payments' && (
-        <ModalTabsBar>
-          <PillOption
-            active={activeTab === 'general'}
-            onClick={() => setActiveTab('general')}
-            icon={<Layers className="w-3.5 h-3.5" />}
+        return (
+          <motion.div
+            key="edit-inventory-backdrop"
+            {...backdropMotion}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/85 backdrop-blur-sm p-3 sm:p-4"
           >
-            Detalles
-          </PillOption>
-          <PillOption
-            active={activeTab === 'currency'}
-            onClick={() => setActiveTab('currency')}
-            icon={<Coins className="w-3.5 h-3.5" />}
-          >
-            Moneda
-          </PillOption>
-          {isOwner && (
-            <PillOption
-              active={activeTab === 'transfer'}
-              onClick={() => setActiveTab('transfer')}
-              icon={<UserCheck className="w-3.5 h-3.5" />}
-            >
-              Propietario
-            </PillOption>
-          )}
-          {isOwner && (
-            <PillOption
-              active={activeTab === 'danger'}
-              onClick={() => setActiveTab('danger')}
-              icon={<Trash2 className="w-3.5 h-3.5" />}
-            >
-              Eliminar
-            </PillOption>
-          )}
-        </ModalTabsBar>
-      )}
-
-      <ModalBody className="space-y-4">
-        {feedbackMsg && (
-          <div
-            className={`p-3 rounded-xl text-xs border ${
-              feedbackMsg.type === 'success'
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
-                : 'bg-rose-500/10 border-rose-500/30 text-rose-200'
-            }`}
-          >
-            {feedbackMsg.text}
-          </div>
-        )}
-
-        <AnimatePresence mode="wait" initial={false}>
-          {mode !== 'payments' && activeTab === 'general' && (
             <motion.div
-              key="edit-general"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.14 }}
+              key="edit-inventory-panel"
+              {...panelMotion}
+              className="mobile-dark-modal bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[92vh]"
             >
-              {!isOwner ? (
+          {/* Cabecera */}
+          <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-2xl">
+                {mode === 'payments' ? (
+                  <QrCode className="w-5 h-5" />
+                ) : isOwner ? (
+                  <Settings className="w-5 h-5" />
+                ) : (
+                  <Info className="w-5 h-5" />
+                )}
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                  {mode === 'payments'
+                    ? 'Pasarela de Pagos'
+                    : isOwner
+                    ? 'Editar Información'
+                    : 'Información de Inventario'}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {inventory.name}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Barra de Pestañas Deslizable Horizontalmente (Swipeable Tabs) */}
+          {mode !== 'payments' && (
+            <div className="mobile-tabs-bar flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 text-xs font-semibold overflow-x-auto no-scrollbar scroll-smooth">
+              {/* Pestaña 1: Detalles */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('general')}
+                className={`py-2.5 px-3.5 shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                  activeTab === 'general'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-500/5 mobile-tab-active font-bold'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
+                }`}
+              >
+                <Layers className="w-4 h-4" /> Detalles
+              </button>
+
+              {/* Pestaña 2: Moneda */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('currency')}
+                className={`py-2.5 px-3.5 shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                  activeTab === 'currency'
+                    ? 'border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-500/5 mobile-tab-active font-bold'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
+                }`}
+              >
+                <Coins className="w-4 h-4" /> Moneda
+              </button>
+
+              {/* Pestaña 3: Propietario (Solo Dueño) */}
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('transfer')}
+                  className={`py-2.5 px-3.5 shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'transfer'
+                      ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-500/5 mobile-tab-active font-bold'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
+                  }`}
+                >
+                  <UserCheck className="w-4 h-4" /> Propietario
+                </button>
+              )}
+
+              {/* Pestaña 4: Eliminar (Solo Dueño) */}
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('danger')}
+                  className={`py-2.5 px-3.5 shrink-0 flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'danger'
+                      ? 'border-rose-500 text-rose-600 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-500/5 mobile-tab-active font-bold'
+                      : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
+                  }`}
+                >
+                  <Trash2 className="w-4 h-4" /> Eliminar
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Contenido del Modal */}
+          <div className="p-5 overflow-y-auto space-y-4">
+            {feedbackMsg && (
+              <div
+                className={`p-3 rounded-xl text-xs border ${
+                  feedbackMsg.type === 'success'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+                    : 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400'
+                }`}
+              >
+                {feedbackMsg.text}
+              </div>
+            )}
+
+            <AnimatePresence mode="wait" initial={false}>
+              {/* TAB 1: DETALLES GENERALES */}
+              {mode !== 'payments' && activeTab === 'general' && (
+                <motion.div key="edit-tab-general" {...tabContentMotion}>
+                  {!isOwner ? (
+                /* Vista Colaborador: Solo Lectura */
                 <div className="space-y-4">
-                  <div className={`${modalSurfaceCardClass} space-y-2`}>
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-medium text-slate-400">Depósito activo</span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-200 text-[10px] font-mono font-semibold uppercase">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                        Depósito Activo
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
                         {inventory.inventory_type === 'PERSONAL' ? (
                           <>
-                            <User className="w-3 h-3" /> PERSONAL
+                            <User className="w-3 h-3" /> Personal
                           </>
                         ) : (
                           <>
-                            <Briefcase className="w-3 h-3" /> BUSINESS
+                            <Briefcase className="w-3 h-3" /> Negocio
                           </>
                         )}
                       </span>
                     </div>
-                    <h4 className="text-base font-semibold text-slate-100">{inventory.name}</h4>
+                    <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                      {inventory.name}
+                    </h4>
                   </div>
 
-                  <div>
-                    <label className={modalFieldLabelClass}>Descripción del inventario</label>
-                    <div className="p-3.5 bg-slate-950/60 rounded-xl border border-slate-800/80 text-xs text-slate-300 min-h-[70px] leading-relaxed">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Descripción del Inventario
+                    </label>
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 min-h-[70px] leading-relaxed">
                       {inventory.description || 'Sin notas descriptivas establecidas por el dueño.'}
                     </div>
                   </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <CancelButton onClick={onClose} label="Cerrar" />
+                  </div>
                 </div>
               ) : (
-                <form id="edit-inv-general-form" onSubmit={handleSaveGeneral} className="space-y-4">
+                /* Vista Dueño: Formulario Editable */
+                <form onSubmit={handleSaveGeneral} className="space-y-4">
                   <div>
-                    <label className={modalFieldLabelClass}>
-                      Nombre del inventario <span className="text-rose-400">*</span>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Nombre del Inventario <span className="text-blue-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -695,129 +725,144 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                       onChange={e => setName(e.target.value)}
                       placeholder="Ej: Depósito Central, Colección Personal..."
                       required
-                      className={modalFieldCompactInputClass}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
                     />
                   </div>
 
                   <div>
-                    <label className={modalFieldLabelClass}>Tipo de inventario</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Tipo de Inventario
+                    </label>
+                    <div className="grid grid-cols-2 gap-2.5">
                       <button
                         type="button"
                         onClick={() => setInventoryType('BUSINESS')}
-                        className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                        className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                           inventoryType === 'BUSINESS'
-                            ? 'bg-slate-800/80 border-indigo-500/70 ring-1 ring-indigo-500/30'
-                            : 'bg-slate-950/50 border-slate-800 hover:border-slate-700'
+                            ? 'bg-blue-50/80 dark:bg-blue-600/10 border-blue-500 ring-2 ring-blue-500/20 mobile-card-active'
+                            : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <div className="flex items-center gap-2">
-                            <Briefcase className={`w-4 h-4 ${inventoryType === 'BUSINESS' ? 'text-indigo-400' : 'text-slate-400'}`} />
-                            <span className="font-semibold text-xs text-slate-100">Negocio / Venta</span>
-                          </div>
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300">
-                            BUSINESS
-                          </span>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Briefcase className={`w-4 h-4 ${inventoryType === 'BUSINESS' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
+                          <span className="font-bold text-xs text-slate-900 dark:text-white">Negocio / Venta</span>
                         </div>
-                        <p className="text-[11px] text-slate-400">
-                          Costos, margen %, caja y módulo POS.
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Precios de costo, markup %, caja y módulo de ventas.
                         </p>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setInventoryType('PERSONAL')}
-                        className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                        className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                           inventoryType === 'PERSONAL'
-                            ? 'bg-slate-800/80 border-indigo-500/70 ring-1 ring-indigo-500/30'
-                            : 'bg-slate-950/50 border-slate-800 hover:border-slate-700'
+                            ? 'bg-blue-50/80 dark:bg-blue-600/10 border-blue-500 ring-2 ring-blue-500/20 mobile-card-active'
+                            : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <div className="flex items-center gap-2">
-                            <User className={`w-4 h-4 ${inventoryType === 'PERSONAL' ? 'text-indigo-400' : 'text-slate-400'}`} />
-                            <span className="font-semibold text-xs text-slate-100">Personal</span>
-                          </div>
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300">
-                            PERSONAL
-                          </span>
+                        <div className="flex items-center gap-2 mb-1">
+                          <User className={`w-4 h-4 ${inventoryType === 'PERSONAL' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
+                          <span className="font-bold text-xs text-slate-900 dark:text-white">Personal / Colección</span>
                         </div>
-                        <p className="text-[11px] text-slate-400">
-                          Control propio de artículos y valorización.
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Control propio de objetos con precio base y valorización.
                         </p>
                       </button>
                     </div>
                   </div>
 
                   <div>
-                    <label className={modalFieldLabelClass}>Descripción del inventario</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Descripción del Inventario
+                    </label>
                     <textarea
                       value={description}
                       onChange={e => setDescription(e.target.value)}
                       placeholder="Notas descriptivas o dirección del depósito..."
                       rows={3}
-                      className="w-full bg-slate-950/75 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm lg:text-xs text-slate-100 placeholder:text-slate-400/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
                     />
                   </div>
+
+                  <div className="pt-2 flex max-md:flex-col-reverse justify-end gap-2.5">
+                    <CancelButton onClick={onClose} />
+                    <button
+                      type="submit"
+                      disabled={isSavingGeneral}
+                      className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-50 transition-all active:scale-95 cursor-pointer"
+                    >
+                      {isSavingGeneral ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                      <span>Guardar Cambios</span>
+                    </button>
+                  </div>
                 </form>
+                  )}
+                </motion.div>
               )}
-            </motion.div>
-          )}
 
-          {mode !== 'payments' && activeTab === 'currency' && (
-            <motion.div
-              key="edit-currency"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.14 }}
-              className="space-y-4"
-            >
-              {!isOwner ? (
-                <div className={`${modalSurfaceCardClass} space-y-3`}>
-                  <div className="flex items-center gap-2 text-slate-100 font-semibold text-xs">
-                    <Coins className="w-4 h-4 text-amber-400" />
-                    <span>Moneda y tipo de cambio operativo</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
-                      <span className="text-[11px] text-slate-400 block">Moneda base</span>
-                      <strong className="text-sm font-mono text-slate-100 block mt-0.5">
-                        {inventory.currency || 'PEN'}
-                      </strong>
+              {/* TAB 2: MONEDA Y TASA DE CAMBIO */}
+              {mode !== 'payments' && activeTab === 'currency' && (
+                <motion.div key="edit-tab-currency" {...tabContentMotion}>
+                  {!isOwner ? (
+                /* Vista Colaborador: Solo Lectura */
+                <div className="space-y-4">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                    <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
+                      <Coins className="w-4 h-4 text-amber-500" />
+                      <span>Moneda y Tipo de Cambio Operativo</span>
                     </div>
 
-                    <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
-                      <span className="text-[11px] text-slate-400 block">Tasa operativa</span>
-                      <strong className="text-sm font-mono tabular-nums text-slate-100 block mt-0.5">
-                        {Number(inventory.exchange_rate || 1.000).toFixed(3)}
-                      </strong>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+                        <span className="text-[10px] text-slate-400 block uppercase font-mono">
+                          Moneda Base
+                        </span>
+                        <strong className="text-sm text-slate-900 dark:text-white block mt-0.5">
+                          {inventory.currency || 'PEN'}
+                        </strong>
+                      </div>
+
+                      <div className="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+                        <span className="text-[10px] text-slate-400 block uppercase font-mono">
+                          Tasa Operativa
+                        </span>
+                        <strong className="text-sm font-mono text-slate-900 tabular-nums block mt-0.5">
+                          {Number(inventory.exchange_rate || 1.000).toFixed(3)}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-mono pt-1">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Última actualización de tasa: {rateLastUpdated}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono tabular-nums pt-1">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Última actualización: {rateLastUpdated}</span>
+                  <div className="pt-2 flex justify-end">
+                    <CancelButton onClick={onClose} label="Cerrar" />
                   </div>
                 </div>
               ) : (
+                /* Vista Dueño: Control de Divisas, Ajuste y Botón "Actualizar precios" */
                 <div className="space-y-4">
-                  <div className={`${modalSurfaceCardClass} space-y-4`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-xs text-slate-100 flex items-center gap-1.5">
-                        <Coins className="w-4 h-4 text-amber-400" />
-                        <span>Moneda y tipo de cambio</span>
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <Coins className="w-4 h-4 text-amber-500" />
+                        <span>Gestión de Moneda y Tipo de Cambio</span>
                       </span>
-                      <span className="text-[11px] font-mono tabular-nums text-slate-400">
-                        Ratio: {ratio.toFixed(3)}x
+                      <span className="text-[10px] font-mono text-slate-400">
+                        Catálogo & Precios
                       </span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {/* Moneda del Inventario */}
                       <div>
-                        <label className={modalFieldLabelClass}>Moneda del inventario</label>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                          Moneda del Inventario
+                        </label>
                         <MinimalDropdown
                           value={currency}
                           onChange={(val) => setCurrency(val)}
@@ -825,11 +870,12 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                         />
                       </div>
 
+                      {/* Tasa de Cambio Operativa */}
                       <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <label className="text-xs font-medium text-slate-300">Tasa de cambio</label>
-                          <span className="text-[10px] font-mono text-slate-400">3 decimales</span>
-                        </div>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center justify-between">
+                          <span>Tasa de Cambio Operativa</span>
+                          <span className="text-[9px] font-mono text-slate-400">3 decimales</span>
+                        </label>
                         <input
                           type="number"
                           step="0.001"
@@ -838,26 +884,31 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                           value={exchangeRate}
                           onChange={e => setExchangeRate(e.target.value)}
                           placeholder="Ej. 3.750"
-                          className={`${modalFieldCompactInputClass} font-mono tabular-nums font-semibold`}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-800/80">
-                      <span className="flex items-center gap-1.5">
+                    {/* Marca de tiempo de última actualización */}
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                      <span className="flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Última act.:</span>
+                        <span>Última act. de tasa:</span>
                       </span>
-                      <span className="text-slate-200 tabular-nums">{rateLastUpdated}</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-medium">
+                        {rateLastUpdated}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="space-y-2.5">
+                  {/* Botones de Acción en Pestaña Moneda */}
+                  <div className="space-y-2.5 pt-1">
+                    {/* Botón Principal: Actualizar precios (Ejecución Directa) */}
                     <button
                       type="button"
                       onClick={handleExecuteRecalculate}
                       disabled={isSavingCurrencyOnly || isRecalculating || !isValidRate}
-                      className={`${modalPrimaryButtonClass} w-full`}
+                      className="w-full h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 active:scale-[0.98] cursor-pointer disabled:opacity-50"
                     >
                       {isRecalculating ? (
                         <>
@@ -867,311 +918,278 @@ export const EditInventoryModal: React.FC<EditInventoryModalProps> = ({
                       ) : (
                         <>
                           <RefreshCw className="w-4 h-4" />
-                          <span>Actualizar precios de todo el catálogo</span>
+                          <span>Actualizar precios</span>
                         </>
                       )}
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={handleSaveCurrencyOnly}
-                      disabled={isSavingCurrencyOnly || isRecalculating || !isValidRate}
-                      className={`${modalSecondaryButtonClass} w-full`}
-                    >
-                      {isSavingCurrencyOnly ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                      <span>Guardar moneda / tasa (sin recalcular)</span>
-                    </button>
+                    {/* Botón Secundario: Guardar Moneda / Tasa sin recalcular */}
+                    <div className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={handleSaveCurrencyOnly}
+                        disabled={isSavingCurrencyOnly || isRecalculating || !isValidRate}
+                        className="w-full h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer disabled:opacity-50"
+                      >
+                        {isSavingCurrencyOnly ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Save className="w-3.5 h-3.5" />
+                        )}
+                        <span>Guardar Moneda / Tasa (Sin recalcular)</span>
+                      </button>
+                      <p className="text-[10px] text-center text-slate-500 dark:text-slate-400">
+                        Aplica este nuevo tipo de cambio a nuevos productos ingresados sin alterar los precios actuales.
+                      </p>
+                    </div>
                   </div>
                 </div>
+                  )}
+                </motion.div>
               )}
-            </motion.div>
-          )}
 
-          {(mode === 'payments' || activeTab === 'payments') && (
-            <motion.form
-              key="edit-payments"
-              id="edit-inv-payments-form"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.14 }}
-              onSubmit={handleSavePayments}
-              className="space-y-4"
-            >
-              <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-xs text-emerald-200 space-y-1">
-                <div className="flex items-center gap-2 font-semibold text-emerald-300">
-                  <Smartphone className="w-4 h-4" />
-                  <span>Cobro rápido con Yape y Plin</span>
-                </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed">
-                  Configura tu teléfono y tus códigos QR para mostrarlos en el punto de venta al cobrar.
-                </p>
-              </div>
-
-              <div className={`${modalSurfaceCardClass} space-y-3`}>
-                <span className="font-semibold text-xs text-purple-300 flex items-center gap-1.5">
-                  <QrCode className="w-4 h-4" /> Configuración de Yape
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className={modalFieldLabelClass}>Teléfono Yape</label>
-                    <input
-                      type="text"
-                      value={yapePhone}
-                      onChange={e => setYapePhone(e.target.value)}
-                      placeholder="Ej: 999 123 456"
-                      disabled={!isOwner}
-                      className={`${modalFieldCompactInputClass} font-mono tabular-nums disabled:opacity-60`}
-                    />
+              {/* TAB 3: PASARELA DE PAGOS YAPE / PLIN (RF-06.3) */}
+              {(mode === 'payments' || activeTab === 'payments') && (
+                <motion.form key="edit-tab-payments" {...tabContentMotion} onSubmit={handleSavePayments} className="space-y-4">
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-600/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
+                  <div className="flex items-center gap-2 font-bold">
+                    <Smartphone className="w-4 h-4" /> Cobro Rápido con Yape y Plin
                   </div>
+                  <p className="text-[11px] text-emerald-700/90 dark:text-emerald-400/90">
+                    Configura tu número de teléfono y tus códigos QR para que los clientes puedan escanear y pagar directamente desde la pantalla de venta.
+                  </p>
+                </div>
 
-                  <div>
-                    <label className={modalFieldLabelClass}>Foto de tu QR Yape</label>
-                    <input
-                      ref={yapeFileRef}
-                      type="file"
-                      accept="image/*"
-                      disabled={!isOwner}
-                      onChange={e => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleUploadPaymentQr('yape', e.target.files[0]);
-                        }
-                      }}
-                      className="hidden"
-                    />
-                    <div className="flex items-center gap-2">
-                      {isOwner && (
-                        <button
-                          type="button"
-                          onClick={() => yapeFileRef.current?.click()}
-                          disabled={isUploadingYape}
-                          className={`${modalSecondaryButtonClass} flex-1 min-h-[38px]`}
-                        >
-                          {isUploadingYape ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 text-purple-300" />}
-                          <span>{yapeQrUrl ? 'Cambiar QR' : 'Subir QR'}</span>
-                        </button>
-                      )}
-                      {yapeQrUrl && (
-                        <img
-                          src={yapeQrUrl}
-                          alt="QR Yape"
-                          className="w-10 h-10 object-cover rounded-lg border border-slate-700 bg-white shrink-0"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      )}
+                {/* Yape */}
+                <div className="mobile-flat-section p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                  <span className="font-bold text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
+                    <QrCode className="w-4 h-4" /> Configuración de Yape
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        Teléfono Yape
+                      </label>
+                      <input
+                        type="text"
+                        value={yapePhone}
+                        onChange={e => setYapePhone(e.target.value)}
+                        placeholder="Ej: 999 123 456"
+                        disabled={!isOwner}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-60"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        Foto de tu QR Yape
+                      </label>
+                      <input
+                        ref={yapeFileRef}
+                        type="file"
+                        accept="image/*"
+                        disabled={!isOwner}
+                        onChange={e => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleUploadPaymentQr('yape', e.target.files[0]);
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      <div className="flex items-center gap-2">
+                        {isOwner && (
+                          <button
+                            type="button"
+                            onClick={() => yapeFileRef.current?.click()}
+                            disabled={isUploadingYape}
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all cursor-pointer"
+                          >
+                            {isUploadingYape ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                            {yapeQrUrl ? 'Cambiar QR' : 'Subir QR'}
+                          </button>
+                        )}
+                        {yapeQrUrl && (
+                          <img src={yapeQrUrl} alt="QR Yape" className="w-9 h-9 object-cover rounded-lg border border-slate-200 dark:border-slate-700" loading="lazy" decoding="async" />
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className={`${modalSurfaceCardClass} space-y-3`}>
-                <span className="font-semibold text-xs text-sky-300 flex items-center gap-1.5">
-                  <QrCode className="w-4 h-4" /> Configuración de Plin
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className={modalFieldLabelClass}>Teléfono Plin</label>
-                    <input
-                      type="text"
-                      value={plinPhone}
-                      onChange={e => setPlinPhone(e.target.value)}
-                      placeholder="Ej: 999 123 456"
-                      disabled={!isOwner}
-                      className={`${modalFieldCompactInputClass} font-mono tabular-nums disabled:opacity-60`}
-                    />
-                  </div>
+                {/* Plin */}
+                <div className="mobile-flat-section p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                  <span className="font-bold text-xs text-sky-600 dark:text-sky-400 flex items-center gap-1.5">
+                    <QrCode className="w-4 h-4" /> Configuración de Plin
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        Teléfono Plin
+                      </label>
+                      <input
+                        type="text"
+                        value={plinPhone}
+                        onChange={e => setPlinPhone(e.target.value)}
+                        placeholder="Ej: 999 123 456"
+                        disabled={!isOwner}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-60"
+                      />
+                    </div>
 
-                  <div>
-                    <label className={modalFieldLabelClass}>Foto de tu QR Plin</label>
-                    <input
-                      ref={plinFileRef}
-                      type="file"
-                      accept="image/*"
-                      disabled={!isOwner}
-                      onChange={e => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleUploadPaymentQr('plin', e.target.files[0]);
-                        }
-                      }}
-                      className="hidden"
-                    />
-                    <div className="flex items-center gap-2">
-                      {isOwner && (
-                        <button
-                          type="button"
-                          onClick={() => plinFileRef.current?.click()}
-                          disabled={isUploadingPlin}
-                          className={`${modalSecondaryButtonClass} flex-1 min-h-[38px]`}
-                        >
-                          {isUploadingPlin ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 text-sky-300" />}
-                          <span>{plinQrUrl ? 'Cambiar QR' : 'Subir QR'}</span>
-                        </button>
-                      )}
-                      {plinQrUrl && (
-                        <img
-                          src={plinQrUrl}
-                          alt="QR Plin"
-                          className="w-10 h-10 object-cover rounded-lg border border-slate-700 bg-white shrink-0"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      )}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        Foto de tu QR Plin
+                      </label>
+                      <input
+                        ref={plinFileRef}
+                        type="file"
+                        accept="image/*"
+                        disabled={!isOwner}
+                        onChange={e => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleUploadPaymentQr('plin', e.target.files[0]);
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      <div className="flex items-center gap-2">
+                        {isOwner && (
+                          <button
+                            type="button"
+                            onClick={() => plinFileRef.current?.click()}
+                            disabled={isUploadingPlin}
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-all cursor-pointer"
+                          >
+                            {isUploadingPlin ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                            {plinQrUrl ? 'Cambiar QR' : 'Subir QR'}
+                          </button>
+                        )}
+                        {plinQrUrl && (
+                          <img src={plinQrUrl} alt="QR Plin" className="w-9 h-9 object-cover rounded-lg border border-slate-200 dark:border-slate-700" loading="lazy" decoding="async" />
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </motion.form>
-          )}
 
-          {activeTab === 'transfer' && isOwner && (
-            <motion.form
-              key="edit-transfer"
-              id="edit-inv-transfer-form"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.14 }}
-              onSubmit={handleTransferOwnership}
-              className="space-y-4"
-            >
-              <div className="p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl space-y-1.5">
-                <div className="flex items-center gap-2 text-xs font-semibold text-indigo-300">
-                  <Shield className="w-4 h-4 text-indigo-400" />
-                  <span>Transferencia de propiedad</span>
+                <div className="pt-2 flex max-md:flex-col-reverse justify-end gap-2.5">
+                  <CancelButton onClick={onClose} label={isOwner ? 'Cancelar' : 'Cerrar'} />
+                  {isOwner && (
+                    <button
+                      type="submit"
+                      disabled={isSavingPayments}
+                      className="inline-flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-emerald-600/20 disabled:opacity-50 transition-all active:scale-95 cursor-pointer"
+                    >
+                      {isSavingPayments ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                      Guardar Métodos de Pago
+                    </button>
+                  )}
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Al transferir la propiedad, el colaborador seleccionado pasará a ser el <strong>Dueño legítimo</strong> del inventario y tú mantendrás acceso como <strong>Colaborador</strong>.
-                </p>
-              </div>
+                </motion.form>
+              )}
 
-              {loadingCollaborators ? (
-                <div className="text-center py-6 text-xs text-slate-400">Cargando colaboradores disponibles...</div>
-              ) : collaborators.length === 0 ? (
-                <div className={`${modalSurfaceCardClass} text-center space-y-2`}>
-                  <p className="text-xs text-slate-300">
-                    No tienes colaboradores activos en este inventario a quienes transferir la propiedad.
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    Primero invita al nuevo usuario desde la sección "Equipo y colaboradores".
+              {/* TAB 4: TRANSFERIR PROPIEDAD (Solo Dueño) */}
+              {activeTab === 'transfer' && isOwner && (
+                <motion.form key="edit-tab-transfer" {...tabContentMotion} onSubmit={handleTransferOwnership} className="space-y-4">
+                <div className="p-3.5 bg-indigo-50/70 dark:bg-indigo-600/10 border border-indigo-200 dark:border-indigo-500/30 rounded-2xl space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs font-bold text-indigo-700 dark:text-indigo-300">
+                    <Shield className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    Transferencia de Propiedad
+                  </div>
+                  <p className="text-xs text-indigo-600/90 dark:text-indigo-300/80 leading-relaxed">
+                    Al transferir la propiedad, el colaborador seleccionado pasará a ser el <strong>Dueño Legitimo</strong> del inventario y tú mantendrás acceso como <strong>Colaborador</strong>.
                   </p>
                 </div>
-              ) : (
+
+                {loadingCollaborators ? (
+                  <div className="text-center py-6 text-xs text-slate-400">Cargando colaboradores disponibles...</div>
+                ) : collaborators.length === 0 ? (
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 text-center space-y-2">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                      No tienes colaboradores activos en este inventario a quienes transferir la propiedad.
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      Primero invita al nuevo usuario por correo electrónico desde la sección <strong>"Equipo y Colaboradores"</strong>.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Seleccionar Nuevo Dueño:
+                    </label>
+                    <MinimalDropdown
+                      value={selectedNewOwnerId}
+                      onChange={(val) => setSelectedNewOwnerId(val)}
+                      placeholder="Seleccionar colaborador..."
+                      options={collaborators.map((c) => ({
+                        value: c.user_id,
+                        label: c.profiles?.full_name || c.profiles?.email || 'Colaborador',
+                        badge: c.profiles?.full_name ? c.profiles.email : undefined
+                      }))}
+                    />
+
+                    <div className="pt-4 flex max-md:flex-col-reverse justify-end gap-2.5">
+                      <CancelButton onClick={onClose} />
+                      <button
+                        type="submit"
+                        disabled={isTransferring || !selectedNewOwnerId}
+                        className="inline-flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-600/20 disabled:opacity-50 transition-all active:scale-95 cursor-pointer"
+                      >
+                        {isTransferring ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserCheck className="w-3.5 h-3.5" />}
+                        Transferir Propiedad
+                      </button>
+                    </div>
+                  </div>
+                )}
+                </motion.form>
+              )}
+
+              {/* TAB 5: ZONA DE PELIGRO (Solo Dueño) */}
+              {activeTab === 'danger' && isOwner && (
+                <motion.form key="edit-tab-danger" {...tabContentMotion} onSubmit={handleDeleteInventory} className="space-y-4">
+                <div className="p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-2xl space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-400">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                    Advertencia de Eliminación Permanente
+                  </div>
+                  <p className="text-xs text-rose-600/90 dark:text-rose-300/80 leading-relaxed">
+                    Se eliminará permanentemente el inventario <strong>"{inventory.name}"</strong>, y toda su información existente. Esta acción es irreversible.
+                  </p>
+                </div>
+
                 <div>
-                  <label className={modalFieldLabelClass}>Seleccionar nuevo dueño</label>
-                  <MinimalDropdown
-                    value={selectedNewOwnerId}
-                    onChange={(val) => setSelectedNewOwnerId(val)}
-                    placeholder="Seleccionar colaborador..."
-                    options={collaborators.map((c) => ({
-                      value: c.user_id,
-                      label: c.profiles?.full_name || c.profiles?.email || 'Colaborador',
-                      badge: c.profiles?.full_name ? c.profiles.email : undefined
-                    }))}
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Para confirmar, escribe exactamente <span className="font-mono text-rose-600 dark:text-rose-400 font-bold select-all bg-rose-50 dark:bg-rose-500/20 px-1.5 py-0.5 rounded">DELETE-INVENTORY</span>:
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmationInput}
+                    onChange={e => setDeleteConfirmationInput(e.target.value)}
+                    placeholder="DELETE-INVENTORY"
+                    required
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white dark:focus:bg-slate-800"
                   />
                 </div>
-              )}
-            </motion.form>
-          )}
 
-          {activeTab === 'danger' && isOwner && (
-            <motion.form
-              key="edit-danger"
-              id="edit-inv-danger-form"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.14 }}
-              onSubmit={handleDeleteInventory}
-              className="space-y-4"
-            >
-              <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl space-y-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-rose-300">
-                  <AlertTriangle className="w-4 h-4 text-rose-400" />
-                  <span>Advertencia de eliminación permanente</span>
+                <div className="pt-2 flex max-md:flex-col-reverse justify-end gap-2.5">
+                  <CancelButton onClick={onClose} />
+                  <button
+                    type="submit"
+                    disabled={isDeleting || deleteConfirmationInput !== 'DELETE-INVENTORY'}
+                    className="inline-flex items-center gap-1.5 px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-rose-600/20 disabled:opacity-40 transition-all active:scale-95 cursor-pointer"
+                  >
+                    {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    Eliminar este Inventario Definitivamente
+                  </button>
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Se eliminará permanentemente el inventario <strong className="text-white">"{inventory.name}"</strong> y toda su información existente. Esta acción es irreversible.
-                </p>
-              </div>
-
-              <div>
-                <label className={modalFieldLabelClass}>
-                  Para confirmar, escribe exactamente{' '}
-                  <span className="font-mono text-rose-300 font-bold select-all bg-rose-500/15 border border-rose-500/30 px-1.5 py-0.5 rounded">
-                    DELETE-INVENTORY
-                  </span>
-                  :
-                </label>
-                <input
-                  type="text"
-                  value={deleteConfirmationInput}
-                  onChange={e => setDeleteConfirmationInput(e.target.value)}
-                  placeholder="DELETE-INVENTORY"
-                  required
-                  className={`${modalFieldCompactInputClass} font-mono tracking-wider`}
-                />
-              </div>
-            </motion.form>
-          )}
-        </AnimatePresence>
-      </ModalBody>
-
-      <ModalFooter shortcutLabel={activeFormId ? 'para confirmar' : undefined}>
-        <CancelButton
-          onClick={onClose}
-          label={isOwner && activeFormId ? 'Cancelar' : 'Cerrar'}
-          disabled={isBusy}
-        />
-
-        {activeTab === 'general' && mode !== 'payments' && isOwner && (
-          <button
-            type="submit"
-            form="edit-inv-general-form"
-            disabled={isSavingGeneral}
-            className={modalPrimaryButtonClass}
-          >
-            {isSavingGeneral ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-            <span>Guardar cambios</span>
-          </button>
-        )}
-
-        {(mode === 'payments' || activeTab === 'payments') && isOwner && (
-          <button
-            type="submit"
-            form="edit-inv-payments-form"
-            disabled={isSavingPayments}
-            className="min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl shadow-sm transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-45 cursor-pointer"
-          >
-            {isSavingPayments ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-            <span>Guardar métodos de pago</span>
-          </button>
-        )}
-
-        {activeTab === 'transfer' && isOwner && collaborators.length > 0 && (
-          <button
-            type="submit"
-            form="edit-inv-transfer-form"
-            disabled={isTransferring || !selectedNewOwnerId}
-            className={modalPrimaryButtonClass}
-          >
-            {isTransferring ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserCheck className="w-3.5 h-3.5" />}
-            <span>Transferir propiedad</span>
-          </button>
-        )}
-
-        {activeTab === 'danger' && isOwner && (
-          <button
-            type="submit"
-            form="edit-inv-danger-form"
-            disabled={isDeleting || deleteConfirmationInput !== 'DELETE-INVENTORY'}
-            className={modalDangerButtonClass}
-          >
-            {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-            <span>Eliminar inventario</span>
-          </button>
-        )}
-      </ModalFooter>
-    </ModalShell>
+                </motion.form>
+              )}
+            </AnimatePresence>
+          </div>
+            </motion.div>
+          </motion.div>
+        );
+      })(activeInventory)}
+    </AnimatePresence>
   );
 };

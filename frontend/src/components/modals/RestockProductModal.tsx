@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Barcode, Plus, Loader2, Eye, AlertCircle, Layers } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, Barcode, Plus, Loader2, Eye, AlertCircle, Layers } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Product } from '../../types/database';
 import {
   supabase,
@@ -11,16 +12,7 @@ import {
 } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { CancelButton } from '../common/CancelButton';
-import {
-  ModalShell,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  modalFieldInputClass,
-  modalFieldLabelClass,
-  modalSurfaceCardClass,
-  modalPrimaryButtonClass
-} from './ModalShell';
+import { useLatestValue, useModalEscape, useModalMotion } from './modalMotion';
 
 interface RestockProductModalProps {
   product: Product | null;
@@ -40,11 +32,6 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
   onUseCodeAnyway
 }) => {
   const { currentInventory, user } = useAuth();
-  const lastProductRef = useRef<Product | null>(null);
-  if (product) {
-    lastProductRef.current = product;
-  }
-  const activeProduct = product || lastProductRef.current;
 
   // Estado para producto tipo UNIT
   const [unitsToAdd, setUnitsToAdd] = useState<string>('1');
@@ -65,13 +52,13 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
     }
   }, [isOpen, product]);
 
-  const isBox = activeProduct?.unit_type === 'BOX' && Number(activeProduct?.units_per_box) > 0;
-  const unitsPerBox = Number(activeProduct?.units_per_box || 1);
-  const currentStock = Number(activeProduct?.stock || 0);
+  const isBox = product?.unit_type === 'BOX' && Number(product?.units_per_box) > 0;
+  const unitsPerBox = Number(product?.units_per_box || 1);
+  const currentStock = Number(product?.stock || 0);
 
   // Cálculo de ingreso consolidado en tiempo real
   const calculation = useMemo(() => {
-    if (!activeProduct) {
+    if (!product) {
       return { deltaStock: 0, newStock: 0, totalAddedUnits: 0 };
     }
 
@@ -95,7 +82,12 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
         totalAddedUnits: parsedUnits
       };
     }
-  }, [activeProduct, isBox, boxesToAdd, looseUnitsToAdd, unitsToAdd, unitsPerBox, currentStock]);
+  }, [product, isBox, boxesToAdd, looseUnitsToAdd, unitsToAdd, unitsPerBox, currentStock]);
+
+  const activeProduct = useLatestValue(product);
+  const showModal = Boolean(isOpen && activeProduct);
+  const { backdropMotion, panelMotion } = useModalMotion();
+  useModalEscape(showModal, onClose, isSubmitting);
 
   const currentBreakdown = activeProduct ? getBoxBreakdown(activeProduct) : { isBox: false, breakdownLabel: '' };
   const previewNewBreakdown = activeProduct
@@ -108,7 +100,7 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
 
   const handleConfirmRestock = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentInventory || !user || !activeProduct) return;
+    if (!currentInventory || !user || !product) return;
 
     if (calculation.deltaStock <= 0) {
       setErrorMsg(
@@ -131,7 +123,7 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
           last_modified_by_email: user.email,
           updated_at: new Date().toISOString()
         })
-        .eq('id', activeProduct.id);
+        .eq('id', product.id);
 
       if (updateError) throw updateError;
 
@@ -141,13 +133,13 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
 
       await logAuditAction({
         inventoryId: currentInventory.id,
-        productId: activeProduct.id,
-        productName: activeProduct.name,
+        productId: product.id,
+        productName: product.name,
         actionType: 'RESTOCK',
         details: auditDetails,
         metadata: {
-          unit_type: activeProduct.unit_type || 'UNIT',
-          units_per_box: activeProduct.units_per_box || null,
+          unit_type: product.unit_type || 'UNIT',
+          units_per_box: product.units_per_box || null,
           added_stock: calculation.deltaStock,
           previous_stock: currentStock,
           new_stock: calculation.newStock
@@ -165,74 +157,85 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
   };
 
   return (
-    <ModalShell
-      isOpen={Boolean(isOpen && activeProduct)}
-      onClose={onClose}
-      maxWidth="sm"
-      disableDismiss={isSubmitting}
-      formId="restock-product-form"
-    >
-      <ModalHeader
-        title="Reingreso de existencias"
-        subtitle={activeProduct ? `Modo ${isBox ? 'caja (BOX)' : 'unidad (UNIT)'}` : undefined}
-        icon={<Barcode className="w-4 h-4 lg:w-5 lg:h-5" />}
-        iconTone="emerald"
-        onClose={onClose}
-        closeDisabled={isSubmitting}
-      />
-
-      {activeProduct && (
-        <form
-          id="restock-product-form"
-          onSubmit={handleConfirmRestock}
-          className="flex-1 min-h-0 flex flex-col overflow-hidden"
+    <AnimatePresence>
+      {showModal && activeProduct && (
+        <motion.div
+          {...backdropMotion}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-4"
         >
-          <ModalBody className="space-y-4">
-            <p className="text-xs text-slate-300 bg-slate-950/50 border border-slate-800/80 rounded-xl px-3.5 py-2.5 leading-relaxed">
-              Este producto ya existe en el sistema. Ajusta la cantidad adicional para sumarla al balance actual.
-            </p>
-
-            {errorMsg && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-200 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            {/* Ficha Resumen del Producto */}
-            <div className={`${modalSurfaceCardClass} space-y-2 text-xs`}>
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold text-slate-100 text-sm truncate">{activeProduct.name}</p>
-                <span className="font-mono px-2 py-0.5 rounded-md text-[10px] bg-slate-800 border border-slate-700 text-slate-200 font-semibold shrink-0">
-                  {isBox ? 'BOX' : 'UNIT'}
-                </span>
-              </div>
-              <p className="text-slate-400 font-mono text-[11px]">
-                SKU: <strong className="text-slate-200">{activeProduct.code}</strong>
-              </p>
-              <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
-                <span className="text-slate-400">Stock actual</span>
-                <div className="text-right font-mono tabular-nums">
-                  <strong className="text-slate-100 text-sm">{formatStockDisplay(activeProduct)}</strong>
-                  {isBox && currentBreakdown.breakdownLabel && (
-                    <span className="block text-[10px] text-slate-400">{currentBreakdown.breakdownLabel}</span>
-                  )}
+          <motion.div
+            {...panelMotion}
+            className="mobile-dark-modal bg-white border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-md overflow-hidden shadow-xl flex flex-col"
+          >
+            {/* Cabecera */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#f5f5f5] text-[#17191c] border border-[#e5e5e5] flex items-center justify-center flex-shrink-0">
+                  <Barcode className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-white block font-bold">
+                    REINGRESO DE EXISTENCIAS // {isBox ? 'MODO CAJA' : 'MODO UNIDAD'}
+                  </span>
+                  <h4 className="font-bold text-[#17191c] text-sm sm:text-base uppercase tracking-tight">
+                    Producto Existente
+                  </h4>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">Precio unitario</span>
-                <strong className="font-mono tabular-nums text-slate-100">
-                  {formatCurrency(activeProduct.price, currentInventory?.currency)}
-                </strong>
-              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-9 h-9 rounded-full flex items-center justify-center text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Inputs según tipo de unidad (UNIT vs BOX) */}
-            {!isBox ? (
-              <div className="space-y-2.5">
-                <div>
-                  <label className={modalFieldLabelClass}>
-                    Unidades a añadir <span className="text-rose-400">*</span>
+            {/* Cuerpo del Modal */}
+            <form onSubmit={handleConfirmRestock} className="p-6 space-y-4 font-mono">
+              <p className="mobile-flat-section text-xs text-[#17191c] font-sans font-medium bg-[#fafafb] border border-[#ececec] rounded-xl p-3">
+                El producto ya existe en el sistema. ¿Deseas añadir más existencias?
+              </p>
+
+              {errorMsg && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+
+              {/* Ficha Resumen del Producto */}
+              <div className="mobile-flat-row p-4 bg-[#fafafb] rounded-xl border border-[#ececec] text-xs space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-bold text-[#17191c] text-sm uppercase truncate">{activeProduct.name}</p>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#17191c] text-white uppercase shrink-0">
+                    {isBox ? 'CAJA (BOX)' : 'UNIDAD (UNIT)'}
+                  </span>
+                </div>
+                <p className="text-[#777b86]">
+                  SKU / REF: <strong className="text-[#17191c]">{activeProduct.code}</strong>
+                </p>
+                <div className="flex items-center justify-between pt-1 border-t border-[#ececec]/80">
+                  <span className="text-[#777b86]">Stock actual:</span>
+                  <div className="text-right">
+                    <strong className="text-[#17191c] text-sm">{formatStockDisplay(activeProduct)}</strong>
+                    {isBox && currentBreakdown.breakdownLabel && (
+                      <span className="block text-[10px] text-[#777b86]">{currentBreakdown.breakdownLabel}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[#777b86]">Precio unitario:</span>
+                  <strong className="text-[#17191c]">{formatCurrency(activeProduct.price, currentInventory?.currency)}</strong>
+                </div>
+              </div>
+
+              {/* Inputs según tipo de unidad (UNIT vs BOX) */}
+              {!isBox ? (
+                /* FLUJO TIPO UNIT */
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#17191c]">
+                    Unidades a añadir: <span className="text-[#e7000b]">*</span>
                   </label>
                   <input
                     type="number"
@@ -241,132 +244,139 @@ export const RestockProductModal: React.FC<RestockProductModalProps> = ({
                     value={unitsToAdd}
                     onChange={e => setUnitsToAdd(e.target.value)}
                     required
-                    autoFocus
-                    className={`${modalFieldInputClass} font-mono tabular-nums font-semibold`}
+                    className="w-full min-h-[44px] bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-4 py-2 text-sm font-mono text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
                   />
-                </div>
-                <div className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Nuevo stock resultante</span>
-                  <strong className="font-mono tabular-nums text-emerald-300 text-sm">
-                    {currentStock} + {Math.max(0, parseInt(unitsToAdd, 10) || 0)} = {calculation.newStock} und
-                  </strong>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center gap-2 text-xs text-slate-200">
-                  <Layers className="w-4 h-4 text-indigo-400 shrink-0" />
-                  <span className="font-mono tabular-nums">
-                    Equivalencia: <strong>1 caja = {unitsPerBox} unidades</strong>
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className={modalFieldLabelClass}>Cajas a ingresar</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="any"
-                      value={boxesToAdd}
-                      onChange={e => setBoxesToAdd(e.target.value)}
-                      placeholder="0"
-                      className={`${modalFieldInputClass} font-mono tabular-nums`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={modalFieldLabelClass}>Unidades sueltas</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={looseUnitsToAdd}
-                      onChange={e => setLooseUnitsToAdd(e.target.value)}
-                      placeholder="0"
-                      className={`${modalFieldInputClass} font-mono tabular-nums`}
-                    />
-                  </div>
-                </div>
-
-                <div className={`${modalSurfaceCardClass} space-y-1.5 text-xs`}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Ingreso consolidado</span>
-                    <strong className="font-mono tabular-nums text-emerald-300">
-                      +{formatCleanDecimal(calculation.deltaStock, 2)} {calculation.deltaStock === 1 ? 'caja' : 'cajas'}
+                  <div className="p-3 bg-[#fafafb] border border-[#ececec] rounded-xl flex items-center justify-between text-xs">
+                    <span className="text-[#777b86]">Nuevo Stock Resultante:</span>
+                    <strong className="text-[#17191c] text-sm">
+                      {currentStock} + {Math.max(0, parseInt(unitsToAdd, 10) || 0)} = {calculation.newStock} und
                     </strong>
                   </div>
-                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/80">
-                    <span className="text-slate-400">Nuevo stock total</span>
-                    <div className="text-right font-mono tabular-nums">
-                      <strong className="text-slate-100 text-sm">
-                        {formatCleanDecimal(calculation.newStock, 2)} {calculation.newStock === 1 ? 'caja' : 'cajas'}
+                </div>
+              ) : (
+                /* FLUJO TIPO BOX (INTERFAZ DUAL COMBINABLE) */
+                <div className="space-y-3">
+                  <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs text-slate-800">
+                    <span className="flex items-center gap-1.5 font-semibold">
+                      <Layers className="w-3.5 h-3.5 text-[#17191c]" />
+                      Equivalencia: 1 caja = {unitsPerBox} unidades
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#17191c] mb-1">
+                        Cajas a ingresar:
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={boxesToAdd}
+                        onChange={e => setBoxesToAdd(e.target.value)}
+                        placeholder="0"
+                        className="w-full min-h-[44px] bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3.5 py-2 text-sm font-mono text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#17191c] mb-1">
+                        Unidades sueltas a ingresar:
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={looseUnitsToAdd}
+                        onChange={e => setLooseUnitsToAdd(e.target.value)}
+                        placeholder="0"
+                        className="w-full min-h-[44px] bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3.5 py-2 text-sm font-mono text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Resumen de Conversión Consolidada */}
+                  <div className="p-3.5 bg-[#fafafb] border border-[#ececec] rounded-xl space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#777b86]">Ingreso consolidado (Δ Cajas):</span>
+                      <strong className="text-[#17191c]">
+                        +{formatCleanDecimal(calculation.deltaStock, 2)} {calculation.deltaStock === 1 ? 'caja' : 'cajas'}
                       </strong>
-                      {previewNewBreakdown.breakdownLabel && (
-                        <span className="block text-[10px] text-slate-400">
-                          ({previewNewBreakdown.breakdownLabel})
-                        </span>
-                      )}
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-[#ececec]">
+                      <span className="text-[#777b86]">Nuevo Stock Total:</span>
+                      <div className="text-right">
+                        <strong className="text-[#17191c] text-sm">
+                          {formatCleanDecimal(calculation.newStock, 2)} {calculation.newStock === 1 ? 'caja' : 'cajas'}
+                        </strong>
+                        {previewNewBreakdown.breakdownLabel && (
+                          <span className="block text-[10px] text-[#777b86]">
+                            ({previewNewBreakdown.breakdownLabel})
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {(onViewDetails || onUseCodeAnyway) && (
-              <div className="pt-1 flex justify-start">
-                {onViewDetails ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      onViewDetails(activeProduct);
-                    }}
-                    className="inline-flex items-center gap-1.5 text-xs text-indigo-300 hover:text-indigo-200 hover:underline font-medium cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>Ver ficha técnica completa</span>
-                  </button>
-                ) : onUseCodeAnyway ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onUseCodeAnyway(activeProduct.code);
-                      onClose();
-                    }}
-                    className="text-xs text-slate-400 hover:text-slate-200 underline cursor-pointer"
-                  >
-                    Usar código de todas formas
-                  </button>
-                ) : null}
-              </div>
-            )}
-          </ModalBody>
-
-          <ModalFooter shortcutLabel="para confirmar">
-            <CancelButton onClick={onClose} disabled={isSubmitting} />
-            <button
-              type="submit"
-              disabled={isSubmitting || calculation.deltaStock <= 0}
-              className={modalPrimaryButtonClass}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Actualizando stock...</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  <span className="tabular-nums">
-                    Sumar +{isBox ? `${formatCleanDecimal(calculation.deltaStock, 2)} cajas` : `${calculation.deltaStock} und`}
-                  </span>
-                </>
               )}
-            </button>
-          </ModalFooter>
-        </form>
+
+              {/* Botones de Acción */}
+              <div className="pt-2 space-y-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting || calculation.deltaStock <= 0}
+                  className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 px-5 bg-[#17191c] hover:bg-black text-white text-xs uppercase tracking-wider font-semibold rounded-full shadow-sm active:scale-95 disabled:opacity-50 transition-all"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <span>Actualizando Stock...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 text-white" />
+                      <span>
+                        Sumar +{isBox ? `${formatCleanDecimal(calculation.deltaStock, 2)} cajas` : `${calculation.deltaStock} und`} al Stock
+                      </span>
+                    </>
+                  )}
+                </button>
+
+                <div className="flex max-md:flex-col items-center justify-between gap-2 pt-2 border-t border-[#ececec] max-md:border-0">
+                  {onViewDetails ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onViewDetails(activeProduct);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs text-[#17191c] hover:underline font-medium"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Ver ficha técnica</span>
+                    </button>
+                  ) : onUseCodeAnyway ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUseCodeAnyway(activeProduct.code);
+                        onClose();
+                      }}
+                      className="text-xs text-[#777b86] hover:text-[#17191c] transition-colors"
+                    >
+                      Usar código de todas formas
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+
+                  <CancelButton onClick={onClose} />
+                </div>
+              </div>
+            </form>
+          </motion.div>
+        </motion.div>
       )}
-    </ModalShell>
+    </AnimatePresence>
   );
 };

@@ -1,21 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Users, UserPlus, Mail, Shield, Trash2, Clock, Loader2 } from 'lucide-react';
+import { X, Users, UserPlus, Mail, Shield, Trash2, Clock, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase, getApiUrl, formatDate } from '../../services/supabase';
 import { InventoryInvitation } from '../../types/database';
 import { PillOption } from '../common/PillOption';
 import { CancelButton } from '../common/CancelButton';
-import {
-  ModalShell,
-  ModalHeader,
-  ModalTabsBar,
-  ModalBody,
-  ModalFooter,
-  modalFieldCompactInputClass,
-  modalSurfaceCardClass,
-  modalPrimaryButtonClass
-} from './ModalShell';
+import { useModalEscape, useModalMotion } from './modalMotion';
 
 interface CollaboratorsModalProps {
   isOpen: boolean;
@@ -234,116 +225,127 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
     }
   };
 
+  const { backdropMotion, panelMotion, tabContentMotion } = useModalMotion();
+  useModalEscape(isOpen, onClose, isInviting);
+
   return (
-    <ModalShell
-      isOpen={isOpen}
-      onClose={onClose}
-      maxWidth="lg"
-      disableDismiss={isInviting}
-      formId={activeTab === 'invite' ? 'invite-collaborator-form' : undefined}
-    >
-      <ModalHeader
-        title="Equipo y colaboradores"
-        subtitle="Trabajo colaborativo multi-usuario en tiempo real"
-        icon={<Users className="w-4 h-4 lg:w-5 lg:h-5" />}
-        iconTone="indigo"
-        onClose={onClose}
-        closeDisabled={isInviting}
-      />
-
-      <ModalTabsBar>
-        <PillOption
-          active={activeTab === 'invite'}
-          onClick={() => setActiveTab('invite')}
-          icon={<UserPlus className="w-3.5 h-3.5" />}
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          {...backdropMotion}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
         >
-          Invitar
-        </PillOption>
-        <PillOption
-          active={activeTab === 'members'}
-          onClick={() => setActiveTab('members')}
-          icon={<Users className="w-3.5 h-3.5" />}
-          badge={members.length}
-        >
-          Miembros
-        </PillOption>
-      </ModalTabsBar>
-
-      <ModalBody className="space-y-4">
-        {feedbackMsg && (
-          <div
-            className={`p-3 rounded-xl text-xs border ${
-              feedbackMsg.type === 'success'
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
-                : 'bg-rose-500/10 border-rose-500/30 text-rose-200'
-            }`}
+          <motion.div
+            {...panelMotion}
+            className="mobile-dark-modal bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]"
           >
-            {feedbackMsg.text}
+        {/* Cabecera */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] bg-[#ffffff]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#17191c]/10 text-[#17191c] flex items-center justify-center">
+              <Users className="w-5 h-5 text-[#17191c]" />
+            </div>
+            <div>
+              <h3 className="font-light text-[#17191c] text-base uppercase tracking-tight">Equipo y Colaboradores</h3>
+              <p className="text-[11px] text-[#777b86]">Trabajo colaborativo multi-usuario en tiempo real</p>
+            </div>
           </div>
-        )}
+          <button
+            onClick={onClose}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-        <AnimatePresence mode="wait" initial={false}>
-          {activeTab === 'invite' ? (
-            <motion.form
-              key="collab-invite"
-              id="invite-collaborator-form"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.14 }}
-              onSubmit={handleInvite}
-              className={`${modalSurfaceCardClass} space-y-4`}
+        {/* Opciones tipo píldora "Invitar" y "Miembros" */}
+        <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#ececec] bg-[#fafafb]/60 shrink-0">
+          <PillOption
+            active={activeTab === 'invite'}
+            onClick={() => setActiveTab('invite')}
+            icon={<UserPlus className="w-3.5 h-3.5" />}
+          >
+            Invitar
+          </PillOption>
+          <PillOption
+            active={activeTab === 'members'}
+            onClick={() => setActiveTab('members')}
+            icon={<Users className="w-3.5 h-3.5" />}
+            badge={members.length}
+          >
+            Miembros
+          </PillOption>
+        </div>
+
+        {/* Contenido */}
+        <div className="p-5 overflow-y-auto space-y-4 flex-1">
+          {feedbackMsg && (
+            <div
+              className={`p-3 rounded-xl text-xs border ${
+                feedbackMsg.type === 'success'
+                  ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+                  : 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400'
+              }`}
             >
+              {feedbackMsg.text}
+            </div>
+          )}
+
+          <AnimatePresence mode="wait" initial={false}>
+            {/* APARTADO "INVIAR": Campo correo electrónico y abajo de ello el botón "Invitar" */}
+            {activeTab === 'invite' && (
+              <motion.form
+                key="collab-tab-invite"
+                {...tabContentMotion}
+                onSubmit={handleInvite}
+                className="mobile-flat-section p-4 sm:p-5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4"
+              >
               <div className="space-y-1">
-                <span className="text-xs font-semibold text-slate-100 flex items-center gap-1.5">
-                  <UserPlus className="w-4 h-4 text-indigo-400" /> Invitar nuevo colaborador
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
+                  <UserPlus className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /> Invitar Nuevo Colaborador
                 </span>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Invitación mediante correo electrónico. La persona invitada tendrá acceso operativo a este inventario.
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Invitacion mediante correo electrónico. La persona invitada tendra acceso completo a este inventario.
                 </p>
               </div>
 
               <div className="space-y-3">
                 <div className="relative w-full">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="email"
                     value={emailToInvite}
                     onChange={e => setEmailToInvite(e.target.value)}
                     placeholder="correo@ejemplo.com"
                     required
-                    className={`${modalFieldCompactInputClass} pl-10`}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
                 </div>
                 <button
                   type="submit"
                   disabled={isInviting || !emailToInvite.trim()}
-                  className={`${modalPrimaryButtonClass} w-full`}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-600/20 disabled:opacity-50 transition-all active:scale-95 cursor-pointer whitespace-nowrap"
                 >
                   {isInviting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                  <span>Enviar invitación</span>
+                  <span>Invitar</span>
                 </button>
               </div>
             </motion.form>
-          ) : (
-            <motion.div
-              key="collab-members"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.14 }}
-              className="space-y-4"
-            >
+            )}
+
+            {/* APARTADO "MIEMBROS": Carga la lista de participantes */}
+            {activeTab === 'members' && (
+              <motion.div key="collab-tab-members" {...tabContentMotion} className="space-y-4">
               <div className="space-y-2">
-                <span className="text-xs font-semibold text-slate-300 tabular-nums block">
-                  Participantes con acceso ({members.length})
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 block">
+                  Participantes con Acceso ({members.length})
                 </span>
 
                 {loading ? (
                   <p className="text-xs text-slate-400 text-center py-6">Cargando equipo...</p>
                 ) : members.length === 0 ? (
-                  <div className="p-4 text-center rounded-2xl bg-slate-950/45 border border-dashed border-slate-800">
-                    <p className="text-xs text-slate-400">No hay otros colaboradores en este inventario.</p>
+                  <div className="p-4 text-center rounded-2xl bg-slate-50 dark:bg-slate-800/30 border border-dashed border-slate-200 dark:border-slate-800">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">No hay otros colaboradores en este inventario.</p>
                   </div>
                 ) : (
                   members.map(m => {
@@ -353,39 +355,36 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
                     return (
                       <div
                         key={m.id}
-                        className="p-3 bg-slate-950/55 rounded-xl border border-slate-800/80 flex items-center justify-between gap-3"
+                        className="mobile-flat-row p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 flex items-center justify-center font-semibold text-xs shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0">
                             {(profile.full_name || profile.email || 'U')[0].toUpperCase()}
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <h4 className="text-xs font-semibold text-slate-100 truncate">
+                              <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
                                 {profile.full_name || profile.email}
                               </h4>
                               <span
-                                className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1 shrink-0 ${
+                                className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase flex items-center gap-1 shrink-0 ${
                                   isMemberOwner
-                                    ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                                    : 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
+                                    ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30'
+                                    : 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30'
                                 }`}
                               >
                                 <Shield className="w-2.5 h-2.5" />
                                 {isMemberOwner ? 'Dueño' : 'Colaborador'}
                               </span>
                             </div>
-                            <p className="text-[11px] font-mono text-slate-400 truncate mt-0.5">
-                              {profile.email}
-                            </p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{profile.email}</p>
                           </div>
                         </div>
 
                         {isOwner && !isMemberOwner && (
                           <button
-                            type="button"
                             onClick={() => handleRemoveMember(m.id, m.user_id)}
-                            className="min-h-[36px] inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-rose-300 hover:text-white bg-rose-500/10 hover:bg-rose-600 rounded-lg transition-colors border border-rose-500/30 active:scale-95 shrink-0 cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 dark:bg-rose-500/10 dark:hover:bg-rose-600 rounded-xl transition-all border border-rose-200 dark:border-rose-500/30 active:scale-95 shrink-0 cursor-pointer"
                             title="Retirar colaborador del inventario"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -398,32 +397,32 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
                 )}
               </div>
 
+              {/* Invitaciones Pendientes dentro de Miembros */}
               {invitations.length > 0 && (
-                <div className="space-y-2 pt-3 border-t border-slate-800/80">
-                  <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 tabular-nums">
-                    <Clock className="w-3.5 h-3.5 text-amber-400" /> Invitaciones pendientes ({invitations.length})
+                <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" /> Invitaciones Pendientes ({invitations.length})
                   </span>
 
                   {invitations.map(inv => (
                     <div
                       key={inv.id}
-                      className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/25 flex items-center justify-between gap-2"
+                      className="mobile-flat-row p-3 bg-amber-50/50 dark:bg-amber-500/5 rounded-2xl border border-amber-200 dark:border-amber-500/20 flex items-center justify-between"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Mail className="w-4 h-4 text-amber-400 shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-slate-100 truncate">{inv.email}</p>
-                          <span className="text-[11px] text-amber-200/80 font-mono tabular-nums block truncate">
-                            Pendiente · {formatDate(inv.created_at)}
+                      <div className="flex items-center gap-2.5">
+                        <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                        <div>
+                          <p className="text-xs font-bold text-slate-900 dark:text-white">{inv.email}</p>
+                          <span className="text-[10px] text-amber-700 dark:text-amber-400/80">
+                            Esperando inicio de sesión o registro • {formatDate(inv.created_at)}
                           </span>
                         </div>
                       </div>
 
                       {isOwner && (
                         <button
-                          type="button"
                           onClick={() => handleCancelInvitation(inv.id)}
-                          className="min-h-[34px] min-w-[34px] flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer shrink-0"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition-colors cursor-pointer"
                           title="Cancelar invitación"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -433,14 +432,18 @@ export const CollaboratorsModal: React.FC<CollaboratorsModalProps> = ({ isOpen, 
                   ))}
                 </div>
               )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </ModalBody>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-      <ModalFooter>
-        <CancelButton onClick={onClose} label="Cerrar" className="min-w-[120px]" />
-      </ModalFooter>
-    </ModalShell>
+        {/* Pie con botón Cancelar / Cerrar centrado */}
+        <div className="px-6 py-3.5 border-t border-[#ececec] bg-[#fafafb]/80 flex justify-center shrink-0">
+          <CancelButton onClick={onClose} label="Cerrar" className="min-w-[130px]" />
+        </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

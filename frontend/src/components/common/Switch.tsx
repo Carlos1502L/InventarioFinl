@@ -1,5 +1,4 @@
 import React from 'react';
-import { useIsDarkModal } from '../modals/ModalShell';
 
 export interface SwitchProps {
   checked: boolean;
@@ -14,6 +13,8 @@ export interface SwitchProps {
 
 /**
  * Componente Switch estandarizado y reutilizable.
+ * Centrado vertical perfecto: la misma distancia en la parte superior e inferior del círculo.
+ * Dimensiones fijas bloqueadas para evitar desbordamientos o estiramientos no deseados.
  */
 export const Switch: React.FC<SwitchProps> = ({
   checked,
@@ -23,11 +24,8 @@ export const Switch: React.FC<SwitchProps> = ({
   ariaLabel,
   className = '',
   size = 'md',
-  activeColor
+  activeColor = 'bg-black'
 }) => {
-  const isDarkModal = useIsDarkModal();
-  const resolvedActiveColor = activeColor || (isDarkModal ? 'bg-indigo-500' : 'bg-slate-900');
-
   const sizeStyles = {
     sm: {
       track: 'h-5 w-9 p-[2px]',
@@ -73,12 +71,10 @@ export const Switch: React.FC<SwitchProps> = ({
         boxSizing: 'border-box',
         flexShrink: 0
       }}
-      className={`relative inline-flex items-center shrink-0 cursor-pointer rounded-full border-0 transition-colors duration-200 ease-in-out select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 disabled:opacity-50 disabled:cursor-not-allowed ${sizeStyles.track} ${
+      className={`relative inline-flex items-center shrink-0 cursor-pointer rounded-full border-0 transition-colors duration-200 ease-in-out select-none outline-none focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${sizeStyles.track} ${
         checked
-          ? resolvedActiveColor
-          : isDarkModal
-          ? 'bg-slate-700'
-          : 'bg-slate-300'
+          ? activeColor
+          : 'bg-gray-300 dark:bg-neutral-700'
       } ${className}`}
     >
       <span
