@@ -1,9 +1,18 @@
 import React, { useEffect, useState, useRef } from 'react';
 import QRCode from 'qrcode';
-import { X, Printer, Download, QrCode as QrIcon, CheckCircle2 } from 'lucide-react';
+import { Printer, Download, QrCode as QrIcon, CheckCircle2 } from 'lucide-react';
 import { Location } from '../../types/database';
 import { useAuth } from '../../context/AuthContext';
 import { escapeHtml } from '../../utils/security';
+import { CancelButton } from '../common/CancelButton';
+import {
+  ModalShell,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  modalPrimaryButtonClass,
+  modalSecondaryButtonClass
+} from './ModalShell';
 
 interface LocationLabelModalProps {
   location: Location | null;
@@ -17,6 +26,12 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
   onClose
 }) => {
   const { currentInventory } = useAuth();
+  const lastLocRef = useRef<Location | null>(null);
+  if (location) {
+    lastLocRef.current = location;
+  }
+  const activeLocation = location || lastLocRef.current;
+
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const printAreaRef = useRef<HTMLDivElement>(null);
@@ -35,10 +50,9 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
     }
   }, [location]);
 
-  if (!isOpen || !location) return null;
-
   // 1. Impresión directa en navegador con dimensiones exactas de tarjeta de crédito (85.6 mm x 53.9 mm)
   const handlePrint = () => {
+    if (!activeLocation) return;
     const printWindow = window.open('', '_blank', 'width=600,height=400');
     if (!printWindow) {
       alert('Por favor permite ventanas emergentes para imprimir la etiqueta.');
@@ -51,7 +65,7 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Etiqueta - ${escapeHtml(location.code)}</title>
+          <title>Etiqueta - ${escapeHtml(activeLocation.code)}</title>
           <style>
             @page {
               size: 85.6mm 53.9mm;
@@ -177,9 +191,9 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
               </div>
               <div class="details">
                 <div class="badge">Ubicación Asignada</div>
-                <div class="loc-name">${escapeHtml(location.name)}</div>
-                <div class="code-box">${escapeHtml(location.code)}</div>
-                ${location.description ? `<div class="desc">${escapeHtml(location.description)}</div>` : ''}
+                <div class="loc-name">${escapeHtml(activeLocation.name)}</div>
+                <div class="code-box">${escapeHtml(activeLocation.code)}</div>
+                ${activeLocation.description ? `<div class="desc">${escapeHtml(activeLocation.description)}</div>` : ''}
               </div>
             </div>
             <div class="footer">Dimensiones: 85.6 mm × 53.9 mm (Tarjeta de Crédito) • Escaneo Directo PWA</div>
@@ -198,6 +212,7 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
 
   // 2. Exportación a PDF directo en cliente (sin depender de internet ni servidor externo)
   const handleDownloadClientPDF = async () => {
+    if (!activeLocation) return;
     try {
       setIsExporting(true);
       const { default: jsPDF } = await import('jspdf');
@@ -244,7 +259,7 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
       doc.setTextColor(15, 23, 42);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10.5);
-      doc.text(location.name, textX, 20.5, { maxWidth: 48 });
+      doc.text(activeLocation.name, textX, 20.5, { maxWidth: 48 });
 
       // Caja de código
       doc.setFillColor(241, 245, 249);
@@ -254,14 +269,14 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
       doc.setTextColor(30, 41, 59);
       doc.setFont('courier', 'bold');
       doc.setFontSize(9);
-      doc.text(location.code, textX + 24, 29.8, { align: 'center' });
+      doc.text(activeLocation.code, textX + 24, 29.8, { align: 'center' });
 
       // Descripción si existe
-      if (location.description) {
+      if (activeLocation.description) {
         doc.setTextColor(100, 116, 139);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(5.5);
-        doc.text(location.description, textX, 36, { maxWidth: 48 });
+        doc.text(activeLocation.description, textX, 36, { maxWidth: 48 });
       }
 
       // Pie
@@ -270,7 +285,7 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
       doc.setFontSize(5);
       doc.text('85.6 mm × 53.9 mm • Escanear para ubicar o transferir productos', 42.8, 50, { align: 'center' });
 
-      doc.save(`etiqueta-${location.code}.pdf`);
+      doc.save(`etiqueta-${activeLocation.code}.pdf`);
     } catch (err) {
       console.error('Error generando PDF de etiqueta:', err);
     } finally {
@@ -279,102 +294,93 @@ export const LocationLabelModal: React.FC<LocationLabelModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="mobile-dark-modal bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
-        {/* Cabecera */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl">
-              <QrIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-900 dark:text-white text-base">Etiqueta de Ubicación</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Dimensiones de Tarjeta de Crédito (85.6 mm × 53.9 mm)</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <ModalShell
+      isOpen={Boolean(isOpen && activeLocation)}
+      onClose={onClose}
+      maxWidth="md"
+    >
+      <ModalHeader
+        title="Etiqueta de ubicación"
+        subtitle="Dimensiones de tarjeta de crédito (85.6 × 53.9 mm)"
+        icon={<QrIcon className="w-4 h-4 lg:w-5 lg:h-5" />}
+        iconTone="indigo"
+        onClose={onClose}
+      />
 
-        {/* Vista previa en escala real */}
-        <div className="p-6 overflow-y-auto bg-slate-100 dark:bg-slate-950 flex flex-col items-center justify-center">
-          <div className="text-xs text-slate-500 mb-3 flex items-center gap-1.5 font-medium">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-            Vista previa exacta para impresión térmica / tarjeta plástica
-          </div>
-
-          {/* Tarjeta con proporción real 85.6 x 53.9 mm */}
-          <div
-            ref={printAreaRef}
-            className="qr-light-surface w-[342px] h-[215px] bg-white rounded-xl p-3 border-2 border-slate-300 shadow-2xl flex flex-col justify-between text-slate-900 relative overflow-hidden select-none"
-          >
-            {/* Encabezado */}
-            <div className="bg-slate-900 text-white text-center py-1.5 px-2 rounded-md font-bold text-[10px] tracking-wide uppercase truncate">
-              {currentInventory?.name || 'SISTEMA DE INVENTARIO'}
+      {activeLocation && (
+        <>
+          <ModalBody className="bg-slate-950/60 flex flex-col items-center justify-center space-y-3">
+            <div className="text-xs text-slate-300 flex items-center gap-1.5 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Vista previa exacta para impresión térmica</span>
             </div>
 
-            {/* Contenido Central */}
-            <div className="flex items-center gap-3 my-auto">
-              {/* QR Code */}
-              <div className="qr-light-surface w-24 h-24 bg-white border border-slate-200 rounded-lg p-1 flex-shrink-0 flex items-center justify-center">
-                {qrDataUrl ? (
-                  <img src={qrDataUrl} alt="QR Code" className="w-full h-full object-contain" />
-                ) : (
-                  <div className="w-full h-full bg-slate-100 animate-pulse rounded" />
-                )}
+            {/* Tarjeta con proporción real 85.6 x 53.9 mm (mantener blanco para legibilidad QR) */}
+            <div
+              ref={printAreaRef}
+              className="qr-light-surface w-full max-w-[342px] h-[215px] bg-white rounded-xl p-3 border-2 border-slate-700/80 shadow-2xl flex flex-col justify-between text-slate-900 relative overflow-hidden select-none"
+            >
+              <div className="bg-slate-900 text-white text-center py-1.5 px-2 rounded-md font-bold text-[10px] tracking-wide uppercase truncate">
+                {currentInventory?.name || 'SISTEMA DE INVENTARIO'}
               </div>
 
-              {/* Datos de Ubicación */}
-              <div className="flex-1 min-w-0">
-                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">
-                  Ubicación Física
-                </span>
-                <h4 className="font-extrabold text-slate-900 text-base leading-tight truncate">
-                  {location.name}
-                </h4>
-                
-                {/* Código de barra/QR en caja */}
-                <div className="mt-2 bg-slate-100 border border-slate-300 rounded px-2 py-1 text-center font-mono font-bold text-xs text-slate-800 tracking-wider">
-                  {location.code}
+              <div className="flex items-center gap-3 my-auto">
+                <div className="qr-light-surface w-24 h-24 bg-white border border-slate-200 rounded-lg p-1 flex-shrink-0 flex items-center justify-center">
+                  {qrDataUrl ? (
+                    <img src={qrDataUrl} alt="QR Code" className="w-full h-full object-contain" />
+                  ) : (
+                    <div className="w-full h-full bg-slate-100 animate-pulse rounded" />
+                  )}
                 </div>
 
-                {location.description && (
-                  <p className="text-[9px] text-slate-500 mt-1 line-clamp-1">
-                    {location.description}
-                  </p>
-                )}
+                <div className="flex-1 min-w-0">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Ubicación Física
+                  </span>
+                  <h4 className="font-extrabold text-slate-900 text-base leading-tight truncate">
+                    {activeLocation.name}
+                  </h4>
+
+                  <div className="mt-2 bg-slate-100 border border-slate-300 rounded px-2 py-1 text-center font-mono font-bold text-xs text-slate-800 tracking-wider truncate">
+                    {activeLocation.code}
+                  </div>
+
+                  {activeLocation.description && (
+                    <p className="text-[9px] text-slate-500 mt-1 line-clamp-1">
+                      {activeLocation.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 pt-1 text-center text-[8px] text-slate-500 font-mono">
+                85.6 mm × 53.9 mm • Escáner de Ubicación PWA
               </div>
             </div>
+          </ModalBody>
 
-            {/* Pie de Tarjeta */}
-            <div className="border-t border-slate-100 pt-1 text-center text-[8px] text-slate-400">
-              85.6 mm × 53.9 mm • Escáner de Ubicación PWA
-            </div>
-          </div>
-        </div>
-
-        {/* Acciones */}
-        <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex flex-wrap gap-2.5 justify-end">
-          <button
-            onClick={handlePrint}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95"
-          >
-            <Printer className="w-4 h-4" /> Imprimir Etiqueta
-          </button>
-
-          <button
-            onClick={handleDownloadClientPDF}
-            disabled={isExporting}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 transition-all active:scale-95"
-          >
-            <Download className="w-4 h-4" /> Exportar a PDF (85.6×53.9 mm)
-          </button>
-        </div>
-      </div>
-    </div>
+          <ModalFooter>
+            <CancelButton onClick={onClose} label="Cerrar" />
+            <button
+              type="button"
+              onClick={handleDownloadClientPDF}
+              disabled={isExporting}
+              className={modalSecondaryButtonClass}
+            >
+              <Download className="w-4 h-4 text-indigo-400" />
+              <span>Exportar PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={handlePrint}
+              className={modalPrimaryButtonClass}
+            >
+              <Printer className="w-4 h-4" />
+              <span>Imprimir etiqueta</span>
+            </button>
+          </ModalFooter>
+        </>
+      )}
+    </ModalShell>
   );
 };

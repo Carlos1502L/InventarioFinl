@@ -1,12 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import QRCode from 'qrcode';
-import { X, Printer, CheckSquare, Square, Search, Tag, Loader2 } from 'lucide-react';
+import { Printer, CheckSquare, Square, Search, Tag, Loader2 } from 'lucide-react';
 import { Product } from '../../types/database';
 import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
-import { formatCurrency } from '../../services/supabase';
+import { formatCurrency, formatCleanDecimal } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { escapeHtml } from '../../utils/security';
 import { CancelButton } from '../common/CancelButton';
+import {
+  ModalShell,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  modalFieldCompactInputClass,
+  modalPrimaryButtonClass,
+  modalSecondaryButtonClass
+} from './ModalShell';
 
 interface BatchLabelsModalProps {
   products: Product[];
@@ -88,8 +97,6 @@ export const BatchLabelsModal: React.FC<BatchLabelsModalProps> = ({
       generateQRs();
     }
   }, [isOpen, selectedProductIds, products, qrCache]);
-
-  if (!isOpen) return null;
 
   const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
 
@@ -253,139 +260,126 @@ export const BatchLabelsModal: React.FC<BatchLabelsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="mobile-dark-modal bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-        {/* Cabecera */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
-              <Tag className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                Impresión de Etiquetas en Lote
-              </h3>
-              <p className="text-xs text-slate-500">
-                Grilla optimizada de 2 columnas sin desperdicio de papel (A4)
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl"
-          >
-            <X className="w-5 h-5" />
-          </button>
+    <ModalShell isOpen={isOpen} onClose={onClose} maxWidth="xl">
+      <ModalHeader
+        title="Impresión de etiquetas en lote"
+        subtitle="Grilla optimizada de 2 columnas sin desperdicio de papel (A4)"
+        icon={<Tag className="w-4 h-4 lg:w-5 lg:h-5" />}
+        iconTone="indigo"
+        onClose={onClose}
+      />
+
+      {/* Buscador y Controles de Selección */}
+      <div className="px-4 lg:px-6 py-3 border-b border-slate-800/80 bg-slate-950/35 shrink-0 flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
+        <div className="relative flex-1 min-w-0">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Buscar productos a imprimir..."
+            className={`${modalFieldCompactInputClass} pl-9`}
+          />
         </div>
 
-        {/* Buscador y Controles de Selección */}
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              placeholder="Buscar productos a imprimir..."
-              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-2 justify-between">
-            <button
-              type="button"
-              onClick={handleSelectAll}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
-            >
-              {selectedProductIds.size === filteredProducts.length && filteredProducts.length > 0 ? (
-                <>
-                  <CheckSquare className="w-4 h-4 text-blue-600" /> Deseleccionar todos
-                </>
-              ) : (
-                <>
-                  <Square className="w-4 h-4" /> Seleccionar todos ({filteredProducts.length})
-                </>
-              )}
-            </button>
-            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">
-              {selectedProductIds.size} seleccionados
-            </span>
-          </div>
-        </div>
-
-        {/* Lista de Productos para Selección */}
-        <div className="flex-1 overflow-y-auto p-4 divide-y divide-slate-100 dark:divide-slate-800">
-          {filteredProducts.length === 0 ? (
-            <p className="text-center text-xs text-slate-400 py-8">No se encontraron productos coincidentes.</p>
-          ) : (
-            filteredProducts.map(product => {
-              const isSelected = selectedProductIds.has(product.id);
-              return (
-                <div
-                  key={product.id}
-                  onClick={() => toggleSelect(product.id)}
-                  className={`mobile-flat-row py-2.5 px-3 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
-                    isSelected
-                      ? 'mobile-card-active bg-blue-50 dark:bg-blue-950/30'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-all ${
-                        isSelected
-                          ? 'bg-blue-600 border-blue-600 text-white'
-                          : 'border-slate-300 dark:border-slate-600'
-                      }`}
-                    >
-                      {isSelected && <CheckSquare className="w-3.5 h-3.5" />}
-                    </button>
-                    <div>
-                      <p className="text-xs font-bold text-slate-900 dark:text-white">{product.name}</p>
-                      <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                        <span className="font-mono">{product.code}</span>
-                        <span>•</span>
-                        <span>{product.locations?.name || 'Almacén'}</span>
-                        <span>•</span>
-                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                          {formatCurrency(product.price, currentInventory?.currency)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    Stock: {product.stock}
-                  </span>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Pie y Acción de Imprimir */}
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex max-md:flex-col-reverse max-md:gap-2 items-center justify-between">
-          <CancelButton onClick={onClose} />
-
+        <div className="flex items-center gap-2 justify-between shrink-0">
           <button
             type="button"
-            onClick={handlePrint}
-            disabled={selectedProductIds.size === 0 || isGeneratingQRs}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50 transition-all"
+            onClick={handleSelectAll}
+            className={`${modalSecondaryButtonClass} min-h-[38px] lg:min-h-[36px] px-3 py-1.5`}
           >
-            {isGeneratingQRs ? (
+            {selectedProductIds.size === filteredProducts.length && filteredProducts.length > 0 ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" /> Generando códigos...
+                <CheckSquare className="w-4 h-4 text-indigo-400" />
+                <span>Deseleccionar</span>
               </>
             ) : (
               <>
-                <Printer className="w-4 h-4" /> Imprimir {selectedProductIds.size} Etiquetas (2 Cols)
+                <Square className="w-4 h-4 text-slate-400" />
+                <span className="tabular-nums">Todos ({filteredProducts.length})</span>
               </>
             )}
           </button>
+          <span className="text-xs font-mono tabular-nums font-semibold text-indigo-300 bg-indigo-500/15 border border-indigo-500/30 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
+            {selectedProductIds.size} sel.
+          </span>
         </div>
       </div>
-    </div>
+
+      {/* Lista de Productos para Selección */}
+      <ModalBody className="p-0 px-4 lg:px-6 py-3 divide-y divide-slate-800/70">
+        {filteredProducts.length === 0 ? (
+          <p className="text-center text-xs text-slate-400 py-10">
+            No se encontraron productos coincidentes.
+          </p>
+        ) : (
+          filteredProducts.map(product => {
+            const isSelected = selectedProductIds.has(product.id);
+            return (
+              <button
+                key={product.id}
+                type="button"
+                onClick={() => toggleSelect(product.id)}
+                className={`w-full text-left py-3 px-3 my-0.5 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                  isSelected
+                    ? 'bg-indigo-500/15 border border-indigo-500/35'
+                    : 'hover:bg-slate-800/50 border border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span
+                    className={`w-5 h-5 rounded-md flex items-center justify-center border shrink-0 transition-all ${
+                      isSelected
+                        ? 'bg-indigo-500 border-indigo-400 text-white'
+                        : 'border-slate-600 bg-slate-950/60'
+                    }`}
+                  >
+                    {isSelected && <CheckSquare className="w-3.5 h-3.5" />}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-100 truncate">{product.name}</p>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-400 flex-wrap mt-0.5">
+                      <span className="font-mono text-slate-300">{product.code}</span>
+                      <span>·</span>
+                      <span className="truncate">{product.locations?.name || 'Almacén'}</span>
+                      <span>·</span>
+                      <span className="font-mono tabular-nums font-semibold text-emerald-300">
+                        {formatCurrency(product.price, currentInventory?.currency)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <span className="text-[11px] text-slate-400 font-mono tabular-nums shrink-0">
+                  {formatCleanDecimal(Number(product.stock || 0), 2)}
+                </span>
+              </button>
+            );
+          })
+        )}
+      </ModalBody>
+
+      <ModalFooter>
+        <CancelButton onClick={onClose} />
+        <button
+          type="button"
+          onClick={handlePrint}
+          disabled={selectedProductIds.size === 0 || isGeneratingQRs}
+          className={modalPrimaryButtonClass}
+        >
+          {isGeneratingQRs ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Generando códigos...</span>
+            </>
+          ) : (
+            <>
+              <Printer className="w-4 h-4" />
+              <span className="tabular-nums">Imprimir {selectedProductIds.size} etiquetas (2 cols)</span>
+            </>
+          )}
+        </button>
+      </ModalFooter>
+    </ModalShell>
   );
 };

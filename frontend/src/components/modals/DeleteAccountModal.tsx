@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  X,
   Trash2,
   Lock,
   Eye,
@@ -12,6 +11,15 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { supabase, getApiUrl } from '../../services/supabase';
 import { CancelButton } from '../common/CancelButton';
+import {
+  ModalShell,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  modalFieldInputClass,
+  modalFieldLabelClass,
+  modalDangerButtonClass
+} from './ModalShell';
 
 interface DeleteAccountModalProps {
   isOpen: boolean;
@@ -27,8 +35,6 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  if (!isOpen) return null;
 
   const handleConfirmDelete = async () => {
     if (!password.trim() || !user?.email) {
@@ -116,128 +122,115 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in fade-in">
-      <div className="mobile-dark-modal bg-[#ffffff] border border-[#E5E7EB] rounded-2xl w-full max-w-md max-h-[85dvh] overflow-hidden shadow-2xl flex flex-col font-sans animate-in zoom-in-95 duration-150">
-        
-        {/* Cabecera Limpia */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-red-50 text-red-600 border border-red-200 flex items-center justify-center shrink-0">
-              <Trash2 className="w-4 h-4 text-red-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-slate-900 text-sm tracking-tight">
-                Eliminar cuenta
-              </h3>
-              <p className="text-[11px] text-slate-500">
-                Baja permanente y purga de información
-              </p>
-            </div>
+    <ModalShell
+      isOpen={isOpen}
+      onClose={handleClose}
+      maxWidth="sm"
+      disableDismiss={isDeleting}
+      onSubmitShortcut={() => {
+        if (password.trim() && !isDeleting) handleConfirmDelete();
+      }}
+    >
+      <ModalHeader
+        title="Eliminar cuenta"
+        subtitle="Baja permanente y purga de información"
+        icon={<Trash2 className="w-4 h-4 lg:w-5 lg:h-5" />}
+        iconTone="rose"
+        onClose={handleClose}
+        closeDisabled={isDeleting}
+      />
+
+      <ModalBody className="space-y-4">
+        {/* Advertencia Destructiva */}
+        <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl space-y-1.5">
+          <div className="flex items-center gap-2 text-rose-300 font-semibold text-xs">
+            <ShieldAlert className="w-4 h-4 shrink-0 text-rose-400" />
+            <span>Confirmación de seguridad</span>
           </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isDeleting}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer disabled:opacity-50"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Se eliminará permanentemente la cuenta de{' '}
+            <strong className="text-white font-mono break-all">{user?.email}</strong>, junto con toda
+            la información existente. Esta acción es irreversible.
+          </p>
         </div>
 
-        {/* Cuerpo de la Ventana Flotante */}
-        <div className="p-5 overflow-y-auto space-y-4">
-          {/* Advertencia Destructiva */}
-          <div className="p-4 bg-red-50/70 border border-red-200 rounded-xl space-y-1.5">
-            <div className="flex items-center gap-2 text-red-700 font-semibold text-xs">
-              <ShieldAlert className="w-4 h-4 shrink-0 text-red-600" />
-              <span>Confirmación de seguridad</span>
+        {/* Formulario de Contraseña */}
+        <div className="space-y-1.5">
+          <label className={modalFieldLabelClass}>
+            Ingresa tu contraseña para autorizar
+          </label>
+          <div className="relative w-full">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <Lock className="w-4 h-4 shrink-0" />
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Se eliminará permanentemente la cuenta de <strong className="text-slate-900 font-mono">{user?.email}</strong>, junto con toda la información existente. Esta acción es irreversible.
-            </p>
-          </div>
 
-          {/* Formulario de Contraseña (RF-UI-AUTH-009) */}
-          <div className="space-y-1.5 pt-1">
-            <label className="text-xs font-medium text-slate-700 block">
-              Ingresa tu contraseña para autorizar
-            </label>
-            <div className="relative w-full">
-              {/* Candado en extremo izquierdo centrado verticalmente con pointer-events-none */}
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400 z-10">
-                <Lock className="w-4 h-4 shrink-0" />
-              </div>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (errorMsg) setErrorMsg(null);
+              }}
+              placeholder="Contraseña actual"
+              disabled={isDeleting}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && password.trim() && !isDeleting) {
+                  handleConfirmDelete();
+                }
+              }}
+              className={`${modalFieldInputClass} pl-11 pr-11`}
+              autoComplete="current-password"
+            />
 
-              {/* Input con clase modal-password-input, paddingLeft forzado de 3rem (48px) para despeje total del icono */}
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (errorMsg) setErrorMsg(null);
-                }}
-                placeholder="Contraseña actual"
+            <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center">
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
                 disabled={isDeleting}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && password.trim() && !isDeleting) {
-                    handleConfirmDelete();
-                  }
-                }}
-                className="modal-password-input w-full h-12 !pl-12 !pr-12 pl-12 pr-12 bg-zinc-100 dark:bg-zinc-800 text-neutral-900 dark:text-zinc-100 placeholder:text-zinc-400 rounded-2xl border-0 box-border focus:outline-none focus:ring-2 focus:ring-zinc-950 dark:focus:ring-white transition-all text-sm font-sans"
-                style={{ paddingLeft: '3rem', paddingRight: '3rem' }}
-                autoComplete="current-password"
-              />
-
-              {/* Botón de visibilidad de contraseña centrado verticalmente en extremo derecho */}
-              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center z-10">
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex={-1}
-                  disabled={isDeleting}
-                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors cursor-pointer p-1"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4 shrink-0" /> : <Eye className="w-4 h-4 shrink-0" />}
-                </button>
-              </div>
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                className="min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-slate-100 rounded-lg transition-colors cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4 shrink-0" /> : <Eye className="w-4 h-4 shrink-0" />}
+              </button>
             </div>
-            <p className="text-[11px] text-[#616161] font-light">
-              Por tu seguridad, solicitamos tu contraseña para verificar la titularidad antes de procesar la baja.
-            </p>
           </div>
+          <p className="text-[11px] text-slate-400">
+            Solicitamos tu contraseña para verificar titularidad antes de procesar la baja.
+          </p>
+        </div>
 
-          {/* Mensaje de Error */}
-          {errorMsg && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2 animate-in fade-in">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
-              <span className="leading-snug">{errorMsg}</span>
-            </div>
+        {/* Mensaje de Error */}
+        {errorMsg && (
+          <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-200 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+            <span className="leading-snug">{errorMsg}</span>
+          </div>
+        )}
+      </ModalBody>
+
+      <ModalFooter shortcutLabel="para eliminar">
+        <CancelButton onClick={handleClose} disabled={isDeleting} className="w-full sm:w-auto" />
+        <button
+          type="button"
+          onClick={handleConfirmDelete}
+          disabled={!password.trim() || isDeleting}
+          className={`${modalDangerButtonClass} w-full sm:w-auto`}
+        >
+          {isDeleting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Eliminando cuenta...</span>
+            </>
+          ) : (
+            <>
+              <Trash2 className="w-4 h-4" />
+              <span>Eliminar cuenta</span>
+            </>
           )}
-        </div>
-
-        {/* Pie de Acciones: Acción Principal y Cancelar Plano (RF-UI-ACTION-010 & RNF-UX-HIERARCHY-006) */}
-        <div className="flex flex-col items-center gap-2 px-5 py-4 border-t border-slate-200 bg-slate-50/60 shrink-0">
-          <button
-            type="button"
-            onClick={handleConfirmDelete}
-            disabled={!password.trim() || isDeleting}
-            className="w-full h-11 rounded-xl bg-red-600 hover:bg-red-700 disabled:bg-slate-200 disabled:text-slate-600 disabled:cursor-not-allowed text-white text-xs font-semibold transition-[background-color,transform] duration-150 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
-          >
-            {isDeleting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Eliminando cuenta...</span>
-              </>
-            ) : (
-              <>
-                <Trash2 className="w-4 h-4" />
-                <span>Eliminar cuenta</span>
-              </>
-            )}
-          </button>
-          <CancelButton onClick={handleClose} disabled={isDeleting} className="w-full" />
-        </div>
-      </div>
-    </div>
+        </button>
+      </ModalFooter>
+    </ModalShell>
   );
 };

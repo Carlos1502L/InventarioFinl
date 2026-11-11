@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   History,
   Calendar,
@@ -10,7 +10,6 @@ import {
   TrendingUp,
   Receipt,
   User,
-  X,
   Loader2,
   ChevronRight,
   CreditCard,
@@ -25,6 +24,120 @@ import { matchesAnyField, normalizeText } from '../utils/searchUtils';
 import { getAllQueuedSales, formatStockShortageNotes } from '../services/offlineSync';
 import jsPDF from 'jspdf';
 import { SalesHistorySkeleton } from '../components/ui/Skeleton';
+import { ModalShell, ModalHeader, ModalBody, ModalFooter } from '../components/modals/ModalShell';
+import { CancelButton } from '../components/common/CancelButton';
+
+interface SaleTicketModalProps {
+  sale: Sale | null;
+  currency?: string;
+  onClose: () => void;
+}
+
+const SaleTicketModal: React.FC<SaleTicketModalProps> = ({ sale, currency, onClose }) => {
+  const lastSaleRef = useRef<Sale | null>(sale);
+  if (sale) lastSaleRef.current = sale;
+  const activeSale = sale ?? lastSaleRef.current;
+
+  return (
+    <ModalShell
+      isOpen={Boolean(sale)}
+      onClose={onClose}
+      maxWidth="lg"
+      ariaLabel={activeSale ? `Ticket #${activeSale.id.slice(0, 8).toUpperCase()}` : 'Detalle de venta'}
+    >
+      {activeSale && (
+        <>
+          <ModalHeader
+            title={`Ticket #${activeSale.id.slice(0, 8).toUpperCase()}`}
+            subtitle={new Date(activeSale.created_at).toLocaleString()}
+            icon={<Receipt className="w-5 h-5" />}
+            iconTone={isSaleRejected(activeSale) ? 'rose' : 'indigo'}
+            onClose={onClose}
+          />
+
+          <ModalBody className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 p-4 bg-slate-950/60 rounded-2xl border border-slate-800/80 text-xs">
+              <div>
+                <span className="text-[11px] text-slate-400 block">Fecha y hora</span>
+                <span className="font-mono text-slate-100 font-medium tabular-nums">
+                  {new Date(activeSale.created_at).toLocaleString()}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-slate-400 block">Método</span>
+                <span className="font-mono text-indigo-300 font-semibold">{activeSale.payment_method}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-slate-400 block">Cliente</span>
+                <span className="text-slate-100 font-medium">{activeSale.customer_name || 'Consumidor Final'}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-slate-400 block">Contacto</span>
+                <span className="font-mono text-slate-200 tabular-nums">{activeSale.customer_contact || 'Sin registrar'}</span>
+              </div>
+              <div className="col-span-2 pt-2.5 border-t border-slate-800/80">
+                <span className="text-[11px] text-slate-400 block">Vendedor</span>
+                <span className="font-mono text-slate-200">{activeSale.seller_email}</span>
+              </div>
+              {activeSale.notes && (
+                <div className="col-span-2 pt-2.5 border-t border-slate-800/80">
+                  <span className="text-[11px] text-slate-400 block">Notas / Cupón</span>
+                  <span className="text-slate-200 leading-relaxed">
+                    {formatStockShortageNotes(activeSale.notes, activeSale.items)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Ítems vendidos */}
+            <div className="space-y-2">
+              <span className="text-xs font-semibold text-slate-300 block">
+                Ítems vendidos ({activeSale.items?.length || 0})
+              </span>
+              <div className="divide-y divide-slate-800/80 border border-slate-800/80 bg-slate-950/45 rounded-2xl overflow-hidden">
+                {activeSale.items?.map((it) => {
+                  const hasFormattedBreakdown = (it.product_name || '').includes('·');
+                  return (
+                    <div key={it.id} className="px-4 py-3 flex items-center justify-between text-xs gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-100 truncate">{it.product_name}</p>
+                        <p className="text-[11px] text-slate-400 font-mono mt-0.5 tabular-nums">
+                          <span className="font-semibold text-slate-300">{it.product_code}</span>
+                          {hasFormattedBreakdown
+                            ? ` · P. Unit: ${formatCurrency(it.unit_price, currency)}`
+                            : ` · ${it.quantity} und × ${formatCurrency(it.unit_price, currency)}`}
+                        </p>
+                      </div>
+                      <span className="font-mono font-semibold tabular-nums text-slate-100 shrink-0">
+                        {formatCurrency(it.subtotal, currency)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Total final */}
+            <div className="flex items-center justify-between p-4 bg-slate-950/70 border border-slate-800/80 rounded-2xl">
+              <span className="text-xs text-slate-300 font-semibold">Total liquidado</span>
+              <span className={`font-mono text-lg font-bold tabular-nums ${isSaleRejected(activeSale) ? 'text-rose-300' : 'text-emerald-300'}`}>
+                {formatCurrency(activeSale.total_amount, currency)}
+              </span>
+            </div>
+          </ModalBody>
+
+          <ModalFooter>
+            <CancelButton
+              onClick={onClose}
+              label="Cerrar ticket"
+              className="w-full sm:w-auto sm:min-w-[140px]"
+            />
+          </ModalFooter>
+        </>
+      )}
+    </ModalShell>
+  );
+};
 
 /**
  * RN-HIST-02: Determina si una venta fue rechazada por falta de stock.
@@ -640,97 +753,11 @@ export const SalesHistoryPage: React.FC<SalesHistoryPageProps> = ({ onNavigateTo
       </div>
 
       {/* Modal de Detalle de Venta */}
-      {selectedSale && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
-          <div className="mobile-dark-modal bg-white border border-slate-200 rounded-2xl w-full max-w-lg lg:max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh] font-sans">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-white">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-800 flex items-center justify-center">
-                  <Receipt className="w-4 h-4" />
-                </div>
-                <h3 className="font-mono font-semibold text-slate-900 tracking-tight text-sm">
-                  Ticket #{selectedSale.id.slice(0, 8).toUpperCase()}
-                </h3>
-              </div>
-              <button
-                onClick={() => setSelectedSale(null)}
-                className="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-5 overflow-y-auto space-y-4">
-              <div className="mobile-flat-section grid grid-cols-2 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
-                <div>
-                  <span className="text-[11px] text-slate-500 block">Fecha</span>
-                  <span className="font-mono text-slate-900 font-medium tabular-nums">{new Date(selectedSale.created_at).toLocaleString()}</span>
-                </div>
-                <div>
-                  <span className="text-[11px] text-slate-500 block">Método</span>
-                  <span className="font-mono text-slate-900 font-semibold">{selectedSale.payment_method}</span>
-                </div>
-                <div>
-                  <span className="text-[11px] text-slate-500 block">Cliente</span>
-                  <span className="text-slate-900 font-medium">{selectedSale.customer_name || 'Consumidor Final'}</span>
-                </div>
-                <div>
-                  <span className="text-[11px] text-slate-500 block">Contacto</span>
-                  <span className="font-mono text-slate-900">{selectedSale.customer_contact || 'Sin registrar'}</span>
-                </div>
-                <div className="col-span-2 pt-2 border-t border-slate-200">
-                  <span className="text-[11px] text-slate-500 block">Vendedor</span>
-                  <span className="font-mono text-slate-900">{selectedSale.seller_email}</span>
-                </div>
-                {selectedSale.notes && (
-                  <div className="col-span-2 pt-2 border-t border-slate-200">
-                    <span className="text-[11px] text-slate-500 block">Notas / Cupón</span>
-                    <span className="text-slate-900">
-                      {formatStockShortageNotes(selectedSale.notes, selectedSale.items)}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Ítems vendidos */}
-              <div className="space-y-2">
-                <span className="text-xs font-semibold text-slate-700 block">
-                  Ítems vendidos ({selectedSale.items?.length || 0})
-                </span>
-                <div className="mobile-flat-section divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
-                  {selectedSale.items?.map((it) => {
-                    const hasFormattedBreakdown = (it.product_name || '').includes('·');
-                    return (
-                      <div key={it.id} className="mobile-flat-row p-3 flex items-center justify-between text-xs gap-3">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-slate-900 truncate">{it.product_name}</p>
-                          <p className="text-[11px] text-slate-500 font-mono mt-0.5 tabular-nums">
-                            <span className="font-semibold text-slate-700">{it.product_code}</span>
-                            {hasFormattedBreakdown
-                              ? ` · P. Unit: ${formatCurrency(it.unit_price, currentInventory?.currency)}`
-                              : ` · ${it.quantity} und × ${formatCurrency(it.unit_price, currentInventory?.currency)}`}
-                          </p>
-                        </div>
-                        <span className="font-mono font-semibold tabular-nums text-slate-900 shrink-0">
-                          {formatCurrency(it.subtotal, currentInventory?.currency)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Total final */}
-              <div className="mobile-flat-row flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                <span className="text-xs text-slate-600 font-semibold">Total liquidado</span>
-                <span className={`text-lg font-semibold tabular-nums ${isSaleRejected(selectedSale) ? 'text-red-600' : 'text-emerald-700'}`}>
-                  {formatCurrency(selectedSale.total_amount, currentInventory?.currency)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <SaleTicketModal
+        sale={selectedSale}
+        currency={currentInventory?.currency}
+        onClose={() => setSelectedSale(null)}
+      />
     </>
   );
 };

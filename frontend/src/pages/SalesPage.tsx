@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingCart,
@@ -22,7 +22,7 @@ import {
   Banknote,
   Smartphone
 } from 'lucide-react';
-import { Product, PaymentMethod, Coupon } from '../types/database';
+import { Product, PaymentMethod, Coupon, Inventory } from '../types/database';
 import {
   supabase,
   formatCurrency,
@@ -39,6 +39,132 @@ import { saveSaleLocally, isNetworkOrOfflineError, QueuedSalePayload } from '../
 import { showAppToast } from '../components/ui/ToastNotification';
 import { Switch } from '../components/common/Switch';
 import jsPDF from 'jspdf';
+import {
+  ModalShell,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  modalPrimaryButtonClass
+} from '../components/modals/ModalShell';
+
+interface QrPaymentModalProps {
+  qrType: 'YAPE' | 'PLIN' | null;
+  inventory: Inventory | null;
+  finalTotal: number;
+  copiedText: boolean;
+  onCopyPhone: (phone: string) => void;
+  onClose: () => void;
+}
+
+const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
+  qrType,
+  inventory,
+  finalTotal,
+  copiedText,
+  onCopyPhone,
+  onClose
+}) => {
+  const lastTypeRef = useRef<'YAPE' | 'PLIN' | null>(qrType);
+  if (qrType) lastTypeRef.current = qrType;
+  const activeType = qrType ?? lastTypeRef.current;
+
+  const qrUrl = activeType === 'YAPE' ? inventory?.yape_qr_url : inventory?.plin_qr_url;
+  const phone = activeType === 'YAPE' ? inventory?.yape_phone : inventory?.plin_phone;
+
+  return (
+    <ModalShell
+      isOpen={Boolean(qrType)}
+      onClose={onClose}
+      maxWidth="sm"
+      ariaLabel={activeType === 'YAPE' ? 'Cobro con Yape' : 'Cobro con Plin'}
+    >
+      {activeType && (
+        <>
+          <ModalHeader
+            title={activeType === 'YAPE' ? 'Cobro con Yape' : 'Cobro con Plin'}
+            subtitle="Presenta el código QR al cliente"
+            icon={<QrCode className="w-5 h-5" />}
+            iconTone={activeType === 'YAPE' ? 'purple' : 'sky'}
+            onClose={onClose}
+          />
+
+          <ModalBody className="space-y-4 text-center">
+            {/* Monto exacto */}
+            <div className="p-3.5 bg-slate-950/65 rounded-2xl border border-slate-800/80">
+              <span className="text-xs font-medium text-slate-400 block">
+                Monto exacto a transferir
+              </span>
+              <span className="font-mono text-2xl sm:text-3xl font-bold tabular-nums text-slate-100 block mt-1">
+                {formatCurrency(finalTotal, inventory?.currency)}
+              </span>
+            </div>
+
+            {/* QR Grande (mantiene fondo blanco puro en .qr-light-surface para escaneo óptimo) */}
+            <div className="flex flex-col items-center justify-center">
+              {qrUrl ? (
+                <div className="qr-light-surface w-64 h-64 sm:w-72 sm:h-72 p-3.5 bg-white rounded-2xl border border-slate-700/80 shadow-lg flex items-center justify-center overflow-hidden">
+                  <img
+                    src={qrUrl}
+                    alt={`Código QR ${activeType}`}
+                    className="w-full h-full object-contain"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              ) : (
+                <div className="w-64 h-64 p-6 bg-slate-950/55 rounded-2xl border-2 border-dashed border-slate-700/80 flex flex-col items-center justify-center text-slate-400 text-xs space-y-2">
+                  <QrCode className="w-12 h-12 text-slate-600" />
+                  <p className="font-semibold text-xs text-slate-200">
+                    Sin QR cargado para {activeType}
+                  </p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Carga la imagen del QR en <strong className="text-slate-200">Configuración &gt; Pasarela de Pagos</strong>.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Número telefónico */}
+            {phone && (
+              <div className="p-3.5 bg-slate-950/65 rounded-xl border border-slate-800/80 flex items-center justify-between gap-3">
+                <div className="text-left min-w-0">
+                  <span className="text-[11px] text-slate-400 block">Número asociado</span>
+                  <span className="text-base font-mono font-semibold tabular-nums text-slate-100 truncate block">
+                    {phone}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onCopyPhone(phone)}
+                  className="min-h-[40px] inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 transition-colors cursor-pointer shrink-0"
+                >
+                  {copiedText ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-slate-300" />}
+                  <span>{copiedText ? 'Copiado' : 'Copiar'}</span>
+                </button>
+              </div>
+            )}
+
+            {inventory?.payment_instructions && (
+              <p className="text-xs text-slate-400 italic leading-relaxed px-2">
+                "{inventory.payment_instructions}"
+              </p>
+            )}
+          </ModalBody>
+
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={onClose}
+              className={`${modalPrimaryButtonClass} w-full`}
+            >
+              Volver al cobro
+            </button>
+          </ModalFooter>
+        </>
+      )}
+    </ModalShell>
+  );
+};
 
 interface SalesPageProps {
   products: Product[];
@@ -1774,107 +1900,14 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
       </div>
 
       {/* MODAL DE PAGO YAPE / PLIN */}
-      {qrModalType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
-          <div className="mobile-dark-modal bg-white border border-slate-200 rounded-2xl w-full max-w-sm sm:max-w-md p-6 shadow-xl space-y-4 text-center font-sans">
-            {/* Cabecera */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-slate-900 text-white">
-                  <QrCode className="w-5 h-5" />
-                </div>
-                <div className="text-left">
-                  <h4 className="font-semibold text-slate-900 text-base tracking-tight">
-                    {qrModalType === 'YAPE' ? 'Cobro con Yape' : 'Cobro con Plin'}
-                  </h4>
-                  <p className="text-[11px] text-slate-500">Presenta el código QR al cliente</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setQrModalType(null)}
-                className="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Cuerpo Operativo */}
-            <div className="overflow-y-auto space-y-4">
-              {/* Monto exacto */}
-              <div className="mobile-flat-row p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-[11px] font-medium text-slate-500 block">
-                  Monto exacto a transferir
-                </span>
-                <span className="text-2xl sm:text-3xl font-semibold tabular-nums text-slate-900 block mt-0.5">
-                  {formatCurrency(finalTotal, currentInventory?.currency)}
-                </span>
-              </div>
-
-              {/* QR Grande */}
-              <div className="flex flex-col items-center justify-center">
-                {((qrModalType === 'YAPE' && currentInventory?.yape_qr_url) ||
-                  (qrModalType === 'PLIN' && currentInventory?.plin_qr_url)) ? (
-                  <div className="qr-light-surface w-64 h-64 sm:w-72 sm:h-72 p-3 bg-white rounded-2xl border border-slate-200 flex items-center justify-center overflow-hidden">
-                    <img
-                      src={qrModalType === 'YAPE' ? currentInventory?.yape_qr_url! : currentInventory?.plin_qr_url!}
-                      alt={`Código QR ${qrModalType}`}
-                      className="w-full h-full object-contain"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-64 h-64 p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-500 text-xs space-y-2">
-                    <QrCode className="w-12 h-12 text-slate-300" />
-                    <p className="font-semibold text-xs text-slate-800">
-                      Sin QR cargado para {qrModalType}
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      Carga la imagen del QR en <strong>Configuración &gt; Pasarela de Pagos</strong>.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Número telefónico */}
-              {((qrModalType === 'YAPE' && currentInventory?.yape_phone) ||
-                (qrModalType === 'PLIN' && currentInventory?.plin_phone)) && (
-                <div className="mobile-flat-row p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
-                  <div className="text-left">
-                    <span className="text-[11px] text-slate-500 block">Número asociado</span>
-                    <span className="text-base font-mono font-semibold text-slate-900">
-                      {qrModalType === 'YAPE' ? currentInventory?.yape_phone : currentInventory?.plin_phone}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => copyPaymentPhone((qrModalType === 'YAPE' ? currentInventory?.yape_phone : currentInventory?.plin_phone)!)}
-                    className="mobile-inline-btn inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-                  >
-                    {copiedText ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                    <span>{copiedText ? 'Copiado' : 'Copiar'}</span>
-                  </button>
-                </div>
-              )}
-
-              {currentInventory?.payment_instructions && (
-                <p className="text-[11px] text-slate-500 italic">
-                  "{currentInventory.payment_instructions}"
-                </p>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setQrModalType(null)}
-                className="mobile-primary-btn w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-xl transition-colors cursor-pointer"
-              >
-                Volver al cobro
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <QrPaymentModal
+        qrType={qrModalType}
+        inventory={currentInventory}
+        finalTotal={finalTotal}
+        copiedText={copiedText}
+        onCopyPhone={copyPaymentPhone}
+        onClose={() => setQrModalType(null)}
+      />
 
       {/* Modal Minimalista de Confirmación de Cobro (Auto-dismiss 1.5s) */}
       <SuccessCheckModal

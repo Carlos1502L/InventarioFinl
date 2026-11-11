@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   X,
   Tag,
@@ -15,7 +16,19 @@ import { supabase } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
 import { PillOption } from '../common/PillOption';
+import { CancelButton } from '../common/CancelButton';
 import { MinimalDropdown } from '../ui/MinimalDropdown';
+import {
+  ModalShell,
+  ModalHeader,
+  ModalTabsBar,
+  ModalBody,
+  ModalFooter,
+  modalFieldCompactInputClass,
+  modalFieldLabelClass,
+  modalSurfaceCardClass,
+  modalPrimaryButtonClass
+} from './ModalShell';
 
 interface CategoriesManagementModalProps {
   isOpen: boolean;
@@ -62,8 +75,6 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  if (!isOpen) return null;
 
   const totalCount = categories.length + subcategories.length;
 
@@ -167,70 +178,66 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
     });
   }, [subcategories, filterType, searchQuery, parentCategoryFilter]);
 
+  const activeCreateFormId = mainTab === 'create'
+    ? createType === 'category'
+      ? 'create-category-form'
+      : 'create-subcategory-form'
+    : undefined;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="mobile-dark-modal bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-xl max-h-[85dvh] overflow-hidden shadow-2xl flex flex-col font-sans">
-        
-        {/* Cabecera Principal */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] bg-[#ffffff] shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#17191c]/10 text-[#17191c] flex items-center justify-center shrink-0">
-              <Tag className="w-5 h-5 text-[#17191c]" />
-            </div>
-            <div>
-              <h3 className="font-bold text-[#17191c] text-base uppercase tracking-tight">
-                Categorías y Subcategorías
-              </h3>
-              <p className="text-[11px] text-[#777b86]">
-                Estructura taxonómica del catálogo de productos
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="lg"
+      disableDismiss={isSubmitting}
+      formId={activeCreateFormId}
+    >
+      <ModalHeader
+        title="Categorías y subcategorías"
+        subtitle="Estructura taxonómica del catálogo de productos"
+        icon={<Tag className="w-4 h-4 lg:w-5 lg:h-5" />}
+        iconTone="indigo"
+        onClose={onClose}
+        closeDisabled={isSubmitting}
+      />
 
-        {/* Barra de Pestañas Tipo Píldora (RF-UI-CAT-011 & RF-UI-TABS-008) */}
-        <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#ececec] bg-white shrink-0 overflow-x-auto">
-          <PillOption
-            active={mainTab === 'create'}
-            onClick={() => setMainTab('create')}
-            icon={<Plus className="w-3.5 h-3.5" />}
-          >
-            Crear
-          </PillOption>
+      <ModalTabsBar>
+        <PillOption
+          active={mainTab === 'create'}
+          onClick={() => setMainTab('create')}
+          icon={<Plus className="w-3.5 h-3.5" />}
+        >
+          Crear
+        </PillOption>
 
-          <PillOption
-            active={mainTab === 'existing'}
-            onClick={() => setMainTab('existing')}
-            badge={totalCount}
-          >
-            Existentes
-          </PillOption>
-        </div>
+        <PillOption
+          active={mainTab === 'existing'}
+          onClick={() => setMainTab('existing')}
+          badge={totalCount}
+        >
+          Existentes
+        </PillOption>
+      </ModalTabsBar>
 
-        {/* Mensaje de Error Global */}
+      <ModalBody className="space-y-4">
         {errorMsg && (
-          <div className="mx-6 mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
+          <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-200">
             {errorMsg}
           </div>
         )}
 
-        {/* Contenido según Pestaña */}
-        <div className="p-6 overflow-y-auto space-y-4">
-          
-          {/* =========================================================
-              VISTA 1: CREAR (Formulario Único sin Scroll Excesivo)
-             ========================================================= */}
-          {mainTab === 'create' && (
-            <div className="space-y-4 animate-in fade-in">
-              {/* Selector de Tipo a Crear: Categoría vs Subcategoría */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <AnimatePresence mode="wait" initial={false}>
+          {mainTab === 'create' ? (
+            <motion.div
+              key="cat-create"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.14 }}
+              className="space-y-4"
+            >
+              {/* Selector de Tipo a Crear */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
                 <PillOption
                   active={createType === 'category'}
                   onClick={() => setCreateType('category')}
@@ -249,13 +256,16 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                 </PillOption>
               </div>
 
-              {/* Formulario 1A: Categoría */}
               {createType === 'category' ? (
-                <form onSubmit={handleCreateCategory} className="p-4 bg-[#fafafb] rounded-2xl border border-[#ececec] space-y-3.5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <form
+                  id="create-category-form"
+                  onSubmit={handleCreateCategory}
+                  className={`${modalSurfaceCardClass} space-y-3.5`}
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
-                        Nombre de Categoría <span className="text-rose-500">*</span>
+                      <label className={modalFieldLabelClass}>
+                        Nombre de categoría <span className="text-rose-400">*</span>
                       </label>
                       <input
                         type="text"
@@ -263,25 +273,24 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                         onChange={(e) => setCatName(e.target.value)}
                         placeholder="Ej. Bebidas, Ferretería, Lácteos..."
                         required
-                        className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                        className={modalFieldCompactInputClass}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
-                        Color de Etiqueta
-                      </label>
-                      <div className="flex items-center gap-2 pt-1 flex-wrap">
+                      <label className={modalFieldLabelClass}>Color de etiqueta</label>
+                      <div className="flex items-center gap-2.5 pt-1.5 flex-wrap">
                         {PRESET_COLORS.map((c) => (
                           <button
                             key={c}
                             type="button"
                             onClick={() => setCatColor(c)}
+                            aria-label={`Color ${c}`}
                             style={{ backgroundColor: c }}
-                            className={`w-6 h-6 rounded-full transition-[transform,opacity] duration-150 cursor-pointer ${
+                            className={`w-7 h-7 lg:w-6 lg:h-6 rounded-full transition-[transform,opacity] duration-150 cursor-pointer ${
                               catColor === c
-                                ? 'ring-2 ring-slate-900 ring-offset-1 scale-110'
-                                : 'opacity-75 hover:opacity-100'
+                                ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-900 scale-110'
+                                : 'opacity-70 hover:opacity-100'
                             }`}
                           />
                         ))}
@@ -290,40 +299,26 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
-                      Descripción (Opcional)
-                    </label>
+                    <label className={modalFieldLabelClass}>Descripción (opcional)</label>
                     <input
                       type="text"
                       value={catDesc}
                       onChange={(e) => setCatDesc(e.target.value)}
-                      placeholder="Breve descripción o notas de la familia de productos..."
-                      className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                      placeholder="Breve descripción o notas de la familia..."
+                      className={modalFieldCompactInputClass}
                     />
-                  </div>
-
-                  <div className="flex justify-end pt-2">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting || !catName.trim()}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#17191c] hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
-                    >
-                      {isSubmitting ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-                      ) : (
-                        <Plus className="w-3.5 h-3.5" />
-                      )}
-                      <span>Crear Categoría</span>
-                    </button>
                   </div>
                 </form>
               ) : (
-                /* Formulario 1B: Subcategoría */
-                <form onSubmit={handleCreateSubcategory} className="p-4 bg-[#fafafb] rounded-2xl border border-[#ececec] space-y-3.5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <form
+                  id="create-subcategory-form"
+                  onSubmit={handleCreateSubcategory}
+                  className={`${modalSurfaceCardClass} space-y-3.5`}
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
-                        Categoría Padre <span className="text-rose-500">*</span>
+                      <label className={modalFieldLabelClass}>
+                        Categoría padre <span className="text-rose-400">*</span>
                       </label>
                       <MinimalDropdown
                         value={selectedCatId}
@@ -340,81 +335,63 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
-                        Nombre de Subcategoría <span className="text-rose-500">*</span>
+                      <label className={modalFieldLabelClass}>
+                        Nombre de subcategoría <span className="text-rose-400">*</span>
                       </label>
                       <input
                         type="text"
                         value={subName}
                         onChange={(e) => setSubName(e.target.value)}
-                        placeholder="Ej. Gaseosas, Jugos, Herramientas manuales..."
+                        placeholder="Ej. Gaseosas, Jugos, Herramientas..."
                         required
-                        className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                        className={modalFieldCompactInputClass}
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
-                      Descripción (Opcional)
-                    </label>
+                    <label className={modalFieldLabelClass}>Descripción (opcional)</label>
                     <input
                       type="text"
                       value={subDesc}
                       onChange={(e) => setSubDesc(e.target.value)}
                       placeholder="Detalles sobre los artículos de esta subclasificación..."
-                      className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                      className={modalFieldCompactInputClass}
                     />
-                  </div>
-
-                  <div className="flex justify-end pt-2">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting || !selectedCatId || !subName.trim()}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#17191c] hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
-                    >
-                      {isSubmitting ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-                      ) : (
-                        <Plus className="w-3.5 h-3.5" />
-                      )}
-                      <span>Crear Subcategoría</span>
-                    </button>
                   </div>
                 </form>
               )}
-            </div>
-          )}
-
-          {/* =========================================================
-              VISTA 2: EXISTENTES (Filtros Chips, Buscador y Lista Bounded)
-             ========================================================= */}
-          {mainTab === 'existing' && (
-            <div className="space-y-3.5 animate-in fade-in">
-              
-              {/* Buscador Rápido Integrado */}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="cat-existing"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.14 }}
+              className="space-y-3.5"
+            >
               <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar por nombre o descripción..."
-                  className="w-full h-10 pl-9 pr-8 bg-zinc-100 rounded-xl text-xs text-[#17191c] placeholder:text-zinc-400 focus:bg-white focus:ring-1 focus:ring-[#17191c] focus:outline-none transition-all box-border"
+                  className={`${modalFieldCompactInputClass} pl-10 pr-8`}
                 />
-                <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-3 pointer-events-none" />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-2.5 text-zinc-400 hover:text-zinc-600 p-0.5 cursor-pointer"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-100 p-1 cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
 
-              {/* Filtro de Visualización Secundario Tipo Píldora Estandarizada */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
                 <PillOption
                   active={filterType === 'categories'}
                   onClick={() => setFilterType('categories')}
@@ -431,10 +408,9 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                 </PillOption>
               </div>
 
-              {/* Filtro adicional por Categoría Padre si está en subcategorías */}
               {filterType === 'subcategories' && categories.length > 0 && (
-                <div className="flex items-center gap-2 pt-0.5">
-                  <Filter className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                <div className="flex items-center gap-2.5">
+                  <Filter className="w-4 h-4 text-slate-400 shrink-0" />
                   <div className="flex-1">
                     <MinimalDropdown
                       value={parentCategoryFilter}
@@ -451,10 +427,9 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                 </div>
               )}
 
-              {/* Contenedor Scrolleable Independiente (Evita Scroll Infinito) */}
-              <div className="max-h-[360px] overflow-y-auto overscroll-contain space-y-2.5 border border-[#ececec] rounded-2xl bg-[#fafafb]/40 p-3">
+              <div className="max-h-[340px] overflow-y-auto overscroll-contain custom-scrollbar-dark space-y-2 border border-slate-800/80 rounded-2xl bg-slate-950/45 p-3">
                 {filteredCategories.length === 0 && filteredSubcategories.length === 0 ? (
-                  <div className="text-center py-10 text-xs text-[#777b86] space-y-2">
+                  <div className="text-center py-10 text-xs text-slate-400 space-y-2">
                     <p>No se encontraron resultados para la consulta actual.</p>
                     <button
                       type="button"
@@ -463,14 +438,13 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                         setFilterType('categories');
                         setParentCategoryFilter('all');
                       }}
-                      className="text-xs text-[#17191c] underline font-semibold cursor-pointer"
+                      className="text-xs text-indigo-300 underline font-semibold cursor-pointer"
                     >
                       Restablecer filtros
                     </button>
                   </div>
                 ) : (
                   <>
-                    {/* Sección Categorías */}
                     {filteredCategories.length > 0 && (
                       <div className="space-y-1.5">
                         {filteredCategories.map((cat) => {
@@ -478,24 +452,24 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                           return (
                             <div
                               key={cat.id}
-                              className="p-3 bg-white rounded-xl border border-[#ececec] flex items-center justify-between group hover:border-[#17191c]/40 transition-colors shadow-2xs"
+                              className="p-3 bg-slate-900/90 rounded-xl border border-slate-800/80 flex items-center justify-between gap-2 hover:border-slate-700 transition-colors"
                             >
                               <div className="flex items-center gap-3 min-w-0 pr-2">
                                 <span
-                                  className="w-3.5 h-3.5 rounded-full ring-2 ring-white shrink-0 shadow-2xs"
+                                  className="w-3.5 h-3.5 rounded-full ring-2 ring-slate-900 shrink-0"
                                   style={{ backgroundColor: cat.color || '#3B82F6' }}
                                 />
                                 <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <h4 className="text-xs font-bold text-[#17191c] truncate">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h4 className="text-xs font-semibold text-slate-100 truncate">
                                       {cat.name}
                                     </h4>
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 font-mono font-medium">
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 font-mono tabular-nums font-medium">
                                       {catSubCount} {catSubCount === 1 ? 'subcat.' : 'subcats.'}
                                     </span>
                                   </div>
                                   {cat.description && (
-                                    <p className="text-[11px] text-[#777b86] truncate mt-0.5">
+                                    <p className="text-[11px] text-slate-400 truncate mt-0.5">
                                       {cat.description}
                                     </p>
                                   )}
@@ -505,7 +479,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                               <button
                                 type="button"
                                 onClick={() => handleDeleteCategory(cat.id)}
-                                className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer shrink-0"
+                                className="min-h-[36px] min-w-[36px] lg:min-h-[32px] lg:min-w-[32px] flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer shrink-0"
                                 title="Eliminar categoría"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -516,7 +490,6 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                       </div>
                     )}
 
-                    {/* Sección Subcategorías */}
                     {filteredSubcategories.length > 0 && (
                       <div className="space-y-1.5 pt-1">
                         {filteredSubcategories.map((sub) => {
@@ -524,19 +497,19 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                           return (
                             <div
                               key={sub.id}
-                              className="p-3 bg-white rounded-xl border border-[#ececec] flex items-center justify-between group hover:border-[#17191c]/40 transition-colors shadow-2xs"
+                              className="p-3 bg-slate-900/90 rounded-xl border border-slate-800/80 flex items-center justify-between gap-2 hover:border-slate-700 transition-colors"
                             >
                               <div className="min-w-0 pr-2">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <h4 className="text-xs font-bold text-[#17191c] truncate">
+                                  <h4 className="text-xs font-semibold text-slate-100 truncate">
                                     {sub.name}
                                   </h4>
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#17191c]/10 text-[#17191c] font-semibold">
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-200 font-medium">
                                     {parentCat?.name || 'Categoría'}
                                   </span>
                                 </div>
                                 {sub.description && (
-                                  <p className="text-[11px] text-[#777b86] truncate mt-0.5">
+                                  <p className="text-[11px] text-slate-400 truncate mt-0.5">
                                     {sub.description}
                                   </p>
                                 )}
@@ -545,7 +518,7 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                               <button
                                 type="button"
                                 onClick={() => handleDeleteSubcategory(sub.id)}
-                                className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer shrink-0"
+                                className="min-h-[36px] min-w-[36px] lg:min-h-[32px] lg:min-w-[32px] flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer shrink-0"
                                 title="Eliminar subcategoría"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -558,10 +531,36 @@ export const CategoriesManagementModal: React.FC<CategoriesManagementModalProps>
                   </>
                 )}
               </div>
-            </div>
+            </motion.div>
           )}
-        </div>
-      </div>
-    </div>
+        </AnimatePresence>
+      </ModalBody>
+
+      <ModalFooter shortcutLabel={mainTab === 'create' ? 'para crear' : undefined}>
+        <CancelButton onClick={onClose} label="Cerrar" disabled={isSubmitting} />
+        {mainTab === 'create' && createType === 'category' && (
+          <button
+            type="submit"
+            form="create-category-form"
+            disabled={isSubmitting || !catName.trim()}
+            className={modalPrimaryButtonClass}
+          >
+            {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+            <span>Crear categoría</span>
+          </button>
+        )}
+        {mainTab === 'create' && createType === 'subcategory' && (
+          <button
+            type="submit"
+            form="create-subcategory-form"
+            disabled={isSubmitting || !selectedCatId || !subName.trim()}
+            className={modalPrimaryButtonClass}
+          >
+            {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+            <span>Crear subcategoría</span>
+          </button>
+        )}
+      </ModalFooter>
+    </ModalShell>
   );
 };

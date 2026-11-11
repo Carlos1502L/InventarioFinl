@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   X,
   PackageMinus,
@@ -9,8 +10,7 @@ import {
   Trash2,
   AlertTriangle,
   Loader2,
-  Package,
-  ChevronDown
+  Package
 } from 'lucide-react';
 import { Product } from '../../types/database';
 import { useAuth } from '../../context/AuthContext';
@@ -27,7 +27,18 @@ import {
 } from '../../services/offlineSync';
 import { showAppToast } from '../ui/ToastNotification';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
+import { MinimalDropdown } from '../ui/MinimalDropdown';
 import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
+import {
+  ModalShell,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  modalFieldCompactInputClass,
+  modalFieldLabelClass,
+  modalSecondaryButtonClass,
+  modalDangerButtonClass
+} from './ModalShell';
 
 export interface BulkWithdrawalSelectedItem {
   product: Product;
@@ -79,8 +90,6 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
       )
       .slice(0, 8);
   }, [searchTerm, products]);
-
-  if (!isOpen) return null;
 
   // Helper para recalcular deltaStock
   const computeDelta = (product: Product, boxes: number, units: number): number => {
@@ -223,8 +232,8 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
   });
 
   // Confirmar Salida Masiva
-  const handleConfirmWithdrawal = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleConfirmWithdrawal = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!currentInventory || isListEmpty || hasInvalidItem || isSubmitting) return;
 
     try {
@@ -329,138 +338,133 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in fade-in">
-        <div className="mobile-dark-modal bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col font-sans">
-          {/* 1. CABECERA DEL MODAL */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] bg-[#ffffff] shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                <PackageMinus className="w-5 h-5 text-rose-600" />
-              </div>
-              <div>
-                <h3 className="font-bold text-[#17191c] text-base uppercase tracking-tight">
-                  Salida Masiva de Mercadería
-                </h3>
-                <p className="text-xs text-[#777b86]">
-                  Escaneo rápido y descuento de stock en lote
-                </p>
-              </div>
+      <ModalShell
+        isOpen={isOpen}
+        onClose={onClose}
+        maxWidth="xl"
+        disableDismiss={isSubmitting}
+        onSubmitShortcut={() => {
+          if (!isListEmpty && !hasInvalidItem && !isSubmitting) {
+            handleConfirmWithdrawal();
+          }
+        }}
+      >
+        <ModalHeader
+          title="Salida masiva de mercadería"
+          subtitle="Escaneo rápido y descuento de stock en lote"
+          icon={<PackageMinus className="w-4 h-4 lg:w-5 lg:h-5" />}
+          iconTone="rose"
+          onClose={onClose}
+          closeDisabled={isSubmitting}
+        />
+
+        {/* Área de captura rápida */}
+        <div className="px-4 lg:px-6 py-3 border-b border-slate-800/80 bg-slate-950/35 shrink-0 space-y-2.5">
+          <div className="flex items-center gap-2.5 w-full">
+            <div className="relative flex-1 min-w-0">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={e => {
+                  setSearchTerm(e.target.value);
+                  setIsSearching(true);
+                }}
+                placeholder="Buscar producto por nombre o SKU..."
+                className={`${modalFieldCompactInputClass} pl-10 pr-9`}
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setIsSearching(false);
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-100 p-1 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
+
             <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[#777b86] hover:text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors"
+              type="button"
+              onClick={() => setScannerOpen(true)}
+              title="Abrir escáner continuo de cámara"
+              aria-label="Escanear con cámara"
+              className={`${modalSecondaryButtonClass} shrink-0`}
             >
-              <X className="w-4 h-4" />
+              <Camera className="w-4 h-4 text-indigo-400" />
+              <span>Escanear</span>
             </button>
           </div>
 
-          {/* 2. ÁREA DE CAPTURA RÁPIDA (BÚSQUEDA ANCHA A LA IZQUIERDA + ESCÁNER PEQUEÑO A LA DERECHA AL MISMO NIVEL) */}
-          <div className="p-4 sm:p-6 pb-2 border-b border-[#ececec] bg-[#fafafb]/80 shrink-0 space-y-3">
-            <div className="flex items-center gap-2.5 w-full">
-              <div className="relative flex-1 min-w-0">
-                <Search className="w-4 h-4 text-[#777b86] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={e => {
-                    setSearchTerm(e.target.value);
-                    setIsSearching(true);
-                  }}
-                  placeholder="Buscar producto por nombre o SKU..."
-                  className="w-full h-11 bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl pl-10 pr-9 text-xs font-mono uppercase text-[#17191c] placeholder-[#616161] focus:outline-none transition-colors shadow-xs"
-                />
-                {searchTerm && (
+          {isSearching && searchResults.length > 0 && (
+            <div className="bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl max-h-48 overflow-y-auto overscroll-contain custom-scrollbar-dark divide-y divide-slate-800/70">
+              {searchResults.map(p => {
+                const alreadySelected = selectedItems.has(p.id);
+                return (
                   <button
+                    key={p.id}
                     type="button"
-                    onClick={() => {
-                      setSearchTerm('');
-                      setIsSearching(false);
-                    }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#777b86] hover:text-[#17191c] p-1"
+                    onClick={() => handleAddProduct(p)}
+                    className="w-full text-left p-2.5 px-3.5 flex items-center justify-between gap-3 hover:bg-slate-800/70 cursor-pointer transition-colors"
                   >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Botón Escáner Continuo al lado de la barra de búsqueda */}
-              <button
-                type="button"
-                onClick={() => setScannerOpen(true)}
-                title="Abrir escáner continuo de cámara"
-                aria-label="Escanear con cámara"
-                className="h-11 px-3.5 flex items-center justify-center gap-1.5 bg-white hover:bg-[#fafafb] text-[#17191c] border border-[#CBD5E1] hover:border-[#17191c] rounded-xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer"
-              >
-                <Camera className="w-4 h-4 text-[#17191c]" />
-                <span>Escanear</span>
-              </button>
-            </div>
-
-            {/* Resultados de Búsqueda Desplegables */}
-            {isSearching && searchResults.length > 0 && (
-              <div className="bg-white border border-[#ececec] rounded-xl shadow-lg max-h-48 overflow-y-auto divide-y divide-[#E5E7EB] animate-in fade-in">
-                {searchResults.map(p => {
-                  const alreadySelected = selectedItems.has(p.id);
-                  return (
-                    <div
-                      key={p.id}
-                      onClick={() => handleAddProduct(p)}
-                      className="p-2.5 px-4 flex items-center justify-between hover:bg-[#fafafb] cursor-pointer transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {p.images && p.images[0] ? (
-                          <img
-                            src={p.images[0]}
-                            alt={p.name}
-                            className="w-9 h-9 rounded-lg object-cover border border-[#ececec] shrink-0"
-                          />
-                        ) : (
-                          <div className="w-9 h-9 rounded-lg bg-[#E5E7EB] flex items-center justify-center shrink-0">
-                            <Package className="w-4 h-4 text-[#777b86]" />
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-[#17191c] truncate">{p.name}</p>
-                          <p className="text-[10px] text-[#777b86] font-mono">
-                            SKU: {p.code} • Stock: {formatStockDisplay(p)}
-                          </p>
+                    <div className="flex items-center gap-3 min-w-0">
+                      {p.images && p.images[0] ? (
+                        <img
+                          src={p.images[0]}
+                          alt={p.name}
+                          className="w-9 h-9 rounded-lg object-cover border border-slate-700 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
+                          <Package className="w-4 h-4 text-slate-400" />
                         </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-100 truncate">{p.name}</p>
+                        <p className="text-[11px] text-slate-400 font-mono tabular-nums truncate">
+                          SKU: {p.code} · Stock: {formatStockDisplay(p)}
+                        </p>
                       </div>
-                      <span className="text-[11px] font-mono text-[#17191c] bg-[#fafafb] px-2 py-1 rounded border border-[#ececec] shrink-0">
-                        {alreadySelected ? 'Sumar (+)' : 'Agregar (+)'}
-                      </span>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                    <span className="text-[11px] font-mono text-indigo-300 bg-indigo-500/15 px-2.5 py-1 rounded-lg border border-indigo-500/30 shrink-0">
+                      {alreadySelected ? '+ Sumar' : '+ Agregar'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-          {/* 3. LISTA DINÁMICA DE PRODUCTOS SELECCIONADOS (SOLO NOMBRE Y CONTROLES AL LADO) */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
-            {errorMsg && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
+        {/* Lista dinámica de productos seleccionados */}
+        <ModalBody className="space-y-4">
+          {errorMsg && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-200 text-xs rounded-xl flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
-            {isListEmpty ? (
-              <div className="py-12 flex flex-col items-center justify-center text-center text-[#777b86] space-y-3">
-                <div className="w-14 h-14 rounded-full bg-[#fafafb] border border-[#ececec] flex items-center justify-center text-[#777b86]">
-                  <PackageMinus className="w-7 h-7 stroke-[1.25]" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-[#17191c]">
-                    No hay productos seleccionados
-                  </p>
-                  <p className="text-xs max-w-sm mt-1 text-[#777b86]">
-                    Usa la barra de búsqueda o el botón de cámara para agregar productos al lote.
-                  </p>
-                </div>
+          {isListEmpty ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center text-slate-400 space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-slate-950/70 border border-slate-800 flex items-center justify-center text-slate-400">
+                <PackageMinus className="w-7 h-7 stroke-[1.5]" />
               </div>
-            ) : (
-              <div className="space-y-2">
+              <div>
+                <p className="text-sm font-semibold text-slate-200">
+                  No hay productos seleccionados
+                </p>
+                <p className="text-xs max-w-sm mt-1 text-slate-400">
+                  Usa la barra de búsqueda o el botón de cámara para agregar productos al lote de retiro.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <AnimatePresence initial={false}>
                 {itemsList.map(item => {
                   const prod = item.product;
                   const isBox = prod.unit_type === 'BOX' && Number(prod.units_per_box) > 0;
@@ -468,100 +472,101 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
                   const isExceeded = item.deltaStock > maxStock + 0.0001;
 
                   return (
-                    <div
+                    <motion.div
                       key={prod.id}
-                      className={`p-3 px-3.5 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+                      layout
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      transition={{ duration: 0.15 }}
+                      className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
                         isExceeded
-                          ? 'bg-rose-50 border-rose-300'
-                          : 'bg-white border-[#ececec] hover:border-[#17191c]/40 shadow-sm'
+                          ? 'bg-rose-500/10 border-rose-500/40'
+                          : 'bg-slate-950/55 border-slate-800/80 hover:border-slate-700'
                       }`}
                     >
-                      {/* Solo Nombre de Producto y Disponibilidad */}
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-xs font-semibold text-[#17191c] truncate">
+                        <h4 className="text-xs font-semibold text-slate-100 truncate">
                           {prod.name}
                         </h4>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[10px] font-mono text-[#777b86]">
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <span className="text-[11px] font-mono tabular-nums text-slate-400">
                             Disp: {formatStockDisplay(prod)}
                           </span>
                           {isExceeded && (
-                            <span className="text-[10px] font-mono text-rose-600 font-bold">
-                              • Excede stock
+                            <span className="text-[11px] font-mono text-rose-300 font-semibold">
+                              · Excede stock
                             </span>
                           )}
                         </div>
                       </div>
 
-                      {/* Controles para Sumar o Descontar al lado */}
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
                         {isBox ? (
                           <div className="flex items-center gap-1.5">
-                            {/* Cajas */}
-                            <div className="flex items-center border border-[#ececec] rounded-lg overflow-hidden bg-[#fafafb]">
+                            <div className="flex items-center border border-slate-700 rounded-lg overflow-hidden bg-slate-900">
                               <button
                                 type="button"
                                 onClick={() => handleUpdateItem(prod.id, -1, 0)}
-                                className="w-7 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#17191c] active:scale-95"
+                                className="min-h-[36px] min-w-[32px] lg:min-h-[30px] lg:min-w-[28px] flex items-center justify-center hover:bg-slate-800 text-slate-200 active:scale-95 cursor-pointer"
                                 title="Restar caja"
                               >
                                 <Minus className="w-3 h-3" />
                               </button>
-                              <span className="w-8 text-center font-mono text-xs font-semibold text-[#17191c]">
+                              <span className="w-8 text-center font-mono tabular-nums text-xs font-semibold text-slate-100">
                                 {item.quantityBoxes}
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleUpdateItem(prod.id, 1, 0)}
-                                className="w-7 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#17191c] active:scale-95"
+                                className="min-h-[36px] min-w-[32px] lg:min-h-[30px] lg:min-w-[28px] flex items-center justify-center hover:bg-slate-800 text-slate-200 active:scale-95 cursor-pointer"
                                 title="Sumar caja"
                               >
                                 <Plus className="w-3 h-3" />
                               </button>
                             </div>
-                            <span className="text-[10px] font-mono text-[#777b86]">caj</span>
+                            <span className="text-[10px] font-mono text-slate-400">caj</span>
 
-                            {/* Unidades Sueltas */}
-                            <div className="flex items-center border border-[#ececec] rounded-lg overflow-hidden bg-[#fafafb]">
+                            <div className="flex items-center border border-slate-700 rounded-lg overflow-hidden bg-slate-900">
                               <button
                                 type="button"
                                 onClick={() => handleUpdateItem(prod.id, 0, -1)}
-                                className="w-6 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#17191c] active:scale-95"
+                                className="min-h-[36px] min-w-[30px] lg:min-h-[30px] lg:min-w-[26px] flex items-center justify-center hover:bg-slate-800 text-slate-200 active:scale-95 cursor-pointer"
                                 title="Restar unidad suelta"
                               >
                                 <Minus className="w-2.5 h-2.5" />
                               </button>
-                              <span className="w-6 text-center font-mono text-[11px] font-semibold text-[#17191c]">
+                              <span className="w-7 text-center font-mono tabular-nums text-[11px] font-semibold text-slate-100">
                                 {item.quantityUnits}
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleUpdateItem(prod.id, 0, 1)}
-                                className="w-6 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#17191c] active:scale-95"
+                                className="min-h-[36px] min-w-[30px] lg:min-h-[30px] lg:min-w-[26px] flex items-center justify-center hover:bg-slate-800 text-slate-200 active:scale-95 cursor-pointer"
                                 title="Sumar unidad suelta"
                               >
                                 <Plus className="w-2.5 h-2.5" />
                               </button>
                             </div>
-                            <span className="text-[10px] font-mono text-[#777b86]">und</span>
+                            <span className="text-[10px] font-mono text-slate-400">und</span>
                           </div>
                         ) : (
-                          <div className="flex items-center border border-[#ececec] rounded-lg overflow-hidden bg-[#fafafb]">
+                          <div className="flex items-center border border-slate-700 rounded-lg overflow-hidden bg-slate-900">
                             <button
                               type="button"
                               onClick={() => handleUpdateItem(prod.id, 0, -1)}
-                              className="w-7 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#17191c] active:scale-95"
+                              className="min-h-[36px] min-w-[32px] lg:min-h-[30px] lg:min-w-[28px] flex items-center justify-center hover:bg-slate-800 text-slate-200 active:scale-95 cursor-pointer"
                               title="Descontar 1 unidad"
                             >
                               <Minus className="w-3 h-3" />
                             </button>
-                            <span className="w-10 text-center font-mono text-xs font-semibold text-[#17191c]">
+                            <span className="w-10 text-center font-mono tabular-nums text-xs font-semibold text-slate-100">
                               {item.quantityUnits}
                             </span>
                             <button
                               type="button"
                               onClick={() => handleUpdateItem(prod.id, 0, 1)}
-                              className="w-7 h-7 flex items-center justify-center hover:bg-[#E5E7EB] text-[#17191c] active:scale-95"
+                              className="min-h-[36px] min-w-[32px] lg:min-h-[30px] lg:min-w-[28px] flex items-center justify-center hover:bg-slate-800 text-slate-200 active:scale-95 cursor-pointer"
                               title="Sumar 1 unidad"
                             >
                               <Plus className="w-3 h-3" />
@@ -569,88 +574,68 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
                           </div>
                         )}
 
-                        {/* Botón Remover */}
                         <button
                           type="button"
                           onClick={() => handleRemoveItem(prod.id)}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-[#777b86] hover:text-rose-600 hover:bg-rose-50 transition-colors ml-1"
+                          className="min-h-[36px] min-w-[36px] lg:min-h-[30px] lg:min-w-[30px] rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
                           title="Eliminar de la lista"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {!isListEmpty && (
+            <div className="pt-4 border-t border-slate-800/80 space-y-3">
+              <div>
+                <label className={modalFieldLabelClass}>Motivo de la salida</label>
+                <MinimalDropdown
+                  value={reason}
+                  onChange={(val) => setReason(val)}
+                  options={REASON_OPTIONS.map(r => ({ value: r, label: r }))}
+                />
               </div>
-            )}
 
-            {/* 4. METADATA DE LA SALIDA (MOTIVO COMO SELECTOR DESPLEGABLE Y NOTAS) */}
-            {!isListEmpty && (
-              <div className="pt-4 border-t border-[#ececec] space-y-3">
-                <div>
-                  <label className="block text-xs font-semibold text-[#17191c] mb-1.5 uppercase font-mono">
-                    Motivo de la Salida:
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={reason}
-                      onChange={e => setReason(e.target.value)}
-                      className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3.5 py-2.5 text-xs text-[#17191c] font-medium appearance-none cursor-pointer pr-10 shadow-sm focus:outline-none transition-colors"
-                    >
-                      {REASON_OPTIONS.map(r => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-[#777b86] absolute right-3.5 top-3 pointer-events-none" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#17191c] mb-1.5 uppercase font-mono">
-                    Notas adicionales (opcional):
-                  </label>
-                  <input
-                    type="text"
-                    value={notes}
-                    onChange={e => setNotes(e.target.value)}
-                    placeholder="Ej. Salida autorizada para showroom, merma de embalaje..."
-                    className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3.5 py-2.5 text-xs text-[#17191c] placeholder-[#616161] focus:outline-none transition-colors shadow-sm"
-                  />
-                </div>
+              <div>
+                <label className={modalFieldLabelClass}>Notas adicionales (opcional)</label>
+                <input
+                  type="text"
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="Ej. Salida autorizada para showroom, merma de embalaje..."
+                  className={modalFieldCompactInputClass}
+                />
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </ModalBody>
 
-          {/* 5. BOTÓN DE ACCIÓN INFERIOR */}
-          <div className="p-4 sm:p-6 border-t border-[#ececec] bg-[#ffffff] shrink-0">
-            <button
-              type="button"
-              onClick={handleConfirmWithdrawal}
-              disabled={isListEmpty || hasInvalidItem || isSubmitting}
-              className={`w-full min-h-[48px] py-3 px-4 rounded-xl font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] ${
-                isListEmpty || hasInvalidItem || isSubmitting
-                  ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed border border-neutral-300'
-                  : 'bg-rose-600 hover:bg-rose-700 text-white border border-rose-700'
-              }`}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>PROCESANDO...</span>
-                </>
-              ) : (
-                <>
-                  <PackageMinus className="w-4 h-4" />
-                  <span>Confirmar Descuentos</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
+        <ModalFooter shortcutLabel={!isListEmpty && !hasInvalidItem ? 'para confirmar' : undefined}>
+          <button
+            type="button"
+            onClick={handleConfirmWithdrawal}
+            disabled={isListEmpty || hasInvalidItem || isSubmitting}
+            className={`${modalDangerButtonClass} w-full sm:w-auto`}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Procesando lote...</span>
+              </>
+            ) : (
+              <>
+                <PackageMinus className="w-4 h-4" />
+                <span className="tabular-nums">Confirmar descuentos ({itemsList.length})</span>
+              </>
+            )}
+          </button>
+        </ModalFooter>
+      </ModalShell>
 
       {/* Escáner Continuo de Cámara */}
       <BarcodeScannerModal
@@ -658,7 +643,7 @@ export const BulkWithdrawModal: React.FC<BulkWithdrawModalProps> = ({
         onClose={() => setScannerOpen(false)}
         onScanSuccess={handleContinuousScan}
         continuous={true}
-        title="Escaneo Continuo de Retiro"
+        title="Escaneo continuo de retiro"
         instructions="Escanea los códigos sucesivamente. Cada detección agregará el producto a la lista sin cerrar la cámara."
       />
     </>

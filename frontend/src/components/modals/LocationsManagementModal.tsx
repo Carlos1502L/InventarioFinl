@@ -1,10 +1,23 @@
 import React, { useState } from 'react';
-import { X, MapPin, Plus, Trash2, QrCode, Loader2, Sparkles } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { MapPin, Plus, Trash2, QrCode, Loader2, Sparkles } from 'lucide-react';
 import { Location } from '../../types/database';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { LocationLabelModal } from './LocationLabelModal';
 import { PillOption } from '../common/PillOption';
+import { CancelButton } from '../common/CancelButton';
+import {
+  ModalShell,
+  ModalHeader,
+  ModalTabsBar,
+  ModalBody,
+  ModalFooter,
+  modalFieldCompactInputClass,
+  modalFieldLabelClass,
+  modalSurfaceCardClass,
+  modalPrimaryButtonClass
+} from './ModalShell';
 
 interface LocationsManagementModalProps {
   isOpen: boolean;
@@ -29,8 +42,6 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
 
   // Modal para imprimir / exportar etiqueta a tamaño de tarjeta de crédito
   const [selectedLocationForLabel, setSelectedLocationForLabel] = useState<Location | null>(null);
-
-  if (!isOpen) return null;
 
   // Auto-generador de código de ubicación amigable
   const generateUniqueCode = (locName: string) => {
@@ -104,72 +115,64 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-        <div className="mobile-dark-modal bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[85dvh] font-sans">
-          
-          {/* Cabecera */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] bg-[#ffffff] shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#17191c]/10 text-[#17191c] flex items-center justify-center shrink-0">
-                <MapPin className="w-5 h-5 text-[#17191c]" />
-              </div>
-              <div>
-                <h3 className="font-bold text-[#17191c] text-base uppercase tracking-tight">
-                  Ubicaciones Físicas
-                </h3>
-                <p className="text-[11px] text-[#777b86]">
-                  Depósitos, estantes y etiquetas QR imprimibles
-                </p>
-              </div>
+      <ModalShell
+        isOpen={isOpen}
+        onClose={onClose}
+        maxWidth="lg"
+        disableDismiss={isSubmitting}
+        formId={activeTab === 'create' ? 'create-location-form' : undefined}
+      >
+        <ModalHeader
+          title="Ubicaciones físicas"
+          subtitle="Depósitos, estantes y etiquetas QR imprimibles"
+          icon={<MapPin className="w-4 h-4 lg:w-5 lg:h-5" />}
+          iconTone="indigo"
+          onClose={onClose}
+          closeDisabled={isSubmitting}
+        />
+
+        <ModalTabsBar>
+          <PillOption
+            active={activeTab === 'create'}
+            onClick={() => setActiveTab('create')}
+            icon={<Plus className="w-3.5 h-3.5" />}
+          >
+            Crear ubicación
+          </PillOption>
+
+          <PillOption
+            active={activeTab === 'existing'}
+            onClick={() => setActiveTab('existing')}
+            badge={locations.length}
+          >
+            Existentes
+          </PillOption>
+        </ModalTabsBar>
+
+        <ModalBody className="space-y-4">
+          {errorMsg && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-200">
+              {errorMsg}
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+          )}
 
-          {/* Barra de Pestañas Tipo Píldora (RF-UI-TABS-008 & RNF-UX-CONSISTENCY-005) */}
-          <div className="mobile-tabs-bar flex items-center gap-2 px-6 py-3 border-b border-[#ececec] bg-white shrink-0 overflow-x-auto">
-            <PillOption
-              active={activeTab === 'create'}
-              onClick={() => setActiveTab('create')}
-              icon={<Plus className="w-3.5 h-3.5" />}
-            >
-              Crear ubicación
-            </PillOption>
-
-            <PillOption
-              active={activeTab === 'existing'}
-              onClick={() => setActiveTab('existing')}
-              badge={locations.length}
-            >
-              Existentes
-            </PillOption>
-          </div>
-
-          {/* Contenido según Pestaña Activa */}
-          <div className="p-6 overflow-y-auto space-y-4">
-            {errorMsg && (
-              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
-                {errorMsg}
-              </div>
-            )}
-
-            {/* PESTAÑA 1: FORMULARIO CREAR UBICACIONES */}
-            {activeTab === 'create' && (
-              <form onSubmit={handleCreateLocation} className="space-y-4 animate-in fade-in">
-                <div className="p-4 bg-[#fafafb] rounded-2xl border border-[#ececec] space-y-3.5">
-                  <span className="text-xs font-bold text-[#17191c] uppercase tracking-wider flex items-center gap-1.5">
-                    <Plus className="w-4 h-4 text-white" /> Datos de la Nueva Ubicación
-                  </span>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <AnimatePresence mode="wait" initial={false}>
+            {activeTab === 'create' ? (
+              <motion.form
+                key="loc-create"
+                id="create-location-form"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.14 }}
+                onSubmit={handleCreateLocation}
+                className="space-y-4"
+              >
+                <div className={`${modalSurfaceCardClass} space-y-3.5`}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
-                        Nombre del Espacio <span className="text-rose-500">*</span>
+                      <label className={modalFieldLabelClass}>
+                        Nombre del espacio <span className="text-rose-400">*</span>
                       </label>
                       <input
                         type="text"
@@ -180,19 +183,19 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                         }}
                         placeholder="Ej: Estante B - Pasillo 3"
                         required
-                        className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                        className={modalFieldCompactInputClass}
                       />
                     </div>
 
                     <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-[11px] font-semibold text-[#17191c]">Código / QR</label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-medium text-slate-300">Código / QR</label>
                         <button
                           type="button"
                           onClick={() => setCode(generateUniqueCode(name || 'LOC'))}
-                          className="text-[10px] text-[#17191c] hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                          className="text-[11px] text-indigo-300 hover:text-indigo-200 hover:underline flex items-center gap-1 cursor-pointer font-medium"
                         >
-                          <Sparkles className="w-2.5 h-2.5 text-white" /> Auto-generar
+                          <Sparkles className="w-3 h-3" /> Auto-generar
                         </button>
                       </div>
                       <input
@@ -200,63 +203,49 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                         value={code}
                         onChange={e => setCode(e.target.value.toUpperCase())}
                         placeholder="Ej: LOC-EST-001"
-                        className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs font-mono text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all uppercase box-border"
+                        className={`${modalFieldCompactInputClass} font-mono uppercase`}
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#17191c] mb-1">
-                      Descripción / Referencia
-                    </label>
+                    <label className={modalFieldLabelClass}>Descripción / Referencia</label>
                     <input
                       type="text"
                       value={description}
                       onChange={e => setDescription(e.target.value)}
                       placeholder="Ej: Segundo piso junto a la puerta principal..."
-                      className="w-full bg-white border border-[#ececec] focus:border-[#17191c] rounded-xl px-3 py-2 text-xs text-[#17191c] placeholder:text-neutral-400 focus:outline-none transition-all box-border"
+                      className={modalFieldCompactInputClass}
                     />
                   </div>
-
-                  <div className="flex justify-end pt-2">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting || !name.trim()}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#17191c] hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
-                    >
-                      {isSubmitting ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-                      ) : (
-                        <Plus className="w-3.5 h-3.5" />
-                      )}
-                      <span>Crear Ubicación</span>
-                    </button>
-                  </div>
                 </div>
-              </form>
-            )}
-
-            {/* PESTAÑA 2: UBICACIONES EXISTENTES (RECUADRO CON SCROLL CONTENIDO) */}
-            {activeTab === 'existing' && (
-              <div className="space-y-3 animate-in fade-in">
-                <div className="flex items-center justify-between text-xs text-[#777b86]">
-                  <span className="font-semibold text-[#17191c]">
-                    Espacios Físicos Registrados ({locations.length})
+              </motion.form>
+            ) : (
+              <motion.div
+                key="loc-existing"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.14 }}
+                className="space-y-3"
+              >
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-semibold text-slate-200 tabular-nums">
+                    Espacios registrados ({locations.length})
                   </span>
-                  <span className="text-[10px] font-mono">
-                    Haz clic en "Etiqueta" para exportar rótulo físico
+                  <span className="text-[11px] font-mono text-slate-400">
+                    85.6 × 53.9 mm QR
                   </span>
                 </div>
 
-                {/* Recuadro contenedor con scroll para evitar scroll infinito */}
-                <div className="max-h-[380px] overflow-y-auto space-y-2.5 border border-[#ececec] rounded-2xl bg-[#fafafb]/40 p-3 overscroll-contain">
+                <div className="max-h-[360px] overflow-y-auto overscroll-contain custom-scrollbar-dark space-y-2 border border-slate-800/80 rounded-2xl bg-slate-950/45 p-3">
                   {locations.length === 0 ? (
-                    <div className="text-center py-10 text-xs text-[#777b86] space-y-2">
+                    <div className="text-center py-10 text-xs text-slate-400 space-y-2">
                       <p>No hay ubicaciones creadas aún.</p>
                       <button
                         type="button"
                         onClick={() => setActiveTab('create')}
-                        className="text-xs text-[#17191c] underline font-semibold cursor-pointer"
+                        className="text-xs text-indigo-300 underline font-semibold cursor-pointer"
                       >
                         Crear la primera ubicación
                       </button>
@@ -265,17 +254,17 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                     locations.map(loc => (
                       <div
                         key={loc.id}
-                        className="p-3.5 bg-white rounded-xl border border-[#ececec] flex items-center justify-between group hover:border-[#17191c]/40 transition-colors shadow-2xs"
+                        className="p-3.5 bg-slate-900/90 rounded-xl border border-slate-800/80 flex items-center justify-between gap-2 hover:border-slate-700 transition-colors"
                       >
-                        <div className="space-y-0.5 min-w-0 pr-3">
+                        <div className="space-y-0.5 min-w-0 pr-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="text-xs font-bold text-[#17191c] truncate">{loc.name}</h4>
-                            <span className="font-mono text-[10px] px-2 py-0.5 bg-[#fafafb] border border-[#ececec] rounded-md text-[#17191c] font-semibold">
+                            <h4 className="text-xs font-semibold text-slate-100 truncate">{loc.name}</h4>
+                            <span className="font-mono text-[10px] px-2 py-0.5 bg-slate-800 border border-slate-700 rounded-md text-slate-200 font-semibold">
                               {loc.code}
                             </span>
                           </div>
                           {loc.description && (
-                            <p className="text-[11px] text-[#777b86] truncate">{loc.description}</p>
+                            <p className="text-[11px] text-slate-400 truncate">{loc.description}</p>
                           )}
                         </div>
 
@@ -283,17 +272,17 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                           <button
                             type="button"
                             onClick={() => setSelectedLocationForLabel(loc)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#fafafb] hover:bg-[#17191c]/10 text-[#17191c] rounded-lg text-xs font-semibold border border-[#ececec] transition-all active:scale-95 cursor-pointer"
+                            className="min-h-[38px] lg:min-h-[32px] inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/90 hover:bg-slate-800 text-slate-200 rounded-lg text-xs font-medium border border-slate-700/80 transition-all active:scale-95 cursor-pointer"
                             title="Imprimir o exportar etiqueta de tarjeta de crédito"
                           >
-                            <QrCode className="w-3.5 h-3.5 text-[#17191c]" />
+                            <QrCode className="w-3.5 h-3.5 text-indigo-400" />
                             <span className="hidden sm:inline">Etiqueta</span>
                           </button>
 
                           <button
                             type="button"
                             onClick={() => handleDeleteLocation(loc.id)}
-                            className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                            className="min-h-[38px] min-w-[38px] lg:min-h-[32px] lg:min-w-[32px] flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
                             title="Eliminar ubicación"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -303,11 +292,26 @@ export const LocationsManagementModal: React.FC<LocationsManagementModalProps> =
                     ))
                   )}
                 </div>
-              </div>
+              </motion.div>
             )}
-          </div>
-        </div>
-      </div>
+          </AnimatePresence>
+        </ModalBody>
+
+        <ModalFooter shortcutLabel={activeTab === 'create' ? 'para crear' : undefined}>
+          <CancelButton onClick={onClose} label="Cerrar" disabled={isSubmitting} />
+          {activeTab === 'create' && (
+            <button
+              type="submit"
+              form="create-location-form"
+              disabled={isSubmitting || !name.trim()}
+              className={modalPrimaryButtonClass}
+            >
+              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+              <span>Crear ubicación</span>
+            </button>
+          )}
+        </ModalFooter>
+      </ModalShell>
 
       {/* Modal de Etiqueta Imprimible */}
       <LocationLabelModal

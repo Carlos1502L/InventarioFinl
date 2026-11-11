@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  X,
   Database,
   Send,
   Calendar,
@@ -12,9 +12,7 @@ import {
   AlertTriangle,
   Mail,
   FileJson,
-  ShieldCheck,
   KeyRound,
-  Edit2,
   ChevronDown
 } from 'lucide-react';
 import { supabase, getApiUrl } from '../../services/supabase';
@@ -23,6 +21,20 @@ import { showAppToast } from '../ui';
 import { BackupRestoreModal } from '../settings/BackupRestoreModal';
 import { PillOption } from '../common/PillOption';
 import { Switch } from '../common/Switch';
+import { CancelButton } from '../common/CancelButton';
+import {
+  ModalShell,
+  ModalHeader,
+  ModalTabsBar,
+  ModalBody,
+  ModalFooter,
+  modalFieldCompactInputClass,
+  modalFieldLabelClass,
+  modalSurfaceCardClass,
+  modalPrimaryButtonClass,
+  modalSecondaryButtonClass,
+  modalDangerButtonClass
+} from './ModalShell';
 
 interface BackupManagementModalProps {
   isOpen: boolean;
@@ -224,8 +236,6 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
 
     fetchSettings();
   }, [currentInventory?.id, isOpen]);
-
-  if (!isOpen) return null;
 
   // --------------------------------------------------------------------------
   // HANDLERS
@@ -711,82 +721,79 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
     }
   };
 
+  const isBusy = isExporting || isDownloading || isSendingOtp || isVerifyingOtp || isSavingSettings || isRestoring;
+
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-3 sm:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in fade-in">
-        <div className="mobile-dark-modal w-full max-w-md bg-white border border-[#E5E7EB] rounded-3xl shadow-2xl flex flex-col font-sans h-auto max-h-[85vh] overflow-hidden transition-all duration-300 ease-in-out">
-          
-          {/* Cabecera Limpia */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E7EB] bg-[#ffffff] shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center shrink-0">
-                <Database className="w-5 h-5 text-[#1E3A5F]" />
-              </div>
-              <div>
-                <h3 className="font-bold text-[#1E3A5F] text-base uppercase tracking-tight">
-                  Copias de Seguridad
-                </h3>
-                <p className="text-xs text-[#616161]">
-                  Respaldo y restauración
-                </p>
-              </div>
+      <ModalShell
+        isOpen={isOpen}
+        onClose={onClose}
+        maxWidth="md"
+        disableDismiss={isBusy}
+      >
+        <ModalHeader
+          title="Copias de seguridad"
+          subtitle="Respaldo cifrado por correo OTP y restauración JSON"
+          icon={<Database className="w-4 h-4 lg:w-5 lg:h-5" />}
+          iconTone="indigo"
+          onClose={onClose}
+          closeDisabled={isBusy}
+        />
+
+        <ModalTabsBar>
+          <PillOption
+            active={activeTab === 'manual'}
+            onClick={() => setActiveTab('manual')}
+          >
+            Manual
+          </PillOption>
+          <PillOption
+            active={activeTab === 'scheduled'}
+            onClick={() => setActiveTab('scheduled')}
+          >
+            Automático
+          </PillOption>
+          <PillOption
+            active={activeTab === 'restore'}
+            onClick={() => setActiveTab('restore')}
+          >
+            Restaurar
+          </PillOption>
+        </ModalTabsBar>
+
+        <ModalBody className="space-y-4">
+          {loadingSettings && (
+            <div className="flex items-center justify-center gap-2 py-3 text-xs text-slate-400">
+              <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+              <span>Cargando configuración de respaldos...</span>
             </div>
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[#616161] hover:text-[#1E3A5F] hover:bg-[#F8F9FA] border border-[#E5E7EB] transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+          )}
 
-          {/* Barra de Pestañas (Píldoras móviles) */}
-          <div className="mobile-tabs-bar">
-            <PillOption
-              active={activeTab === 'manual'}
-              onClick={() => setActiveTab('manual')}
-            >
-              Manual
-            </PillOption>
-            <PillOption
-              active={activeTab === 'scheduled'}
-              onClick={() => setActiveTab('scheduled')}
-            >
-              Automático
-            </PillOption>
-            <PillOption
-              active={activeTab === 'restore'}
-              onClick={() => setActiveTab('restore')}
-            >
-              Restaurar
-            </PillOption>
-          </div>
-
-          {/* Cuerpo Scrollable con Padding y Espaciado Limpio */}
-          <div className="overflow-y-auto space-y-4 p-5 h-auto transition-all duration-300 ease-in-out">
-            {loadingSettings && (
-              <div className="flex items-center justify-center gap-2 py-3 text-xs text-[#616161]">
-                <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
-                <span>Cargando datos...</span>
-              </div>
-            )}
-
+          <AnimatePresence mode="wait" initial={false}>
             {/* PESTAÑA 1: MANUAL (con Verificación OTP y RF-2) */}
             {activeTab === 'manual' && (
-              <div className="space-y-4">
-                <div className="space-y-1.5">
+              <motion.div
+                key="backup-manual"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.14 }}
+                className="space-y-4"
+              >
+                <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2 min-w-0">
-                    <label className="text-xs font-semibold text-[#1E3A5F] truncate min-w-0 shrink">
+                    <label className="text-xs font-medium text-slate-300 truncate">
                       Correo de destino
                     </label>
                     {isEmailVerified && (
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-medium shrink-0">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Verificado
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-medium">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" /> Verificado
                         </span>
                         <button
                           type="button"
                           onClick={handleResetVerification}
-                          className="text-[10px] text-neutral-400 hover:text-neutral-700 underline font-medium cursor-pointer shrink-0"
+                          className="text-[11px] text-slate-400 hover:text-slate-100 underline font-medium cursor-pointer"
                         >
                           Cambiar
                         </button>
@@ -795,8 +802,8 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 w-full min-w-0">
-                    <div className="flex-1 min-w-0 h-11 bg-neutral-100 rounded-xl px-3.5 flex items-center gap-2.5 border border-transparent focus-within:ring-1 focus-within:ring-[#1E3A5F]">
-                      <Mail className="w-4 h-4 text-[#616161] shrink-0 pointer-events-none" />
+                    <div className="relative flex-1 min-w-0">
+                      <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
                         type="text"
                         inputMode="email"
@@ -811,10 +818,8 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                         placeholder="propietario@ejemplo.com"
                         disabled={isExporting || isEmailVerified}
                         readOnly={isEmailVerified}
-                        className={`w-full flex-1 min-w-0 bg-transparent text-xs font-medium focus:outline-none truncate border-none p-0 shadow-none ${
-                          isEmailVerified
-                            ? 'text-neutral-600 cursor-not-allowed'
-                            : 'text-[#1E3A5F]'
+                        className={`${modalFieldCompactInputClass} pl-10 ${
+                          isEmailVerified ? 'opacity-65 cursor-not-allowed' : ''
                         }`}
                       />
                     </div>
@@ -824,49 +829,54 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                         type="button"
                         onClick={handleSendOtp}
                         disabled={isSendingOtp || isExporting || !manualEmail.trim()}
-                        className="h-11 px-3.5 rounded-xl border border-[#1E3A5F] bg-white hover:bg-[#1E3A5F]/5 text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0 shadow-xs"
+                        className={`${modalSecondaryButtonClass} shrink-0 min-h-[44px] lg:min-h-[38px]`}
                       >
                         {isSendingOtp ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1E3A5F]" />
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
                         ) : (
-                          <KeyRound className="w-3.5 h-3.5 text-[#1E3A5F]" />
+                          <KeyRound className="w-3.5 h-3.5 text-indigo-400" />
                         )}
                         <span>{otpSent ? 'Reenviar' : 'Validar'}</span>
                       </button>
                     )}
                   </div>
 
-                  {/* Formulario OTP minimalista en línea */}
+                  {/* Formulario OTP de 6 dígitos en línea */}
                   {otpSent && !isEmailVerified && (
-                    <div className="flex items-center gap-2 pt-1 animate-in fade-in">
+                    <div className="flex flex-wrap items-center gap-2 pt-1.5">
                       <input
                         type="text"
+                        inputMode="numeric"
                         maxLength={6}
                         value={otpCode}
                         onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        placeholder="Código 6 dígitos"
-                        className="w-32 h-9 px-2 text-center font-mono text-xs font-bold tracking-widest bg-white border border-[#1E3A5F]/30 focus:border-[#1E3A5F] rounded-lg text-[#1E3A5F] focus:outline-none"
+                        placeholder="000000"
+                        className="w-32 h-10 px-2.5 text-center font-mono tabular-nums text-sm font-bold tracking-[0.25em] bg-slate-950 border border-indigo-500/40 focus:border-indigo-400 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
                       />
 
                       <button
                         type="button"
                         onClick={handleVerifyOtp}
                         disabled={isVerifyingOtp || otpCode.trim().length !== 6}
-                        className="h-9 px-3 rounded-lg bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                        className={`${modalPrimaryButtonClass} min-h-[40px] lg:min-h-[38px] px-4 py-2`}
                       >
-                        {isVerifyingOtp ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3 text-[#E8B4A0]" />}
-                        <span>Verificar</span>
+                        {isVerifyingOtp ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        )}
+                        <span>Verificar OTP</span>
                       </button>
 
-                      <span className="text-[10px] text-neutral-400 pl-1">
+                      <span className="text-[11px] font-mono tabular-nums text-slate-400 pl-1">
                         {otpCooldown > 0 ? `${otpCooldown}s` : (
                           <button
                             type="button"
                             onClick={handleSendOtp}
                             disabled={isSendingOtp}
-                            className="text-[#1E3A5F] underline hover:text-black cursor-pointer font-medium"
+                            className="text-indigo-300 underline hover:text-indigo-200 cursor-pointer font-sans font-medium"
                           >
-                            Reenviar
+                            Reenviar código
                           </button>
                         )}
                       </span>
@@ -874,117 +884,97 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                   )}
                 </div>
 
-                <div className="space-y-2 pt-1">
-                  {/* Botón 1: Generar y Enviar */}
+                <div className="space-y-2.5 pt-1">
                   <button
                     type="button"
                     onClick={handleExportAndSend}
                     disabled={!isEmailVerified || isExporting || isDownloading}
-                    className={`mobile-primary-btn w-full min-h-[44px] px-4 rounded-xl text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-98 shadow-xs cursor-pointer ${
-                      isEmailVerified
-                        ? 'bg-[#1E3A5F] hover:bg-[#152a45]'
-                        : 'bg-neutral-300 text-neutral-500 cursor-not-allowed opacity-60'
-                    }`}
+                    className={`${modalPrimaryButtonClass} w-full`}
                     title={
                       !isEmailVerified
                         ? 'Debes verificar tu correo mediante código OTP antes de despachar el respaldo.'
-                        : 'Generar y Enviar'
+                        : 'Generar y enviar'
                     }
                   >
                     {isExporting ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
+                        <Loader2 className="w-4 h-4 animate-spin" />
                         <span>Generando y enviando...</span>
                       </>
                     ) : (
                       <>
-                        <Send className="w-4 h-4 text-[#E8B4A0]" />
-                        <span>Generar y Enviar</span>
+                        <Send className="w-4 h-4" />
+                        <span>Generar y enviar por correo</span>
                       </>
                     )}
                   </button>
 
-                  {/* Botón 2: Descargar Backup */}
                   <button
                     type="button"
                     onClick={handleDownloadDirectly}
                     disabled={isExporting || isDownloading}
-                    className="w-full min-h-[44px] px-4 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer disabled:opacity-50"
+                    className={`${modalSecondaryButtonClass} w-full`}
                   >
                     {isDownloading ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin text-neutral-600" />
+                        <Loader2 className="w-4 h-4 animate-spin" />
                         <span>Descargando...</span>
                       </>
                     ) : (
                       <>
-                        <Download className="w-4 h-4 text-neutral-600" />
-                        <span>Descargar Backup</span>
+                        <Download className="w-4 h-4 text-indigo-400" />
+                        <span>Descargar copia JSON</span>
                       </>
                     )}
                   </button>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* PESTAÑA 2: AUTOMÁTICO */}
             {activeTab === 'scheduled' && (
-              <div className="flex flex-col gap-4 animate-in fade-in duration-300">
-                {/* Fila del Toggle: Siempre visible e intacta */}
-                <div className="flex items-center justify-between p-4 bg-gray-50/80 rounded-2xl border border-gray-100 min-h-[58px] shrink-0">
-                  <div className="flex flex-col pr-4 min-w-0 flex-1">
-                    <span className="text-sm font-semibold text-gray-900 block truncate">Respaldos automáticos</span>
-                    <span className="text-xs text-gray-500 block truncate">Envío recurrente sin abrir la app</span>
+              <motion.div
+                key="backup-scheduled"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.14 }}
+                className="flex flex-col gap-4"
+              >
+                <div className={`${modalSurfaceCardClass} flex items-center justify-between gap-3`}>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-sm font-semibold text-slate-100 block truncate">
+                      Respaldos automáticos
+                    </span>
+                    <span className="text-xs text-slate-400 block truncate mt-0.5">
+                      Envío recurrente en segundo plano
+                    </span>
                   </div>
-                  
-                  {/* Switch con tamaño fijo bloqueado y centrado vertical exacto */}
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={isScheduled}
-                    aria-label="Respaldos automáticos"
-                    onClick={() => setIsScheduled(!isScheduled)}
-                    style={{
-                      width: '48px',
-                      minWidth: '48px',
-                      maxWidth: '48px',
-                      height: '28px',
-                      minHeight: '28px',
-                      maxHeight: '28px',
-                      padding: '4px',
-                      boxSizing: 'border-box',
-                      flexShrink: 0
-                    }}
-                    className={`relative inline-flex items-center p-1 h-7 w-12 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                      isScheduled ? 'bg-black' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
-                        isScheduled ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
+
+                  <Switch
+                    checked={isScheduled}
+                    onChange={setIsScheduled}
+                    ariaLabel="Respaldos automáticos"
+                  />
                 </div>
 
-                {/* Formulario desplegable: Solo se renderiza DEBAJO cuando isScheduled es true */}
                 {isScheduled && (
-                  <div className="flex flex-col gap-4 pt-1 transition-all duration-300 animate-in fade-in">
-                    {/* Correo de destino con Validación Minimalista */}
-                    <div className="space-y-1.5">
+                  <div className="flex flex-col gap-4 pt-1">
+                    {/* Correo de destino con Validación OTP */}
+                    <div className="space-y-2">
                       <div className="flex items-center justify-between gap-2 min-w-0">
-                        <label className="text-xs font-semibold text-[#1E3A5F] truncate min-w-0 shrink">
+                        <label className="text-xs font-medium text-slate-300 truncate">
                           Correo de destino
                         </label>
                         {isScheduledEmailVerified && (
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-medium shrink-0">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Verificado
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-medium">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" /> Verificado
                             </span>
                             <button
                               type="button"
                               onClick={handleResetScheduledVerification}
-                              className="text-[10px] text-neutral-400 hover:text-neutral-700 underline font-medium cursor-pointer shrink-0"
+                              className="text-[11px] text-slate-400 hover:text-slate-100 underline font-medium cursor-pointer"
                             >
                               Cambiar
                             </button>
@@ -993,8 +983,8 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       </div>
 
                       <div className="flex items-center gap-2 w-full min-w-0">
-                        <div className="flex-1 min-w-0 h-11 bg-neutral-100 rounded-xl px-3.5 flex items-center gap-2.5 border border-transparent focus-within:ring-1 focus-within:ring-[#1E3A5F]">
-                          <Mail className="w-4 h-4 text-[#616161] shrink-0 pointer-events-none" />
+                        <div className="relative flex-1 min-w-0">
+                          <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                           <input
                             type="text"
                             inputMode="email"
@@ -1009,10 +999,8 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                             placeholder="propietario@empresa.com"
                             disabled={isScheduledEmailVerified}
                             readOnly={isScheduledEmailVerified}
-                            className={`w-full flex-1 min-w-0 bg-transparent text-xs font-medium focus:outline-none truncate border-none p-0 shadow-none ${
-                              isScheduledEmailVerified
-                                ? 'text-neutral-600 cursor-not-allowed'
-                                : 'text-[#1E3A5F]'
+                            className={`${modalFieldCompactInputClass} pl-10 ${
+                              isScheduledEmailVerified ? 'opacity-65 cursor-not-allowed' : ''
                             }`}
                           />
                         </div>
@@ -1022,12 +1010,12 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                             type="button"
                             onClick={handleSendScheduledOtp}
                             disabled={isSendingScheduledOtp || !scheduledEmail.trim()}
-                            className="h-11 px-3.5 rounded-xl border border-[#1E3A5F] bg-white hover:bg-[#1E3A5F]/5 text-[#1E3A5F] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0 shadow-xs"
+                            className={`${modalSecondaryButtonClass} shrink-0 min-h-[44px] lg:min-h-[38px]`}
                           >
                             {isSendingScheduledOtp ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1E3A5F]" />
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
                             ) : (
-                              <KeyRound className="w-3.5 h-3.5 text-[#1E3A5F]" />
+                              <KeyRound className="w-3.5 h-3.5 text-indigo-400" />
                             )}
                             <span>{scheduledOtpSent ? 'Reenviar' : 'Validar'}</span>
                           </button>
@@ -1035,35 +1023,40 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       </div>
 
                       {scheduledOtpSent && !isScheduledEmailVerified && (
-                        <div className="flex items-center gap-2 pt-1 animate-in fade-in">
+                        <div className="flex flex-wrap items-center gap-2 pt-1.5">
                           <input
                             type="text"
+                            inputMode="numeric"
                             maxLength={6}
                             value={scheduledOtpCode}
                             onChange={(e) => setScheduledOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                            placeholder="Código 6 dígitos"
-                            className="w-32 h-9 px-2 text-center font-mono text-xs font-bold tracking-widest bg-white border border-[#1E3A5F]/30 focus:border-[#1E3A5F] rounded-lg text-[#1E3A5F] focus:outline-none"
+                            placeholder="000000"
+                            className="w-32 h-10 px-2.5 text-center font-mono tabular-nums text-sm font-bold tracking-[0.25em] bg-slate-950 border border-indigo-500/40 focus:border-indigo-400 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
                           />
 
                           <button
                             type="button"
                             onClick={handleVerifyScheduledOtp}
                             disabled={isVerifyingScheduledOtp || scheduledOtpCode.trim().length !== 6}
-                            className="h-9 px-3 rounded-lg bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                            className={`${modalPrimaryButtonClass} min-h-[40px] lg:min-h-[38px] px-4 py-2`}
                           >
-                            {isVerifyingScheduledOtp ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3 text-[#E8B4A0]" />}
-                            <span>Verificar</span>
+                            {isVerifyingScheduledOtp ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            )}
+                            <span>Verificar OTP</span>
                           </button>
 
-                          <span className="text-[10px] text-neutral-400 pl-1">
+                          <span className="text-[11px] font-mono tabular-nums text-slate-400 pl-1">
                             {scheduledOtpCooldown > 0 ? `${scheduledOtpCooldown}s` : (
                               <button
                                 type="button"
                                 onClick={handleSendScheduledOtp}
                                 disabled={isSendingScheduledOtp}
-                                className="text-[#1E3A5F] underline hover:text-black cursor-pointer font-medium"
+                                className="text-indigo-300 underline hover:text-indigo-200 cursor-pointer font-sans font-medium"
                               >
-                                Reenviar
+                                Reenviar código
                               </button>
                             )}
                           </span>
@@ -1071,19 +1064,16 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       )}
                     </div>
 
-                    {/* Frecuencia de envío: Cápsulas de selección con capa visual centrada y selector nativo superpuesto */}
+                    {/* Frecuencia de envío */}
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-[#1E3A5F] block">
-                        Frecuencia de envío
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {/* Campo 1: Predeterminado (Diario, Semanal, Quincenal) */}
+                      <label className={modalFieldLabelClass}>Frecuencia de envío</label>
+                      <div className="grid grid-cols-2 gap-2.5">
                         <div className="relative w-full">
                           <div
-                            className={`w-full min-h-[44px] px-3.5 py-2 rounded-2xl flex items-center justify-between gap-1.5 transition-all pointer-events-none select-none ${
+                            className={`w-full min-h-[44px] px-3.5 py-2 rounded-xl flex items-center justify-between gap-1.5 transition-colors pointer-events-none select-none border ${
                               frequencyOption !== 'custom'
-                                ? 'bg-neutral-100 border border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
-                                : 'bg-neutral-100/70 border border-neutral-200/60 text-neutral-500 font-medium'
+                                ? 'bg-slate-800/80 border-indigo-500/60 text-white font-semibold'
+                                : 'bg-slate-950/60 border-slate-800 text-slate-400 font-medium'
                             }`}
                           >
                             <span className="flex-1 text-center text-xs leading-snug truncate">
@@ -1095,11 +1085,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                                 ? 'Quincenal (15 días)'
                                 : 'Predeterminado'}
                             </span>
-                            <ChevronDown
-                              className={`w-3.5 h-3.5 shrink-0 transition-colors ${
-                                frequencyOption !== 'custom' ? 'text-[#1E3A5F]' : 'text-neutral-400'
-                              }`}
-                            />
+                            <ChevronDown className="w-3.5 h-3.5 shrink-0 text-slate-400" />
                           </div>
 
                           <select
@@ -1121,25 +1107,20 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                           </select>
                         </div>
 
-                        {/* Campo 2: Personalizado (Abre el scroll wheel / menú nativo para desplazar días) */}
                         <div className="relative w-full">
                           <div
-                            className={`w-full min-h-[44px] px-3.5 py-2 rounded-2xl flex items-center justify-between gap-1.5 transition-all pointer-events-none select-none ${
+                            className={`w-full min-h-[44px] px-3.5 py-2 rounded-xl flex items-center justify-between gap-1.5 transition-colors pointer-events-none select-none border ${
                               frequencyOption === 'custom'
-                                ? 'bg-neutral-100 border border-[#1E3A5F]/40 text-[#1E3A5F] font-bold shadow-2xs'
-                                : 'bg-neutral-100/70 border border-neutral-200/60 text-neutral-500 font-medium'
+                                ? 'bg-slate-800/80 border-indigo-500/60 text-white font-semibold'
+                                : 'bg-slate-950/60 border-slate-800 text-slate-400 font-medium'
                             }`}
                           >
-                            <span className="flex-1 text-center text-xs leading-snug truncate">
+                            <span className="flex-1 text-center text-xs leading-snug truncate font-mono tabular-nums">
                               {frequencyOption === 'custom'
                                 ? `${customDays} ${customDays === 1 ? 'día' : 'días'}`
                                 : 'Personalizado'}
                             </span>
-                            <ChevronDown
-                              className={`w-3.5 h-3.5 shrink-0 transition-colors ${
-                                frequencyOption === 'custom' ? 'text-[#1E3A5F]' : 'text-neutral-400'
-                              }`}
-                            />
+                            <ChevronDown className="w-3.5 h-3.5 shrink-0 text-slate-400" />
                           </div>
 
                           <select
@@ -1172,65 +1153,70 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Hora de Envío: Centrado visualmente junto al recuadro de hora EN LA VERSIÓN MÓVIL */}
-                    <div className="w-full flex items-center justify-center gap-3 py-2 px-1">
-                      <label className="text-xs font-semibold text-[#1E3A5F] flex items-center gap-1.5 shrink-0 select-none">
-                        <Clock className="w-4 h-4 text-[#E8B4A0]" />
+                    {/* Hora de envío */}
+                    <div className="w-full flex items-center justify-between p-3 bg-slate-950/50 border border-slate-800/80 rounded-xl gap-3">
+                      <label className="text-xs font-medium text-slate-300 flex items-center gap-2 shrink-0 select-none">
+                        <Clock className="w-4 h-4 text-indigo-400" />
                         <span>Hora de envío (24h)</span>
                       </label>
                       <input
                         type="time"
                         value={executionTime || '02:00'}
                         onChange={(e) => setExecutionTime(e.target.value || '02:00')}
-                        className="w-24 h-9 px-2 bg-neutral-100 rounded-xl text-xs font-mono font-bold text-[#1E3A5F] border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] text-center shrink-0 shadow-2xs cursor-pointer"
+                        className="w-28 h-9 px-2.5 bg-slate-900 rounded-lg text-xs font-mono tabular-nums font-semibold text-slate-100 border border-slate-700 focus:outline-none focus:border-indigo-400 text-center shrink-0 cursor-pointer"
                       />
                     </div>
 
-                    {/* Próximo envío badge */}
                     {nextRunAt && (
-                      <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-[11px] text-emerald-800 flex items-center justify-between gap-2">
+                      <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/25 text-xs text-emerald-200 flex items-center justify-between gap-2">
                         <span className="flex items-center gap-1.5 font-medium">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                           Próximo envío:
                         </span>
-                        <strong className="truncate">
+                        <strong className="font-mono tabular-nums truncate">
                           {new Date(nextRunAt).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })}
                         </strong>
                       </div>
                     )}
 
-                    {/* Botón Guardar Programación */}
                     <button
                       type="button"
                       onClick={handleSaveSchedule}
                       disabled={isSavingSettings || (isScheduled && !isScheduledEmailVerified)}
-                      className="mobile-primary-btn w-full min-h-[44px] px-4 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-98 shadow-xs disabled:opacity-50 cursor-pointer"
+                      className={`${modalPrimaryButtonClass} w-full`}
                       title={
                         isScheduled && !isScheduledEmailVerified
                           ? 'Debes validar el correo de destino con OTP antes de guardar.'
-                          : 'Guardar Programación'
+                          : 'Guardar programación'
                       }
                     >
                       {isSavingSettings ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin text-[#E8B4A0]" />
+                          <Loader2 className="w-4 h-4 animate-spin" />
                           <span>Guardando...</span>
                         </>
                       ) : (
                         <>
-                          <Calendar className="w-4 h-4 text-[#E8B4A0]" />
-                          <span>Guardar Programación</span>
+                          <Calendar className="w-4 h-4" />
+                          <span>Guardar programación</span>
                         </>
                       )}
                     </button>
                   </div>
                 )}
-              </div>
+              </motion.div>
             )}
 
             {/* PESTAÑA 3: RESTAURAR */}
             {activeTab === 'restore' && (
-              <div className="space-y-4">
+              <motion.div
+                key="backup-restore"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.14 }}
+                className="space-y-4"
+              >
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -1243,59 +1229,63 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full min-h-[120px] border-2 border-dashed border-neutral-200 hover:border-neutral-400 rounded-2xl bg-neutral-50/50 flex flex-col items-center justify-center p-4 gap-2 transition-all cursor-pointer active:scale-98"
+                    className="w-full min-h-[130px] border border-dashed border-slate-700 hover:border-indigo-400/70 rounded-2xl bg-slate-950/50 hover:bg-slate-900 flex flex-col items-center justify-center p-4 gap-2.5 transition-colors cursor-pointer active:scale-[0.99]"
                   >
-                    <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-600">
-                      <Upload className="w-5 h-5" />
+                    <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-200">
+                      <Upload className="w-5 h-5 text-indigo-400" />
                     </div>
                     <div className="text-center">
-                      <span className="text-xs font-bold text-neutral-800 block">
+                      <span className="text-xs font-semibold text-slate-100 block">
                         Seleccionar archivo .json
                       </span>
-                      <span className="text-[11px] text-neutral-500 block">
+                      <span className="text-[11px] text-slate-400 block mt-0.5">
                         Copia de respaldo previa del inventario
                       </span>
                     </div>
                   </button>
                 ) : (
-                  <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3.5">
+                  <div className={`${modalSurfaceCardClass} space-y-3.5`}>
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 flex items-center justify-center shrink-0">
                         <FileJson className="w-5 h-5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <span className="text-xs font-bold text-neutral-800 block truncate">
+                        <span className="text-xs font-mono font-semibold text-slate-100 block truncate">
                           {selectedFile.name}
                         </span>
-                        <span className="text-[11px] text-emerald-600 font-medium block">
+                        <span className="text-[11px] text-emerald-300 font-medium block mt-0.5">
                           Estructura validada (Versión 1.0)
                         </span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setSelectedFile(null)}
-                        className="text-neutral-400 hover:text-neutral-600 p-1 rounded-lg"
+                        className="text-xs text-slate-400 hover:text-slate-100 px-2 py-1 rounded-lg cursor-pointer"
                         title="Quitar archivo"
                       >
-                        <X className="w-4 h-4" />
+                        Quitar
                       </button>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => setRestoreModalOpen(true)}
-                      className="w-full min-h-[44px] rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer"
+                      className={`${modalDangerButtonClass} w-full`}
                     >
-                      <AlertTriangle className="w-4 h-4 text-white" />
-                      <span>Continuar con la Restauración</span>
+                      <AlertTriangle className="w-4 h-4" />
+                      <span>Continuar con la restauración</span>
                     </button>
                   </div>
                 )}
-              </div>
+              </motion.div>
             )}
-          </div>
-        </div>
-      </div>
+          </AnimatePresence>
+        </ModalBody>
+
+        <ModalFooter>
+          <CancelButton onClick={onClose} label="Cerrar" disabled={isBusy} />
+        </ModalFooter>
+      </ModalShell>
 
       {/* Modal de Confirmación Crítica de Restauración */}
       <BackupRestoreModal

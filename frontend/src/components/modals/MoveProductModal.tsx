@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { X, ArrowRightLeft, MapPin, Loader2, Check, Camera } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { ArrowRightLeft, Loader2, Check, Camera } from 'lucide-react';
 import { Product, Location } from '../../types/database';
 import {
   supabase,
@@ -10,6 +10,17 @@ import { useAuth } from '../../context/AuthContext';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { MinimalDropdown } from '../ui/MinimalDropdown';
 import { CancelButton } from '../common/CancelButton';
+import {
+  ModalShell,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  modalFieldInputClass,
+  modalFieldLabelClass,
+  modalSurfaceCardClass,
+  modalPrimaryButtonClass,
+  modalSecondaryButtonClass
+} from './ModalShell';
 
 interface MoveProductModalProps {
   product: Product | null;
@@ -27,6 +38,12 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
   locations
 }) => {
   const { currentInventory, user } = useAuth();
+  const lastProductRef = useRef<Product | null>(null);
+  if (product) {
+    lastProductRef.current = product;
+  }
+  const activeProduct = product || lastProductRef.current;
+
   const [fromLocationId, setFromLocationId] = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState('');
   const [quantityToMove, setQuantityToMove] = useState<string>('1');
@@ -38,9 +55,9 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
   const [scannerOpen, setScannerOpen] = useState(false);
 
   const availableOrigins = useMemo(() => {
-    if (!product) return [];
-    return (product.product_locations || []).filter(pl => Number(pl.quantity || 0) > 0.0001);
-  }, [product]);
+    if (!activeProduct) return [];
+    return (activeProduct.product_locations || []).filter(pl => Number(pl.quantity || 0) > 0.0001);
+  }, [activeProduct]);
 
   const originStock = useMemo(() => {
     const found = availableOrigins.find(pl => pl.location_id === fromLocationId);
@@ -75,10 +92,8 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
     }
   }, [product, isOpen, availableOrigins]);
 
-  if (!isOpen || !product) return null;
-
-  const isBox = product.unit_type === 'BOX' && Number(product.units_per_box) > 0;
-  const upb = Number(product.units_per_box || 1);
+  const isBox = activeProduct?.unit_type === 'BOX' && Number(activeProduct?.units_per_box) > 0;
+  const upb = Number(activeProduct?.units_per_box || 1);
   const availableDestinations = locations.filter(l => l.id !== fromLocationId);
   const selectedLocation = locations.find(l => l.id === selectedLocationId);
 
@@ -102,7 +117,7 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
 
   const handleMove = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentInventory || !user) return;
+    if (!currentInventory || !user || !activeProduct) return;
     if (!fromLocationId) {
       setErrorMsg('Debes elegir una ubicación de origen con saldo disponible.');
       return;
@@ -118,7 +133,7 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
 
     if (finalQty <= 0 || finalQty > originStock + 0.0002) {
       setErrorMsg(
-        `La cantidad a trasladar debe ser mayor a 0 y no superar el disponible en origen (${formatLocationQuantity(originStock, product)}).`
+        `La cantidad a trasladar debe ser mayor a 0 y no superar el disponible en origen (${formatLocationQuantity(originStock, activeProduct)}).`
       );
       return;
     }
@@ -129,7 +144,7 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
 
       const { error } = await supabase.rpc('move_product_location', {
         p_inventory_id: currentInventory.id,
-        p_product_id: product.id,
+        p_product_id: activeProduct.id,
         p_from_location_id: fromLocationId,
         p_to_location_id: selectedLocationId,
         p_quantity: finalQty,
@@ -152,211 +167,220 @@ export const MoveProductModal: React.FC<MoveProductModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 max-md:bg-black/75 backdrop-blur-sm p-4 animate-in fade-in">
-        <div className="mobile-dark-modal bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl w-full max-w-md overflow-hidden shadow-xl flex flex-col">
-          {/* Cabecera */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec] bg-[#ffffff]">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#17191c]/10 text-[#17191c] flex items-center justify-center">
-                <ArrowRightLeft className="w-5 h-5 text-[#17191c]" />
-              </div>
-              <div>
-                <h3 className="font-bold text-[#17191c] text-base uppercase tracking-tight">
-                  Mover de Ubicación
-                </h3>
-                <p className="text-[11px] text-[#777b86]">Reubicación atómica entre zonas</p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[#17191c] hover:bg-[#fafafb] border border-[#ececec] transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+      <ModalShell
+        isOpen={Boolean(isOpen && activeProduct)}
+        onClose={onClose}
+        maxWidth="md"
+        disableDismiss={isSubmitting}
+        formId="move-product-form"
+      >
+        <ModalHeader
+          title="Mover de ubicación"
+          subtitle="Reubicación atómica entre zonas y estantes"
+          icon={<ArrowRightLeft className="w-4 h-4 lg:w-5 lg:h-5" />}
+          iconTone="indigo"
+          onClose={onClose}
+          closeDisabled={isSubmitting}
+        />
 
-          <form onSubmit={handleMove} className="p-6 space-y-4 font-mono">
-            {errorMsg && (
-              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
-                {errorMsg}
-              </div>
-            )}
-
-            <div className="mobile-flat-row p-4 bg-[#fafafb] rounded-xl border border-[#ececec] space-y-1">
-              <span className="text-[10px] text-[#777b86] uppercase tracking-wider">
-                PRODUCTO ({product.code})
-              </span>
-              <p className="text-sm font-bold text-[#17191c] uppercase">{product.name}</p>
-            </div>
-
-            {availableOrigins.length === 0 ? (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 space-y-1">
-                <p className="font-bold uppercase">Sin stock asignado en ubicaciones</p>
-                <p>
-                  Este artículo tiene {formatLocationQuantity(getPendingLocationStock(product), product)} pendientes en recepción. Primero asígnalo desde el módulo "Asignar Ubicación".
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Selector de Origen */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#17191c] mb-1.5">
-                    UBICACIÓN DE ORIGEN <span className="text-[#e7000b]">*</span>
-                  </label>
-                  <MinimalDropdown
-                    value={fromLocationId}
-                    onChange={(val) => setFromLocationId(val)}
-                    placeholder="Seleccionar origen..."
-                    options={availableOrigins.map((pl) => ({
-                      value: pl.location_id,
-                      label: pl.locations?.name || 'Estante',
-                      badge: `${pl.locations?.code || ''} · Disp: ${formatLocationQuantity(pl.quantity, product)}`
-                    }))}
-                  />
+        {activeProduct && (
+          <form
+            id="move-product-form"
+            onSubmit={handleMove}
+            className="flex-1 min-h-0 flex flex-col overflow-hidden"
+          >
+            <ModalBody className="space-y-4">
+              {errorMsg && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-200">
+                  {errorMsg}
                 </div>
+              )}
 
-                {/* Cantidad a Mover */}
-                <div className="mobile-flat-section p-4 bg-[#fafafb] border border-[#ececec] rounded-xl space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase tracking-wider text-[#17191c]">
-                      CANTIDAD A TRASLADAR <span className="text-[#e7000b]">*</span>
+              <div className={`${modalSurfaceCardClass} flex items-center justify-between gap-3`}>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-100 truncate">{activeProduct.name}</p>
+                  <p className="text-[11px] font-mono text-slate-400 mt-0.5">SKU: {activeProduct.code}</p>
+                </div>
+                <span className="font-mono px-2 py-0.5 rounded-md text-[10px] bg-slate-800 border border-slate-700 text-slate-200 font-semibold shrink-0">
+                  {isBox ? 'BOX' : 'UNIT'}
+                </span>
+              </div>
+
+              {availableOrigins.length === 0 ? (
+                <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs text-amber-200 space-y-1.5">
+                  <p className="font-semibold text-amber-300">Sin stock asignado en ubicaciones</p>
+                  <p className="text-slate-300 leading-relaxed">
+                    Este artículo tiene{' '}
+                    <span className="font-mono tabular-nums text-white font-semibold">
+                      {formatLocationQuantity(getPendingLocationStock(activeProduct), activeProduct)}
+                    </span>{' '}
+                    pendientes en recepción. Primero asígnalo desde el módulo "Asignar ubicación".
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Selector de Origen */}
+                  <div>
+                    <label className={modalFieldLabelClass}>
+                      Ubicación de origen <span className="text-rose-400">*</span>
                     </label>
-                    <span className="text-[10px] text-[#777b86] uppercase">
-                      DISPONIBLE:{' '}
-                      <strong className="text-[#17191c]">
-                        {formatLocationQuantity(originStock, product)}
-                      </strong>
-                    </span>
+                    <MinimalDropdown
+                      value={fromLocationId}
+                      onChange={(val) => setFromLocationId(val)}
+                      placeholder="Seleccionar origen..."
+                      options={availableOrigins.map((pl) => ({
+                        value: pl.location_id,
+                        label: pl.locations?.name || 'Estante',
+                        badge: `${pl.locations?.code || ''} · Disp: ${formatLocationQuantity(pl.quantity, activeProduct)}`
+                      }))}
+                    />
                   </div>
 
-                  {isBox ? (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <span className="text-[10px] text-[#777b86] block mb-1">Cajas</span>
-                        <input
-                          type="number"
-                          min={0}
-                          max={Math.floor(originStock + 0.0001)}
-                          value={moveBoxes}
-                          onChange={e => setMoveBoxes(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                          className="w-full min-h-[38px] bg-white border border-[#ececec] rounded-xl px-3 py-1 text-center text-sm font-bold text-[#17191c]"
-                        />
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-[#777b86] block mb-1">Unidades sueltas</span>
-                        <input
-                          type="number"
-                          min={0}
-                          max={upb - 1}
-                          value={moveLooseUnits}
-                          onChange={e => setMoveLooseUnits(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                          className="w-full min-h-[38px] bg-white border border-[#ececec] rounded-xl px-3 py-1 text-center text-sm font-bold text-[#17191c]"
-                        />
-                      </div>
+                  {/* Cantidad a Mover */}
+                  <div className={`${modalSurfaceCardClass} space-y-3`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="text-xs font-medium text-slate-200">
+                        Cantidad a trasladar <span className="text-rose-400">*</span>
+                      </label>
+                      <span className="text-[11px] font-mono tabular-nums text-slate-400">
+                        Disponible:{' '}
+                        <strong className="text-slate-100">
+                          {formatLocationQuantity(originStock, activeProduct)}
+                        </strong>
+                      </span>
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={1}
-                        max={Math.round(originStock)}
-                        value={quantityToMove}
-                        onChange={e => setQuantityToMove(e.target.value)}
-                        className="flex-1 min-h-[40px] bg-white border border-[#ececec] rounded-xl px-3 py-1.5 text-center text-sm font-bold text-[#17191c]"
-                      />
+
+                    {isBox ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <span className="text-[11px] text-slate-400 block mb-1">Cajas</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={Math.floor(originStock + 0.0001)}
+                            value={moveBoxes}
+                            onChange={e => setMoveBoxes(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                            className={`${modalFieldInputClass} text-center font-mono tabular-nums font-semibold`}
+                          />
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-slate-400 block mb-1">Unidades sueltas</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={upb - 1}
+                            value={moveLooseUnits}
+                            onChange={e => setMoveLooseUnits(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                            className={`${modalFieldInputClass} text-center font-mono tabular-nums font-semibold`}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="number"
+                          min={1}
+                          max={Math.round(originStock)}
+                          value={quantityToMove}
+                          onChange={e => setQuantityToMove(e.target.value)}
+                          className={`${modalFieldInputClass} flex-1 text-center font-mono tabular-nums font-semibold`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setQuantityToMove(String(Math.round(originStock)))}
+                          className={`${modalSecondaryButtonClass} font-mono tabular-nums shrink-0`}
+                        >
+                          Todas ({Math.round(originStock)})
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Selección de Destino */}
+                  <div>
+                    <label className={modalFieldLabelClass}>
+                      Ubicación de destino <span className="text-rose-400">*</span>
+                    </label>
+                    <div className="flex items-center gap-2.5 w-full">
+                      <div className="flex-1 min-w-0">
+                        <MinimalDropdown
+                          value={selectedLocationId}
+                          onChange={(val) => setSelectedLocationId(val)}
+                          placeholder="Selecciona la nueva ubicación..."
+                          options={availableDestinations.map((loc) => ({
+                            value: loc.id,
+                            label: loc.name,
+                            badge: loc.code
+                          }))}
+                        />
+                      </div>
                       <button
                         type="button"
-                        onClick={() => setQuantityToMove(String(Math.round(originStock)))}
-                        className="px-3 min-h-[40px] text-[11px] uppercase tracking-wider text-[#17191c] bg-[#f5f5f5] hover:bg-[#f5f5f5] border border-[#e5e5e5] rounded-xl"
+                        onClick={() => setScannerOpen(true)}
+                        className={`${modalSecondaryButtonClass} shrink-0`}
+                        title="Escanear ubicación"
                       >
-                        Todas ({Math.round(originStock)})
+                        <Camera className="w-4 h-4 text-indigo-400" />
+                        <span>Escanear</span>
                       </button>
                     </div>
-                  )}
-                </div>
-
-                {/* Selección de Destino */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#17191c] mb-1.5">
-                    UBICACIÓN DE DESTINO <span className="text-[#e7000b]">*</span>
-                  </label>
-                  <div className="flex items-center gap-2.5 w-full">
-                    <div className="flex-1 min-w-0">
-                      <MinimalDropdown
-                        value={selectedLocationId}
-                        onChange={(val) => setSelectedLocationId(val)}
-                        placeholder="Selecciona la nueva ubicación..."
-                        options={availableDestinations.map((loc) => ({
-                          value: loc.id,
-                          label: loc.name,
-                          badge: loc.code
-                        }))}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setScannerOpen(true)}
-                      className="inline-flex items-center gap-1.5 px-4 min-h-[44px] bg-white hover:bg-[#fafafb] text-[#17191c] border border-[#CBD5E1] hover:border-[#17191c] rounded-xl text-xs uppercase tracking-wider shrink-0 active:scale-95 transition-all shadow-xs cursor-pointer font-medium"
-                      title="Escanear ubicación"
-                    >
-                      <Camera className="w-4 h-4 text-[#17191c]" />
-                      <span>Escanear</span>
-                    </button>
+                    {selectedLocation && (
+                      <p className="text-xs text-emerald-300 font-medium mt-2 flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span className="truncate">
+                          Destino: {selectedLocation.name}{' '}
+                          <span className="font-mono text-emerald-200">({selectedLocation.code})</span>
+                        </span>
+                      </p>
+                    )}
                   </div>
-                  {selectedLocation && (
-                    <p className="text-[11px] text-[#17191c] font-medium mt-1.5 flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5 text-white" /> Destino: {selectedLocation.name} ({selectedLocation.code})
-                    </p>
-                  )}
-                </div>
 
-                {/* Motivo */}
-                <div>
-                  <label className="block text-xs uppercase tracking-wider text-[#17191c] mb-1.5">
-                    MOTIVO DEL TRASLADO (OPCIONAL)
-                  </label>
-                  <input
-                    type="text"
-                    value={reason}
-                    onChange={e => setReason(e.target.value)}
-                    placeholder="Ej: Reorganización de vitrina, reposición..."
-                    className="w-full min-h-[42px] bg-white border border-[#ececec] rounded-xl px-4 py-2 text-xs text-[#17191c]"
-                  />
-                </div>
-              </>
-            )}
+                  {/* Motivo */}
+                  <div>
+                    <label className={modalFieldLabelClass}>Motivo del traslado (opcional)</label>
+                    <input
+                      type="text"
+                      value={reason}
+                      onChange={e => setReason(e.target.value)}
+                      placeholder="Ej: Reorganización de vitrina, reposición..."
+                      className={modalFieldInputClass}
+                    />
+                  </div>
+                </>
+              )}
+            </ModalBody>
 
-            <div className="pt-3 border-t border-[#ececec] max-md:border-0 flex max-md:flex-col-reverse justify-end gap-2.5">
-              <CancelButton onClick={onClose} />
+            <ModalFooter shortcutLabel={availableOrigins.length > 0 ? 'para trasladar' : undefined}>
+              <CancelButton onClick={onClose} disabled={isSubmitting} />
               {availableOrigins.length > 0 && (
                 <button
                   type="submit"
                   disabled={isSubmitting || !selectedLocationId || !fromLocationId}
-                  className="min-h-[44px] inline-flex items-center gap-2 px-6 bg-[#17191c] hover:bg-black text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50"
+                  className={modalPrimaryButtonClass}
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       <span>Moviendo...</span>
                     </>
                   ) : (
                     <>
-                      <Check className="w-4 h-4 text-white" />
-                      <span>Confirmar Traslado</span>
+                      <Check className="w-4 h-4" />
+                      <span>Confirmar traslado</span>
                     </>
                   )}
                 </button>
               )}
-            </div>
+            </ModalFooter>
           </form>
-        </div>
-      </div>
+        )}
+      </ModalShell>
 
       <BarcodeScannerModal
         isOpen={scannerOpen}
         onClose={() => setScannerOpen(false)}
         onScanSuccess={handleScanLocationQR}
-        title="Escanear Código QR de Ubicación de Destino"
+        title="Escanear código QR de destino"
       />
     </>
   );

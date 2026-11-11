@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import QRCode from 'qrcode';
 import {
-  X,
   Printer,
   Download,
   MapPin,
@@ -9,8 +8,7 @@ import {
   Square,
   Search,
   Loader2,
-  CheckCircle2,
-  Layers
+  CheckCircle2
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { Location } from '../../types/database';
@@ -18,6 +16,15 @@ import { PillOption } from '../common/PillOption';
 import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
 import { useAuth } from '../../context/AuthContext';
 import { escapeHtml } from '../../utils/security';
+import {
+  ModalShell,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  modalFieldCompactInputClass,
+  modalPrimaryButtonClass,
+  modalSecondaryButtonClass
+} from './ModalShell';
 
 interface BatchLocationsPrintModalProps {
   isOpen: boolean;
@@ -423,151 +430,145 @@ export const BatchLocationsPrintModal: React.FC<BatchLocationsPrintModalProps> =
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="mobile-dark-modal bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-        {/* Cabecera */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-amber-50 dark:bg-amber-600/20 text-amber-600 dark:text-amber-400 rounded-xl">
-              <Printer className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg">
-                Imprimir ubicación
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Selecciona las ubicaciones para imprimir sus códigos QR (85.6 × 53.9 mm)
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="xl"
+      disableDismiss={isProcessing}
+    >
+      <ModalHeader
+        title="Imprimir etiquetas de ubicación"
+        subtitle="Selecciona las ubicaciones para imprimir QR (85.6 × 53.9 mm)"
+        icon={<Printer className="w-4 h-4 lg:w-5 lg:h-5" />}
+        iconTone="amber"
+        onClose={onClose}
+        closeDisabled={isProcessing}
+      />
 
-        {/* Barra de control y búsqueda */}
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-3">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Buscar por nombre o código de ubicación..."
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <PillOption
-                active={selectedIds.size === filteredLocations.length && filteredLocations.length > 0}
-                onClick={handleSelectAll}
-              >
-                Todos
-              </PillOption>
-              <PillOption
-                active={selectedIds.size === 0}
-                onClick={handleDeselectAll}
-              >
-                Ninguna
-              </PillOption>
-              <span className="text-xs font-bold text-amber-600 dark:text-amber-400 px-2 py-1 bg-amber-50 dark:bg-amber-500/10 rounded-lg whitespace-nowrap">
-                {selectedIds.size} / {locations.length} sel.
+      {/* Barra de control y búsqueda */}
+      <div className="px-4 lg:px-6 py-3 border-b border-slate-800/80 bg-slate-950/35 shrink-0 space-y-2.5">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+          <div className="relative flex-1 min-w-0">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Buscar por nombre o código de ubicación..."
+              className={`${modalFieldCompactInputClass} pl-9`}
+            />
+          </div>
+          <div className="flex items-center gap-2 shrink-0 overflow-x-auto no-scrollbar">
+            <PillOption
+              active={selectedIds.size === filteredLocations.length && filteredLocations.length > 0}
+              onClick={handleSelectAll}
+            >
+              Todos
+            </PillOption>
+            <PillOption
+              active={selectedIds.size === 0}
+              onClick={handleDeselectAll}
+            >
+              Ninguna
+            </PillOption>
+            <span className="text-xs font-mono tabular-nums font-semibold text-amber-300 px-2.5 py-1.5 bg-amber-500/15 border border-amber-500/30 rounded-lg whitespace-nowrap">
+              {selectedIds.size} / {locations.length}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <ModalBody className="space-y-3">
+        {loading ? (
+          <div className="py-12 text-center space-y-2">
+            <Loader2 className="w-6 h-6 animate-spin text-amber-400 mx-auto" />
+            <p className="text-xs text-slate-400">Cargando ubicaciones físicas...</p>
+          </div>
+        ) : filteredLocations.length === 0 ? (
+          <div className="p-8 text-center rounded-2xl border border-dashed border-slate-800">
+            <MapPin className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+            <p className="text-xs font-medium text-slate-400">
+              {locations.length === 0
+                ? 'No hay ubicaciones registradas en este inventario.'
+                : 'No se encontraron ubicaciones que coincidan con la búsqueda.'}
+            </p>
+          </div>
+        ) : (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-slate-400 tabular-nums">
+                Ubicaciones ({filteredLocations.length})
               </span>
+              {progressMsg && (
+                <span className="text-[11px] font-mono text-amber-300">{progressMsg}</span>
+              )}
             </div>
-          </div>
-        </div>
-
-        {/* Lista de Ubicaciones */}
-        <div className="px-4 py-3 overflow-y-auto flex-1">
-          {loading ? (
-            <div className="py-12 text-center space-y-2">
-              <Loader2 className="w-6 h-6 animate-spin text-amber-500 mx-auto" />
-              <p className="text-xs text-slate-500 dark:text-slate-400">Cargando ubicaciones físicas...</p>
-            </div>
-          ) : filteredLocations.length === 0 ? (
-            <div className="p-8 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-              <MapPin className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                {locations.length === 0
-                  ? 'No hay ubicaciones registradas en este inventario.'
-                  : 'No se encontraron ubicaciones que coincidan con la búsqueda.'}
-              </p>
-            </div>
-          ) : (
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-medium text-neutral-400">
-                  Ubicaciones ({filteredLocations.length})
-                </span>
-              </div>
-              <div className="mobile-scroll-box bg-neutral-50/70 border border-neutral-200/80 rounded-2xl px-3.5 max-h-44 overflow-y-auto overscroll-contain divide-y divide-neutral-100 custom-scrollbar">
+            <div className="bg-slate-950/50 border border-slate-800/80 rounded-2xl px-3 max-h-60 overflow-y-auto overscroll-contain custom-scrollbar-dark divide-y divide-slate-800/70">
               {filteredLocations.map(loc => {
                 const isSelected = selectedIds.has(loc.id);
                 return (
-                  <div
+                  <button
                     key={loc.id}
+                    type="button"
                     onClick={() => toggleSelect(loc.id)}
-                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors"
+                    className="w-full min-h-[46px] py-2.5 px-1 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors text-left hover:bg-slate-800/30"
                   >
                     <div className="min-w-0 flex-1 pr-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className={`text-sm truncate ${isSelected ? 'font-semibold text-neutral-950' : 'font-medium text-neutral-700'}`}>
+                        <span
+                          className={`text-sm truncate ${
+                            isSelected ? 'font-semibold text-white' : 'font-medium text-slate-300'
+                          }`}
+                        >
                           {loc.name}
                         </span>
-                        <span className="text-xs text-neutral-400 font-normal shrink-0">
+                        <span className="text-[11px] font-mono text-slate-400 shrink-0">
                           {loc.code}
                         </span>
                       </div>
                     </div>
                     <div className="shrink-0 flex items-center justify-center">
                       {isSelected ? (
-                        <CheckSquare className="w-5 h-5 text-neutral-950 dark:text-amber-400" />
+                        <CheckSquare className="w-5 h-5 text-indigo-400" />
                       ) : (
-                        <Square className="w-5 h-5 text-neutral-300 dark:text-slate-600" />
+                        <Square className="w-5 h-5 text-slate-600" />
                       )}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
-              </div>
             </div>
-          )}
+          </div>
+        )}
+      </ModalBody>
+
+      <ModalFooter>
+        <div className="text-xs text-slate-400 flex items-center gap-1.5 mr-auto">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span className="font-mono">85.6 × 53.9 mm</span>
         </div>
 
-        {/* Acciones de impresión */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-            <span>Medida (85.6 x 53.9 mm)</span>
-          </div>
+        <button
+          type="button"
+          onClick={handleExportPDF}
+          disabled={isProcessing || selectedIds.size === 0}
+          className={modalSecondaryButtonClass}
+        >
+          {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-indigo-400 shrink-0" />}
+          <span className="tabular-nums truncate">Descargar ({selectedIds.size})</span>
+        </button>
 
-          <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
-            <button
-              onClick={handleExportPDF}
-              disabled={isProcessing || selectedIds.size === 0}
-              className="mobile-inline-btn flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 max-md:py-3 bg-slate-100 hover:bg-slate-200 max-md:bg-neutral-100 max-md:text-neutral-800 max-md:border-0 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold max-md:font-semibold rounded-xl max-md:rounded-2xl border border-slate-200 dark:border-slate-700 transition-all active:scale-95 disabled:opacity-50"
-            >
-              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-indigo-500 max-md:text-neutral-700 shrink-0" />}
-              <span className="truncate">Descargar ({selectedIds.size})</span>
-            </button>
-            <button
-              onClick={handlePrint}
-              disabled={isProcessing || selectedIds.size === 0}
-              className="mobile-inline-btn flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 max-md:py-3 bg-amber-600 hover:bg-amber-500 max-md:bg-neutral-950 text-white text-xs font-bold max-md:font-semibold rounded-xl max-md:rounded-2xl shadow-lg max-md:shadow-none shadow-amber-600/20 transition-all active:scale-95 disabled:opacity-50"
-            >
-              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4 shrink-0" />}
-              <span className="truncate">Imprimir ({selectedIds.size})</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+        <button
+          type="button"
+          onClick={handlePrint}
+          disabled={isProcessing || selectedIds.size === 0}
+          className={modalPrimaryButtonClass}
+        >
+          {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4 shrink-0" />}
+          <span className="tabular-nums truncate">Imprimir ({selectedIds.size})</span>
+        </button>
+      </ModalFooter>
+    </ModalShell>
   );
 };
