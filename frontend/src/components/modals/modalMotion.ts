@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 
 /** Pila LIFO global para que la tecla Esc cierre únicamente el modal superior activo */
@@ -112,90 +112,92 @@ export function useModalMotion() {
   const shouldReduceMotion = useReducedMotion();
   const isWide = useIsWideScreen();
 
-  const backdropMotion = {
-    initial: { opacity: 0 },
-    animate: {
-      opacity: 1,
-      transition: { duration: shouldReduceMotion ? 0.08 : 0.2, ease: [0.22, 1, 0.36, 1] as const }
-    },
-    exit: {
-      opacity: 0,
-      transition: { duration: shouldReduceMotion ? 0.08 : 0.14, ease: [0.4, 0, 1, 1] as const }
-    }
-  };
+  return useMemo(() => {
+    const backdropMotion = {
+      initial: { opacity: 0 },
+      animate: {
+        opacity: 1,
+        transition: { duration: shouldReduceMotion ? 0.08 : 0.18, ease: [0.22, 1, 0.36, 1] as const }
+      },
+      exit: {
+        opacity: 0,
+        transition: { duration: shouldReduceMotion ? 0.08 : 0.13, ease: [0.4, 0, 1, 1] as const }
+      }
+    };
 
-  const panelMotion = {
-    initial: shouldReduceMotion
-      ? { opacity: 0 }
-      : isWide
-        ? { opacity: 0, scale: 0.96, y: 8 }
-        : { opacity: 0, scale: 0.95, y: 18 },
-    animate: shouldReduceMotion
-      ? { opacity: 1, transition: { duration: 0.1 } }
-      : {
-          opacity: 1,
-          scale: 1,
-          y: 0,
-          transition: { type: 'spring' as const, stiffness: 420, damping: 32, mass: 0.8 }
-        },
-    exit: shouldReduceMotion
-      ? { opacity: 0, transition: { duration: 0.08 } }
-      : isWide
-        ? {
-            opacity: 0,
-            scale: 0.97,
-            y: 6,
-            transition: { duration: 0.14, ease: [0.4, 0, 1, 1] as const }
-          }
+    const panelMotion = {
+      initial: shouldReduceMotion
+        ? { opacity: 0 }
+        : isWide
+          ? { opacity: 0, scale: 0.96, y: 8 }
+          : { opacity: 0, scale: 0.96, y: 12 },
+      animate: shouldReduceMotion
+        ? { opacity: 1, transition: { duration: 0.1 } }
+        : {
+            opacity: 1,
+            scale: 1,
+            y: 0,
+            transition: { type: 'spring' as const, stiffness: 460, damping: 38, mass: 0.8 }
+          },
+      exit: shouldReduceMotion
+        ? { opacity: 0, transition: { duration: 0.08 } }
+        : isWide
+          ? {
+              opacity: 0,
+              scale: 0.97,
+              y: 6,
+              transition: { duration: 0.13, ease: [0.4, 0, 1, 1] as const }
+            }
+          : {
+              opacity: 0,
+              scale: 0.97,
+              y: 10,
+              transition: { duration: 0.13, ease: [0.4, 0, 1, 1] as const }
+            }
+    };
+
+    const sheetMotion = {
+      initial: shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.98 },
+      animate: shouldReduceMotion
+        ? { opacity: 1, transition: { duration: 0.1 } }
+        : {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            transition: { type: 'spring' as const, stiffness: 440, damping: 36, mass: 0.85 }
+          },
+      exit: shouldReduceMotion
+        ? { opacity: 0, transition: { duration: 0.08 } }
         : {
             opacity: 0,
-            scale: 0.97,
-            y: 14,
+            y: 16,
+            scale: 0.98,
             transition: { duration: 0.14, ease: [0.4, 0, 1, 1] as const }
           }
-  };
+    };
 
-  const sheetMotion = {
-    initial: shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 28, scale: 0.98 },
-    animate: shouldReduceMotion
-      ? { opacity: 1, transition: { duration: 0.1 } }
-      : {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          transition: { type: 'spring' as const, stiffness: 400, damping: 32, mass: 0.85 }
-        },
-    exit: shouldReduceMotion
-      ? { opacity: 0, transition: { duration: 0.08 } }
-      : {
-          opacity: 0,
-          y: 22,
-          scale: 0.98,
-          transition: { duration: 0.15, ease: [0.4, 0, 1, 1] as const }
-        }
-  };
+    const tabContentMotion = {
+      initial: shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 },
+      animate: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: shouldReduceMotion ? 0.08 : 0.16, ease: [0.22, 1, 0.36, 1] as const }
+      },
+      exit: shouldReduceMotion
+        ? { opacity: 0, transition: { duration: 0.06 } }
+        : {
+            opacity: 0,
+            y: -4,
+            transition: { duration: 0.11, ease: [0.4, 0, 1, 1] as const }
+          }
+    };
 
-  const tabContentMotion = {
-    initial: shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 },
-    animate: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: shouldReduceMotion ? 0.08 : 0.16, ease: [0.22, 1, 0.36, 1] as const }
-    },
-    exit: shouldReduceMotion
-      ? { opacity: 0, transition: { duration: 0.06 } }
-      : {
-          opacity: 0,
-          y: -4,
-          transition: { duration: 0.11, ease: [0.4, 0, 1, 1] as const }
-        }
-  };
-
-  return {
-    shouldReduceMotion,
-    backdropMotion,
-    panelMotion,
-    sheetMotion,
-    tabContentMotion
-  };
+    return {
+      shouldReduceMotion,
+      backdropMotion,
+      panelMotion,
+      sheetMotion,
+      tabContentMotion
+    };
+  }, [shouldReduceMotion, isWide]);
 }

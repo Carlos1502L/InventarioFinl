@@ -20,6 +20,7 @@ import { useAuth } from '../context/AuthContext';
 const BarcodeScannerModal = React.lazy(() => import('../components/modals/BarcodeScannerModal').then(m => ({ default: m.BarcodeScannerModal })));
 import { isSaleRejected } from '../lib/supabase';
 import { InventoryCardsSkeleton } from '../components/ui/Skeleton';
+import { LazyModalSlot } from '../components/common/LazyModalSlot';
 import { useBackdropDismiss, useLatestValue, useModalEscape, useModalMotion } from '../components/modals/modalMotion';
 
 interface QuickConsultModalProps {
@@ -384,17 +385,15 @@ export const HomePage: React.FC<HomePageProps> = ({
           />
         </Suspense>
 
-        {homeScannerOpen && (
-          <Suspense fallback={null}>
-            <BarcodeScannerModal
-              isOpen={homeScannerOpen}
+        <LazyModalSlot open={homeScannerOpen}>
+          <BarcodeScannerModal
+            isOpen={homeScannerOpen}
             onClose={() => setHomeScannerOpen(false)}
             onScanSuccess={handleHomeQuickConsult}
             title="Consulta Rápida de Producto"
             instructions="Escanea el código de barras o QR para consultar precio y disponibilidad."
-            />
-          </Suspense>
-        )}
+          />
+        </LazyModalSlot>
 
         <QuickConsultModal
           data={consultModalData}
@@ -771,17 +770,15 @@ export const HomePage: React.FC<HomePageProps> = ({
       </div>
 
       {/* Escáner de Consulta Rápida (Exclusivo Home Mobile) */}
-      {homeScannerOpen && (
-        <Suspense fallback={null}>
-          <BarcodeScannerModal
+      <LazyModalSlot open={homeScannerOpen}>
+        <BarcodeScannerModal
           isOpen={homeScannerOpen}
-        onClose={() => setHomeScannerOpen(false)}
-        onScanSuccess={handleHomeQuickConsult}
-        title="Consulta Rápida de Producto"
-        instructions="Escanea el código de barras o QR para consultar precio y disponibilidad."
+          onClose={() => setHomeScannerOpen(false)}
+          onScanSuccess={handleHomeQuickConsult}
+          title="Consulta Rápida de Producto"
+          instructions="Escanea el código de barras o QR para consultar precio y disponibilidad."
         />
-        </Suspense>
-      )}
+      </LazyModalSlot>
 
       {/* Modal / Tarjeta Flotante de Resultado de Consulta Rápida */}
       <QuickConsultModal

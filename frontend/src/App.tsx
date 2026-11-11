@@ -40,6 +40,7 @@ const InventorySelectorModal = React.lazy(() => import('./components/modals/Inve
 const BarcodeScannerModal = React.lazy(() => import('./components/modals/BarcodeScannerModal').then(m => ({ default: m.BarcodeScannerModal })));
 const RestockProductModal = React.lazy(() => import('./components/modals/RestockProductModal').then(m => ({ default: m.RestockProductModal })));
 import { ToastNotification, showAppToast } from './components/ui';
+import { LazyModalSlot } from './components/common/LazyModalSlot';
 import { syncAllOfflineDataSilently } from './services/offlineSync';
 
 import { Loader2, Layers, Plus, Sparkles } from 'lucide-react';
@@ -650,8 +651,7 @@ export const AppContent: React.FC = () => {
          ========================================================= */}
 
       {/* 1. Modal de Creación / Edición de Producto */}
-      {productFormOpen && (
-        <Suspense fallback={null}>
+      <LazyModalSlot open={productFormOpen}>
           <ProductFormModal
             isOpen={productFormOpen}
             onClose={() => setProductFormOpen(false)}
@@ -668,12 +668,10 @@ export const AppContent: React.FC = () => {
               setScannedRestockProduct(prod);
             }}
           />
-        </Suspense>
-      )}
+        </LazyModalSlot>
 
       {/* 2. Modal de Detalle de Producto (Ficha Técnica Suiza) */}
-      {productDetailOpen && (
-        <Suspense fallback={null}>
+      <LazyModalSlot open={productDetailOpen}>
           <ProductDetailModal
             product={selectedProduct}
             isOpen={productDetailOpen}
@@ -702,12 +700,10 @@ export const AppContent: React.FC = () => {
             onSelectProduct={(p) => setSelectedProduct(p)}
             onUpdated={fetchInventoryData}
           />
-        </Suspense>
-      )}
+        </LazyModalSlot>
 
       {/* 3. Modal de Traslado de Ubicación */}
-      {moveModalOpen && (
-        <Suspense fallback={null}>
+      <LazyModalSlot open={moveModalOpen}>
           <MoveProductModal
             product={selectedProduct}
             isOpen={moveModalOpen}
@@ -715,24 +711,20 @@ export const AppContent: React.FC = () => {
             onMoved={fetchInventoryData}
             locations={locations}
           />
-        </Suspense>
-      )}
+        </LazyModalSlot>
 
       {/* 4. Modal de Retiro / Baja de Stock */}
-      {withdrawModalOpen && (
-        <Suspense fallback={null}>
+      <LazyModalSlot open={withdrawModalOpen}>
           <WithdrawProductModal
             product={selectedProduct}
             isOpen={withdrawModalOpen}
             onClose={() => setWithdrawModalOpen(false)}
             onWithdrawn={fetchInventoryData}
           />
-        </Suspense>
-      )}
+        </LazyModalSlot>
 
       {/* 5. Modales de Configuración */}
-      {categoriesModalOpen && (
-        <Suspense fallback={null}>
+      <LazyModalSlot open={categoriesModalOpen}>
           <CategoriesManagementModal
             isOpen={categoriesModalOpen}
             onClose={() => setCategoriesModalOpen(false)}
@@ -740,41 +732,33 @@ export const AppContent: React.FC = () => {
             subcategories={subcategories}
             onRefresh={fetchInventoryData}
           />
-        </Suspense>
-      )}
+        </LazyModalSlot>
 
-      {locationsModalOpen && (
-        <Suspense fallback={null}>
+      <LazyModalSlot open={locationsModalOpen}>
           <LocationsManagementModal
             isOpen={locationsModalOpen}
             onClose={() => setLocationsModalOpen(false)}
             locations={locations}
             onRefresh={fetchInventoryData}
           />
-        </Suspense>
-      )}
+        </LazyModalSlot>
 
-      {collaboratorsModalOpen && (
-        <Suspense fallback={null}>
+      <LazyModalSlot open={collaboratorsModalOpen}>
           <CollaboratorsModal
             isOpen={collaboratorsModalOpen}
             onClose={() => setCollaboratorsModalOpen(false)}
           />
-        </Suspense>
-      )}
+        </LazyModalSlot>
 
-      {inventorySelectorOpen && (
-        <Suspense fallback={null}>
+      <LazyModalSlot open={inventorySelectorOpen}>
           <InventorySelectorModal
             isOpen={inventorySelectorOpen}
             onClose={() => setInventorySelectorOpen(false)}
           />
-        </Suspense>
-      )}
+        </LazyModalSlot>
 
       {/* Escáner Rápido Global */}
-      {quickScanOpen && (
-        <Suspense fallback={null}>
+      <LazyModalSlot open={quickScanOpen}>
           <BarcodeScannerModal
             isOpen={quickScanOpen}
             onClose={() => setQuickScanOpen(false)}
@@ -782,12 +766,10 @@ export const AppContent: React.FC = () => {
             title="ESCANEAR CÓDIGO // BÚSQUEDA RÁPIDA"
             instructions="Apunta la cámara al código de barras o QR de cualquier producto o estantería."
           />
-        </Suspense>
-      )}
+        </LazyModalSlot>
 
       {/* 3.2: Modal de Reingreso de Stock al escanear código existente */}
-      {Boolean(scannedRestockProduct) && (
-        <Suspense fallback={null}>
+      <LazyModalSlot open={Boolean(scannedRestockProduct)}>
           <RestockProductModal
             product={scannedRestockProduct}
             isOpen={Boolean(scannedRestockProduct)}
@@ -799,8 +781,7 @@ export const AppContent: React.FC = () => {
               setProductDetailOpen(true);
             }}
           />
-        </Suspense>
-      )}
+        </LazyModalSlot>
       {/* Notificación Toast Global Flotante (Zero-UI Alterations) */}
       <ToastNotification />
     </div>

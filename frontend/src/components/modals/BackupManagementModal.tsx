@@ -777,7 +777,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
           </div>
 
           {/* Cuerpo Scrollable con Padding y Espaciado Limpio */}
-          <div className="overflow-y-auto space-y-4 p-5 h-auto transition-all duration-300 ease-in-out">
+          <div className="overflow-y-auto space-y-4 p-5 h-auto">
             {loadingSettings && (
               <div className="flex items-center justify-center gap-2 py-3 text-xs text-[#616161]">
                 <Loader2 className="w-4 h-4 animate-spin text-[#1E3A5F]" />
@@ -854,7 +854,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
 
                   {/* Formulario OTP minimalista en línea */}
                   {otpSent && !isEmailVerified && (
-                    <div className="flex items-center gap-2 pt-1 animate-in fade-in">
+                    <div className="flex items-center gap-2 pt-1">
                       <input
                         type="text"
                         maxLength={6}
@@ -985,7 +985,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
 
                 {/* Formulario desplegable: Solo se renderiza DEBAJO cuando isScheduled es true */}
                 {isScheduled && (
-                  <div className="flex flex-col gap-4 pt-1 transition-all duration-300 animate-in fade-in">
+                  <div className="flex flex-col gap-4 pt-1">
                     {/* Correo de destino con Validación Minimalista */}
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between gap-2 min-w-0">
@@ -1051,7 +1051,7 @@ export const BackupManagementModal: React.FC<BackupManagementModalProps> = ({
                       </div>
 
                       {scheduledOtpSent && !isScheduledEmailVerified && (
-                        <div className="flex items-center gap-2 pt-1 animate-in fade-in">
+                        <div className="flex items-center gap-2 pt-1">
                           <input
                             type="text"
                             maxLength={6}

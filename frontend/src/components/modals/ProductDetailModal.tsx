@@ -246,11 +246,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               </div>
             )}
 
-            {/* Grilla Principal 50/50 Desktop */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-              {/* COLUMNA IZQUIERDA: GALERÍA */}
-              <div className="space-y-3">
-                <div className="relative aspect-square sm:aspect-[4/3] bg-[#fafafb] border border-[#ececec] rounded-2xl flex items-center justify-center overflow-hidden">
+            {/* Grilla Principal Desktop (12 columnas: 5 izq Media + SKU + Variantes / 7 der Ficha + Acciones) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* COLUMNA IZQUIERDA: GALERÍA + IDENTIFICACIÓN + VARIANTES DE FAMILIA */}
+              <div className="lg:col-span-5 min-w-0 flex flex-col gap-3.5">
+                <div className="relative aspect-square sm:aspect-[4/3] lg:max-h-72 bg-[#fafafb] border border-[#ececec] rounded-2xl flex items-center justify-center overflow-hidden">
                   {photos.length > 0 ? (
                     <img
                       src={photos[activePhotoIdx]}
@@ -310,19 +310,70 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 )}
 
                 {/* Código de Identificación */}
-                <div className="border border-[#ececec] rounded-xl p-3 bg-[#fafafb] font-mono text-xs flex items-center justify-between">
+                <div className="border border-[#ececec] rounded-xl p-3.5 bg-[#fafafb] font-mono text-xs flex items-center justify-between">
                   <div>
                     <span className="text-[10px] text-[#777b86] uppercase tracking-wider block">
                       CÓDIGO DE IDENTIFICACIÓN
                     </span>
                     <span className="text-[#17191c] font-semibold uppercase tracking-wider">{product.code}</span>
                   </div>
-
                 </div>
+
+                {/* Variantes de la familia dentro de la columna izquierda */}
+                {relatedVariants.length > 0 && (
+                  <div className="border border-[#ececec] rounded-2xl p-3.5 sm:p-4 space-y-2.5 bg-[#fafafb]/70">
+                    <div className="flex items-center justify-between gap-2 font-mono">
+                      <span className="text-[11px] uppercase tracking-wider text-[#17191c] flex items-center gap-1.5 font-semibold truncate">
+                        <GitBranch className="w-3.5 h-3.5 text-[#17191c] shrink-0" />
+                        <span className="truncate">Variantes de la familia ({relatedVariants.length})</span>
+                      </span>
+                      <span className="text-[10px] text-[#777b86] uppercase shrink-0">Toca para cambiar</span>
+                    </div>
+
+                    <div className="flex flex-col gap-2 max-h-56 overflow-y-auto custom-scrollbar pr-1 font-mono">
+                      {relatedVariants.map(v => {
+                        const vInactive = v.status === 'INACTIVE' || v.status === 'WITHDRAWN';
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => onSelectProduct?.(v)}
+                            className="w-full p-2.5 border border-[#ececec] hover:border-[#17191c] rounded-xl bg-white hover:bg-[#fafafb] text-left transition-[border-color,background-color,transform] duration-150 active:scale-[0.98] flex items-center justify-between gap-2.5 group cursor-pointer"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs uppercase tracking-wide text-[#17191c] group-hover:underline truncate font-bold">
+                                {v.name}
+                              </p>
+                              <span className="text-[10px] text-[#777b86] uppercase tracking-wider block mt-0.5 truncate">
+                                REF: {v.code}
+                              </span>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="text-xs font-semibold tabular-nums text-[#17191c] block">
+                                {formatCurrency(v.price, currentInventory?.currency)}
+                              </span>
+                              <span
+                                className={`inline-block mt-0.5 text-[10px] tabular-nums ${
+                                  vInactive
+                                    ? 'text-[#777b86]'
+                                    : v.stock < (v.min_stock !== undefined && v.min_stock !== null ? v.min_stock : 1)
+                                      ? 'text-red-700 bg-red-50 px-1.5 py-0.5 rounded-md font-semibold border border-red-200'
+                                      : 'text-slate-700'
+                                }`}
+                              >
+                                {vInactive ? 'BAJA' : formatStockDisplay(v)}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* COLUMNA DERECHA: ESPECIFICACIONES TÉCNICAS */}
-              <div className="space-y-5">
+              {/* COLUMNA DERECHA: TÍTULO + ESPECIFICACIONES TÉCNICAS + ACCIONES */}
+              <div className="lg:col-span-7 min-w-0 flex flex-col gap-5">
                 <div>
                   <p className="font-mono text-[11px] text-slate-500 mb-1 font-medium">
                     {product.categories?.name || 'Catálogo general'}
@@ -454,11 +505,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
 
                 {/* Botones de Acción Operativa */}
-                <div className="space-y-2 pt-2">
-                  <div className="flex flex-col sm:flex-row gap-2">
+                <div className="pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <button
                       onClick={() => onMove(product)}
-                      className="mobile-primary-btn flex-1 min-h-[42px] px-4 rounded-xl border border-slate-900 hover:bg-slate-900 hover:text-white text-slate-900 text-xs font-semibold flex items-center justify-center gap-2 transition-[background-color,color,transform] duration-150 active:scale-[0.97] cursor-pointer"
+                      className="mobile-primary-btn w-full min-h-[44px] px-4 rounded-xl border border-slate-900 hover:bg-slate-900 hover:text-white text-slate-900 text-xs font-semibold flex items-center justify-center gap-2 transition-[background-color,color,transform] duration-150 active:scale-[0.97] cursor-pointer"
                     >
                       <ArrowRightLeft className="w-3.5 h-3.5" />
                       <span>Trasladar ubicación</span>
@@ -467,7 +518,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     {!isInactive ? (
                       <button
                         onClick={() => onWithdraw(product)}
-                        className="flex-1 min-h-[44px] px-5 rounded-full max-md:rounded-2xl border border-[#ececec] hover:border-[#17191c] text-[#777b86] hover:text-[#17191c] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] bg-white shadow-sm"
+                        className="w-full min-h-[44px] px-5 rounded-full max-md:rounded-2xl border border-[#ececec] hover:border-[#17191c] text-[#777b86] hover:text-[#17191c] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] bg-white shadow-sm"
                       >
                         <Archive className="w-3.5 h-3.5" />
                         <span>DESCONTAR / MERMA</span>
@@ -476,7 +527,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       <button
                         onClick={handleReactivateProduct}
                         disabled={isReactivating}
-                        className="flex-1 min-h-[44px] px-5 rounded-full max-md:rounded-2xl bg-[#17191c] hover:bg-black text-white text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm"
+                        className="w-full min-h-[44px] px-5 rounded-full max-md:rounded-2xl bg-[#17191c] hover:bg-black text-white text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm"
                       >
                         {isReactivating ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -490,60 +541,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
               </div>
             </div>
-
-            {/* =========================================================
-                VARIACIONES ASOCIADAS (SI APLICA)
-               ========================================================= */}
-            {relatedVariants.length > 0 && (
-              <div className="border border-[#ececec] rounded-2xl p-4 sm:p-5 space-y-3 bg-[#ffffff] shadow-sm">
-                <div className="flex items-center justify-between font-mono">
-                  <span className="text-xs uppercase tracking-wider text-[#17191c] flex items-center gap-1.5 font-medium">
-                    <GitBranch className="w-4 h-4 text-[#17191c]" />
-                    VARIANTES REGISTRADAS DE LA FAMILIA ({relatedVariants.length})
-                  </span>
-                  <span className="text-[10px] text-[#777b86] uppercase">TOCA PARA CAMBIAR DE FICHA</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono">
-                  {relatedVariants.map(v => {
-                    const vInactive = v.status === 'INACTIVE' || v.status === 'WITHDRAWN';
-                    return (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => onSelectProduct?.(v)}
-                        className="p-3 border border-[#ececec] hover:border-[#17191c] rounded-xl bg-white hover:bg-[#fafafb] text-left transition-all active:scale-[0.98] flex items-center justify-between group shadow-sm"
-                      >
-                        <div className="min-w-0 pr-2">
-                          <p className="text-xs uppercase tracking-wide text-[#17191c] group-hover:underline truncate font-bold">
-                            {v.name}
-                          </p>
-                          <span className="text-[10px] text-[#777b86] uppercase tracking-wider block mt-0.5">
-                            REF: {v.code}
-                          </span>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span className="text-xs font-light tabular-nums text-[#17191c] block">
-                            {formatCurrency(v.price, currentInventory?.currency)}
-                          </span>
-                          <span
-                            className={`text-[10px] ${
-                              vInactive
-                                ? 'text-[#777b86]'
-                                : v.stock < (v.min_stock !== undefined && v.min_stock !== null ? v.min_stock : 1)
-                                  ? 'text-red-700 bg-red-50 px-2 py-0.5 rounded-md font-semibold border border-red-200 tabular-nums'
-                                  : 'text-slate-900 tabular-nums'
-                            }`}
-                          >
-                            {vInactive ? 'BAJA' : formatStockDisplay(v)}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
               </motion.div>
             </motion.div>

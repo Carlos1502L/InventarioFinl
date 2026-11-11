@@ -1222,7 +1222,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ products, onSaleCompleted,
             </div>
 
             {showCustomerInfo && (
-              <div className="space-y-2.5 animate-in fade-in duration-150">
+              <div className="space-y-2.5">
                 <input
                   type="text"
                   value={customerName}
