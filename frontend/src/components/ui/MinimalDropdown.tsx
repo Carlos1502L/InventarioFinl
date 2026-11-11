@@ -99,18 +99,17 @@ export const MinimalDropdown: React.FC<MinimalDropdownProps> = ({
         {isOpen && !disabled && (
           <motion.div
             key="minimal-dropdown-menu"
-            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -4 }}
-            animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -2 }}
+            animate={{ opacity: 1, y: 0 }}
             exit={
               shouldReduceMotion
                 ? { opacity: 0, transition: { duration: 0.08 } }
-                : { opacity: 0, scale: 0.97, y: -3, transition: { duration: 0.12, ease: 'easeIn' } }
+                : { opacity: 0, y: -2, transition: { duration: 0.1, ease: [0.4, 0, 1, 1] } }
             }
-            transition={
-              shouldReduceMotion
-                ? { duration: 0.08 }
-                : { type: 'spring', stiffness: 450, damping: 32, mass: 0.7 }
-            }
+            transition={{
+              duration: shouldReduceMotion ? 0.08 : 0.14,
+              ease: [0.22, 1, 0.36, 1]
+            }}
             className="mobile-dropdown-menu absolute left-0 right-0 top-full mt-2 z-50 bg-white rounded-2xl lg:rounded-xl border border-neutral-200/80 lg:border-slate-200 shadow-xl p-1.5 overflow-hidden max-h-60 overflow-y-auto overscroll-contain font-sans normal-case tracking-normal origin-top"
           >
             {options.length === 0 ? (

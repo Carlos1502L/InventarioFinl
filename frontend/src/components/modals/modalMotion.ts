@@ -129,67 +129,54 @@ export function useModalMotion() {
       initial: shouldReduceMotion
         ? { opacity: 0 }
         : isWide
-          ? { opacity: 0, scale: 0.96, y: 8 }
-          : { opacity: 0, scale: 0.96, y: 12 },
+          ? { opacity: 0, scale: 0.985, y: 4 }
+          : { opacity: 0, scale: 0.985, y: 6 },
       animate: shouldReduceMotion
         ? { opacity: 1, transition: { duration: 0.1 } }
         : {
             opacity: 1,
             scale: 1,
             y: 0,
-            transition: { type: 'spring' as const, stiffness: 460, damping: 38, mass: 0.8 }
-          },
-      exit: shouldReduceMotion
-        ? { opacity: 0, transition: { duration: 0.08 } }
-        : isWide
-          ? {
-              opacity: 0,
-              scale: 0.97,
-              y: 6,
-              transition: { duration: 0.13, ease: [0.4, 0, 1, 1] as const }
-            }
-          : {
-              opacity: 0,
-              scale: 0.97,
-              y: 10,
-              transition: { duration: 0.13, ease: [0.4, 0, 1, 1] as const }
-            }
-    };
-
-    const sheetMotion = {
-      initial: shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.98 },
-      animate: shouldReduceMotion
-        ? { opacity: 1, transition: { duration: 0.1 } }
-        : {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            transition: { type: 'spring' as const, stiffness: 440, damping: 36, mass: 0.85 }
+            transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] as const }
           },
       exit: shouldReduceMotion
         ? { opacity: 0, transition: { duration: 0.08 } }
         : {
             opacity: 0,
-            y: 16,
-            scale: 0.98,
-            transition: { duration: 0.14, ease: [0.4, 0, 1, 1] as const }
+            scale: 0.99,
+            y: 3,
+            transition: { duration: 0.12, ease: [0.4, 0, 1, 1] as const }
+          }
+    };
+
+    const sheetMotion = {
+      initial: shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 },
+      animate: shouldReduceMotion
+        ? { opacity: 1, transition: { duration: 0.1 } }
+        : {
+            opacity: 1,
+            y: 0,
+            transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] as const }
+          },
+      exit: shouldReduceMotion
+        ? { opacity: 0, transition: { duration: 0.08 } }
+        : {
+            opacity: 0,
+            y: 10,
+            transition: { duration: 0.13, ease: [0.4, 0, 1, 1] as const }
           }
     };
 
     const tabContentMotion = {
-      initial: shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 },
+      initial: { opacity: 0 },
       animate: {
         opacity: 1,
-        y: 0,
-        transition: { duration: shouldReduceMotion ? 0.08 : 0.16, ease: [0.22, 1, 0.36, 1] as const }
+        transition: { duration: shouldReduceMotion ? 0.06 : 0.15, ease: [0.22, 1, 0.36, 1] as const }
       },
-      exit: shouldReduceMotion
-        ? { opacity: 0, transition: { duration: 0.06 } }
-        : {
-            opacity: 0,
-            y: -4,
-            transition: { duration: 0.11, ease: [0.4, 0, 1, 1] as const }
-          }
+      exit: {
+        opacity: 0,
+        transition: { duration: shouldReduceMotion ? 0.05 : 0.09, ease: [0.4, 0, 1, 1] as const }
+      }
     };
 
     return {

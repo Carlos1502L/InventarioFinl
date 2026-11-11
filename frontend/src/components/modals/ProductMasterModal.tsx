@@ -43,9 +43,9 @@ export interface ProductMasterModalProps {
 
 const VIEW_WIDTH_CLASS: Record<ProductModalView, string> = {
   DETAIL: 'max-w-4xl w-full',
-  RESTOCK: 'max-w-md w-full',
-  EDIT: 'max-w-3xl w-full',
-  MOVE: 'max-w-lg w-full'
+  RESTOCK: 'max-w-lg w-full',
+  EDIT: 'max-w-5xl w-full',
+  MOVE: 'max-w-xl w-full'
 };
 
 const SUBVIEW_META: Record<
@@ -145,24 +145,23 @@ export const ProductMasterModal: React.FC<ProductMasterModalProps> = ({
   useModalEscape(isOpen, onClose, isBusy);
   const backdropDismiss = useBackdropDismiss(onClose, isOpen && !isBusy);
 
-  const popViewMotion = useMemo(
+  const viewTransitionMotion = useMemo(
     () => ({
-      initial: shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 },
+      initial: { opacity: 0 },
       animate: {
         opacity: 1,
-        y: 0,
         transition: {
-          duration: shouldReduceMotion ? 0.08 : 0.18,
+          duration: shouldReduceMotion ? 0.06 : 0.14,
           ease: [0.22, 1, 0.36, 1] as const
         }
       },
-      exit: shouldReduceMotion
-        ? { opacity: 0, transition: { duration: 0.06 } }
-        : {
-            opacity: 0,
-            y: -6,
-            transition: { duration: 0.12, ease: [0.4, 0, 1, 1] as const }
-          }
+      exit: {
+        opacity: 0,
+        transition: {
+          duration: shouldReduceMotion ? 0.05 : 0.09,
+          ease: [0.4, 0, 1, 1] as const
+        }
+      }
     }),
     [shouldReduceMotion]
   );
@@ -276,17 +275,9 @@ export const ProductMasterModal: React.FC<ProductMasterModalProps> = ({
         >
           <motion.div
             key="product-master-panel"
-            layout
-            initial={panelMotion.initial}
-            animate={panelMotion.animate}
-            exit={panelMotion.exit}
-            transition={{
-              layout: shouldReduceMotion
-                ? { duration: 0.01 }
-                : { type: 'spring', damping: 28, stiffness: 320 }
-            }}
+            {...panelMotion}
             onClick={e => e.stopPropagation()}
-            className={`mobile-dark-modal relative bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl ${VIEW_WIDTH_CLASS[activeView]} my-auto overflow-hidden flex flex-col max-h-[94vh] shadow-xl`}
+            className={`mobile-dark-modal relative bg-[#ffffff] border border-[#ececec] rounded-2xl md:rounded-3xl ${VIEW_WIDTH_CLASS[activeView]} lg:transition-[max-width] lg:duration-200 lg:ease-[cubic-bezier(0.22,1,0.36,1)] my-auto overflow-hidden flex flex-col max-h-[94vh] shadow-xl`}
           >
             {/* CABECERA ADAPTATIVA UNIFICADA */}
             <div className="flex items-center justify-between gap-3 p-4 sm:p-5 border-b border-[#ececec] bg-white shrink-0 z-20">
@@ -408,13 +399,13 @@ export const ProductMasterModal: React.FC<ProductMasterModalProps> = ({
               )}
             </div>
 
-            {/* CUERPO MORPHING ADAPTATIVO */}
+            {/* CUERPO ADAPTATIVO */}
             <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
-              <AnimatePresence mode="popLayout" initial={false}>
+              <AnimatePresence mode="wait" initial={false}>
                 {activeView === 'DETAIL' && resolvedProduct && (
                   <motion.div
                     key="DETAIL"
-                    {...popViewMotion}
+                    {...viewTransitionMotion}
                     className="flex flex-col flex-1 min-h-0 w-full"
                   >
                     <ProductDetailView
@@ -437,7 +428,7 @@ export const ProductMasterModal: React.FC<ProductMasterModalProps> = ({
                 {activeView === 'RESTOCK' && resolvedProduct && (
                   <motion.div
                     key="RESTOCK"
-                    {...popViewMotion}
+                    {...viewTransitionMotion}
                     className="flex flex-col flex-1 min-h-0 w-full"
                   >
                     <ProductRestockView
@@ -470,7 +461,7 @@ export const ProductMasterModal: React.FC<ProductMasterModalProps> = ({
                 {activeView === 'EDIT' && (
                   <motion.div
                     key="EDIT"
-                    {...popViewMotion}
+                    {...viewTransitionMotion}
                     className="flex flex-col flex-1 min-h-0 w-full"
                   >
                     <ProductEditView
@@ -505,7 +496,7 @@ export const ProductMasterModal: React.FC<ProductMasterModalProps> = ({
                 {activeView === 'MOVE' && resolvedProduct && (
                   <motion.div
                     key="MOVE"
-                    {...popViewMotion}
+                    {...viewTransitionMotion}
                     className="flex flex-col flex-1 min-h-0 w-full"
                   >
                     <ProductMoveView
