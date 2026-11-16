@@ -91,6 +91,33 @@ export interface QueuedWithdrawal {
   error_message?: string | null;
 }
 
+export interface QueuedStocktakeItem {
+  product_id: string;
+  counted_qty: number;
+  expected_qty?: number;
+  unit_cost_snapshot?: number;
+}
+
+export interface QueuedStocktakePayload {
+  session_id?: string;
+  inventory_id: string;
+  location_id: string;
+  code?: string;
+  user_id?: string;
+  user_email?: string;
+  notes?: string;
+  items: QueuedStocktakeItem[];
+}
+
+export interface QueuedStocktake {
+  local_id?: number;
+  payload: QueuedStocktakePayload;
+  status: 'PENDING' | 'SYNCING' | 'SYNCED' | 'FAILED';
+  created_at: string;
+  synced_at?: string | null;
+  error_message?: string | null;
+}
+
 interface PosOfflineDB extends DBSchema {
   sales_queue: {
     key: number;
@@ -116,10 +143,18 @@ interface PosOfflineDB extends DBSchema {
       'by-created_at': string;
     };
   };
+  stocktake_queue: {
+    key: number;
+    value: QueuedStocktake;
+    indexes: {
+      'by-status': string;
+      'by-created_at': string;
+    };
+  };
 }
 
 const DB_NAME = 'pos_offline_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise: Promise<IDBPDatabase<PosOfflineDB>> | null = null;
 
@@ -154,6 +189,15 @@ export function getDB(): Promise<IDBPDatabase<PosOfflineDB>> {
           });
           withStore.createIndex('by-status', 'status');
           withStore.createIndex('by-created_at', 'created_at');
+        }
+
+        if (!db.objectStoreNames.contains('stocktake_queue')) {
+          const stockStore = db.createObjectStore('stocktake_queue', {
+            keyPath: 'local_id',
+            autoIncrement: true
+          });
+          stockStore.createIndex('by-status', 'status');
+          stockStore.createIndex('by-created_at', 'created_at');
         }
       }
     });
@@ -543,6 +587,170 @@ export async function markWithdrawalFailed(localId: number, errorMessage: string
 }
 
 // =========================================================
+// MÉTODOS DE COLA DE BARRIDOS / CONTEOS CÍCLICOS (stocktake_queue)
+// =========================================================
+
+/**
+ * Guarda una sesión de barrido completada en stocktake_queue para sincronización diferida.
+ */
+export async function saveStocktakeLocally(payload: QueuedStocktakePayload): Promise<number> {
+  const db = await getDB();
+  const queued: QueuedStocktake = {
+    payload,
+    status: 'PENDING',
+    created_at: new Date().toISOString(),
+    synced_at: null,
+    error_message: null
+  };
+  const localId = await db.add('stocktake_queue', queued);
+  return localId as number;
+}
+
+/**
+ * Retorna todos los barridos de inventario pendientes en orden FIFO.
+ */
+export async function getPendingStocktakes(): Promise<QueuedStocktake[]> {
+  try {
+    const db = await getDB();
+    const all = await db.getAll('stocktake_queue');
+    return all
+      .filter((s) => s.status === 'PENDING')
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  } catch (err) {
+    console.error('[OfflineDB] Error obteniendo barridos pendientes:', err);
+    return [];
+  }
+}
+
+/**
+ * Retorna el número de barridos pendientes de sincronizar.
+ */
+export async function getPendingStocktakesCount(): Promise<number> {
+  const pending = await getPendingStocktakes();
+  return pending.length;
+}
+
+/**
+ * Marca un barrido local como sincronizado.
+ */
+export async function markStocktakeSynced(localId: number): Promise<void> {
+  try {
+    const db = await getDB();
+    const item = await db.get('stocktake_queue', localId);
+    if (item) {
+      item.status = 'SYNCED';
+      item.synced_at = new Date().toISOString();
+      await db.put('stocktake_queue', item);
+    }
+  } catch (err) {
+    console.error(`[OfflineDB] Error marcando barrido #${localId} como sincronizado:`, err);
+  }
+}
+
+/**
+ * Marca un barrido como fallido.
+ */
+export async function markStocktakeFailed(localId: number, errorMessage: string): Promise<void> {
+  try {
+    const db = await getDB();
+    const item = await db.get('stocktake_queue', localId);
+    if (item) {
+      item.status = 'FAILED';
+      item.error_message = errorMessage;
+      await db.put('stocktake_queue', item);
+    }
+  } catch (err) {
+    console.error(`[OfflineDB] Error marcando barrido #${localId} como fallido:`, err);
+  }
+}
+
+/**
+ * Sincroniza los barridos pendientes contra la RPC de Supabase commit_stocktake_session.
+ */
+export async function syncPendingStocktakesSilently(): Promise<{ synced: number; failed: number }> {
+  const pending = await getPendingStocktakes();
+  let synced = 0;
+  let failed = 0;
+
+  for (const st of pending) {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) break;
+
+    try {
+      let sessionId = st.payload.session_id;
+
+      // 1. Si no tiene session_id remoto, crear la sesión
+      if (!sessionId) {
+        const { data: sessionData, error: sessErr } = await supabase.rpc('create_stocktake_session', {
+          p_inventory_id: st.payload.inventory_id,
+          p_location_id: st.payload.location_id,
+          p_user_id: st.payload.user_id || null,
+          p_user_email: st.payload.user_email || null,
+          p_notes: st.payload.notes || null
+        });
+
+        if (sessErr) {
+          if (isNetworkOrOfflineError(sessErr)) break;
+          throw sessErr;
+        }
+        sessionId = sessionData?.session_id;
+      }
+
+      if (!sessionId) {
+        throw new Error('No se pudo inicializar la sesión remota de barrido.');
+      }
+
+      // 2. Insertar ítems contados en stocktake_items
+      if (st.payload.items && st.payload.items.length > 0) {
+        const itemsToInsert = st.payload.items.map((it) => {
+          const resolvedProductId = offlineTempIdMap.get(it.product_id) || it.product_id;
+          return {
+            session_id: sessionId,
+            product_id: resolvedProductId,
+            counted_qty: it.counted_qty,
+            unit_cost_snapshot: it.unit_cost_snapshot || 0
+          };
+        });
+
+        const { error: itemsErr } = await supabase
+          .from('stocktake_items')
+          .upsert(itemsToInsert, { onConflict: 'session_id,product_id' });
+
+        if (itemsErr) {
+          if (isNetworkOrOfflineError(itemsErr)) break;
+          throw itemsErr;
+        }
+      }
+
+      // 3. Ejecutar RPC transaccional commit_stocktake_session
+      const { error: commitErr } = await supabase.rpc('commit_stocktake_session', {
+        p_session_id: sessionId,
+        p_user_id: st.payload.user_id || null,
+        p_user_email: st.payload.user_email || null
+      });
+
+      if (commitErr) {
+        if (isNetworkOrOfflineError(commitErr)) break;
+        throw commitErr;
+      }
+
+      if (st.local_id) {
+        await markStocktakeSynced(st.local_id);
+      }
+      synced++;
+    } catch (err: any) {
+      if (isNetworkOrOfflineError(err)) break;
+      console.warn(`[SyncEngine] Error en barrido #${st.local_id}:`, err);
+      if (st.local_id) {
+        await markStocktakeFailed(st.local_id, err?.message || 'Error desconocido');
+      }
+      failed++;
+    }
+  }
+
+  return { synced, failed };
+}
+
+// =========================================================
 // VALIDACIÓN DE RED Y ERRORES DE CONECTIVIDAD
 // =========================================================
 
@@ -698,31 +906,34 @@ export async function syncPendingSalesSilently(
 }
 
 /**
- * Sincronizador Integral en Cascada (Fase 1: Productos -> Fase 2: Retiros -> Fase 3: Ventas)
+ * Sincronizador Integral en Cascada (Fase 1: Productos -> Fase 2: Retiros -> Fase 3: Ventas -> Fase 4: Barridos)
  */
 export async function syncAllOfflineDataSilently(
   onSummary?: (summary: {
     syncedProducts: number;
     syncedWithdrawals: number;
     syncedSales: number;
+    syncedStocktakes?: number;
   }) => void
 ): Promise<{
   syncedProducts: number;
   syncedWithdrawals: number;
   syncedSales: number;
+  syncedStocktakes: number;
   errors: number;
 }> {
   if (isSyncInProgress) {
-    return { syncedProducts: 0, syncedWithdrawals: 0, syncedSales: 0, errors: 0 };
+    return { syncedProducts: 0, syncedWithdrawals: 0, syncedSales: 0, syncedStocktakes: 0, errors: 0 };
   }
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    return { syncedProducts: 0, syncedWithdrawals: 0, syncedSales: 0, errors: 0 };
+    return { syncedProducts: 0, syncedWithdrawals: 0, syncedSales: 0, syncedStocktakes: 0, errors: 0 };
   }
 
   isSyncInProgress = true;
   let syncedProducts = 0;
   let syncedWithdrawals = 0;
   let syncedSales = 0;
+  let syncedStocktakes = 0;
   let errors = 0;
 
   try {
@@ -924,12 +1135,20 @@ export async function syncAllOfflineDataSilently(
     syncedSales = salesRes.synced;
     errors += salesRes.failed;
 
-    const totalSynced = syncedProducts + syncedWithdrawals + syncedSales;
+    // =========================================================
+    // FASE 4: Barridos de Inventario (stocktake_queue)
+    // =========================================================
+    const stocktakesRes = await syncPendingStocktakesSilently();
+    syncedStocktakes = stocktakesRes.synced;
+    errors += stocktakesRes.failed;
+
+    const totalSynced = syncedProducts + syncedWithdrawals + syncedSales + syncedStocktakes;
     if (totalSynced > 0 && onSummary) {
       onSummary({
         syncedProducts,
         syncedWithdrawals,
-        syncedSales
+        syncedSales,
+        syncedStocktakes
       });
     }
 
@@ -937,6 +1156,7 @@ export async function syncAllOfflineDataSilently(
       syncedProducts,
       syncedWithdrawals,
       syncedSales,
+      syncedStocktakes,
       errors
     };
   } finally {

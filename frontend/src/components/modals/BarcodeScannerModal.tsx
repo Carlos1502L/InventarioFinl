@@ -10,6 +10,7 @@ interface BarcodeScannerModalProps {
   title?: string;
   instructions?: string;
   continuous?: boolean;
+  qrBoxType?: 'barcode' | 'qr' | 'square';
 }
 
 export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
@@ -18,7 +19,8 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   onScanSuccess,
   title = 'Escanear Código de Barras / QR',
   instructions = 'Apunta la cámara del dispositivo hacia el código para escanearlo automáticamente.',
-  continuous = false
+  continuous = false,
+  qrBoxType = 'barcode'
 }) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cameras, setCameras] = useState<Array<{ id: string; label: string }>>([]);
@@ -104,6 +106,13 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
         {
           fps: 15,
           qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+            if (qrBoxType === 'qr' || qrBoxType === 'square') {
+              const size = Math.min(Math.floor(viewfinderWidth * 0.78), Math.floor(viewfinderHeight * 0.78), 260);
+              return {
+                width: Math.max(190, size),
+                height: Math.max(190, size)
+              };
+            }
             const width = Math.min(Math.floor(viewfinderWidth * 0.88), 300);
             const height = Math.min(Math.floor(width * 0.5), Math.floor(viewfinderHeight * 0.55), 150);
             return {

@@ -18,7 +18,8 @@ import {
   Loader2,
   CheckCircle2,
   Filter,
-  RotateCcw
+  RotateCcw,
+  ClipboardCheck
 } from 'lucide-react';
 import { Product, AuditLog } from '../../types/database';
 import { supabase, formatDate } from '../../services/supabase';
@@ -156,6 +157,22 @@ function formatActionDiff(
         badgeText: 'Venta',
         badgeColor: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
         icon: <ShoppingCart className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+      };
+    }
+
+    case 'INVENTORY_ADJUSTMENT_CYCLE_COUNT': {
+      let headline = log.details || 'Ajuste de inventario por barrido físico';
+      headline = headline.replace(/\s+por\s+[\w.-]+@[\w.-]+/gi, '');
+      const diff = Number(meta.difference_qty || 0);
+      return {
+        headline,
+        badgeText: diff > 0 ? 'Sobrante Barrido' : diff < 0 ? 'Faltante Barrido' : 'Cuadre Barrido',
+        badgeColor: diff > 0
+          ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+          : diff < 0
+          ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+          : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+        icon: <ClipboardCheck className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
       };
     }
 

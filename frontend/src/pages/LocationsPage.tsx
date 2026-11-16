@@ -18,7 +18,8 @@ import {
   CheckCircle2,
   Inbox,
   ChevronDown,
-  X
+  X,
+  ClipboardList
 } from 'lucide-react';
 import { Product, Location } from '../types/database';
 import {
@@ -34,8 +35,9 @@ import { matchesAnyField, normalizeText } from '../utils/searchUtils';
 import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import { MinimalDropdown } from '../components/ui/MinimalDropdown';
 import { showAppToast } from '../components/ui/ToastNotification';
+import { StocktakeView } from '../components/stocktake/StocktakeView';
 
-export type LocationSubTab = 'assign' | 'consult' | 'move';
+export type LocationSubTab = 'assign' | 'consult' | 'move' | 'stocktake';
 
 interface BatchAssignItem {
   product: Product;
@@ -63,6 +65,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
   onClearInitialProduct
 }) => {
   const { currentInventory, user } = useAuth();
+  const isBusiness = currentInventory?.inventory_type !== 'PERSONAL';
 
   // Sub-módulo activo: 1. Asignar | 2. Consultar | 3. Mover | 4. Estantes QR
   const [subTab, setSubTab] = useState<LocationSubTab>(initialSubTab);
@@ -998,12 +1001,13 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
           </div>
 
           {/* Selector de submódulos tipo píldora en fila horizontal deslizable */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mt-4">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar mt-4 -mx-1 px-1 py-0.5">
             {(
               [
                 { id: 'assign', label: 'Asignar' },
                 { id: 'consult', label: 'Consultar' },
-                { id: 'move', label: 'Mover' }
+                { id: 'move', label: 'Mover' },
+                ...(isBusiness ? [{ id: 'stocktake', label: 'Barrido' }] : [])
               ] as { id: LocationSubTab; label: string }[]
             ).map((tab) => {
               const active = subTab === tab.id;
@@ -1012,7 +1016,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => handleTabSwitch(tab.id)}
-                  className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
                     active
                       ? 'bg-white text-neutral-950 shadow-sm'
                       : 'bg-neutral-800/70 text-neutral-400 hover:text-white'
@@ -1796,6 +1800,16 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
             </div>
           )}
 
+          {/* SUBMÓDULO D: BARRIDO / CONTEO CÍCLICO */}
+          {subTab === 'stocktake' && isBusiness && (
+            <StocktakeView
+              products={products}
+              locations={locations}
+              onRefresh={onRefresh}
+              onExitStocktake={() => handleTabSwitch('assign')}
+            />
+          )}
+
         </section>
       </div>
 
@@ -1836,7 +1850,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       </div>
 
       {/* Pestañas Segmented Tab Bar con Indicador Spring */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 p-1 bg-slate-100 border border-slate-200 rounded-xl text-xs">
+      <div className={`grid grid-cols-1 ${isBusiness ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-1 p-1 bg-slate-100 border border-slate-200 rounded-xl text-xs`}>
         {[
           {
             id: 'assign' as const,
@@ -1855,7 +1869,17 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
             label: 'Mover ubicación',
             Icon: ArrowRightLeft,
             badge: null
-          }
+          },
+          ...(isBusiness
+            ? [
+                {
+                  id: 'stocktake' as const,
+                  label: 'Barrido físico',
+                  Icon: ClipboardList,
+                  badge: null
+                }
+              ]
+            : [])
         ].map((tab) => {
           const active = subTab === tab.id;
           const TabIcon = tab.Icon;
@@ -2894,6 +2918,18 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
               </form>
             )}
           </div>
+        </div>
+      )}
+
+      {/* SUB-MÓDULO D: BARRIDO FÍSICO (DESKTOP) */}
+      {subTab === 'stocktake' && isBusiness && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs min-h-[500px] flex flex-col">
+          <StocktakeView
+            products={products}
+            locations={locations}
+            onRefresh={onRefresh}
+            onExitStocktake={() => handleTabSwitch('assign')}
+          />
         </div>
       )}
 

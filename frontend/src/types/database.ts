@@ -1,7 +1,7 @@
 export type InventoryRole = 'owner' | 'collaborator';
 export type InventoryType = 'PERSONAL' | 'BUSINESS';
 export type ProductStatus = 'ACTIVE' | 'INACTIVE' | 'WITHDRAWN' | 'ARCHIVED';
-export type ActionType = 'CREATE' | 'UPDATE' | 'MOVE' | 'ASSIGN' | 'WITHDRAW' | 'RESTOCK' | 'DELETE' | 'SALE';
+export type ActionType = 'CREATE' | 'UPDATE' | 'MOVE' | 'ASSIGN' | 'WITHDRAW' | 'RESTOCK' | 'DELETE' | 'SALE' | 'INVENTORY_ADJUSTMENT_CYCLE_COUNT';
 export type PaymentMethod = 'CASH' | 'YAPE' | 'PLIN' | 'CARD' | 'TRANSFER' | 'OTHER';
 export type DiscountType = 'PERCENTAGE' | 'FIXED';
 export type CouponStatus = 'ACTIVE' | 'INACTIVE';
@@ -205,3 +205,55 @@ export interface SaleItem {
   subtotal: number;
   created_at: string;
 }
+
+// Módulo de Barrido / Conteo Cíclico (Stocktake)
+export type StocktakeStatus = 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+export interface StocktakeSession {
+  id: string;
+  inventory_id: string;
+  location_id: string;
+  code: string;
+  status: StocktakeStatus;
+  created_by: string | null;
+  started_at: string;
+  completed_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  location?: Location;
+  items?: StocktakeItem[];
+}
+
+export interface StocktakeItem {
+  id: string;
+  session_id: string;
+  product_id: string;
+  expected_qty: number;
+  counted_qty: number;
+  difference_qty: number;
+  unit_cost_snapshot: number;
+  created_at: string;
+  updated_at: string;
+  product?: Product;
+}
+
+export interface ProductAudit {
+  id: string;
+  inventory_id: string;
+  product_id: string;
+  user_id: string | null;
+  user_email: string | null;
+  action_type: string;
+  location_id: string | null;
+  location_code: string | null;
+  valor_anterior: number;
+  valor_posterior: number;
+  difference_qty: number;
+  session_code: string | null;
+  reason: string | null;
+  details: string | null;
+  metadata: Record<string, any>;
+  created_at: string;
+}
+
