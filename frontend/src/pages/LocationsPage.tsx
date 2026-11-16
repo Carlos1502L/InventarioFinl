@@ -133,15 +133,16 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
   const [moveProductId, setMoveProductId] = useState<string | null>(initialProduct?.id || null);
   const [moveFromLocationId, setMoveFromLocationId] = useState<string>('');
   const [moveToLocationId, setMoveToLocationId] = useState<string>('');
-  const [moveQuantity, setMoveQuantity] = useState<string>('1');
-  const [moveBoxes, setMoveBoxes] = useState<number>(1);
-  const [moveLooseUnits, setMoveLooseUnits] = useState<number>(0);
+  const [moveQuantity, setMoveQuantity] = useState<string>('');
+  const [moveBoxes, setMoveBoxes] = useState<string>('');
+  const [moveLooseUnits, setMoveLooseUnits] = useState<string>('');
   const [moveReason, setMoveReason] = useState<string>('');
   const [moveAlert, setMoveAlert] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [isMovingStock, setIsMovingStock] = useState(false);
 
   // Estados para búsqueda de Ubicación de Destino (Campo de búsqueda en vez de select)
-  const moveDestSearchRef = useRef<HTMLDivElement>(null);
+  const moveDestSearchMobileRef = useRef<HTMLDivElement>(null);
+  const moveDestSearchDesktopRef = useRef<HTMLDivElement>(null);
   const [moveDestSearchQuery, setMoveDestSearchQuery] = useState('');
   const [isMoveDestSearchOpen, setIsMoveDestSearchOpen] = useState(false);
 
@@ -172,6 +173,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       setMoveFromLocationId('');
       setMoveToLocationId('');
       setMoveDestSearchQuery('');
+      setMoveQuantity('');
+      setMoveBoxes('');
+      setMoveLooseUnits('');
       setMoveAlert(null);
       setIsMoveDestSearchOpen(false);
       setAssignScanCode('');
@@ -179,10 +183,23 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
     };
   }, []);
 
-  // Cierre de dropdown al hacer clic fuera del buscador de destino
+  // Seleccionar ubicación de destino en traslado
+  const handleSelectMoveDestination = (loc: Location) => {
+    setMoveToLocationId(loc.id);
+    setMoveDestSearchQuery(`${loc.name} (${loc.code})`);
+    setIsMoveDestSearchOpen(false);
+    setMoveAlert(null);
+  };
+
+  // Cierre de dropdown al hacer clic fuera del buscador de destino (soporte móvil y escritorio)
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (moveDestSearchRef.current && !moveDestSearchRef.current.contains(e.target as Node)) {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      const isInside =
+        (moveDestSearchMobileRef.current && moveDestSearchMobileRef.current.contains(target)) ||
+        (moveDestSearchDesktopRef.current && moveDestSearchDesktopRef.current.contains(target));
+
+      if (!isInside) {
         setIsMoveDestSearchOpen(false);
         const sel = locations.find(l => l.id === moveToLocationId);
         if (sel) {
@@ -193,7 +210,11 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [locations, moveToLocationId]);
 
   // Sincronizar producto inicial si viene desde otra vista (ej: botón "+ Asignar Ubicación")
@@ -698,25 +719,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
     setMoveFromLocationId(chosenOrigin);
     setMoveToLocationId('');
     setMoveDestSearchQuery('');
-
-    const originEntry = origins.find(o => o.location_id === chosenOrigin);
-    const avail = Number(originEntry?.quantity || 0);
-
-    if (prod.unit_type === 'BOX' && Number(prod.units_per_box) > 0) {
-      const upb = Number(prod.units_per_box);
-      if (avail >= 1) {
-        setMoveBoxes(1);
-        setMoveLooseUnits(0);
-        setMoveQuantity('1');
-      } else {
-        const b = decomposeBoxQty(avail, upb);
-        setMoveBoxes(b.boxes);
-        setMoveLooseUnits(b.looseUnits);
-        setMoveQuantity(String(avail));
-      }
-    } else {
-      setMoveQuantity(avail >= 1 ? '1' : '0');
-    }
+    setMoveBoxes('');
+    setMoveLooseUnits('');
+    setMoveQuantity('');
   };
 
   const handleMoveScanSubmit = (e: React.FormEvent) => {
@@ -760,30 +765,16 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
     setMoveScanQuery('');
   };
 
-  // Cuando cambia la ubicación de origen en Mover Ubicación, ajustar el tope de cantidad
+  // Cuando cambia la ubicación de origen en Mover Ubicación, limpiar cantidades
   const handleOriginLocationChange = (locId: string) => {
     setMoveFromLocationId(locId);
     if (moveToLocationId === locId) {
       setMoveToLocationId('');
       setMoveDestSearchQuery('');
     }
-    const found = moveAvailableOrigins.find(pl => pl.location_id === locId);
-    const avail = Number(found?.quantity || 0);
-    if (moveSelectedProduct?.unit_type === 'BOX' && Number(moveSelectedProduct.units_per_box) > 0) {
-      const upb = Number(moveSelectedProduct.units_per_box);
-      if (avail >= 1) {
-        setMoveBoxes(1);
-        setMoveLooseUnits(0);
-        setMoveQuantity('1');
-      } else {
-        const b = decomposeBoxQty(avail, upb);
-        setMoveBoxes(b.boxes);
-        setMoveLooseUnits(b.looseUnits);
-        setMoveQuantity(String(avail));
-      }
-    } else {
-      setMoveQuantity(avail >= 1 ? '1' : '0');
-    }
+    setMoveBoxes('');
+    setMoveLooseUnits('');
+    setMoveQuantity('');
   };
 
   const handleConfirmMove = async (e: React.FormEvent) => {
@@ -807,14 +798,16 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
     const isBox = moveSelectedProduct.unit_type === 'BOX' && Number(moveSelectedProduct.units_per_box) > 0;
     const upb = Number(moveSelectedProduct.units_per_box || 1);
+    const parsedBoxes = Number(moveBoxes) || 0;
+    const parsedLoose = Number(moveLooseUnits) || 0;
     const finalQtyToMove = isBox
-      ? Number((moveBoxes + moveLooseUnits / upb).toFixed(4))
+      ? Number((parsedBoxes + parsedLoose / upb).toFixed(4))
       : Math.round(Number(moveQuantity || 0));
 
     if (finalQtyToMove <= 0) {
       setMoveAlert({
         type: 'error',
-        message: 'La cantidad a trasladar debe ser mayor a 0.'
+        message: 'Ingresa una cantidad mayor a 0 para trasladar.'
       });
       return;
     }
@@ -855,9 +848,9 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       setMoveFromLocationId('');
       setMoveToLocationId('');
       setMoveDestSearchQuery('');
-      setMoveQuantity('1');
-      setMoveBoxes(1);
-      setMoveLooseUnits(0);
+      setMoveQuantity('');
+      setMoveBoxes('');
+      setMoveLooseUnits('');
       setMoveReason('');
       setMoveScanQuery('');
       onRefresh();
@@ -1645,7 +1638,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                       Ubicación de destino
                     </label>
                     <div className="flex items-center gap-2.5 w-full">
-                      <div ref={moveDestSearchRef} className="relative w-full flex-1 min-w-0">
+                      <div ref={moveDestSearchMobileRef} className="relative w-full flex-1 min-w-0">
                         <div className="relative flex items-center">
                           <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 pointer-events-none" />
                           <input
@@ -1679,7 +1672,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                                 setMoveToLocationId('');
                                 setIsMoveDestSearchOpen(true);
                               }}
-                              className="absolute right-3 p-1 text-neutral-400 hover:text-neutral-700 rounded-full"
+                              className="absolute right-3 p-1 text-neutral-400 hover:text-neutral-700 rounded-full cursor-pointer"
                               aria-label="Limpiar destino"
                             >
                               <X className="w-4 h-4" />
@@ -1700,12 +1693,11 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                                   <button
                                     key={loc.id}
                                     type="button"
-                                    onClick={() => {
-                                      setMoveToLocationId(loc.id);
-                                      setMoveDestSearchQuery(`${loc.name} (${loc.code})`);
-                                      setIsMoveDestSearchOpen(false);
-                                      setMoveAlert(null);
+                                    onPointerDown={(e) => {
+                                      e.preventDefault();
+                                      handleSelectMoveDestination(loc);
                                     }}
+                                    onClick={() => handleSelectMoveDestination(loc)}
                                     className={`w-full rounded-xl px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950 transition-colors flex items-center justify-between cursor-pointer text-left ${
                                       isSelected ? 'bg-neutral-100/80 font-semibold text-neutral-950' : ''
                                     }`}
@@ -1752,9 +1744,15 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                           <input
                             type="number"
                             min={0}
+                            placeholder="0"
                             value={moveBoxes}
-                            onChange={(e) => setMoveBoxes(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
-                            className="w-full bg-transparent text-sm font-semibold text-neutral-900 focus:outline-none mt-0.5"
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || /^\d*$/.test(val)) {
+                                setMoveBoxes(val);
+                              }
+                            }}
+                            className="w-full bg-transparent text-sm font-semibold text-neutral-900 focus:outline-none mt-0.5 placeholder:text-neutral-400"
                           />
                         </div>
                         <div className="bg-neutral-50 rounded-2xl px-4 py-2.5">
@@ -1762,9 +1760,15 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                           <input
                             type="number"
                             min={0}
+                            placeholder="0"
                             value={moveLooseUnits}
-                            onChange={(e) => setMoveLooseUnits(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
-                            className="w-full bg-transparent text-sm font-semibold text-neutral-900 focus:outline-none mt-0.5"
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || /^\d*$/.test(val)) {
+                                setMoveLooseUnits(val);
+                              }
+                            }}
+                            className="w-full bg-transparent text-sm font-semibold text-neutral-900 focus:outline-none mt-0.5 placeholder:text-neutral-400"
                           />
                         </div>
                       </div>
@@ -1773,16 +1777,29 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                         type="number"
                         min={1}
                         max={moveOriginStock}
+                        placeholder="0"
                         value={moveQuantity}
-                        onChange={(e) => setMoveQuantity(e.target.value)}
-                        className="w-full bg-neutral-50 rounded-2xl px-4 py-3.5 text-sm font-semibold text-neutral-900 focus:outline-none"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*$/.test(val)) {
+                            setMoveQuantity(val);
+                          }
+                        }}
+                        className="w-full bg-neutral-50 rounded-2xl px-4 py-3.5 text-sm font-semibold text-neutral-900 focus:outline-none placeholder:text-neutral-400"
                       />
                     )}
                   </div>
 
                   <button
                     type="submit"
-                    disabled={isMovingStock || !moveFromLocationId || !moveToLocationId}
+                    disabled={
+                      isMovingStock ||
+                      !moveFromLocationId ||
+                      !moveToLocationId ||
+                      (moveSelectedProduct.unit_type === 'BOX' && Number(moveSelectedProduct.units_per_box) > 0
+                        ? (Number(moveBoxes) || 0) + (Number(moveLooseUnits) || 0) <= 0
+                        : (Number(moveQuantity) || 0) <= 0)
+                    }
                     className="bg-neutral-950 text-white rounded-2xl py-4 font-semibold w-full text-sm disabled:opacity-40 transition-all active:scale-[0.99] flex items-center justify-center gap-2 mt-2"
                   >
                     {isMovingStock ? (
@@ -2732,11 +2749,15 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                                 type="number"
                                 min={0}
                                 max={Math.floor(moveOriginStock + 0.0001)}
+                                placeholder="0"
                                 value={moveBoxes}
-                                onChange={e =>
-                                  setMoveBoxes(Math.max(0, parseInt(e.target.value, 10) || 0))
-                                }
-                                className="w-full min-h-[38px] bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3 py-1.5 font-mono tabular-nums text-sm font-semibold text-slate-900 outline-none"
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  if (val === '' || /^\d*$/.test(val)) {
+                                    setMoveBoxes(val);
+                                  }
+                                }}
+                                className="w-full min-h-[38px] bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3 py-1.5 font-mono tabular-nums text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-300"
                               />
                             </div>
                             <div>
@@ -2747,11 +2768,15 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                                 type="number"
                                 min={0}
                                 max={Number(moveSelectedProduct.units_per_box) - 1}
+                                placeholder="0"
                                 value={moveLooseUnits}
-                                onChange={e =>
-                                  setMoveLooseUnits(Math.max(0, parseInt(e.target.value, 10) || 0))
-                                }
-                                className="w-full min-h-[38px] bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3 py-1.5 font-mono tabular-nums text-sm font-semibold text-slate-900 outline-none"
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  if (val === '' || /^\d*$/.test(val)) {
+                                    setMoveLooseUnits(val);
+                                  }
+                                }}
+                                className="w-full min-h-[38px] bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3 py-1.5 font-mono tabular-nums text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-300"
                               />
                             </div>
                           </div>
@@ -2762,10 +2787,16 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                               min={1}
                               max={Math.round(moveOriginStock)}
                               step={1}
+                              placeholder="0"
                               value={moveQuantity}
-                              onChange={e => setMoveQuantity(e.target.value)}
+                              onChange={e => {
+                                const val = e.target.value;
+                                if (val === '' || /^\d*$/.test(val)) {
+                                  setMoveQuantity(val);
+                                }
+                              }}
                               required
-                              className="flex-1 min-h-[40px] bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3.5 py-2 font-mono tabular-nums text-sm font-semibold text-slate-900 outline-none"
+                              className="flex-1 min-h-[40px] bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3.5 py-2 font-mono tabular-nums text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-300"
                             />
                             <button
                               type="button"
@@ -2785,7 +2816,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                         3. Ubicación de destino
                       </label>
                       <div className="flex gap-2">
-                        <div ref={moveDestSearchRef} className="relative flex-1 min-w-0">
+                        <div ref={moveDestSearchDesktopRef} className="relative flex-1 min-w-0">
                           <div className="relative flex items-center">
                             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
                             <input
@@ -2840,12 +2871,11 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                                     <button
                                       key={loc.id}
                                       type="button"
-                                      onClick={() => {
-                                        setMoveToLocationId(loc.id);
-                                        setMoveDestSearchQuery(`${loc.name} (${loc.code})`);
-                                        setIsMoveDestSearchOpen(false);
-                                        setMoveAlert(null);
+                                      onPointerDown={(e) => {
+                                        e.preventDefault();
+                                        handleSelectMoveDestination(loc);
                                       }}
+                                      onClick={() => handleSelectMoveDestination(loc)}
                                       className={`w-full px-3.5 py-2.5 text-left text-xs flex items-center justify-between gap-2 hover:bg-slate-50 transition-colors cursor-pointer ${
                                         isSelected ? 'bg-slate-100 font-semibold text-slate-900' : ''
                                       }`}
@@ -2898,7 +2928,14 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
                     <button
                       type="submit"
-                      disabled={isMovingStock || !moveFromLocationId || !moveToLocationId}
+                      disabled={
+                        isMovingStock ||
+                        !moveFromLocationId ||
+                        !moveToLocationId ||
+                        (moveSelectedProduct.unit_type === 'BOX' && Number(moveSelectedProduct.units_per_box) > 0
+                          ? (Number(moveBoxes) || 0) + (Number(moveLooseUnits) || 0) <= 0
+                          : (Number(moveQuantity) || 0) <= 0)
+                      }
                       className="w-full min-h-[42px] px-5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold disabled:opacity-45 transition-[background-color,transform] duration-150 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
                     >
                       {isMovingStock ? (

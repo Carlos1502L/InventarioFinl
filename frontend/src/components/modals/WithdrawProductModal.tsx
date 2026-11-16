@@ -31,11 +31,11 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
   const [withdrawMode, setWithdrawMode] = useState<'partial' | 'full'>('partial');
 
   // Modo UNIT
-  const [quantity, setQuantity] = useState<string>('1');
+  const [quantity, setQuantity] = useState<string>('');
 
   // Modo BOX (permite descontar cajas y/o unidades sueltas por merma/consumo)
-  const [boxesToWithdraw, setBoxesToWithdraw] = useState<string>('0');
-  const [looseUnitsToWithdraw, setLooseUnitsToWithdraw] = useState<string>('1');
+  const [boxesToWithdraw, setBoxesToWithdraw] = useState<string>('');
+  const [looseUnitsToWithdraw, setLooseUnitsToWithdraw] = useState<string>('');
 
   const [reason, setReason] = useState<string>('Merma o pérdida');
   const [customReason, setCustomReason] = useState<string>('');
@@ -45,9 +45,9 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
   useEffect(() => {
     if (isOpen && product) {
       setWithdrawMode('partial');
-      setQuantity('1');
-      setBoxesToWithdraw('0');
-      setLooseUnitsToWithdraw('1');
+      setQuantity('');
+      setBoxesToWithdraw('');
+      setLooseUnitsToWithdraw('');
       setErrorMsg(null);
     }
   }, [isOpen, product]);
@@ -310,10 +310,14 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
                             type="number"
                             min="1"
                             max={maxStock}
+                            placeholder="0"
                             value={quantity}
-                            onChange={e => setQuantity(e.target.value)}
+                            onChange={e => {
+                              const val = e.target.value;
+                              if (val === '' || /^\d*$/.test(val)) setQuantity(val);
+                            }}
                             required
-                            className="w-full min-h-[44px] bg-white border border-[#ececec] rounded-xl px-4 py-2 text-sm text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
+                            className="w-full min-h-[44px] bg-white border border-[#ececec] rounded-xl px-4 py-2 text-sm text-[#17191c] placeholder:text-[#CBD5E1] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
                           />
                           <span className="text-xs text-[#777b86] whitespace-nowrap">de {maxStock} und</span>
                         </div>
@@ -337,9 +341,13 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
                               type="number"
                               min="0"
                               step="1"
+                              placeholder="0"
                               value={looseUnitsToWithdraw}
-                              onChange={e => setLooseUnitsToWithdraw(e.target.value)}
-                              className="w-full min-h-[44px] bg-white border border-[#ececec] rounded-xl px-3.5 py-2 text-sm text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
+                              onChange={e => {
+                                const val = e.target.value;
+                                if (val === '' || /^\d*$/.test(val)) setLooseUnitsToWithdraw(val);
+                              }}
+                              className="w-full min-h-[44px] bg-white border border-[#ececec] rounded-xl px-3.5 py-2 text-sm text-[#17191c] placeholder:text-[#CBD5E1] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
                             />
                           </div>
 
@@ -351,9 +359,13 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
                               type="number"
                               min="0"
                               step="any"
+                              placeholder="0"
                               value={boxesToWithdraw}
-                              onChange={e => setBoxesToWithdraw(e.target.value)}
-                              className="w-full min-h-[44px] bg-white border border-[#ececec] rounded-xl px-3.5 py-2 text-sm text-[#17191c] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
+                              onChange={e => {
+                                const val = e.target.value;
+                                if (val === '' || /^\d*\.?\d*$/.test(val)) setBoxesToWithdraw(val);
+                              }}
+                              className="w-full min-h-[44px] bg-white border border-[#ececec] rounded-xl px-3.5 py-2 text-sm text-[#17191c] placeholder:text-[#CBD5E1] focus:outline-none focus:ring-1 focus:ring-[#17191c]"
                             />
                           </div>
                         </div>
@@ -438,7 +450,7 @@ export const WithdrawProductModal: React.FC<WithdrawProductModalProps> = ({
                 <CancelButton onClick={onClose} />
                 <button
                   type="submit"
-                  disabled={isSubmitting || (withdrawMode === 'partial' && maxStock <= 0)}
+                  disabled={isSubmitting || (withdrawMode === 'partial' && (maxStock <= 0 || calculation.deltaStock <= 0))}
                   className="min-h-[44px] inline-flex items-center gap-2 px-6 bg-[#17191c] hover:bg-black text-white text-xs uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50 transition-all active:scale-95"
                 >
                   {isSubmitting ? (

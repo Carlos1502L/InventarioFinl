@@ -31,9 +31,9 @@ export const ProductMoveView: React.FC<ProductMoveViewProps> = ({
   const { currentInventory, user } = useAuth();
   const [fromLocationId, setFromLocationId] = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState('');
-  const [quantityToMove, setQuantityToMove] = useState<string>('1');
-  const [moveBoxes, setMoveBoxes] = useState<number>(1);
-  const [moveLooseUnits, setMoveLooseUnits] = useState<number>(0);
+  const [quantityToMove, setQuantityToMove] = useState<string>('');
+  const [moveBoxes, setMoveBoxes] = useState<string>('');
+  const [moveLooseUnits, setMoveLooseUnits] = useState<string>('');
   const [reason, setReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -55,23 +55,9 @@ export const ProductMoveView: React.FC<ProductMoveViewProps> = ({
     setSelectedLocationId('');
     setErrorMsg(null);
     setReason('');
-
-    const avail = Number(firstOrigin?.quantity || 0);
-    if (product.unit_type === 'BOX' && Number(product.units_per_box) > 0) {
-      const upb = Number(product.units_per_box);
-      if (avail >= 1) {
-        setMoveBoxes(1);
-        setMoveLooseUnits(0);
-        setQuantityToMove('1');
-      } else {
-        const totalUnits = Math.round(avail * upb);
-        setMoveBoxes(Math.floor(totalUnits / upb));
-        setMoveLooseUnits(totalUnits % upb);
-        setQuantityToMove(String(avail));
-      }
-    } else {
-      setQuantityToMove(avail >= 1 ? '1' : '0');
-    }
+    setMoveBoxes('');
+    setMoveLooseUnits('');
+    setQuantityToMove('');
   }, [product.id, availableOrigins, product.unit_type, product.units_per_box]);
 
   const setSubmitting = (next: boolean) => {
@@ -119,8 +105,10 @@ export const ProductMoveView: React.FC<ProductMoveViewProps> = ({
       return;
     }
 
+    const parsedBoxes = Number(moveBoxes) || 0;
+    const parsedLoose = Number(moveLooseUnits) || 0;
     const finalQty = isBox
-      ? Number((moveBoxes + moveLooseUnits / upb).toFixed(4))
+      ? Number((parsedBoxes + parsedLoose / upb).toFixed(4))
       : Math.round(Number(quantityToMove || 0));
 
     if (finalQty <= 0 || finalQty > originStock + 0.0002) {
@@ -219,9 +207,13 @@ export const ProductMoveView: React.FC<ProductMoveViewProps> = ({
                         type="number"
                         min={0}
                         max={Math.floor(originStock + 0.0001)}
+                        placeholder="0"
                         value={moveBoxes}
-                        onChange={e => setMoveBoxes(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                        className="w-full min-h-[38px] bg-white border border-[#ececec] rounded-xl px-3 py-1 text-center font-mono text-sm font-bold tabular-nums text-[#17191c]"
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*$/.test(val)) setMoveBoxes(val);
+                        }}
+                        className="w-full min-h-[38px] bg-white border border-[#ececec] rounded-xl px-3 py-1 text-center font-mono text-sm font-bold tabular-nums text-[#17191c] placeholder:text-[#CBD5E1]"
                       />
                     </div>
                     <div>
@@ -230,9 +222,13 @@ export const ProductMoveView: React.FC<ProductMoveViewProps> = ({
                         type="number"
                         min={0}
                         max={upb - 1}
+                        placeholder="0"
                         value={moveLooseUnits}
-                        onChange={e => setMoveLooseUnits(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                        className="w-full min-h-[38px] bg-white border border-[#ececec] rounded-xl px-3 py-1 text-center font-mono text-sm font-bold tabular-nums text-[#17191c]"
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*$/.test(val)) setMoveLooseUnits(val);
+                        }}
+                        className="w-full min-h-[38px] bg-white border border-[#ececec] rounded-xl px-3 py-1 text-center font-mono text-sm font-bold tabular-nums text-[#17191c] placeholder:text-[#CBD5E1]"
                       />
                     </div>
                   </div>
@@ -242,9 +238,13 @@ export const ProductMoveView: React.FC<ProductMoveViewProps> = ({
                       type="number"
                       min={1}
                       max={Math.round(originStock)}
+                      placeholder="0"
                       value={quantityToMove}
-                      onChange={e => setQuantityToMove(e.target.value)}
-                      className="flex-1 min-h-[40px] bg-white border border-[#ececec] rounded-xl px-3 py-1.5 text-center font-mono text-sm font-bold tabular-nums text-[#17191c]"
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d*$/.test(val)) setQuantityToMove(val);
+                      }}
+                      className="flex-1 min-h-[40px] bg-white border border-[#ececec] rounded-xl px-3 py-1.5 text-center font-mono text-sm font-bold tabular-nums text-[#17191c] placeholder:text-[#CBD5E1]"
                     />
                     <button
                       type="button"
@@ -312,7 +312,14 @@ export const ProductMoveView: React.FC<ProductMoveViewProps> = ({
           {availableOrigins.length > 0 && (
             <button
               type="submit"
-              disabled={isSubmitting || !selectedLocationId || !fromLocationId}
+              disabled={
+                isSubmitting ||
+                !selectedLocationId ||
+                !fromLocationId ||
+                (isBox
+                  ? (Number(moveBoxes) || 0) + (Number(moveLooseUnits) || 0) <= 0
+                  : (Number(quantityToMove) || 0) <= 0)
+              }
               className="mobile-primary-btn min-h-[44px] inline-flex items-center justify-center gap-2 px-6 bg-[#17191c] hover:bg-black text-white text-xs font-mono uppercase tracking-wider font-medium rounded-xl shadow-sm disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
