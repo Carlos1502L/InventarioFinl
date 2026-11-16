@@ -28,7 +28,9 @@ import { StocktakeQuantityModal } from './StocktakeQuantityModal';
 import { StocktakeReviewModal, StocktakeDiscrepancyItem } from './StocktakeReviewModal';
 import { StocktakeHistoryModal } from './StocktakeHistoryModal';
 import { showAppToast } from '../ui/ToastNotification';
-import { saveStocktakeLocally } from '../../services/offlineSync';
+import { saveStocktakeLocally, isNetworkOrOfflineError } from '../../services/offlineSync';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface StocktakeViewProps {
   products: Product[];
@@ -97,48 +99,60 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
   // Iniciar Sesión de Barrido para una Ubicación
   const handleStartSession = async (location: Location) => {
     if (!currentInventory) return;
-    try {
-      // Si estamos online, intentar crear sesión en Supabase
-      if (typeof navigator !== 'undefined' && navigator.onLine) {
+    const isOnline = typeof navigator !== 'undefined' && navigator.onLine;
+    const validUserId = user?.id && UUID_REGEX.test(user.id) ? user.id : null;
+
+    if (isOnline) {
+      try {
         const { data, error } = await supabase.rpc('create_stocktake_session', {
           p_inventory_id: currentInventory.id,
           p_location_id: location.id,
-          p_user_id: user?.id || null,
+          p_user_id: validUserId,
           p_user_email: user?.email || null,
           p_notes: 'Barrido móvil'
         });
 
-        if (error) throw error;
+        if (error) {
+          if (isNetworkOrOfflineError(error)) {
+            throw error;
+          }
+          console.error('Error RPC create_stocktake_session:', error);
+          showAppToast(`Error al iniciar sesión en servidor: ${error.message}`, 'error', 4000);
+          return;
+        }
+
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+        const sessionId = parsedData?.session_id || parsedData?.id;
+        const sessionCode = parsedData?.code || `BRR-${Date.now().toString().slice(-4)}`;
 
         setActiveSession({
-          id: data.session_id,
-          code: data.code,
+          id: sessionId,
+          code: sessionCode,
           location
         });
-      } else {
-        // Modo offline
-        const localCode = `BRR-${Date.now().toString().slice(-4)}`;
-        setActiveSession({
-          code: localCode,
-          location
-        });
+        setScannedLocation(null);
+        setCountedEntries(new Map());
+        showAppToast(`Barrido ${sessionCode} iniciado en ${location.name}`, 'success', 3000);
+        return;
+      } catch (err: any) {
+        if (!isNetworkOrOfflineError(err)) {
+          console.error('Error no-red al iniciar barrido:', err);
+          showAppToast(`Error al iniciar barrido: ${err?.message || 'Error inesperado'}`, 'error', 4000);
+          return;
+        }
+        // Falla de red auténtica -> modo offline
       }
-
-      setScannedLocation(null);
-      setCountedEntries(new Map());
-      showAppToast(`Barrido iniciado en ${location.name} (${location.code})`, 'success', 3000);
-    } catch (err: any) {
-      console.error('Error al iniciar barrido:', err);
-      // Fallback local
-      const localCode = `BRR-${Date.now().toString().slice(-4)}`;
-      setActiveSession({
-        code: localCode,
-        location
-      });
-      setScannedLocation(null);
-      setCountedEntries(new Map());
-      showAppToast(`Barrido iniciado localmente en ${location.name}`, 'info', 3000);
     }
+
+    // Modo offline (o falla real de red)
+    const localCode = `BRR-${Date.now().toString().slice(-4)}`;
+    setActiveSession({
+      code: localCode,
+      location
+    });
+    setScannedLocation(null);
+    setCountedEntries(new Map());
+    showAppToast(`Barrido iniciado sin conexión en ${location.name}`, 'info', 3000);
   };
 
   // Procesar escaneo de QR de Ubicación (Obligatorio para iniciar)
@@ -296,6 +310,9 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
     if (!activeSession || !currentInventory) return;
     setIsCommitting(true);
 
+    const isOnline = typeof navigator !== 'undefined' && navigator.onLine;
+    const validUserId = user?.id && UUID_REGEX.test(user.id) ? user.id : null;
+
     try {
       const itemsPayload = Array.from(countedEntries.values()).map((entry) => ({
         product_id: entry.product.id,
@@ -303,57 +320,112 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
         unit_cost_snapshot: Number(entry.product.cost_price || 0)
       }));
 
-      // Si hay conexión y sesión remota, llamar a la RPC commit_stocktake_session
-      if (typeof navigator !== 'undefined' && navigator.onLine && activeSession.id) {
-        // 1. Guardar o actualizar ítems contados en stocktake_items
-        if (itemsPayload.length > 0) {
-          const rowsToUpsert = itemsPayload.map((it) => ({
-            session_id: activeSession.id,
-            product_id: it.product_id,
-            counted_qty: it.counted_qty,
-            unit_cost_snapshot: it.unit_cost_snapshot
-          }));
+      // Si hay conexión a internet, ejecutar directamente contra Supabase
+      if (isOnline) {
+        try {
+          let sessionId = activeSession.id;
 
-          const { error: upsertErr } = await supabase
-            .from('stocktake_items')
-            .upsert(rowsToUpsert, { onConflict: 'session_id,product_id' });
+          // Si por alguna razón la sesión se inició offline o no tenía session_id remoto, crearla en línea ahora
+          if (!sessionId) {
+            const { data: createData, error: createErr } = await supabase.rpc('create_stocktake_session', {
+              p_inventory_id: currentInventory.id,
+              p_location_id: activeSession.location.id,
+              p_user_id: validUserId,
+              p_user_email: user?.email || null,
+              p_notes: 'Barrido completado en línea'
+            });
 
-          if (upsertErr) throw upsertErr;
+            if (createErr) {
+              if (isNetworkOrOfflineError(createErr)) {
+                throw createErr;
+              }
+              throw new Error(`Error al registrar sesión en Supabase: ${createErr.message}`);
+            }
+
+            const parsedCreate = typeof createData === 'string' ? JSON.parse(createData) : createData;
+            sessionId = parsedCreate?.session_id || parsedCreate?.id;
+          }
+
+          if (!sessionId) {
+            throw new Error('No se pudo obtener el identificador de la sesión de barrido.');
+          }
+
+          // 1. Guardar o actualizar ítems contados en stocktake_items
+          if (itemsPayload.length > 0) {
+            const rowsToUpsert = itemsPayload.map((it) => ({
+              session_id: sessionId,
+              product_id: it.product_id,
+              counted_qty: it.counted_qty,
+              unit_cost_snapshot: it.unit_cost_snapshot
+            }));
+
+            const { error: upsertErr } = await supabase
+              .from('stocktake_items')
+              .upsert(rowsToUpsert, { onConflict: 'session_id,product_id' });
+
+            if (upsertErr) {
+              if (isNetworkOrOfflineError(upsertErr)) {
+                throw upsertErr;
+              }
+              throw new Error(`Error al guardar productos contados: ${upsertErr.message}`);
+            }
+          }
+
+          // 2. Ejecutar RPC transaccional commit_stocktake_session
+          const { data: rpcRes, error: rpcErr } = await supabase.rpc('commit_stocktake_session', {
+            p_session_id: sessionId,
+            p_user_id: validUserId,
+            p_user_email: user?.email || null
+          });
+
+          if (rpcErr) {
+            if (isNetworkOrOfflineError(rpcErr)) {
+              throw rpcErr;
+            }
+            throw new Error(`Error al aplicar ajuste en Kardex: ${rpcErr.message}`);
+          }
+
+          const parsedRpc = typeof rpcRes === 'string' ? JSON.parse(rpcRes) : rpcRes;
+          const adjustedCount = parsedRpc?.adjusted_count ?? 0;
+
+          showAppToast(
+            `Barrido ${activeSession.code} conciliado: ${adjustedCount} productos ajustados en Kardex.`,
+            'success',
+            5000
+          );
+
+          // Limpiar sesión y refrescar catálogo
+          setIsReviewModalOpen(false);
+          setActiveSession(null);
+          setCountedEntries(new Map());
+          onRefresh();
+          return;
+        } catch (onlineErr: any) {
+          if (!isNetworkOrOfflineError(onlineErr)) {
+            // Error de negocio o base de datos: propagar sin encolar
+            throw onlineErr;
+          }
+          console.warn('[Stocktake] Falla de red al confirmar barrido online, guardando en cola offline:', onlineErr);
         }
-
-        // 2. Ejecutar RPC transaccional commit_stocktake_session
-        const { data: rpcRes, error: rpcErr } = await supabase.rpc('commit_stocktake_session', {
-          p_session_id: activeSession.id,
-          p_user_id: user?.id || null,
-          p_user_email: user?.email || null
-        });
-
-        if (rpcErr) throw rpcErr;
-
-        showAppToast(
-          `Barrido ${activeSession.code} conciliado: ${rpcRes.adjusted_count} productos ajustados en Kardex.`,
-          'success',
-          5000
-        );
-      } else {
-        // Guardar en cola offline de IndexedDB (stocktake_queue)
-        await saveStocktakeLocally({
-          session_id: activeSession.id,
-          inventory_id: currentInventory.id,
-          location_id: activeSession.location.id,
-          code: activeSession.code,
-          user_id: user?.id,
-          user_email: user?.email,
-          notes: 'Barrido guardado sin conexión',
-          items: itemsPayload
-        });
-
-        showAppToast(
-          `Barrido ${activeSession.code} guardado localmente en cola offline. Se sincronizará al conectar.`,
-          'info',
-          5000
-        );
       }
+
+      // Solo si está verdaderamente offline (!isOnline o falla de red verificada):
+      await saveStocktakeLocally({
+        session_id: activeSession.id,
+        inventory_id: currentInventory.id,
+        location_id: activeSession.location.id,
+        code: activeSession.code,
+        user_id: user?.id,
+        user_email: user?.email,
+        notes: 'Barrido guardado sin conexión',
+        items: itemsPayload
+      });
+
+      showAppToast(
+        `Sin conexión: Barrido ${activeSession.code} guardado localmente. Se sincronizará al conectar.`,
+        'info',
+        5000
+      );
 
       // Limpiar sesión y refrescar catálogo
       setIsReviewModalOpen(false);
@@ -362,7 +434,7 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
       onRefresh();
     } catch (err: any) {
       console.error('Error al confirmar barrido:', err);
-      showAppToast(`Error al aplicar ajuste: ${err?.message || 'Error de base de datos'}`, 'error', 5000);
+      showAppToast(err?.message || 'Error al aplicar ajuste en inventario', 'error', 5000);
     } finally {
       setIsCommitting(false);
     }
@@ -370,320 +442,339 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
 
   return (
     <div className="flex-1 min-h-0 w-full flex flex-col overflow-hidden bg-white text-neutral-900">
-      {/* VISTA 1: ESCANEAR ESTANTE OBLIGATORIO / INICIAR BARRIDO */}
-      {!activeSession ? (
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-4 pb-32 space-y-4">
-          {/* Card Informativa con Título y Botón de Historial al lado */}
-          <div className="p-4 rounded-3xl bg-neutral-950 text-white shadow-xl space-y-2.5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xl font-bold tracking-tight text-white">
-                Ajuste de inventario
-              </h2>
+      {/* VISTA 1: ESCANEAR ESTANTE OBLIGATORIO / PANEL BASE */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-4 pb-32 space-y-4">
+        {/* Card Informativa con Título y Botón de Historial al lado */}
+        <div className="p-4 rounded-3xl bg-neutral-950 text-white shadow-xl space-y-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-xl font-bold tracking-tight text-white">
+              Ajuste de inventario
+            </h2>
+            <button
+              type="button"
+              onClick={() => setIsHistoryModalOpen(true)}
+              className="py-1.5 px-3.5 rounded-full bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-200 flex items-center gap-1.5 transition-colors active:scale-95 border border-neutral-700/60 shrink-0 cursor-pointer"
+            >
+              <History className="w-3.5 h-3.5 text-neutral-300" />
+              <span>Historial</span>
+            </button>
+          </div>
+          <p className="text-xs text-neutral-300 leading-relaxed">
+            Para garantizar la máxima fidelidad, es obligatorio escanear físicamente el código QR del estante antes de comenzar. Durante la toma no se mostrarán las existencias del sistema.
+          </p>
+        </div>
+
+        {/* Tarjeta de Ubicación Escaneada (Si ya se escaneó el QR) */}
+        {scannedLocation ? (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-5 rounded-3xl bg-neutral-50 border-2 border-neutral-900/10 shadow-lg space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Estante verificado físicamente
+              </span>
               <button
                 type="button"
-                onClick={() => setIsHistoryModalOpen(true)}
-                className="py-1.5 px-3.5 rounded-full bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-200 flex items-center gap-1.5 transition-colors active:scale-95 border border-neutral-700/60 shrink-0"
+                onClick={() => setScannedLocation(null)}
+                className="p-1 rounded-full hover:bg-neutral-200 text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
+                title="Cambiar estante"
               >
-                <History className="w-3.5 h-3.5 text-neutral-300" />
-                <span>Historial</span>
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-neutral-300 leading-relaxed">
-              Para garantizar la máxima fidelidad, es obligatorio escanear físicamente el código QR del estante antes de comenzar. Durante la toma no se mostrarán las existencias del sistema.
-            </p>
-          </div>
 
-          {/* Tarjeta de Ubicación Escaneada (Si ya se escaneó el QR) */}
-          {scannedLocation ? (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-5 rounded-3xl bg-neutral-50 border-2 border-neutral-900/10 shadow-lg space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Estante verificado físicamente
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <MapPin className="w-6 h-6 stroke-[1.8] text-emerald-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 font-bold block">
+                  Ubicación escaneada
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setScannedLocation(null)}
-                  className="p-1 rounded-full hover:bg-neutral-200 text-neutral-400 hover:text-neutral-700 transition-colors"
-                  title="Cambiar estante"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shrink-0 shadow-sm">
-                  <MapPin className="w-6 h-6 stroke-[1.8] text-emerald-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 font-bold block">
-                    Ubicación escaneada
+                <h3 className="text-base font-bold text-neutral-950 truncate">
+                  {scannedLocation.name}
+                </h3>
+                <div className="mt-1">
+                  <span className="font-mono text-xs font-semibold px-2.5 py-0.5 rounded-md bg-neutral-200/80 text-neutral-800">
+                    CÓDIGO: {scannedLocation.code}
                   </span>
-                  <h3 className="text-base font-bold text-neutral-950 truncate">
-                    {scannedLocation.name}
-                  </h3>
-                  <div className="mt-1">
-                    <span className="font-mono text-xs font-semibold px-2.5 py-0.5 rounded-md bg-neutral-200/80 text-neutral-800">
-                      CÓDIGO: {scannedLocation.code}
-                    </span>
-                  </div>
                 </div>
               </div>
+            </div>
 
-              <div className="space-y-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleStartSession(scannedLocation)}
-                  className="w-full py-4 px-5 rounded-2xl bg-neutral-950 hover:bg-neutral-900 active:scale-[0.98] text-white text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span>Iniciar barrido en este estante</span>
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </button>
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handleStartSession(scannedLocation)}
+                className="w-full py-4 px-5 rounded-2xl bg-neutral-950 hover:bg-neutral-900 active:scale-[0.98] text-white text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Iniciar barrido en este estante</span>
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCameraScanTarget('location');
-                    setIsCameraScannerOpen(true);
-                  }}
-                  className="w-full py-2.5 text-center text-xs font-semibold text-neutral-500 hover:text-neutral-800 transition-colors"
-                >
-                  Escanear otro estante QR
-                </button>
-              </div>
-            </motion.div>
-          ) : (
-            /* Botón Principal y Único: Escaneo QR de Ubicación */
-            <div className="space-y-3">
               <button
                 type="button"
                 onClick={() => {
                   setCameraScanTarget('location');
                   setIsCameraScannerOpen(true);
                 }}
-                className="w-full p-5 rounded-3xl bg-neutral-900 hover:bg-neutral-800 text-white flex items-center justify-between gap-3 shadow-md active:scale-[0.98] transition-all cursor-pointer"
+                className="w-full py-2.5 text-center text-xs font-semibold text-neutral-500 hover:text-neutral-800 transition-colors cursor-pointer"
               >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-neutral-800 flex items-center justify-center text-white shrink-0">
-                    <QrCode className="w-6 h-6 stroke-[1.8] text-emerald-400" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm font-bold text-white">Escanear Estante (QR)</p>
-                    <p className="text-xs text-neutral-400">Lectura de etiqueta física ISO/IEC 7810</p>
-                  </div>
-                </div>
-                <span className="text-xs font-bold text-neutral-300 bg-neutral-800 px-3 py-1.5 rounded-full shrink-0">
-                  Cámara
-                </span>
-              </button>
-
-              <div className="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex items-start gap-3">
-                <ShieldCheck className="w-5 h-5 text-neutral-500 shrink-0 mt-0.5" />
-                <div className="text-xs text-neutral-600 leading-relaxed">
-                  <strong className="text-neutral-800 font-semibold block">Verificación de presencia física:</strong>
-                  Para iniciar un ajuste es obligatorio escanear el código QR del estante físico. La selección manual desde listas está deshabilitada para asegurar que el operario esté presente en el lugar.
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        /* VISTA 2: BARRIDO CIEGO EN PROGRESO (BLIND COUNT) */
-        <div className="flex-1 min-h-0 w-full flex flex-col overflow-hidden">
-          {/* Sub-Header Fijo: Información de la Sesión y Conteo */}
-          <div className="shrink-0 bg-neutral-900 text-white px-5 pt-3 pb-3 border-b border-neutral-800 space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold block">
-                  {activeSession.code} · Barrido Ciego
-                </span>
-                <h3 className="text-sm font-bold text-white truncate max-w-[220px]">
-                  {activeSession.location.name} <span className="text-neutral-400 text-xs font-mono">({activeSession.location.code})</span>
-                </h3>
-              </div>
-
-              {/* Botón de Salir / Cancelar Sesión */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (countedEntries.size > 0) {
-                    if (confirm('¿Deseas salir del barrido? Los ítems escaneados se conservarán hasta finalizar.')) {
-                      setActiveSession(null);
-                    }
-                  } else {
-                    setActiveSession(null);
-                  }
-                }}
-                className="py-1 px-2.5 rounded-full bg-neutral-800 text-neutral-400 hover:text-white text-xs font-medium transition-colors"
-              >
-                Pausar
+                Escanear otro estante QR
               </button>
             </div>
+          </motion.div>
+        ) : (
+          /* Botón Principal y Único: Escaneo QR de Ubicación */
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => {
+                setCameraScanTarget('location');
+                setIsCameraScannerOpen(true);
+              }}
+              className="w-full p-5 rounded-3xl bg-neutral-900 hover:bg-neutral-800 text-white flex items-center justify-between gap-3 shadow-md active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-neutral-800 flex items-center justify-center text-white shrink-0">
+                  <QrCode className="w-6 h-6 stroke-[1.8] text-emerald-400" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold text-white">Escanear Estante (QR)</p>
+                  <p className="text-xs text-neutral-400">Lectura de etiqueta física ISO/IEC 7810</p>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-neutral-300 bg-neutral-800 px-3 py-1.5 rounded-full shrink-0">
+                Cámara
+              </span>
+            </button>
 
-            {/* Badges de Conteo en Vivo */}
-            <div className="flex items-center gap-2 pt-1 text-xs">
-              <span className="px-2.5 py-1 rounded-full bg-neutral-800 text-neutral-200 font-medium">
-                SKUs contados: <strong className="text-white tabular-nums font-mono">{countedEntries.size}</strong>
-              </span>
-              <span className="px-2.5 py-1 rounded-full bg-neutral-800 text-neutral-200 font-medium">
-                Unidades físicas: <strong className="text-amber-300 tabular-nums font-mono">{totalCountedUnits}</strong>
-              </span>
+            <div className="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-neutral-500 shrink-0 mt-0.5" />
+              <div className="text-xs text-neutral-600 leading-relaxed">
+                <strong className="text-neutral-800 font-semibold block">Verificación de presencia física:</strong>
+                Para iniciar un ajuste es obligatorio escanear el código QR del estante físico. La selección manual desde listas está deshabilitada para asegurar que el operario esté presente en el lugar.
+              </div>
             </div>
           </div>
+        )}
+      </div>
 
-          {/* Barra Fija de Búsqueda y Escáner de Producto */}
-          <div className="shrink-0 bg-white px-5 pt-3 pb-2 space-y-2 border-b border-neutral-100">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 min-w-0 flex items-center gap-2.5 bg-neutral-50 border border-neutral-200/70 rounded-2xl px-3.5 py-3 focus-within:border-neutral-950 focus-within:bg-white transition-all">
-                <Search className="w-4 h-4 text-neutral-400 shrink-0" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchProductQuery}
-                  onChange={(e) => setSearchProductQuery(e.target.value)}
-                  placeholder="Escanear o buscar producto..."
-                  className="w-full bg-transparent border-0 outline-none p-0 text-xs text-neutral-900 placeholder:text-neutral-400 font-medium"
-                />
-                {searchProductQuery && (
-                  <button type="button" onClick={() => setSearchProductQuery('')} className="text-neutral-400">
-                    <X className="w-3.5 h-3.5" />
+      {/* VISTA 2: VENTANA FLOTANTE DE BARRIDO CIEGO EN PROGRESO (BLIND COUNT MODAL) */}
+      <AnimatePresence>
+        {activeSession && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 bg-black/60 backdrop-blur-sm select-none overflow-hidden">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0"
+            />
+
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+              className="relative w-full max-w-3xl bg-white md:rounded-3xl shadow-2xl border border-neutral-200/80 overflow-hidden z-10 h-full md:max-h-[92vh] flex flex-col my-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header Fijo de la Ventana Flotante */}
+              <div className="shrink-0 bg-neutral-950 text-white px-5 pt-4 pb-3.5 border-b border-neutral-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold block">
+                      {activeSession.code} · Conteo de Ajuste Ciego
+                    </span>
+                    <h3 className="text-base font-bold text-white truncate max-w-sm md:max-w-md">
+                      {activeSession.location.name} <span className="text-neutral-400 text-xs font-mono">({activeSession.location.code})</span>
+                    </h3>
+                  </div>
+
+                  {/* Botón de Pausar */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (countedEntries.size > 0) {
+                        if (confirm('¿Deseas pausar el barrido? Los artículos contados se conservarán mientras no recargues la página.')) {
+                          setActiveSession(null);
+                        }
+                      } else {
+                        setActiveSession(null);
+                      }
+                    }}
+                    className="py-1.5 px-3 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-semibold transition-colors border border-neutral-700/60 cursor-pointer"
+                  >
+                    Pausar
                   </button>
+                </div>
+
+                {/* Badges de Conteo en Vivo */}
+                <div className="flex items-center gap-2 pt-0.5 text-xs">
+                  <span className="px-3 py-1 rounded-full bg-neutral-800 text-neutral-200 font-medium">
+                    SKUs contados: <strong className="text-white tabular-nums font-mono">{countedEntries.size}</strong>
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-neutral-800 text-neutral-200 font-medium">
+                    Unidades físicas: <strong className="text-amber-300 tabular-nums font-mono">{totalCountedUnits}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* Barra Fija de Búsqueda y Escáner de Producto */}
+              <div className="shrink-0 bg-white px-5 pt-3 pb-2.5 space-y-2 border-b border-neutral-100">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0 flex items-center gap-2.5 bg-neutral-50 border border-neutral-200/70 rounded-2xl px-3.5 py-3 focus-within:border-neutral-950 focus-within:bg-white transition-all">
+                    <Search className="w-4 h-4 text-neutral-400 shrink-0" />
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={searchProductQuery}
+                      onChange={(e) => setSearchProductQuery(e.target.value)}
+                      placeholder="Escanear o buscar producto..."
+                      className="w-full bg-transparent border-0 outline-none p-0 text-xs text-neutral-900 placeholder:text-neutral-400 font-medium"
+                    />
+                    {searchProductQuery && (
+                      <button type="button" onClick={() => setSearchProductQuery('')} className="text-neutral-400 hover:text-neutral-700">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCameraScanTarget('product');
+                      setIsCameraScannerOpen(true);
+                    }}
+                    className="w-12 h-12 rounded-2xl bg-neutral-950 hover:bg-neutral-800 text-white flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-sm cursor-pointer"
+                    title="Escanear con Cámara"
+                  >
+                    <Camera className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+
+                {/* Sugerencias de búsqueda manual */}
+                {productSuggestions.length > 0 && (
+                  <div className="bg-neutral-50 border border-neutral-100 rounded-2xl px-3 max-h-48 overflow-y-auto divide-y divide-neutral-100 shadow-lg">
+                    {productSuggestions.map((prod) => (
+                      <button
+                        key={prod.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedProductForCount(prod);
+                          setIsQuantityModalOpen(true);
+                          setSearchProductQuery('');
+                        }}
+                        className="w-full py-2.5 flex items-center justify-between text-left active:opacity-70"
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="text-xs font-semibold text-neutral-900 truncate">{prod.name}</p>
+                          <p className="text-[10px] font-mono text-neutral-400 truncate">SKU: {prod.code}</p>
+                        </div>
+                        <span className="text-[11px] font-bold text-neutral-900 bg-white px-2 py-0.5 rounded-full border border-neutral-200 shrink-0">
+                          + Contar
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setCameraScanTarget('product');
-                  setIsCameraScannerOpen(true);
-                }}
-                className="w-12 h-12 rounded-2xl bg-neutral-950 hover:bg-neutral-800 text-white flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-sm cursor-pointer"
-                title="Escanear con Cámara"
-              >
-                <Camera className="w-5 h-5 text-white" />
-              </button>
-            </div>
-
-            {/* Sugerencias de búsqueda manual */}
-            {productSuggestions.length > 0 && (
-              <div className="bg-neutral-50 border border-neutral-100 rounded-2xl px-3 max-h-48 overflow-y-auto divide-y divide-neutral-100 shadow-lg">
-                {productSuggestions.map((prod) => (
-                  <button
-                    key={prod.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedProductForCount(prod);
-                      setIsQuantityModalOpen(true);
-                      setSearchProductQuery('');
-                    }}
-                    className="w-full py-2.5 flex items-center justify-between text-left active:opacity-70"
-                  >
-                    <div className="min-w-0 pr-2">
-                      <p className="text-xs font-semibold text-neutral-900 truncate">{prod.name}</p>
-                      <p className="text-[10px] font-mono text-neutral-400 truncate">SKU: {prod.code}</p>
+              {/* Listado de Productos Contados en esta Sesión (Scroll Aislado) */}
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-3 pb-4 space-y-2.5">
+                {countedEntries.size === 0 ? (
+                  <div className="text-center py-12 px-4 space-y-2">
+                    <div className="w-12 h-12 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center mx-auto">
+                      <ClipboardList className="w-6 h-6 stroke-[1.8]" />
                     </div>
-                    <span className="text-[11px] font-bold text-neutral-900 bg-white px-2 py-0.5 rounded-full border border-neutral-200 shrink-0">
-                      + Contar
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Listado de Productos Contados en esta Sesión (Scroll Aislado) */}
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-3 pb-32 space-y-2.5">
-            {countedEntries.size === 0 ? (
-              <div className="text-center py-12 px-4 space-y-2">
-                <div className="w-12 h-12 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center mx-auto">
-                  <ClipboardList className="w-6 h-6 stroke-[1.8]" />
-                </div>
-                <p className="text-xs font-semibold text-neutral-700">
-                  Ningún producto contado aún en este estante
-                </p>
-                <p className="text-[11px] text-neutral-400 max-w-xs mx-auto">
-                  Apunta la cámara a los códigos de barra o usa el buscador superior para registrar cada artículo presente físicamente.
-                </p>
-              </div>
-            ) : (
-              Array.from(countedEntries.values()).map((entry) => {
-                const imageUrl = Array.isArray(entry.product.images) && entry.product.images.length > 0
-                  ? (typeof entry.product.images[0] === 'string' ? entry.product.images[0] : (entry.product.images[0] as any)?.url)
-                  : null;
-
-                return (
-                  <div
-                    key={entry.product.id}
-                    onClick={() => {
-                      setSelectedProductForCount(entry.product);
-                      setIsQuantityModalOpen(true);
-                    }}
-                    className="p-3 rounded-2xl bg-white border border-neutral-200/70 shadow-xs flex items-center justify-between gap-3 active:scale-[0.99] transition-all cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-11 h-11 rounded-xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center overflow-hidden shrink-0">
-                        {imageUrl ? (
-                          <img src={imageUrl} alt={entry.product.name} className="w-full h-full object-contain" />
-                        ) : (
-                          <Package className="w-5 h-5 text-neutral-400" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-neutral-900 truncate">
-                          {entry.product.name}
-                        </p>
-                        <p className="text-[11px] font-mono text-neutral-400 truncate">
-                          SKU: {entry.product.code}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-sm font-mono font-bold text-neutral-950 bg-neutral-100 px-2.5 py-1 rounded-xl tabular-nums">
-                        {entry.countedQty} unds
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveCountedItem(entry.product.id);
-                        }}
-                        className="w-7 h-7 rounded-full text-neutral-300 hover:text-rose-600 flex items-center justify-center transition-colors"
-                        title="Eliminar del conteo"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    <p className="text-xs font-semibold text-neutral-700">
+                      Ningún producto contado aún en este estante
+                    </p>
+                    <p className="text-[11px] text-neutral-400 max-w-xs mx-auto">
+                      Apunta la cámara a los códigos de barra o usa el buscador superior para registrar cada artículo presente físicamente.
+                    </p>
                   </div>
-                );
-              })
-            )}
-          </div>
+                ) : (
+                  Array.from(countedEntries.values()).map((entry) => {
+                    const imageUrl = Array.isArray(entry.product.images) && entry.product.images.length > 0
+                      ? (typeof entry.product.images[0] === 'string' ? entry.product.images[0] : (entry.product.images[0] as any)?.url)
+                      : null;
 
-          {/* Barra Fija Inferior de Cierre (con margen seguro sobre la cápsula de navegación) */}
-          <div className="fixed bottom-20 left-0 right-0 p-4 bg-white/95 backdrop-blur-md border-t border-neutral-100 z-30 flex items-center justify-center">
-            <button
-              type="button"
-              disabled={countedEntries.size === 0}
-              onClick={handleOpenReview}
-              className="w-full max-w-lg py-4 rounded-2xl bg-neutral-950 hover:bg-neutral-900 text-white font-bold text-sm shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
-            >
-              <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
-              <span>Finalizar Barrido ({countedEntries.size} SKUs · {totalCountedUnits} unds)</span>
-            </button>
+                    return (
+                      <div
+                        key={entry.product.id}
+                        onClick={() => {
+                          setSelectedProductForCount(entry.product);
+                          setIsQuantityModalOpen(true);
+                        }}
+                        className="p-3 rounded-2xl bg-white border border-neutral-200/70 shadow-xs flex items-center justify-between gap-3 active:scale-[0.99] transition-all cursor-pointer hover:border-neutral-300"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-11 h-11 rounded-xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center overflow-hidden shrink-0">
+                            {imageUrl ? (
+                              <img src={imageUrl} alt={entry.product.name} className="w-full h-full object-contain" />
+                            ) : (
+                              <Package className="w-5 h-5 text-neutral-400" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-neutral-900 truncate">
+                              {entry.product.name}
+                            </p>
+                            <p className="text-[11px] font-mono text-neutral-400 truncate">
+                              SKU: {entry.product.code}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-sm font-mono font-bold text-neutral-950 bg-neutral-100 px-2.5 py-1 rounded-xl tabular-nums">
+                            {entry.countedQty} unds
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveCountedItem(entry.product.id);
+                            }}
+                            className="w-7 h-7 rounded-full text-neutral-300 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer"
+                            title="Eliminar del conteo"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Barra Inferior del Modal de Cierre */}
+              <div className="shrink-0 p-4 bg-white/95 backdrop-blur-md border-t border-neutral-100 flex items-center justify-center">
+                <button
+                  type="button"
+                  disabled={countedEntries.size === 0}
+                  onClick={handleOpenReview}
+                  className="w-full max-w-lg py-3.5 rounded-2xl bg-neutral-950 hover:bg-neutral-900 text-white font-bold text-sm shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+                >
+                  <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
+                  <span>Finalizar Barrido ({countedEntries.size} SKUs · {totalCountedUnits} unds)</span>
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* MODAL 1: Escáner de Cámara */}
       <BarcodeScannerModal
         isOpen={isCameraScannerOpen}
         onClose={() => setIsCameraScannerOpen(false)}
+        zIndex="z-[70]"
         qrBoxType={cameraScanTarget === 'location' ? 'square' : 'barcode'}
         title={cameraScanTarget === 'location' ? 'Escanear Etiqueta de Estante' : 'Escanear Producto'}
         instructions={

@@ -76,7 +76,7 @@ export const StocktakeQuantityModal: React.FC<StocktakeQuantityModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-neutral-950/60 backdrop-blur-xs select-none">
+      <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-neutral-950/60 backdrop-blur-xs select-none">
         {/* Fondo interactivo para cerrar */}
         <motion.div
           initial={{ opacity: 0 }}

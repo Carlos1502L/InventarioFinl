@@ -11,6 +11,7 @@ interface BarcodeScannerModalProps {
   instructions?: string;
   continuous?: boolean;
   qrBoxType?: 'barcode' | 'qr' | 'square';
+  zIndex?: string;
 }
 
 export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
@@ -20,7 +21,8 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   title = 'Escanear Código de Barras / QR',
   instructions = 'Apunta la cámara del dispositivo hacia el código para escanearlo automáticamente.',
   continuous = false,
-  qrBoxType = 'barcode'
+  qrBoxType = 'barcode',
+  zIndex = 'z-50'
 }) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cameras, setCameras] = useState<Array<{ id: string; label: string }>>([]);
@@ -244,7 +246,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       {isOpen && (
         <motion.div
           {...backdropMotion}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
+          className={`fixed inset-0 ${zIndex || 'z-50'} flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]`}
         >
           <motion.div
             {...panelMotion}

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { supabase, formatCurrency } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useModalEscape } from '../modals/modalMotion';
 
 interface StocktakeHistoryModalProps {
   isOpen: boolean;
@@ -32,6 +33,8 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
   const [sessions, setSessions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSessionDetail, setSelectedSessionDetail] = useState<any | null>(null);
+
+  useModalEscape(isOpen, onClose);
 
   const formatDateTime = (dateStr: string | null | undefined) => {
     if (!dateStr) return { date: 'Fecha no registrada', time: '--:--' };
@@ -131,7 +134,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-neutral-950/70 backdrop-blur-xs select-none">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm select-none overflow-y-auto">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -141,11 +144,12 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
         />
 
         <motion.div
-          initial={{ y: '100%', opacity: 0.9 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: '100%', opacity: 0 }}
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
           transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-          className="relative w-full max-w-xl bg-white rounded-t-[2.5rem] sm:rounded-3xl shadow-2xl border border-neutral-200/80 overflow-hidden z-10 max-h-[90dvh] flex flex-col"
+          className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-neutral-200/80 overflow-hidden z-10 max-h-[90dvh] flex flex-col my-auto"
+          onClick={e => e.stopPropagation()}
         >
           {/* Manija táctil móvil */}
           <div className="w-12 h-1.5 bg-neutral-300 rounded-full mx-auto mt-3 mb-1 shrink-0 sm:hidden" />

@@ -116,7 +116,7 @@ export const StocktakeReviewModal: React.FC<StocktakeReviewModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-neutral-950/70 backdrop-blur-xs select-none">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm select-none overflow-y-auto">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -128,11 +128,11 @@ export const StocktakeReviewModal: React.FC<StocktakeReviewModalProps> = ({
 
         {/* Modal Sheet de Cierre */}
         <motion.div
-          initial={{ y: '100%', opacity: 0.9 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: '100%', opacity: 0 }}
-          transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="relative w-full max-w-2xl bg-white rounded-t-[2.5rem] sm:rounded-3xl shadow-2xl border border-neutral-200/80 overflow-hidden z-10 max-h-[92dvh] flex flex-col"
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+          className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-neutral-200/80 overflow-hidden z-10 max-h-[92dvh] flex flex-col my-auto"
         >
           {/* Manija táctil móvil */}
           <div className="w-12 h-1.5 bg-neutral-300 rounded-full mx-auto mt-3 mb-1 shrink-0 sm:hidden" />
@@ -165,11 +165,11 @@ export const StocktakeReviewModal: React.FC<StocktakeReviewModalProps> = ({
             <div className="grid grid-cols-3 gap-2.5">
               {/* Faltantes (Rojo) */}
               <div
-                onClick={() => setActiveFilter('DEFICIT')}
+                onClick={() => setActiveFilter(activeFilter === 'DEFICIT' ? 'ALL' : 'DEFICIT')}
                 className={`p-3 rounded-2xl border transition-all cursor-pointer ${
                   activeFilter === 'DEFICIT'
                     ? 'bg-rose-50 border-rose-300 ring-2 ring-rose-400'
-                    : 'bg-rose-50/50 border-rose-100'
+                    : 'bg-rose-50/50 border-rose-100 hover:border-rose-200'
                 }`}
               >
                 <div className="flex items-center gap-1.5 text-rose-700 text-xs font-bold">
@@ -188,11 +188,11 @@ export const StocktakeReviewModal: React.FC<StocktakeReviewModalProps> = ({
 
               {/* Sobrantes (Ámbar) */}
               <div
-                onClick={() => setActiveFilter('SURPLUS')}
+                onClick={() => setActiveFilter(activeFilter === 'SURPLUS' ? 'ALL' : 'SURPLUS')}
                 className={`p-3 rounded-2xl border transition-all cursor-pointer ${
                   activeFilter === 'SURPLUS'
                     ? 'bg-amber-50 border-amber-300 ring-2 ring-amber-400'
-                    : 'bg-amber-50/50 border-amber-100'
+                    : 'bg-amber-50/50 border-amber-100 hover:border-amber-200'
                 }`}
               >
                 <div className="flex items-center gap-1.5 text-amber-700 text-xs font-bold">
@@ -209,18 +209,18 @@ export const StocktakeReviewModal: React.FC<StocktakeReviewModalProps> = ({
                 </div>
               </div>
 
-              {/* Cuadrados (Verde) */}
+              {/* Validados (Verde) */}
               <div
-                onClick={() => setActiveFilter('MATCH')}
+                onClick={() => setActiveFilter(activeFilter === 'MATCH' ? 'ALL' : 'MATCH')}
                 className={`p-3 rounded-2xl border transition-all cursor-pointer ${
                   activeFilter === 'MATCH'
                     ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-400'
-                    : 'bg-emerald-50/50 border-emerald-100'
+                    : 'bg-emerald-50/50 border-emerald-100 hover:border-emerald-200'
                 }`}
               >
                 <div className="flex items-center gap-1.5 text-emerald-700 text-xs font-bold">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Cuadrados</span>
+                  <span>Validados</span>
                 </div>
                 <div className="mt-1">
                   <span className="text-base font-mono font-bold text-emerald-800 tabular-nums">
@@ -233,61 +233,21 @@ export const StocktakeReviewModal: React.FC<StocktakeReviewModalProps> = ({
               </div>
             </div>
 
-            {/* Impacto Financiero Global */}
-            <div className="p-3 bg-neutral-900 text-white rounded-2xl flex items-center justify-between text-xs">
-              <span className="text-neutral-400 font-medium">Impacto Neto en Costo:</span>
-              <span className={`font-mono font-bold tabular-nums text-sm ${
-                summary.netCostImpact < 0
-                  ? 'text-rose-400'
-                  : summary.netCostImpact > 0
-                  ? 'text-amber-400'
-                  : 'text-emerald-400'
-              }`}>
-                {summary.netCostImpact < 0 ? '-' : summary.netCostImpact > 0 ? '+' : ''}
-                {formatCurrency(Math.abs(summary.netCostImpact), currency)}
-              </span>
-            </div>
-
-            {/* Píldoras de Filtro y Buscador */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                {[
-                  { id: 'ALL', label: `Todos (${discrepancies.length})` },
-                  { id: 'DEFICIT', label: `Faltantes (${summary.deficitCount})` },
-                  { id: 'SURPLUS', label: `Sobrantes (${summary.surplusCount})` },
-                  { id: 'MATCH', label: `Cuadrados (${summary.matchCount})` }
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveFilter(tab.id as any)}
-                    className={`py-1.5 px-3 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-                      activeFilter === tab.id
-                        ? 'bg-neutral-900 text-white shadow-xs'
-                        : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Búsqueda rápida */}
-              <div className="flex items-center gap-2 bg-neutral-50 border border-neutral-200/60 rounded-xl px-3 py-2 text-xs">
-                <Search className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Filtrar por nombre o código..."
-                  className="w-full bg-transparent outline-none text-neutral-800 placeholder:text-neutral-400"
-                />
-                {searchQuery && (
-                  <button type="button" onClick={() => setSearchQuery('')} className="text-neutral-400">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
+            {/* Búsqueda rápida de productos conciliados */}
+            <div className="flex items-center gap-2 bg-neutral-50 border border-neutral-200/60 rounded-xl px-3 py-2 text-xs">
+              <Search className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Filtrar por nombre o código..."
+                className="w-full bg-transparent outline-none text-neutral-800 placeholder:text-neutral-400"
+              />
+              {searchQuery && (
+                <button type="button" onClick={() => setSearchQuery('')} className="text-neutral-400 hover:text-neutral-700">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             {/* Lista de Ítems Conciliados */}
