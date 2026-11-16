@@ -13,7 +13,6 @@ import {
   X,
   Package,
   Layers,
-  ChevronDown,
   ArrowRight,
   ShieldCheck,
   RotateCcw,
@@ -59,10 +58,8 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
     location: Location;
   } | null>(null);
 
-  // Selector de Ubicación Manual / Jerárquico
-  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
-  const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
-  const locationDropdownRef = useRef<HTMLDivElement>(null);
+  // Estante escaneado físicamente (QR obligatorio para iniciar)
+  const [scannedLocation, setScannedLocation] = useState<Location | null>(null);
 
   // Modales
   const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
@@ -79,21 +76,6 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
   // Búsqueda Manual de Producto (Buscador sin bordes, insensible a acentos)
   const [searchProductQuery, setSearchProductQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  // Cerrar dropdown al hacer clic afuera
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-      if (locationDropdownRef.current && !locationDropdownRef.current.contains(e.target as Node)) {
-        setIsLocationDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
-  }, []);
 
   // Productos sugeridos por el buscador manual (durante el barrido ciego)
   const productSuggestions = useMemo(() => {
@@ -142,6 +124,7 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
         });
       }
 
+      setScannedLocation(null);
       setCountedEntries(new Map());
       showAppToast(`Barrido iniciado en ${location.name} (${location.code})`, 'success', 3000);
     } catch (err: any) {
@@ -152,21 +135,23 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
         code: localCode,
         location
       });
+      setScannedLocation(null);
       setCountedEntries(new Map());
       showAppToast(`Barrido iniciado localmente en ${location.name}`, 'info', 3000);
     }
   };
 
-  // Procesar escaneo de QR de Ubicación
+  // Procesar escaneo de QR de Ubicación (Obligatorio para iniciar)
   const handleLocationScanSuccess = (decodedText: string) => {
     const cleanCode = decodedText.trim();
     // Buscar ubicación por código exacto o case-insensitive
     const matchedLoc = locations.find(
-      (l) => l.code.toUpperCase() === cleanCode.toUpperCase() || cleanCode.includes(l.code)
+      (l) => l.code.toUpperCase() === cleanCode.toUpperCase() || cleanCode.toUpperCase().includes(l.code.toUpperCase())
     );
 
     if (matchedLoc) {
-      handleStartSession(matchedLoc);
+      setScannedLocation(matchedLoc);
+      showAppToast(`Estante detectado: ${matchedLoc.name} (${matchedLoc.code})`, 'success', 3000);
     } else {
       showAppToast(`No se encontró ningún estante con el código "${cleanCode}"`, 'error', 4000);
     }
@@ -385,118 +370,127 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
 
   return (
     <div className="flex-1 min-h-0 w-full flex flex-col overflow-hidden bg-white text-neutral-900">
-      {/* VISTA 1: SELECCIONAR ESTANTE / INICIAR BARRIDO */}
+      {/* VISTA 1: ESCANEAR ESTANTE OBLIGATORIO / INICIAR BARRIDO */}
       {!activeSession ? (
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-4 pb-32 space-y-4">
-          {/* Card Informativa */}
-          <div className="p-4 rounded-3xl bg-neutral-950 text-white shadow-xl space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-bold">
-                Conteo Cíclico · Barrido Físico
-              </span>
+          {/* Card Informativa con Título y Botón de Historial al lado */}
+          <div className="p-4 rounded-3xl bg-neutral-950 text-white shadow-xl space-y-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xl font-bold tracking-tight text-white">
+                Ajuste de inventario
+              </h2>
               <button
                 type="button"
                 onClick={() => setIsHistoryModalOpen(true)}
-                className="py-1 px-3 rounded-full bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-200 flex items-center gap-1.5 transition-colors active:scale-95"
+                className="py-1.5 px-3.5 rounded-full bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-200 flex items-center gap-1.5 transition-colors active:scale-95 border border-neutral-700/60 shrink-0"
               >
-                <History className="w-3.5 h-3.5" />
+                <History className="w-3.5 h-3.5 text-neutral-300" />
                 <span>Historial</span>
               </button>
             </div>
-            <h2 className="text-lg font-bold">
-              Toma de Inventario Ciego
-            </h2>
             <p className="text-xs text-neutral-300 leading-relaxed">
-              Selecciona o escanea la etiqueta QR del estante a verificar. Durante el conteo no se mostrarán las existencias del sistema para garantizar máxima precisión.
+              Para garantizar la máxima fidelidad, es obligatorio escanear físicamente el código QR del estante antes de comenzar. Durante la toma no se mostrarán las existencias del sistema.
             </p>
           </div>
 
-          {/* Botón Principal: Escaneo QR de Ubicación */}
-          <button
-            type="button"
-            onClick={() => {
-              setCameraScanTarget('location');
-              setIsCameraScannerOpen(true);
-            }}
-            className="w-full p-4 rounded-3xl bg-neutral-900 hover:bg-neutral-800 text-white flex items-center justify-between gap-3 shadow-md active:scale-[0.98] transition-all cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-neutral-800 flex items-center justify-center text-white shrink-0">
-                <QrCode className="w-6 h-6 stroke-[1.8]" />
+          {/* Tarjeta de Ubicación Escaneada (Si ya se escaneó el QR) */}
+          {scannedLocation ? (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-5 rounded-3xl bg-neutral-50 border-2 border-neutral-900/10 shadow-lg space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Estante verificado físicamente
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setScannedLocation(null)}
+                  className="p-1 rounded-full hover:bg-neutral-200 text-neutral-400 hover:text-neutral-700 transition-colors"
+                  title="Cambiar estante"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <div className="text-left">
-                <p className="text-sm font-bold text-white">Escanear Estante (QR)</p>
-                <p className="text-xs text-neutral-400">Lectura instantánea de etiqueta ISO/IEC 7810</p>
+
+              <div className="flex items-start gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <MapPin className="w-6 h-6 stroke-[1.8] text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 font-bold block">
+                    Ubicación escaneada
+                  </span>
+                  <h3 className="text-base font-bold text-neutral-950 truncate">
+                    {scannedLocation.name}
+                  </h3>
+                  <div className="mt-1">
+                    <span className="font-mono text-xs font-semibold px-2.5 py-0.5 rounded-md bg-neutral-200/80 text-neutral-800">
+                      CÓDIGO: {scannedLocation.code}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-            <span className="text-xs font-bold text-neutral-300 bg-neutral-800 px-3 py-1.5 rounded-full">
-              Cámara
-            </span>
-          </button>
 
-          {/* Selector Jerárquico Manual */}
-          <div className="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-neutral-700">
-              <MapPin className="w-4 h-4 text-neutral-500" />
-              <span>O seleccionar estante manualmente</span>
-            </div>
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleStartSession(scannedLocation)}
+                  className="w-full py-4 px-5 rounded-2xl bg-neutral-950 hover:bg-neutral-900 active:scale-[0.98] text-white text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span>Iniciar barrido en este estante</span>
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </button>
 
-            <div className="relative" ref={locationDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCameraScanTarget('location');
+                    setIsCameraScannerOpen(true);
+                  }}
+                  className="w-full py-2.5 text-center text-xs font-semibold text-neutral-500 hover:text-neutral-800 transition-colors"
+                >
+                  Escanear otro estante QR
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            /* Botón Principal y Único: Escaneo QR de Ubicación */
+            <div className="space-y-3">
               <button
                 type="button"
-                onClick={() => setIsLocationDropdownOpen(!isLocationDropdownOpen)}
-                className="w-full p-3.5 rounded-2xl bg-white border border-neutral-200 text-left flex items-center justify-between text-xs font-medium text-neutral-800"
+                onClick={() => {
+                  setCameraScanTarget('location');
+                  setIsCameraScannerOpen(true);
+                }}
+                className="w-full p-5 rounded-3xl bg-neutral-900 hover:bg-neutral-800 text-white flex items-center justify-between gap-3 shadow-md active:scale-[0.98] transition-all cursor-pointer"
               >
-                <span className="truncate">
-                  {selectedLocationId
-                    ? locations.find((l) => l.id === selectedLocationId)?.name || 'Estante seleccionado'
-                    : 'Seleccionar de la lista de almacenes...'}
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-neutral-800 flex items-center justify-center text-white shrink-0">
+                    <QrCode className="w-6 h-6 stroke-[1.8] text-emerald-400" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-bold text-white">Escanear Estante (QR)</p>
+                    <p className="text-xs text-neutral-400">Lectura de etiqueta física ISO/IEC 7810</p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-neutral-300 bg-neutral-800 px-3 py-1.5 rounded-full shrink-0">
+                  Cámara
                 </span>
-                <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform ${isLocationDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {isLocationDropdownOpen && (
-                <div className="absolute left-0 right-0 top-full mt-2 z-30 bg-white rounded-2xl border border-neutral-200 shadow-xl max-h-56 overflow-y-auto divide-y divide-neutral-100 p-1.5">
-                  {locations.length === 0 ? (
-                    <p className="p-3 text-center text-xs text-neutral-400">No hay ubicaciones creadas</p>
-                  ) : (
-                    locations.map((loc) => (
-                      <button
-                        key={loc.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedLocationId(loc.id);
-                          setIsLocationDropdownOpen(false);
-                        }}
-                        className={`w-full p-3 rounded-xl text-left text-xs flex items-center justify-between hover:bg-neutral-50 transition-colors ${
-                          selectedLocationId === loc.id ? 'bg-neutral-100 font-bold text-neutral-950' : 'text-neutral-700'
-                        }`}
-                      >
-                        <div className="truncate pr-2">
-                          <p className="font-semibold text-neutral-900">{loc.name}</p>
-                          <p className="text-[11px] font-mono text-neutral-400">{loc.code}</p>
-                        </div>
-                        {selectedLocationId === loc.id && <CheckCircle2 className="w-4 h-4 text-neutral-950 shrink-0" />}
-                      </button>
-                    ))
-                  )}
+              <div className="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex items-start gap-3">
+                <ShieldCheck className="w-5 h-5 text-neutral-500 shrink-0 mt-0.5" />
+                <div className="text-xs text-neutral-600 leading-relaxed">
+                  <strong className="text-neutral-800 font-semibold block">Verificación de presencia física:</strong>
+                  Para iniciar un ajuste es obligatorio escanear el código QR del estante físico. La selección manual desde listas está deshabilitada para asegurar que el operario esté presente en el lugar.
                 </div>
-              )}
+              </div>
             </div>
-
-            <button
-              type="button"
-              disabled={!selectedLocationId}
-              onClick={() => {
-                const loc = locations.find((l) => l.id === selectedLocationId);
-                if (loc) handleStartSession(loc);
-              }}
-              className="w-full py-3.5 rounded-2xl bg-neutral-950 hover:bg-neutral-900 text-white text-xs font-bold disabled:opacity-40 transition-all flex items-center justify-center gap-1.5"
-            >
-              <span>Iniciar Barrido en este Estante</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          )}
         </div>
       ) : (
         /* VISTA 2: BARRIDO CIEGO EN PROGRESO (BLIND COUNT) */

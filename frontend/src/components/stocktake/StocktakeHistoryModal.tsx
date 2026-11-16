@@ -4,19 +4,16 @@ import {
   X,
   History,
   Calendar,
+  Clock,
+  User,
   MapPin,
   CheckCircle2,
-  AlertCircle,
-  Clock,
   ChevronRight,
-  TrendingDown,
-  TrendingUp,
   Loader2,
   Package
 } from 'lucide-react';
-import { supabase, formatCurrency, formatDate } from '../../services/supabase';
+import { supabase, formatCurrency } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { StocktakeSession } from '../../types/database';
 
 interface StocktakeHistoryModalProps {
   isOpen: boolean;
@@ -36,6 +33,22 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSessionDetail, setSelectedSessionDetail] = useState<any | null>(null);
 
+  const formatDateTime = (dateStr: string | null | undefined) => {
+    if (!dateStr) return { date: 'Fecha no registrada', time: '--:--' };
+    const d = new Date(dateStr);
+    const dateFormatted = d.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+    const timeFormatted = d.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    return { date: dateFormatted, time: timeFormatted };
+  };
+
   const fetchHistory = async () => {
     if (!currentInventory) return;
     setIsLoading(true);
@@ -46,6 +59,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
           id,
           code,
           status,
+          created_by,
           started_at,
           completed_at,
           notes,
@@ -72,7 +86,33 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
         .order('started_at', { ascending: false });
 
       if (error) throw error;
-      setSessions(data || []);
+
+      // Obtener perfiles de los usuarios que realizaron los barridos
+      const userIds = Array.from(
+        new Set((data || []).map((s: any) => s.created_by).filter(Boolean))
+      ) as string[];
+
+      const profilesMap = new Map<string, { email: string; full_name: string | null }>();
+      if (userIds.length > 0) {
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('id, email, full_name')
+          .in('id', userIds);
+        (profs || []).forEach((p: any) => profilesMap.set(p.id, p));
+      }
+
+      // Enriquecer sesiones con información de operador
+      const enriched = (data || []).map((s: any) => {
+        const prof = s.created_by ? profilesMap.get(s.created_by) : null;
+        const operatorName = prof?.full_name || prof?.email || 'Operador del sistema';
+        return {
+          ...s,
+          operatorName,
+          operatorEmail: prof?.email
+        };
+      });
+
+      setSessions(enriched);
     } catch (err) {
       console.error('Error fetching stocktake history:', err);
     } finally {
@@ -107,7 +147,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
           transition={{ type: 'spring', damping: 28, stiffness: 320 }}
           className="relative w-full max-w-xl bg-white rounded-t-[2.5rem] sm:rounded-3xl shadow-2xl border border-neutral-200/80 overflow-hidden z-10 max-h-[90dvh] flex flex-col"
         >
-          {/* Manija táctil */}
+          {/* Manija táctil móvil */}
           <div className="w-12 h-1.5 bg-neutral-300 rounded-full mx-auto mt-3 mb-1 shrink-0 sm:hidden" />
 
           {/* Header */}
@@ -121,7 +161,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
                   Historial de Barridos
                 </h2>
                 <p className="text-xs text-neutral-400">
-                  Conteos cíclicos y tomas físicas registradas
+                  Registro de ejecutor, fecha y hora de cada ajuste físico
                 </p>
               </div>
             </div>
@@ -156,41 +196,62 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
                   ← Volver al listado
                 </button>
 
-                <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-sm font-bold text-neutral-900">
-                      {selectedSessionDetail.code}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      selectedSessionDetail.status === 'COMPLETED'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : selectedSessionDetail.status === 'IN_PROGRESS'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-neutral-100 text-neutral-700'
-                    }`}>
-                      {selectedSessionDetail.status === 'COMPLETED' ? 'Finalizado' : 'En progreso'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-neutral-500 mt-1 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-neutral-400" />
-                    <span>Estante: <strong>{selectedSessionDetail.locations?.name || 'Ubicación'}</strong> ({selectedSessionDetail.locations?.code})</span>
-                  </p>
-                  <p className="text-[11px] text-neutral-400 mt-0.5">
-                    Fecha: {formatDate(selectedSessionDetail.started_at)}
-                  </p>
-                </div>
+                {(() => {
+                  const { date: detailDate, time: detailTime } = formatDateTime(
+                    selectedSessionDetail.completed_at || selectedSessionDetail.started_at
+                  );
+                  return (
+                    <div className="p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200/70 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-sm font-bold text-neutral-950">
+                          {selectedSessionDetail.code}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          selectedSessionDetail.status === 'COMPLETED'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {selectedSessionDetail.status === 'COMPLETED' ? 'Finalizado' : 'En progreso'}
+                        </span>
+                      </div>
+
+                      {/* Quién */}
+                      <div className="flex items-center gap-1.5 text-xs text-neutral-800">
+                        <User className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                        <span>Realizado por: <strong className="text-neutral-950">{selectedSessionDetail.operatorName}</strong></span>
+                      </div>
+
+                      {/* Cuándo y Hora */}
+                      <div className="flex items-center gap-4 text-xs text-neutral-600">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                          <span>{detailDate}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                          <span className="font-mono font-medium">{detailTime}</span>
+                        </div>
+                      </div>
+
+                      {/* Estante */}
+                      <div className="flex items-center gap-1.5 text-xs text-neutral-600">
+                        <MapPin className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                        <span>Estante: <strong>{selectedSessionDetail.locations?.name || 'Ubicación'}</strong> ({selectedSessionDetail.locations?.code})</span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="space-y-1.5">
                   <span className="text-xs font-bold text-neutral-700 block">
                     Productos verificados ({selectedSessionDetail.stocktake_items?.length || 0}):
                   </span>
 
-                  <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                  <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                     {(selectedSessionDetail.stocktake_items || []).map((item: any) => {
                       const diff = Number(item.difference_qty || 0);
                       const isDeficit = diff < 0;
                       const isSurplus = diff > 0;
-                      const isMatch = diff === 0;
 
                       return (
                         <div
@@ -212,7 +273,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
                               ? 'bg-amber-50 text-amber-700'
                               : 'bg-emerald-50 text-emerald-700'
                           }`}>
-                            {isSurplus ? '+' : ''}{diff}
+                            {isSurplus ? '+' : ''}{diff} unds
                           </span>
                         </div>
                       );
@@ -221,7 +282,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
                 </div>
               </div>
             ) : (
-              // Listado de sesiones
+              // Listado de sesiones con Quién, Cuándo y Hora destacados
               sessions.map((sess) => {
                 const totalItems = sess.stocktake_items?.length || 0;
                 let adjustedCount = 0;
@@ -236,12 +297,15 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
                   }
                 });
 
+                const { date: sessDate, time: sessTime } = formatDateTime(sess.completed_at || sess.started_at);
+
                 return (
                   <div
                     key={sess.id}
                     onClick={() => setSelectedSessionDetail(sess)}
-                    className="p-3.5 rounded-2xl bg-white border border-neutral-200/70 hover:border-neutral-900/40 transition-all cursor-pointer active:scale-[0.99] space-y-2 shadow-xs"
+                    className="p-3.5 rounded-2xl bg-white border border-neutral-200/70 hover:border-neutral-900/40 transition-all cursor-pointer active:scale-[0.99] space-y-2.5 shadow-xs"
                   >
+                    {/* Fila 1: Código + Estado */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs font-bold text-neutral-950 bg-neutral-100 px-2 py-0.5 rounded-md">
@@ -258,22 +322,36 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
                       <ChevronRight className="w-4 h-4 text-neutral-400" />
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-neutral-600">
-                      <div className="flex items-center gap-1.5 truncate">
-                        <MapPin className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                        <span className="font-semibold text-neutral-900 truncate">
-                          {sess.locations?.name || 'Ubicación'}
-                        </span>
-                        <span className="text-[11px] font-mono text-neutral-400">
-                          ({sess.locations?.code})
-                        </span>
-                      </div>
-                      <span className="text-[11px] text-neutral-400 shrink-0">
-                        {formatDate(sess.started_at)}
+                    {/* Fila 2: Quién realizó el barrido */}
+                    <div className="flex items-center gap-1.5 text-xs text-neutral-800">
+                      <User className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                      <span className="truncate">
+                        Realizado por: <strong className="text-neutral-950 font-semibold">{sess.operatorName}</strong>
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between pt-1 border-t border-neutral-100 text-[11px] text-neutral-500">
+                    {/* Fila 3: Cuándo (Fecha) y A qué hora (Hora) */}
+                    <div className="flex items-center gap-4 text-[11px] text-neutral-500">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                        <span>{sessDate}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                        <span className="font-mono tabular-nums font-semibold text-neutral-700">{sessTime}</span>
+                      </div>
+                    </div>
+
+                    {/* Fila 4: Estante */}
+                    <div className="flex items-center gap-1.5 text-xs text-neutral-600 truncate">
+                      <MapPin className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                      <span className="truncate">
+                        Estante: <strong className="text-neutral-900">{sess.locations?.name || 'Ubicación'}</strong> ({sess.locations?.code})
+                      </span>
+                    </div>
+
+                    {/* Fila 5: Resumen de Ajuste */}
+                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 text-[11px] text-neutral-500">
                       <span>{totalItems} productos verificados · {adjustedCount} ajustados</span>
                       {adjustedCount > 0 && (
                         <span className={`font-mono font-semibold ${
