@@ -455,3 +455,6 @@ $$;
 -- Permisos de ejecución
 GRANT EXECUTE ON FUNCTION public.create_stocktake_session(UUID, UUID, UUID, TEXT, TEXT) TO authenticated, anon, service_role;
 GRANT EXECUTE ON FUNCTION public.commit_stocktake_session(UUID, UUID, TEXT) TO authenticated, anon, service_role;
+
+-- Recargar la caché de PostgREST en Supabase de forma inmediata
+NOTIFY pgrst, 'reload schema';
