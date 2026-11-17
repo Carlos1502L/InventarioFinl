@@ -9,6 +9,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Plus,
+  Minus,
+  Check,
+  ArrowLeft,
   Trash2,
   X,
   Package,
@@ -24,7 +27,6 @@ import { supabase } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { matchesAnyField, normalizeText } from '../../utils/searchUtils';
 import { BarcodeScannerModal } from '../modals/BarcodeScannerModal';
-import { StocktakeQuantityModal } from './StocktakeQuantityModal';
 import { StocktakeReviewModal, StocktakeDiscrepancyItem } from './StocktakeReviewModal';
 import { StocktakeHistoryModal } from './StocktakeHistoryModal';
 import { showAppToast } from '../ui/ToastNotification';
@@ -63,14 +65,24 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
   // Estante escaneado físicamente (QR obligatorio para iniciar)
   const [scannedLocation, setScannedLocation] = useState<Location | null>(null);
 
-  // Modales
+  // Modales y Vistas
   const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
   const [cameraScanTarget, setCameraScanTarget] = useState<'location' | 'product'>('location');
-  const [isQuantityModalOpen, setIsQuantityModalOpen] = useState(false);
   const [selectedProductForCount, setSelectedProductForCount] = useState<Product | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
+
+  // Vista interna de la sesión de barrido:
+  // 'LIST' = Escanear/buscar producto y ver lista de ya contados
+  // 'QUANTITY' = Ingresar cantidad física contada del producto seleccionado
+  const [sessionModalView, setSessionModalView] = useState<'LIST' | 'QUANTITY'>('LIST');
+
+  // Estado del formulario de ingreso de cantidad
+  const [quantitySelectedUnitMode, setQuantitySelectedUnitMode] = useState<'unit' | 'box'>('unit');
+  const [quantityCountMode, setQuantityCountMode] = useState<'add' | 'replace'>('add');
+  const [quantityInputValue, setQuantityInputValue] = useState<string>('1');
+  const quantityInputRef = useRef<HTMLInputElement>(null);
 
   // Conteo Físico en la Sesión (Blind Count: Almacena producto_id -> CountedProductEntry)
   const [countedEntries, setCountedEntries] = useState<Map<string, CountedProductEntry>>(new Map());
@@ -130,6 +142,7 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
           code: sessionCode,
           location
         });
+        setSessionModalView('LIST');
         setScannedLocation(null);
         setCountedEntries(new Map());
         showAppToast(`Barrido ${sessionCode} iniciado en ${location.name}`, 'success', 3000);
@@ -150,6 +163,7 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
       code: localCode,
       location
     });
+    setSessionModalView('LIST');
     setScannedLocation(null);
     setCountedEntries(new Map());
     showAppToast(`Barrido iniciado sin conexión en ${location.name}`, 'info', 3000);
@@ -171,6 +185,19 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
     }
   };
 
+  // Abrir vista flotante de ingreso de cantidad para un producto específico
+  const handleOpenQuantityForProduct = (product: Product) => {
+    setSelectedProductForCount(product);
+    setQuantitySelectedUnitMode('unit');
+    setQuantityCountMode('add');
+    setQuantityInputValue('1');
+    setSessionModalView('QUANTITY');
+    setTimeout(() => {
+      quantityInputRef.current?.focus();
+      quantityInputRef.current?.select();
+    }, 80);
+  };
+
   // Procesar escaneo de Código de Barras / SKU de Producto
   const handleProductScanSuccess = (decodedText: string) => {
     const cleanCode = decodedText.trim();
@@ -180,11 +207,37 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
     );
 
     if (matchedProd) {
-      setSelectedProductForCount(matchedProd);
-      setIsQuantityModalOpen(true);
+      setIsCameraScannerOpen(false);
+      handleOpenQuantityForProduct(matchedProd);
     } else {
       showAppToast(`Producto "${cleanCode}" no encontrado en el catálogo`, 'error', 4000);
     }
+  };
+
+  // Ajuste rápido de delta (+1, -1, +5, +10, etc.)
+  const handleQuickDelta = (delta: number) => {
+    const current = parseFloat(quantityInputValue) || 0;
+    const next = Math.max(0, current + delta);
+    setQuantityInputValue(next.toString());
+  };
+
+  // Confirmar y aplicar cantidad desde el formulario de cantidad
+  const handleQuantitySubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!selectedProductForCount) return;
+
+    const rawNum = parseFloat(quantityInputValue) || 0;
+    const upb = Number(selectedProductForCount.units_per_box) || 1;
+    const delta = quantitySelectedUnitMode === 'box'
+      ? Number((rawNum * upb).toFixed(4))
+      : Number(rawNum.toFixed(4));
+
+    const existingQty = countedEntries.get(selectedProductForCount.id)?.countedQty || 0;
+    if (rawNum <= 0 && quantityCountMode === 'replace' && existingQty <= 0) return;
+
+    handleConfirmQuantity(selectedProductForCount, delta, quantityCountMode);
+    setSessionModalView('LIST');
+    setSelectedProductForCount(null);
   };
 
   // Confirmar cantidad de un producto (Sumar o Reemplazar)
@@ -440,6 +493,22 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
     }
   };
 
+  // Cálculos reactivos para la vista de ingreso de cantidad dentro de la ventana flotante
+  const quantityRawNum = parseFloat(quantityInputValue) || 0;
+  const quantityIsBoxProduct = selectedProductForCount?.unit_type === 'BOX' && Number(selectedProductForCount?.units_per_box) > 0;
+  const quantityUnitsPerBox = Number(selectedProductForCount?.units_per_box) || 1;
+  const quantityDeltaUnits = quantitySelectedUnitMode === 'box'
+    ? Number((quantityRawNum * quantityUnitsPerBox).toFixed(4))
+    : Number(quantityRawNum.toFixed(4));
+
+  const existingProductCountedQty = selectedProductForCount
+    ? (countedEntries.get(selectedProductForCount.id)?.countedQty || 0)
+    : 0;
+
+  const totalResultingQty = quantityCountMode === 'add'
+    ? Number((existingProductCountedQty + quantityDeltaUnits).toFixed(4))
+    : quantityDeltaUnits;
+
   return (
     <div className="flex-1 min-h-0 w-full flex flex-col overflow-hidden bg-white text-neutral-900">
       {/* VISTA 1: ESCANEAR ESTANTE OBLIGATORIO / PANEL BASE */}
@@ -574,7 +643,10 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
               exit={{ opacity: 0 }}
               className="absolute inset-0"
               onClick={() => {
-                if (countedEntries.size > 0) {
+                if (sessionModalView === 'QUANTITY') {
+                  setSessionModalView('LIST');
+                  setSelectedProductForCount(null);
+                } else if (countedEntries.size > 0) {
                   if (confirm('¿Deseas pausar el barrido? Los artículos contados se conservarán mientras no recargues la página.')) {
                     setActiveSession(null);
                   }
@@ -589,191 +661,423 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-neutral-200/80 overflow-hidden z-10 max-h-[82dvh] sm:max-h-[88dvh] flex flex-col my-auto"
+              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-neutral-200/70 overflow-hidden z-10 max-h-[84dvh] flex flex-col my-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header Fijo de la Ventana Flotante */}
-              <div className="shrink-0 bg-neutral-950 text-white px-5 pt-4 pb-3.5 border-b border-neutral-800 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold block">
-                      {activeSession.code} · Conteo de Ajuste Ciego
-                    </span>
-                    <h3 className="text-base font-bold text-white truncate max-w-sm md:max-w-md">
-                      {activeSession.location.name} <span className="text-neutral-400 text-xs font-mono">({activeSession.location.code})</span>
-                    </h3>
-                  </div>
-
-                  {/* Botón de Pausar */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (countedEntries.size > 0) {
-                        if (confirm('¿Deseas pausar el barrido? Los artículos contados se conservarán mientras no recargues la página.')) {
-                          setActiveSession(null);
-                        }
-                      } else {
-                        setActiveSession(null);
-                      }
-                    }}
-                    className="py-1.5 px-3 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-semibold transition-colors border border-neutral-700/60 cursor-pointer"
-                  >
-                    Pausar
-                  </button>
-                </div>
-
-                {/* Badges de Conteo en Vivo */}
-                <div className="flex items-center gap-2 pt-0.5 text-xs">
-                  <span className="px-3 py-1 rounded-full bg-neutral-800 text-neutral-200 font-medium">
-                    SKUs contados: <strong className="text-white tabular-nums font-mono">{countedEntries.size}</strong>
-                  </span>
-                  <span className="px-3 py-1 rounded-full bg-neutral-800 text-neutral-200 font-medium">
-                    Unidades físicas: <strong className="text-amber-300 tabular-nums font-mono">{totalCountedUnits}</strong>
-                  </span>
-                </div>
-              </div>
-
-              {/* Barra Fija de Búsqueda y Escáner de Producto */}
-              <div className="shrink-0 bg-white px-5 pt-3 pb-2.5 space-y-2 border-b border-neutral-100">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 min-w-0 flex items-center gap-2.5 bg-neutral-50 border border-neutral-200/70 rounded-2xl px-3.5 py-3 focus-within:border-neutral-950 focus-within:bg-white transition-all">
-                    <Search className="w-4 h-4 text-neutral-400 shrink-0" />
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      value={searchProductQuery}
-                      onChange={(e) => setSearchProductQuery(e.target.value)}
-                      placeholder="Escanear o buscar producto..."
-                      className="w-full bg-transparent border-0 outline-none p-0 text-xs text-neutral-900 placeholder:text-neutral-400 font-medium"
-                    />
-                    {searchProductQuery && (
-                      <button type="button" onClick={() => setSearchProductQuery('')} className="text-neutral-400 hover:text-neutral-700">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCameraScanTarget('product');
-                      setIsCameraScannerOpen(true);
-                    }}
-                    className="w-12 h-12 rounded-2xl bg-neutral-950 hover:bg-neutral-800 text-white flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-sm cursor-pointer"
-                    title="Escanear con Cámara"
-                  >
-                    <Camera className="w-5 h-5 text-white" />
-                  </button>
-                </div>
-
-                {/* Sugerencias de búsqueda manual */}
-                {productSuggestions.length > 0 && (
-                  <div className="bg-neutral-50 border border-neutral-100 rounded-2xl px-3 max-h-48 overflow-y-auto divide-y divide-neutral-100 shadow-lg">
-                    {productSuggestions.map((prod) => (
+              {/* VISTA B: INGRESO DE CANTIDAD FÍSICA CONTADA */}
+              {sessionModalView === 'QUANTITY' && selectedProductForCount ? (
+                <form onSubmit={handleQuantitySubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                  {/* Header Fijo de Ingreso de Cantidad */}
+                  <div className="shrink-0 bg-white px-5 pt-4 pb-3 border-b border-neutral-100 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <button
-                        key={prod.id}
                         type="button"
                         onClick={() => {
-                          setSelectedProductForCount(prod);
-                          setIsQuantityModalOpen(true);
-                          setSearchProductQuery('');
+                          setSessionModalView('LIST');
+                          setSelectedProductForCount(null);
                         }}
-                        className="w-full py-2.5 flex items-center justify-between text-left active:opacity-70"
+                        className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-900 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                        title="Volver a la lista de conteo"
                       >
-                        <div className="min-w-0 pr-2">
-                          <p className="text-xs font-semibold text-neutral-900 truncate">{prod.name}</p>
-                          <p className="text-[10px] font-mono text-neutral-400 truncate">SKU: {prod.code}</p>
-                        </div>
-                        <span className="text-[11px] font-bold text-neutral-900 bg-white px-2 py-0.5 rounded-full border border-neutral-200 shrink-0">
-                          + Contar
-                        </span>
+                        <ArrowLeft className="w-4 h-4" />
                       </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Listado de Productos Contados en esta Sesión (Scroll Aislado) */}
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-3 pb-4 space-y-2.5">
-                {countedEntries.size === 0 ? (
-                  <div className="text-center py-12 px-4 space-y-2">
-                    <div className="w-12 h-12 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center mx-auto">
-                      <ClipboardList className="w-6 h-6 stroke-[1.8]" />
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 font-bold block">
+                          Ingresar cantidad física
+                        </span>
+                        <h3 className="text-sm sm:text-base font-bold text-neutral-900 truncate">
+                          {selectedProductForCount.name}
+                        </h3>
+                      </div>
                     </div>
-                    <p className="text-xs font-semibold text-neutral-700">
-                      Ningún producto contado aún en este estante
-                    </p>
-                    <p className="text-[11px] text-neutral-400 max-w-xs mx-auto">
-                      Apunta la cámara a los códigos de barra o usa el buscador superior para registrar cada artículo presente físicamente.
-                    </p>
-                  </div>
-                ) : (
-                  Array.from(countedEntries.values()).map((entry) => {
-                    const imageUrl = Array.isArray(entry.product.images) && entry.product.images.length > 0
-                      ? (typeof entry.product.images[0] === 'string' ? entry.product.images[0] : (entry.product.images[0] as any)?.url)
-                      : null;
 
-                    return (
-                      <div
-                        key={entry.product.id}
-                        onClick={() => {
-                          setSelectedProductForCount(entry.product);
-                          setIsQuantityModalOpen(true);
-                        }}
-                        className="p-3 rounded-2xl bg-white border border-neutral-200/70 shadow-xs flex items-center justify-between gap-3 active:scale-[0.99] transition-all cursor-pointer hover:border-neutral-300"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-11 h-11 rounded-xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center overflow-hidden shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSessionModalView('LIST');
+                        setSelectedProductForCount(null);
+                      }}
+                      className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Cuerpo con Scroll para Ingreso de Cantidad */}
+                  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
+                    {/* Tarjeta de Identificación del Producto */}
+                    {(() => {
+                      const prod = selectedProductForCount;
+                      const imageUrl = Array.isArray(prod.images) && prod.images.length > 0
+                        ? (typeof prod.images[0] === 'string' ? prod.images[0] : (prod.images[0] as any)?.url)
+                        : null;
+
+                      return (
+                        <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-neutral-50 border border-neutral-100">
+                          <div className="w-14 h-14 rounded-xl bg-white border border-neutral-200/60 flex items-center justify-center overflow-hidden shrink-0">
                             {imageUrl ? (
-                              <img src={imageUrl} alt={entry.product.name} className="w-full h-full object-contain" />
+                              <img src={imageUrl} alt={prod.name} className="w-full h-full object-contain" />
                             ) : (
-                              <Package className="w-5 h-5 text-neutral-400" />
+                              <Package className="w-6 h-6 text-neutral-400" />
                             )}
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-neutral-900 truncate">
-                              {entry.product.name}
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs font-mono font-medium text-neutral-500 block truncate">
+                              SKU / CÓDIGO: {prod.code}
+                            </span>
+                            <p className="text-xs text-neutral-400 mt-0.5 truncate">
+                              {prod.unit_type === 'BOX'
+                                ? `Caja de ${prod.units_per_box} unidades`
+                                : 'Producto por Unidad'}
                             </p>
-                            <p className="text-[11px] font-mono text-neutral-400 truncate">
-                              SKU: {entry.product.code}
-                            </p>
+                            {existingProductCountedQty > 0 && (
+                              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 mt-1 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-semibold">
+                                <span>Ya contado en sesión: <strong>{existingProductCountedQty} unds</strong></span>
+                              </div>
+                            )}
                           </div>
                         </div>
+                      );
+                    })()}
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-sm font-mono font-bold text-neutral-950 bg-neutral-100 px-2.5 py-1 rounded-xl tabular-nums">
-                            {entry.countedQty} unds
-                          </span>
+                    {/* Si ya estaba contado, switch Sumar o Reemplazar */}
+                    {existingProductCountedQty > 0 && (
+                      <div className="p-3 bg-amber-50/60 border border-amber-100 rounded-2xl space-y-2">
+                        <span className="text-xs font-semibold text-amber-900 block">
+                          ¿Cómo deseas registrar esta lectura?
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveCountedItem(entry.product.id);
-                            }}
-                            className="w-7 h-7 rounded-full text-neutral-300 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer"
-                            title="Eliminar del conteo"
+                            onClick={() => setQuantityCountMode('add')}
+                            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              quantityCountMode === 'add'
+                                ? 'bg-amber-500 text-white shadow-xs'
+                                : 'bg-white text-neutral-700 border border-neutral-200/60'
+                            }`}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Sumar a lo contado</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuantityCountMode('replace')}
+                            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              quantityCountMode === 'replace'
+                                ? 'bg-neutral-900 text-white shadow-xs'
+                                : 'bg-white text-neutral-700 border border-neutral-200/60'
+                            }`}
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>Reemplazar cantidad</span>
                           </button>
                         </div>
                       </div>
-                    );
-                  })
-                )}
-              </div>
+                    )}
 
-              {/* Barra Inferior del Modal de Cierre */}
-              <div className="shrink-0 p-3.5 bg-white/95 backdrop-blur-md border-t border-neutral-100 flex items-center justify-center">
-                <button
-                  type="button"
-                  disabled={countedEntries.size === 0}
-                  onClick={handleOpenReview}
-                  className="w-full max-w-lg py-3 rounded-2xl bg-neutral-950 hover:bg-neutral-900 text-white font-bold text-xs sm:text-sm shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
-                >
-                  <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
-                  <span>Finalizar Barrido ({countedEntries.size} SKUs · {totalCountedUnits} unds)</span>
-                </button>
-              </div>
+                    {/* Selector de Unidades / Cajas (Si aplica) */}
+                    {quantityIsBoxProduct && (
+                      <div className="space-y-1.5">
+                        <span className="text-xs font-semibold text-neutral-700 block">
+                          Unidad de conteo
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setQuantitySelectedUnitMode('unit')}
+                            className={`py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                              quantitySelectedUnitMode === 'unit'
+                                ? 'bg-neutral-900 text-white shadow-sm'
+                                : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900'
+                            }`}
+                          >
+                            Piezas / Unidades (und)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuantitySelectedUnitMode('box')}
+                            className={`py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                              quantitySelectedUnitMode === 'box'
+                                ? 'bg-neutral-900 text-white shadow-sm'
+                                : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900'
+                            }`}
+                          >
+                            Cajas ({quantityUnitsPerBox} und/caja)
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Input Numérico con Steppers Táctiles */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-neutral-700 block">
+                        {quantityCountMode === 'add' ? 'Cantidad a sumar (+)' : 'Nueva cantidad total'}
+                      </label>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleQuickDelta(-1)}
+                          className="w-12 h-14 rounded-2xl bg-neutral-100 hover:bg-neutral-200 text-neutral-800 flex items-center justify-center text-lg font-bold shrink-0 active:scale-95 transition-all cursor-pointer"
+                        >
+                          <Minus className="w-5 h-5" />
+                        </button>
+
+                        <div className="flex-1 bg-neutral-50 border-2 border-neutral-300 focus-within:border-neutral-950 rounded-2xl px-3 py-1 flex items-center justify-center">
+                          <input
+                            ref={quantityInputRef}
+                            type="number"
+                            inputMode="decimal"
+                            step="any"
+                            value={quantityInputValue}
+                            onChange={(e) => setQuantityInputValue(e.target.value)}
+                            className="w-full text-center text-2xl font-mono font-bold text-neutral-900 bg-transparent outline-none p-2"
+                          />
+                          <span className="text-xs font-mono font-semibold text-neutral-400 uppercase pr-1">
+                            {quantitySelectedUnitMode === 'box' ? 'Cjs' : 'Unds'}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleQuickDelta(1)}
+                          className="w-12 h-14 rounded-2xl bg-neutral-100 hover:bg-neutral-200 text-neutral-800 flex items-center justify-center text-lg font-bold shrink-0 active:scale-95 transition-all cursor-pointer"
+                        >
+                          <Plus className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      {/* Botones de incremento rápido (+5, +10, +25) */}
+                      <div className="flex items-center gap-2 pt-1">
+                        {[5, 10, 25].map((amt) => (
+                          <button
+                            key={amt}
+                            type="button"
+                            onClick={() => handleQuickDelta(amt)}
+                            className="flex-1 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-xs font-mono font-semibold text-neutral-700 active:scale-95 transition-all cursor-pointer"
+                          >
+                            +{amt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Resumen del conteo resultante */}
+                    <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100 flex items-center justify-between text-xs">
+                      <span className="text-neutral-500">Total en este estante tras confirmar:</span>
+                      <span className="font-mono font-bold text-neutral-950 text-sm tabular-nums">
+                        {totalResultingQty} unds
+                        {quantityIsBoxProduct && quantityUnitsPerBox > 1 && (
+                          <span className="text-[11px] font-normal text-neutral-500 ml-1">
+                            ({(totalResultingQty / quantityUnitsPerBox).toFixed(2)} cjs)
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Barra Inferior Fija de Confirmación */}
+                  <div className="shrink-0 p-3.5 bg-white/95 backdrop-blur-md border-t border-neutral-100 flex items-center justify-center">
+                    <button
+                      type="submit"
+                      disabled={quantityRawNum <= 0 && quantityCountMode === 'replace' && existingProductCountedQty <= 0}
+                      className="w-full max-w-lg py-3 rounded-2xl bg-neutral-950 hover:bg-neutral-900 text-white font-bold text-xs sm:text-sm shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+                    >
+                      <Check className="w-4 h-4 stroke-[2.5]" />
+                      <span>Confirmar Conteo ({totalResultingQty} unds)</span>
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* VISTA A: LISTADO DE PRODUCTOS CONTADOS Y BARRA DE ESCANEO */
+                <>
+                  {/* Header Fijo de la Ventana Flotante */}
+                  <div className="shrink-0 bg-white px-5 pt-4 pb-3 border-b border-neutral-100 space-y-2.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-md bg-neutral-100 font-mono text-[10px] font-bold text-neutral-600 uppercase tracking-wider">
+                            {activeSession.code}
+                          </span>
+                          <span className="text-[11px] font-semibold text-neutral-400">
+                            Ajuste de inventario ciego
+                          </span>
+                        </div>
+                        <h3 className="text-base font-bold text-neutral-900 truncate mt-0.5">
+                          {activeSession.location.name} <span className="text-neutral-400 text-xs font-mono font-normal">({activeSession.location.code})</span>
+                        </h3>
+                      </div>
+
+                      {/* Botón de Pausar */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (countedEntries.size > 0) {
+                            if (confirm('¿Deseas pausar el barrido? Los artículos contados se conservarán mientras no recargues la página.')) {
+                              setActiveSession(null);
+                            }
+                          } else {
+                            setActiveSession(null);
+                          }
+                        }}
+                        className="py-1.5 px-3 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold transition-colors border border-neutral-200/60 shrink-0 cursor-pointer"
+                      >
+                        Pausar
+                      </button>
+                    </div>
+
+                    {/* Badges de Conteo en Vivo */}
+                    <div className="flex items-center gap-2 pt-0.5 text-xs">
+                      <span className="px-3 py-1 rounded-full bg-neutral-100 text-neutral-700 font-medium text-xs">
+                        SKUs contados: <strong className="text-neutral-900 tabular-nums font-mono">{countedEntries.size}</strong>
+                      </span>
+                      <span className="px-3 py-1 rounded-full bg-neutral-100 text-neutral-700 font-medium text-xs">
+                        Unidades físicas: <strong className="text-neutral-900 tabular-nums font-mono">{totalCountedUnits}</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Barra Fija de Búsqueda y Escáner de Producto */}
+                  <div className="shrink-0 bg-white px-5 pt-3 pb-2.5 space-y-2 border-b border-neutral-100">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0 flex items-center gap-2.5 bg-neutral-50 border border-neutral-200/70 rounded-2xl px-3.5 py-3 focus-within:border-neutral-950 focus-within:bg-white transition-all">
+                        <Search className="w-4 h-4 text-neutral-400 shrink-0" />
+                        <input
+                          ref={searchInputRef}
+                          type="text"
+                          value={searchProductQuery}
+                          onChange={(e) => setSearchProductQuery(e.target.value)}
+                          placeholder="Escanear o buscar producto..."
+                          className="w-full bg-transparent border-0 outline-none p-0 text-xs text-neutral-900 placeholder:text-neutral-400 font-medium"
+                        />
+                        {searchProductQuery && (
+                          <button type="button" onClick={() => setSearchProductQuery('')} className="text-neutral-400 hover:text-neutral-700 cursor-pointer">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCameraScanTarget('product');
+                          setIsCameraScannerOpen(true);
+                        }}
+                        className="w-12 h-12 rounded-2xl bg-neutral-950 hover:bg-neutral-800 text-white flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-sm cursor-pointer"
+                        title="Escanear con Cámara"
+                      >
+                        <Camera className="w-5 h-5 text-white" />
+                      </button>
+                    </div>
+
+                    {/* Sugerencias de búsqueda manual */}
+                    {productSuggestions.length > 0 && (
+                      <div className="bg-neutral-50 border border-neutral-100 rounded-2xl px-3 max-h-48 overflow-y-auto divide-y divide-neutral-100 shadow-lg">
+                        {productSuggestions.map((prod) => (
+                          <button
+                            key={prod.id}
+                            type="button"
+                            onClick={() => {
+                              handleOpenQuantityForProduct(prod);
+                              setSearchProductQuery('');
+                            }}
+                            className="w-full py-2.5 flex items-center justify-between text-left active:opacity-70 cursor-pointer"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <p className="text-xs font-semibold text-neutral-900 truncate">{prod.name}</p>
+                              <p className="text-[10px] font-mono text-neutral-400 truncate">SKU: {prod.code}</p>
+                            </div>
+                            <span className="text-[11px] font-bold text-neutral-900 bg-white px-2 py-0.5 rounded-full border border-neutral-200 shrink-0">
+                              + Contar
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Listado de Productos Contados en esta Sesión (Scroll Aislado) */}
+                  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-3 pb-4 space-y-2.5">
+                    {countedEntries.size === 0 ? (
+                      <div className="text-center py-12 px-4 space-y-2">
+                        <div className="w-12 h-12 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center mx-auto">
+                          <ClipboardList className="w-6 h-6 stroke-[1.8]" />
+                        </div>
+                        <p className="text-xs font-semibold text-neutral-700">
+                          Ningún producto contado aún en este estante
+                        </p>
+                        <p className="text-[11px] text-neutral-400 max-w-xs mx-auto">
+                          Apunta la cámara a los códigos de barra o usa el buscador superior para registrar cada artículo presente físicamente.
+                        </p>
+                      </div>
+                    ) : (
+                      Array.from(countedEntries.values()).map((entry) => {
+                        const imageUrl = Array.isArray(entry.product.images) && entry.product.images.length > 0
+                          ? (typeof entry.product.images[0] === 'string' ? entry.product.images[0] : (entry.product.images[0] as any)?.url)
+                          : null;
+
+                        return (
+                          <div
+                            key={entry.product.id}
+                            onClick={() => {
+                              handleOpenQuantityForProduct(entry.product);
+                            }}
+                            className="p-3 rounded-2xl bg-white border border-neutral-200/70 shadow-xs flex items-center justify-between gap-3 active:scale-[0.99] transition-all cursor-pointer hover:border-neutral-300"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-11 h-11 rounded-xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center overflow-hidden shrink-0">
+                                {imageUrl ? (
+                                  <img src={imageUrl} alt={entry.product.name} className="w-full h-full object-contain" />
+                                ) : (
+                                  <Package className="w-5 h-5 text-neutral-400" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-neutral-900 truncate">
+                                  {entry.product.name}
+                                </p>
+                                <p className="text-[11px] font-mono text-neutral-400 truncate">
+                                  SKU: {entry.product.code}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-sm font-mono font-bold text-neutral-950 bg-neutral-100 px-2.5 py-1 rounded-xl tabular-nums">
+                                {entry.countedQty} unds
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveCountedItem(entry.product.id);
+                                }}
+                                className="w-7 h-7 rounded-full text-neutral-300 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer"
+                                title="Eliminar del conteo"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Barra Inferior del Modal de Cierre */}
+                  <div className="shrink-0 p-3.5 bg-white/95 backdrop-blur-md border-t border-neutral-100 flex items-center justify-center">
+                    <button
+                      type="button"
+                      disabled={countedEntries.size === 0}
+                      onClick={handleOpenReview}
+                      className="w-full max-w-lg py-3 rounded-2xl bg-neutral-950 hover:bg-neutral-900 text-white font-bold text-xs sm:text-sm shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+                    >
+                      <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
+                      <span>Finalizar Barrido ({countedEntries.size} SKUs · {totalCountedUnits} unds)</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </motion.div>
           </div>
         )}
@@ -800,19 +1104,7 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
         }}
       />
 
-      {/* MODAL 2: Ingreso Numérico Táctil */}
-      <StocktakeQuantityModal
-        isOpen={isQuantityModalOpen}
-        onClose={() => {
-          setIsQuantityModalOpen(false);
-          setSelectedProductForCount(null);
-        }}
-        product={selectedProductForCount}
-        existingCountedQty={selectedProductForCount ? (countedEntries.get(selectedProductForCount.id)?.countedQty || 0) : 0}
-        onConfirm={handleConfirmQuantity}
-      />
-
-      {/* MODAL 3: Conciliación y Ajuste en Kardex */}
+      {/* MODAL 2: Conciliación y Ajuste en Kardex */}
       {activeSession && (
         <StocktakeReviewModal
           isOpen={isReviewModalOpen}
@@ -826,7 +1118,7 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
         />
       )}
 
-      {/* MODAL 4: Historial de Barridos */}
+      {/* MODAL 3: Historial de Barridos */}
       <StocktakeHistoryModal
         isOpen={isHistoryModalOpen}
         onClose={() => setIsHistoryModalOpen(false)}
@@ -837,6 +1129,7 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
             code: session.code,
             location: session.locations
           });
+          setSessionModalView('LIST');
           // Reconstruir mapa de ítems previamente contados
           const map = new Map<string, CountedProductEntry>();
           (session.stocktake_items || []).forEach((it: any) => {

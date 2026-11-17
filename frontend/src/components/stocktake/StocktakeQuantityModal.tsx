@@ -76,7 +76,7 @@ export const StocktakeQuantityModal: React.FC<StocktakeQuantityModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-neutral-950/60 backdrop-blur-xs select-none">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-6 pb-20 sm:pb-6 bg-black/60 backdrop-blur-sm select-none overflow-hidden">
         {/* Fondo interactivo para cerrar */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -86,17 +86,14 @@ export const StocktakeQuantityModal: React.FC<StocktakeQuantityModalProps> = ({
           className="absolute inset-0"
         />
 
-        {/* Modal Sheet Táctil */}
+        {/* Modal Flotante Táctil */}
         <motion.div
-          initial={{ y: '100%', opacity: 0.8 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: '100%', opacity: 0 }}
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
           transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-          className="relative w-full max-w-lg bg-white rounded-t-[2rem] sm:rounded-3xl shadow-2xl border border-neutral-200/80 overflow-hidden z-10 max-h-[90dvh] flex flex-col"
+          className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-neutral-200/70 overflow-hidden z-10 max-h-[84dvh] flex flex-col my-auto"
         >
-          {/* Manija táctil móvil */}
-          <div className="w-12 h-1.5 bg-neutral-300 rounded-full mx-auto mt-3 mb-1 shrink-0 sm:hidden" />
-
           {/* Header */}
           <div className="px-5 pt-3 pb-3 border-b border-neutral-100 flex items-center justify-between shrink-0">
             <div>
