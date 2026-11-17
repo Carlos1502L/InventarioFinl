@@ -19,10 +19,7 @@ import {
   Inbox,
   ChevronDown,
   X,
-  ClipboardList,
-  Wifi,
-  WifiOff,
-  RefreshCw
+  ClipboardList
 } from 'lucide-react';
 import { Product, Location } from '../types/database';
 import {
@@ -41,7 +38,6 @@ import { showAppToast } from '../components/ui/ToastNotification';
 import { StocktakeView } from '../components/stocktake/StocktakeView';
 import {
   saveLocationOpLocally,
-  getPendingLocationOpsCount,
   syncPendingLocationOpsSilently,
   isNetworkOrOfflineError
 } from '../services/offlineSync';
@@ -80,27 +76,13 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
   const [subTab, setSubTab] = useState<LocationSubTab>(initialSubTab);
 
   // ============================================================================
-  // ESTADO DE CONECTIVIDAD OFFLINE / ONLINE Y COLA DE OPERACIONES
+  // ESTADO DE CONECTIVIDAD OFFLINE / ONLINE (PUNTO INDICADOR COHERENTE CON COBRO)
   // ============================================================================
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
-  const [pendingLocationOpsCount, setPendingLocationOpsCount] = useState<number>(0);
-  const [isSyncingOps, setIsSyncingOps] = useState<boolean>(false);
-
-  const refreshPendingOpsCount = async () => {
-    try {
-      const count = await getPendingLocationOpsCount();
-      setPendingLocationOpsCount(count);
-    } catch (err) {
-      console.warn('[Locations] Error leyendo operaciones pendientes:', err);
-    }
-  };
 
   useEffect(() => {
-    refreshPendingOpsCount();
-
     const handleOnline = async () => {
       setIsOnline(true);
-      setIsSyncingOps(true);
       try {
         const res = await syncPendingLocationOpsSilently();
         if (res.synced > 0) {
@@ -109,9 +91,6 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
         }
       } catch (err) {
         console.warn('[Locations] Error sincronizando operaciones al reconectar:', err);
-      } finally {
-        setIsSyncingOps(false);
-        refreshPendingOpsCount();
       }
     };
 
@@ -119,42 +98,14 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       setIsOnline(false);
     };
 
-    const handleOpsSyncedEvent = () => {
-      refreshPendingOpsCount();
-      onRefresh();
-    };
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    window.addEventListener('stockly:location_ops_synced', handleOpsSyncedEvent);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('stockly:location_ops_synced', handleOpsSyncedEvent);
     };
   }, [onRefresh]);
-
-  const handleManualSyncOps = async () => {
-    if (!isOnline || isSyncingOps) return;
-    setIsSyncingOps(true);
-    try {
-      const res = await syncPendingLocationOpsSilently();
-      if (res.synced > 0) {
-        showAppToast(`Sincronización completada: ${res.synced} operaciones aplicadas.`, 'success', 3500);
-        onRefresh();
-      } else if (res.failed > 0) {
-        showAppToast(`Sincronización: ${res.failed} operaciones fallaron o fueron rechazadas.`, 'warning', 4000);
-      } else {
-        showAppToast('No hay operaciones pendientes de sincronizar.', 'info', 2500);
-      }
-    } catch (err: any) {
-      showAppToast(`Error al sincronizar: ${err?.message || 'Error inesperado'}`, 'error', 4000);
-    } finally {
-      setIsSyncingOps(false);
-      refreshPendingOpsCount();
-    }
-  };
 
   useEffect(() => {
     if (initialSubTab) {
@@ -706,7 +657,6 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
       setBatchItems([]);
       setAssignScanCode('');
-      await refreshPendingOpsCount();
 
       setAssignAlert({
         type: 'success',
@@ -1070,7 +1020,6 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       setMoveLooseUnits('');
       setMoveReason('');
       setMoveScanQuery('');
-      await refreshPendingOpsCount();
 
       setMoveAlert({
         type: 'success',
@@ -1197,41 +1146,16 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
         <header className="shrink-0 bg-neutral-950 text-white rounded-b-[2.5rem] z-20 select-none px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-5">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
                 <h1 className="text-xl font-semibold tracking-tight text-white">
                   Ubicaciones
                 </h1>
-                {/* Pill Indicador de Conexión (Online / Offline) */}
-                <div
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors ${
-                    isOnline
-                      ? 'bg-emerald-950/80 border border-emerald-500/40 text-emerald-300'
-                      : 'bg-amber-950/80 border border-amber-500/50 text-amber-300'
+                <span
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    isOnline ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
                   }`}
-                  title={isOnline ? 'En línea (Sincronizado)' : 'Sin conexión a internet (Modo Offline activo)'}
-                >
-                  {isOnline ? (
-                    <>
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                      <span>En línea</span>
-                      {pendingLocationOpsCount > 0 && (
-                        <span className="font-mono text-[10px] bg-amber-400 text-neutral-950 font-bold px-1.5 rounded-full ml-0.5">
-                          {pendingLocationOpsCount} pend.
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <WifiOff className="w-3 h-3 text-amber-400" />
-                      <span>Offline</span>
-                      {pendingLocationOpsCount > 0 && (
-                        <span className="font-mono text-[10px] bg-amber-400 text-neutral-950 font-bold px-1.5 rounded-full ml-0.5">
-                          {pendingLocationOpsCount}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
+                  title={isOnline ? 'En línea' : 'Modo fuera de línea'}
+                />
               </div>
 
               <div className="flex items-center gap-2 mt-2">
@@ -2109,9 +2033,17 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
          ======================================================================== */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 pt-1">
         <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-slate-900">
-            Gestión de ubicaciones
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-slate-900">
+              Gestión de ubicaciones
+            </h1>
+            <span
+              className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                isOnline ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+              }`}
+              title={isOnline ? 'En línea' : 'Modo fuera de línea'}
+            />
+          </div>
           <p className="text-xs text-slate-500 mt-1 max-w-2xl">
             Asignación por lotes con validación de saldo pendiente, consulta multi-estante y traslado atómico.
           </p>
@@ -2119,44 +2051,6 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
         {/* Indicadores rápidos y Acciones */}
         <div className="flex flex-wrap items-center gap-2 text-xs shrink-0">
-          {/* Indicador de Conexión Desktop */}
-          <div
-            className={`px-3 py-1.5 rounded-lg border flex items-center gap-2 transition-colors ${
-              isOnline
-                ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
-                : 'bg-amber-50/80 border-amber-200 text-amber-800'
-            }`}
-          >
-            {isOnline ? (
-              <>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                <span className="font-medium">En línea</span>
-                {pendingLocationOpsCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleManualSyncOps}
-                    disabled={isSyncingOps}
-                    className="ml-1 px-2 py-0.5 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
-                    title="Clic para sincronizar operaciones pendientes"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${isSyncingOps ? 'animate-spin' : ''}`} />
-                    <span>{pendingLocationOpsCount} pend.</span>
-                  </button>
-                )}
-              </>
-            ) : (
-              <>
-                <WifiOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span className="font-medium">Modo offline</span>
-                {pendingLocationOpsCount > 0 && (
-                  <span className="ml-1 px-2 py-0.5 rounded bg-amber-200/80 text-amber-950 font-bold text-[11px]">
-                    {pendingLocationOpsCount} pend.
-                  </span>
-                )}
-              </>
-            )}
-          </div>
-
           <div className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 flex items-center gap-2">
             <Inbox className="w-3.5 h-3.5 text-slate-600" />
             <span className="text-slate-600">
