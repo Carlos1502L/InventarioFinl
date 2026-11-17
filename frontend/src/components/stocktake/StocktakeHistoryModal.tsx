@@ -134,7 +134,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm select-none overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 pb-20 sm:pb-6 bg-black/60 backdrop-blur-sm select-none overflow-hidden">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -148,7 +148,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
           transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-          className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-neutral-200/80 overflow-hidden z-10 max-h-[90dvh] flex flex-col my-auto"
+          className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-neutral-200/80 overflow-hidden z-10 max-h-[80dvh] flex flex-col my-auto"
           onClick={e => e.stopPropagation()}
         >
           {/* Manija táctil móvil */}
@@ -172,7 +172,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 flex items-center justify-center transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -195,7 +195,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setSelectedSessionDetail(null)}
-                  className="text-xs font-bold text-neutral-600 hover:text-neutral-900 flex items-center gap-1"
+                  className="text-xs font-bold text-neutral-600 hover:text-neutral-900 flex items-center gap-1 cursor-pointer"
                 >
                   ← Volver al listado
                 </button>
@@ -205,7 +205,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
                     selectedSessionDetail.completed_at || selectedSessionDetail.started_at
                   );
                   return (
-                    <div className="p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200/70 space-y-2">
+                    <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/70 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="font-mono text-sm font-bold text-neutral-950">
                           {selectedSessionDetail.code}
@@ -251,7 +251,8 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
                     Productos verificados ({selectedSessionDetail.stocktake_items?.length || 0}):
                   </span>
 
-                  <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                  {/* Recuadro con scroll interno para productos verificados */}
+                  <div className="space-y-1.5 max-h-[180px] sm:max-h-[220px] overflow-y-auto overscroll-contain pr-1">
                     {(selectedSessionDetail.stocktake_items || []).map((item: any) => {
                       const diff = Number(item.difference_qty || 0);
                       const isDeficit = diff < 0;
@@ -286,102 +287,104 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
                 </div>
               </div>
             ) : (
-              // Listado de sesiones con Quién, Cuándo y Hora destacados
-              sessions.map((sess) => {
-                const totalItems = sess.stocktake_items?.length || 0;
-                let adjustedCount = 0;
-                let netCostImpact = 0;
+              // Listado de sesiones con scroll interno limitado a 2 tarjetas visibles
+              <div className="space-y-2.5 max-h-[250px] sm:max-h-[270px] overflow-y-auto overscroll-contain pr-1">
+                {sessions.map((sess) => {
+                  const totalItems = sess.stocktake_items?.length || 0;
+                  let adjustedCount = 0;
+                  let netCostImpact = 0;
 
-                (sess.stocktake_items || []).forEach((it: any) => {
-                  const diff = Number(it.difference_qty || 0);
-                  const cost = Number(it.unit_cost_snapshot || 0);
-                  if (diff !== 0) {
-                    adjustedCount++;
-                    netCostImpact += (diff * cost);
-                  }
-                });
+                  (sess.stocktake_items || []).forEach((it: any) => {
+                    const diff = Number(it.difference_qty || 0);
+                    const cost = Number(it.unit_cost_snapshot || 0);
+                    if (diff !== 0) {
+                      adjustedCount++;
+                      netCostImpact += (diff * cost);
+                    }
+                  });
 
-                const { date: sessDate, time: sessTime } = formatDateTime(sess.completed_at || sess.started_at);
+                  const { date: sessDate, time: sessTime } = formatDateTime(sess.completed_at || sess.started_at);
 
-                return (
-                  <div
-                    key={sess.id}
-                    onClick={() => setSelectedSessionDetail(sess)}
-                    className="p-3.5 rounded-2xl bg-white border border-neutral-200/70 hover:border-neutral-900/40 transition-all cursor-pointer active:scale-[0.99] space-y-2.5 shadow-xs"
-                  >
-                    {/* Fila 1: Código + Estado */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-neutral-950 bg-neutral-100 px-2 py-0.5 rounded-md">
-                          {sess.code}
-                        </span>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          sess.status === 'COMPLETED'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}>
-                          {sess.status === 'COMPLETED' ? 'Finalizado' : 'En Progreso'}
+                  return (
+                    <div
+                      key={sess.id}
+                      onClick={() => setSelectedSessionDetail(sess)}
+                      className="p-3.5 rounded-2xl bg-white border border-neutral-200/70 hover:border-neutral-900/40 transition-all cursor-pointer active:scale-[0.99] space-y-2.5 shadow-xs"
+                    >
+                      {/* Fila 1: Código + Estado */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-neutral-950 bg-neutral-100 px-2 py-0.5 rounded-md">
+                            {sess.code}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            sess.status === 'COMPLETED'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}>
+                            {sess.status === 'COMPLETED' ? 'Finalizado' : 'En Progreso'}
+                          </span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-neutral-400" />
+                      </div>
+
+                      {/* Fila 2: Quién realizó el barrido */}
+                      <div className="flex items-center gap-1.5 text-xs text-neutral-800">
+                        <User className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                        <span className="truncate">
+                          Realizado por: <strong className="text-neutral-950 font-semibold">{sess.operatorName}</strong>
                         </span>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-neutral-400" />
-                    </div>
 
-                    {/* Fila 2: Quién realizó el barrido */}
-                    <div className="flex items-center gap-1.5 text-xs text-neutral-800">
-                      <User className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                      <span className="truncate">
-                        Realizado por: <strong className="text-neutral-950 font-semibold">{sess.operatorName}</strong>
-                      </span>
-                    </div>
-
-                    {/* Fila 3: Cuándo (Fecha) y A qué hora (Hora) */}
-                    <div className="flex items-center gap-4 text-[11px] text-neutral-500">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                        <span>{sessDate}</span>
+                      {/* Fila 3: Cuándo (Fecha) y A qué hora (Hora) */}
+                      <div className="flex items-center gap-4 text-[11px] text-neutral-500">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                          <span>{sessDate}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                          <span className="font-mono tabular-nums font-semibold text-neutral-700">{sessTime}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                        <span className="font-mono tabular-nums font-semibold text-neutral-700">{sessTime}</span>
-                      </div>
-                    </div>
 
-                    {/* Fila 4: Estante */}
-                    <div className="flex items-center gap-1.5 text-xs text-neutral-600 truncate">
-                      <MapPin className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                      <span className="truncate">
-                        Estante: <strong className="text-neutral-900">{sess.locations?.name || 'Ubicación'}</strong> ({sess.locations?.code})
-                      </span>
-                    </div>
-
-                    {/* Fila 5: Resumen de Ajuste */}
-                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 text-[11px] text-neutral-500">
-                      <span>{totalItems} productos verificados · {adjustedCount} ajustados</span>
-                      {adjustedCount > 0 && (
-                        <span className={`font-mono font-semibold ${
-                          netCostImpact < 0 ? 'text-rose-600' : 'text-amber-600'
-                        }`}>
-                          {netCostImpact < 0 ? '-' : '+'}{formatCurrency(Math.abs(netCostImpact), currency)}
+                      {/* Fila 4: Estante */}
+                      <div className="flex items-center gap-1.5 text-xs text-neutral-600 truncate">
+                        <MapPin className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                        <span className="truncate">
+                          Estante: <strong className="text-neutral-900">{sess.locations?.name || 'Ubicación'}</strong> ({sess.locations?.code})
                         </span>
+                      </div>
+
+                      {/* Fila 5: Resumen de Ajuste */}
+                      <div className="flex items-center justify-between pt-2 border-t border-neutral-100 text-[11px] text-neutral-500">
+                        <span>{totalItems} productos verificados · {adjustedCount} ajustados</span>
+                        {adjustedCount > 0 && (
+                          <span className={`font-mono font-semibold ${
+                            netCostImpact < 0 ? 'text-rose-600' : 'text-amber-600'
+                          }`}>
+                            {netCostImpact < 0 ? '-' : '+'}{formatCurrency(Math.abs(netCostImpact), currency)}
+                          </span>
+                        )}
+                      </div>
+
+                      {sess.status === 'IN_PROGRESS' && onSelectSessionToResume && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectSessionToResume(sess);
+                            onClose();
+                          }}
+                          className="w-full mt-1 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          Reanudar este Barrido
+                        </button>
                       )}
                     </div>
-
-                    {sess.status === 'IN_PROGRESS' && onSelectSessionToResume && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectSessionToResume(sess);
-                          onClose();
-                        }}
-                        className="w-full mt-1 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-colors"
-                      >
-                        Reanudar este Barrido
-                      </button>
-                    )}
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             )}
           </div>
         </motion.div>

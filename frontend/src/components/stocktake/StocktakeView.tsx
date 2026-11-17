@@ -512,7 +512,7 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
                 className="w-full py-4 px-5 rounded-2xl bg-neutral-950 hover:bg-neutral-900 active:scale-[0.98] text-white text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-amber-400" />
-                <span>Iniciar barrido en este estante</span>
+                <span>Iniciar barrido</span>
                 <ArrowRight className="w-4 h-4 ml-1" />
               </button>
 
@@ -567,20 +567,29 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
       {/* VISTA 2: VENTANA FLOTANTE DE BARRIDO CIEGO EN PROGRESO (BLIND COUNT MODAL) */}
       <AnimatePresence>
         {activeSession && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 bg-black/60 backdrop-blur-sm select-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 pb-20 sm:pb-6 bg-black/60 backdrop-blur-sm select-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0"
+              onClick={() => {
+                if (countedEntries.size > 0) {
+                  if (confirm('¿Deseas pausar el barrido? Los artículos contados se conservarán mientras no recargues la página.')) {
+                    setActiveSession(null);
+                  }
+                } else {
+                  setActiveSession(null);
+                }
+              }}
             />
 
             <motion.div
-              initial={{ scale: 0.96, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.96, opacity: 0 }}
+              exit={{ scale: 0.95, opacity: 0 }}
               transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-              className="relative w-full max-w-3xl bg-white md:rounded-3xl shadow-2xl border border-neutral-200/80 overflow-hidden z-10 h-full md:max-h-[92vh] flex flex-col my-auto"
+              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-neutral-200/80 overflow-hidden z-10 max-h-[82dvh] sm:max-h-[88dvh] flex flex-col my-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header Fijo de la Ventana Flotante */}
@@ -754,12 +763,12 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
               </div>
 
               {/* Barra Inferior del Modal de Cierre */}
-              <div className="shrink-0 p-4 bg-white/95 backdrop-blur-md border-t border-neutral-100 flex items-center justify-center">
+              <div className="shrink-0 p-3.5 bg-white/95 backdrop-blur-md border-t border-neutral-100 flex items-center justify-center">
                 <button
                   type="button"
                   disabled={countedEntries.size === 0}
                   onClick={handleOpenReview}
-                  className="w-full max-w-lg py-3.5 rounded-2xl bg-neutral-950 hover:bg-neutral-900 text-white font-bold text-sm shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+                  className="w-full max-w-lg py-3 rounded-2xl bg-neutral-950 hover:bg-neutral-900 text-white font-bold text-xs sm:text-sm shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
                 >
                   <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
                   <span>Finalizar Barrido ({countedEntries.size} SKUs · {totalCountedUnits} unds)</span>

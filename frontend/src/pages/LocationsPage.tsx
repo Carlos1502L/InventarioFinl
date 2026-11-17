@@ -991,16 +991,34 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* Botón Circular de Barrido (Ajuste de inventario) en el Header */}
+            {isBusiness && (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleTabSwitch(subTab === 'stocktake' ? 'assign' : 'stocktake')}
+                  aria-label="Ajuste de inventario (Barrido)"
+                  title="Ajuste de inventario (Barrido)"
+                  className={`w-10 h-10 rounded-full border flex items-center justify-center transition-colors active:scale-95 cursor-pointer ${
+                    subTab === 'stocktake'
+                      ? 'bg-white text-neutral-950 border-white shadow-md'
+                      : 'border-neutral-700/80 bg-neutral-900/60 hover:bg-neutral-800 text-neutral-200'
+                  }`}
+                >
+                  <ClipboardList className="w-4 h-4 stroke-[1.8]" />
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Selector de submódulos tipo píldora en fila horizontal deslizable */}
+          {/* Selector de submódulos tipo píldora en fila horizontal */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar mt-4 -mx-1 px-1 py-0.5">
             {(
               [
                 { id: 'assign', label: 'Asignar' },
                 { id: 'consult', label: 'Consultar' },
-                { id: 'move', label: 'Mover' },
-                ...(isBusiness ? [{ id: 'stocktake', label: 'Barrido' }] : [])
+                { id: 'move', label: 'Mover' }
               ] as { id: LocationSubTab; label: string }[]
             ).map((tab) => {
               const active = subTab === tab.id;
@@ -1847,7 +1865,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
           </p>
         </div>
 
-        {/* Indicadores rápidos */}
+        {/* Indicadores rápidos y Acciones */}
         <div className="flex flex-wrap items-center gap-2 text-xs shrink-0">
           <div className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 flex items-center gap-2">
             <Inbox className="w-3.5 h-3.5 text-slate-600" />
@@ -1863,11 +1881,28 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
               <strong className="font-mono text-slate-900 font-semibold tabular-nums">{globalSummary.totalLocations}</strong>
             </span>
           </div>
+
+          {/* Botón de Barrido Físico en el Header */}
+          {isBusiness && (
+            <button
+              type="button"
+              onClick={() => handleTabSwitch(subTab === 'stocktake' ? 'assign' : 'stocktake')}
+              className={`min-h-[38px] px-3.5 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition-[background-color,border-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.97] cursor-pointer ${
+                subTab === 'stocktake'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                  : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 hover:border-slate-300'
+              }`}
+              title="Ajuste de inventario físico (Barrido)"
+            >
+              <ClipboardList className="w-4 h-4 stroke-[1.8]" />
+              <span>Barrido físico</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Pestañas Segmented Tab Bar con Indicador Spring */}
-      <div className={`grid grid-cols-1 ${isBusiness ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-1 p-1 bg-slate-100 border border-slate-200 rounded-xl text-xs`}>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 p-1 bg-slate-100 border border-slate-200 rounded-xl text-xs">
         {[
           {
             id: 'assign' as const,
@@ -1886,17 +1921,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
             label: 'Mover ubicación',
             Icon: ArrowRightLeft,
             badge: null
-          },
-          ...(isBusiness
-            ? [
-                {
-                  id: 'stocktake' as const,
-                  label: 'Barrido físico',
-                  Icon: ClipboardList,
-                  badge: null
-                }
-              ]
-            : [])
+          }
         ].map((tab) => {
           const active = subTab === tab.id;
           const TabIcon = tab.Icon;
