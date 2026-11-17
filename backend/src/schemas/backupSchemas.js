@@ -1,8 +1,27 @@
 import { z } from 'zod';
 
+export const exportBackupSchema = z.object({
+  inventory_id: z.string().uuid({ message: 'El ID de inventario debe ser un UUID válido.' })
+});
+
+export const sendVerificationCodeSchema = z.object({
+  inventory_id: z.string().uuid({ message: 'El ID de inventario debe ser un UUID válido.' }),
+  email: z.string().email({ message: 'Debe proporcionar un correo electrónico válido.' }).max(255)
+});
+
+export const verifyCodeSchema = z.object({
+  inventory_id: z.string().uuid({ message: 'El ID de inventario debe ser un UUID válido.' }),
+  email: z.string().email({ message: 'Debe proporcionar un correo electrónico válido.' }).max(255),
+  code: z.string().regex(/^\d{6}$/, { message: 'El código de verificación debe contener exactamente 6 dígitos numéricos.' })
+});
+
 export const exportAndSendBackupSchema = z.object({
   inventory_id: z.string().uuid({ message: 'El ID de inventario debe ser un UUID válido.' }),
-  target_email: z.string().email({ message: 'Debe proporcionar un correo electrónico de destino válido.' }).max(255)
+  email: z.string().email({ message: 'Debe proporcionar un correo electrónico válido.' }).max(255).optional(),
+  target_email: z.string().email({ message: 'Debe proporcionar un correo electrónico de destino válido.' }).max(255).optional(),
+  verification_token: z.string({ required_error: 'El token de verificación OTP es obligatorio.' }).min(10, { message: 'Token de verificación inválido.' })
+}).refine((data) => data.email || data.target_email, {
+  message: 'Debe proporcionar el correo electrónico de destino (email o target_email).'
 });
 
 export const saveBackupSettingsSchema = z.object({
@@ -13,7 +32,8 @@ export const saveBackupSettingsSchema = z.object({
   execution_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)(:([0-5]\d))?$/, {
     message: 'El formato de hora debe ser HH:MM (24 horas).'
   }).default('02:00:00'),
-  timezone: z.string().default('America/Lima')
+  timezone: z.string().default('America/Lima'),
+  verification_token: z.string().min(10).optional()
 });
 
 export const restoreBackupSchema = z.object({
@@ -34,5 +54,22 @@ export const restoreBackupSchema = z.object({
       coupons: z.array(z.any()).optional().default([]),
       audit_logs: z.array(z.any()).optional().default([])
     })
-  })
+  }),
+  currency_conversion: z.object({
+    enabled: z.boolean().default(false),
+    rate: z.number().positive().optional(),
+    operation: z.enum(['DIVIDE', 'MULTIPLY']).optional(),
+    source_currency: z.string().optional(),
+    target_currency: z.string().optional()
+  }).optional()
+});
+
+export const recalculatePricesSchema = z.object({
+  inventory_id: z.string().uuid({ message: 'El ID de inventario debe ser un UUID válido.' }),
+  new_exchange_rate: z.number().positive({ message: 'La nueva tasa de cambio debe ser un número positivo mayor a 0.' }).optional(),
+  new_rate: z.number().positive({ message: 'La nueva tasa de cambio debe ser un número positivo mayor a 0.' }).optional(),
+  currency: z.string().optional(),
+  new_currency: z.string().optional()
+}).refine(data => data.new_exchange_rate !== undefined || data.new_rate !== undefined, {
+  message: 'La nueva tasa de cambio debe ser un número positivo mayor a 0.'
 });

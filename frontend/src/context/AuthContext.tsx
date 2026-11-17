@@ -8,11 +8,13 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  inventories: Inventory[];
+  isInitialLoading: boolean;
+  isInitialAuthCheck: boolean;
+  inventories: Inventory[] | null;
   currentInventory: Inventory | null;
   needsInventorySelection: boolean;
   pendingInvitations: InventoryInvitation[];
-  selectInventory: (inventory: Inventory) => void;
+  selectInventory: (inventory: Inventory | null) => void;
   refreshInventories: () => Promise<void>;
   setNeedsInventorySelection: (show: boolean) => void;
   acceptInvitation: (invitationId: string, inventoryId: string, role: string) => Promise<void>;
@@ -28,10 +30,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [isInitialAuthCheck, setIsInitialAuthCheck] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   
   // Multi-Tenancy State
-  const [inventories, setInventories] = useState<Inventory[]>([]);
+  const [inventories, setInventories] = useState<Inventory[] | null>(null);
   const [currentInventory, setCurrentInventory] = useState<Inventory | null>(null);
   const [needsInventorySelection, setNeedsInventorySelection] = useState<boolean>(false);
   const [pendingInvitations, setPendingInvitations] = useState<InventoryInvitation[]>([]);
@@ -175,15 +179,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
 
-      // Si aún no tiene ningún inventario, ejecutar auto-inicialización inmediata
-      if (invList.length === 0) {
-        const autoInv = await autoInitializeInventory(currentUser);
-        if (autoInv) {
-          invList = [autoInv];
-        }
-      }
-
+      // RF-INV-043: Actualizar el estado global con la lista real (vacía si el usuario eliminó todos los inventarios)
       setInventories(invList);
+
+      if (invList.length === 0) {
+        setCurrentInventory(null);
+        setNeedsInventorySelection(false);
+        localStorage.removeItem(`active_inventory_${currentUser.id}`);
+        return;
+      }
 
       // RNF-02: Persistencia del inventario seleccionado
       // Al cambiar de pestaña o bloquear el teléfono, NO volver a preguntar si ya había uno seleccionado
@@ -191,19 +195,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const savedInv = invList.find((i) => i.id === savedInvId);
 
       if (invList.length === 1) {
-        // Solo un inventario disponible
-        setCurrentInventory(invList[0]);
+        // Solo un inventario disponible: preservar identidad si no ha cambiado
+        setCurrentInventory((prev) => {
+          const next = invList[0];
+          if (prev && prev.id === next.id) {
+            return JSON.stringify(prev) !== JSON.stringify(next) ? next : prev;
+          }
+          return next;
+        });
         setNeedsInventorySelection(false);
         localStorage.setItem(`active_inventory_${currentUser.id}`, invList[0].id);
       } else if (invList.length > 1) {
         if (savedInv) {
-          // Ya tenía un inventario seleccionado previamente: persistir sin modal
-          setCurrentInventory(savedInv);
+          // Ya tenía un inventario seleccionado previamente: persistir sin modal ni re-render innecesario
+          setCurrentInventory((prev) => {
+            if (prev && prev.id === savedInv.id) {
+              return JSON.stringify(prev) !== JSON.stringify(savedInv) ? savedInv : prev;
+            }
+            return savedInv;
+          });
           setNeedsInventorySelection(false);
         } else {
-          // Primera vez con múltiples inventarios: preguntar
-          setCurrentInventory(invList[0]);
-          setNeedsInventorySelection(true);
+          // Primera vez con múltiples inventarios: preguntar solo si no había selección previa
+          setCurrentInventory((prev) => {
+            if (prev && invList.some((i) => i.id === prev.id)) {
+              return prev;
+            }
+            setNeedsInventorySelection(true);
+            return invList[0];
+          });
         }
       } else {
         setCurrentInventory(null);
@@ -214,11 +234,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const selectInventory = (inventory: Inventory) => {
+  const selectInventory = (inventory: Inventory | null) => {
     setCurrentInventory(inventory);
     setNeedsInventorySelection(false);
     if (user) {
-      localStorage.setItem(`active_inventory_${user.id}`, inventory.id);
+      if (inventory) {
+        localStorage.setItem(`active_inventory_${user.id}`, inventory.id);
+      } else {
+        localStorage.removeItem(`active_inventory_${user.id}`);
+      }
     }
   };
 
@@ -305,38 +329,76 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   useEffect(() => {
-    // 1. Obtener sesión activa inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchInventories(session.user);
-        if (session.user.email) {
-          fetchPendingInvitations(session.user.email);
-        }
-      }
-      setLoading(false);
-    });
+    let isMounted = true;
 
-    // 2. Suscribirse a cambios de estado de autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // 1. Lectura de sesión inicial en almacenamiento (Arranque en frío)
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!isMounted) return;
       setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchInventories(session.user);
-        if (session.user.email) {
-          fetchPendingInvitations(session.user.email);
+      const initialUser = session?.user ?? null;
+      setUser(initialUser);
+
+      if (initialUser) {
+        await fetchInventories(initialUser);
+        if (initialUser.email) {
+          await fetchPendingInvitations(initialUser.email);
         }
       } else {
-        setInventories([]);
+        setInventories(null);
+      }
+
+      // Solo se apaga aquí una única vez en el ciclo de vida del arranque
+      setIsInitialAuthCheck(false);
+      setIsInitialLoading(false);
+      setLoading(false);
+    }).catch((err) => {
+      console.error('Error verificando sesión inicial:', err);
+      if (isMounted) {
+        setInventories(null);
+        setIsInitialAuthCheck(false);
+        setIsInitialLoading(false);
+        setLoading(false);
+      }
+    });
+
+    // 2. Suscripción a cambios de auth (Segundo plano silencioso)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      if (!isMounted) return;
+
+      // CRÍTICO: NUNCA activar loaders ni setIsInitialAuthCheck(true) aquí
+      setSession(newSession);
+      const newUser = newSession?.user ?? null;
+      setUser(newUser);
+
+      if (event === 'SIGNED_OUT' || !newSession) {
+        setInventories(null);
         setCurrentInventory(null);
         setNeedsInventorySelection(false);
         setPendingInvitations([]);
+        return;
       }
-      setLoading(false);
+
+      // TOKEN_REFRESHED, USER_UPDATED o reconexiones de red: silencioso en segundo plano
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        return;
+      }
+
+      // Si es un inicio de sesión genuino y no se tenían inventarios en memoria:
+      if (event === 'SIGNED_IN' && newUser) {
+        setInventories((prevInvs) => {
+          if (!prevInvs || prevInvs.length === 0) {
+            fetchInventories(newUser);
+            if (newUser.email) {
+              fetchPendingInvitations(newUser.email);
+            }
+          }
+          return prevInvs;
+        });
+      }
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, [fetchInventories, fetchPendingInvitations]);
@@ -344,6 +406,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (!error && data.user) {
+      try {
+        // Al ingresar a cuenta existente, marcar onboarding como completado y limpiar bandera de nuevo registro
+        localStorage.setItem(`onboarding_completed_${data.user.id}`, 'true');
+        localStorage.removeItem(`is_new_registration_${data.user.id}`);
+      } catch (e) {
+        console.warn(e);
+      }
       await fetchInventories(data.user);
       if (data.user.email) {
         await fetchPendingInvitations(data.user.email);
@@ -362,6 +431,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     });
+    if (!error && data?.user) {
+      try {
+        // Únicamente si la cuenta se registra por primera vez
+        localStorage.setItem(`is_new_registration_${data.user.id}`, 'true');
+        localStorage.removeItem(`onboarding_completed_${data.user.id}`);
+      } catch (e) {
+        console.warn(e);
+      }
+    }
     return { error };
   };
 
@@ -371,7 +449,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     await supabase.auth.signOut();
     setCurrentInventory(null);
-    setInventories([]);
+    setInventories(null);
     setPendingInvitations([]);
   };
 
@@ -382,6 +460,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session,
         profile,
         loading,
+        isInitialLoading,
+        isInitialAuthCheck,
         inventories,
         currentInventory,
         needsInventorySelection,

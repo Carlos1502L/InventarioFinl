@@ -8,40 +8,100 @@ export default {
   theme: {
     extend: {
       colors: {
-        navy: {
-          DEFAULT: '#1E3A5F',
-          dark: '#142740',
-          light: '#284E7E',
-          50: '#F0F4F8',
-          100: '#D9E3ED',
-          500: '#1E3A5F',
-          600: '#172E4C',
-          900: '#0F1E32',
-        },
-        nude: {
-          DEFAULT: '#E8B4A0',
-          dark: '#D89E88',
-          light: '#F5D3C6',
-          50: '#FAF0EB',
-          100: '#F5E1D8',
-          200: '#E8B4A0',
+        // Monochromatic clinical blueprint palette (Ui / shadcn)
+        canvas: {
+          DEFAULT: '#f5f5f5',
+          alt: '#f0f0f0',
         },
         paper: '#ffffff',
-        canvas: {
-          DEFAULT: '#F8F9FA',
-          alt: '#F3F4F6',
+        surface: {
+          DEFAULT: '#fafafa',
+          alt: '#fafafa',
+        },
+        ink: {
+          DEFAULT: '#0a0a0a',
+          soft: '#171717',
+          black: '#0a0a0a',
+        },
+        midgray: {
+          DEFAULT: '#737373',
+          gray: '#737373',
+        },
+        hairline: '#e5e5e5',
+        ember: {
+          DEFAULT: '#e7000b',
+          dark: '#c4000a',
+        },
+        // Legacy fallbacks preserved for business components
+        navy: {
+          DEFAULT: '#0a0a0a',
+          dark: '#000000',
+          light: '#171717',
+          50: '#f5f5f5',
+          100: '#e5e5e5',
+          500: '#0a0a0a',
+          600: '#171717',
+          900: '#000000',
+        },
+        nude: {
+          DEFAULT: '#737373',
+          dark: '#525252',
+          light: '#f5f5f5',
+          50: '#fafafa',
+          100: '#f5f5f5',
+          200: '#e5e5e5',
         },
         fog: {
-          DEFAULT: '#E5E7EB',
-          light: '#F3F4F6',
-          dark: '#D1D5DB',
+          DEFAULT: '#e5e5e5',
+          white: '#fafafa',
+          light: '#f5f5f5',
+          dark: '#737373',
+        },
+        slate: {
+          DEFAULT: '#737373',
+          gray: '#737373',
+        },
+        ash: {
+          DEFAULT: '#737373',
+          gray: '#737373',
+        },
+        smoke: {
+          DEFAULT: '#a3a3a3',
+          gray: '#a3a3a3',
+        },
+        mist: {
+          DEFAULT: '#f5f5f5',
+          gray: '#f5f5f5',
+        },
+        peach: {
+          DEFAULT: '#f5f5f5',
+          blush: '#f5f5f5',
+        },
+        sienna: {
+          DEFAULT: '#0a0a0a',
+          brown: '#0a0a0a',
         },
         alert: {
-          yellow: '#ffdd00',
+          yellow: '#e7000b',
         }
       },
+      fontFamily: {
+        geist: ['"Geist"', '"Inter"', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        sans: ['"Geist"', '"Inter Tight"', '"Inter"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+      },
       borderRadius: {
-        '2xl': '16px',
+        '3xl': '24px',
+        '2xl': '18px',
+        'xl': '14px',
+        'lg': '10px',
+        'md': '6px',
+        'pill': '18px',
+      },
+      boxShadow: {
+        'ui-card': '0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)',
+        'ui-subtle': '0 0 0 1px rgba(23,23,23,0.05)',
+        'steep-subtle': '0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.08)',
+        'steep-card': '0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)',
       }
     },
   },

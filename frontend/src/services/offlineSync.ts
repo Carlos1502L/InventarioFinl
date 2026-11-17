@@ -1,5 +1,6 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { supabase } from '../lib/supabase';
+import { supabase, formatCleanDecimal } from '../lib/supabase';
+import { showAppToast } from '../components/ui/ToastNotification';
 
 // =========================================================
 // ESQUEMAS Y TIPOS DE INDEXEDDB (pos_offline_db v2)
@@ -90,6 +91,33 @@ export interface QueuedWithdrawal {
   error_message?: string | null;
 }
 
+export interface QueuedStocktakeItem {
+  product_id: string;
+  counted_qty: number;
+  expected_qty?: number;
+  unit_cost_snapshot?: number;
+}
+
+export interface QueuedStocktakePayload {
+  session_id?: string;
+  inventory_id: string;
+  location_id: string;
+  code?: string;
+  user_id?: string;
+  user_email?: string;
+  notes?: string;
+  items: QueuedStocktakeItem[];
+}
+
+export interface QueuedStocktake {
+  local_id?: number;
+  payload: QueuedStocktakePayload;
+  status: 'PENDING' | 'SYNCING' | 'SYNCED' | 'FAILED';
+  created_at: string;
+  synced_at?: string | null;
+  error_message?: string | null;
+}
+
 interface PosOfflineDB extends DBSchema {
   sales_queue: {
     key: number;
@@ -115,10 +143,18 @@ interface PosOfflineDB extends DBSchema {
       'by-created_at': string;
     };
   };
+  stocktake_queue: {
+    key: number;
+    value: QueuedStocktake;
+    indexes: {
+      'by-status': string;
+      'by-created_at': string;
+    };
+  };
 }
 
 const DB_NAME = 'pos_offline_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise: Promise<IDBPDatabase<PosOfflineDB>> | null = null;
 
@@ -153,6 +189,15 @@ export function getDB(): Promise<IDBPDatabase<PosOfflineDB>> {
           });
           withStore.createIndex('by-status', 'status');
           withStore.createIndex('by-created_at', 'created_at');
+        }
+
+        if (!db.objectStoreNames.contains('stocktake_queue')) {
+          const stockStore = db.createObjectStore('stocktake_queue', {
+            keyPath: 'local_id',
+            autoIncrement: true
+          });
+          stockStore.createIndex('by-status', 'status');
+          stockStore.createIndex('by-created_at', 'created_at');
         }
       }
     });
@@ -235,6 +280,143 @@ export async function markSaleFailed(localId: number, errorMessage: string): Pro
     }
   } catch (err) {
     console.error(`[OfflineDB] Error marcando venta #${localId} como fallida:`, err);
+  }
+}
+
+/**
+ * Retorna todas las ventas en la cola local de IndexedDB.
+ */
+export async function getAllQueuedSales(): Promise<QueuedSale[]> {
+  try {
+    const db = await getDB();
+    return await db.getAll('sales_queue');
+  } catch (err) {
+    console.error('[OfflineDB] Error obteniendo todas las ventas de la cola:', err);
+    return [];
+  }
+}
+
+/**
+ * Sanitiza y formatea el mensaje de quiebre de stock según la unidad de medida:
+ * - Si es tipo caja (BOX): entero si no tiene decimales, y máximo 2 decimales si tiene fracción (ej: "Disponible: 1, Solicitado: 0.5")
+ * - Si es tipo unidad (UNIT): estrictamente números enteros (ej: "Disponible: 0, Solicitado: 1")
+ */
+export function formatStockShortageNotes(notes: string | null | undefined, items?: any[]): string {
+  if (!notes) return '';
+
+  let isBox = false;
+  if (items && items.length > 0) {
+    isBox = items.some(
+      (it) => it.unit_type === 'BOX' || (it.product_name && it.product_name.toLowerCase().includes('caja'))
+    );
+  }
+
+  return notes.replace(
+    /(Disponible:\s*)(\d+(?:\.\d+)?)([^\d,]*)(,\s*(?:Solicitado|Requerido):\s*)(\d+(?:\.\d+)?)/gi,
+    (_match, p1, dispVal, p3, p4, solVal) => {
+      const numDisp = Number(dispVal);
+      const numSol = Number(solVal);
+      const hasFractions = numDisp % 1 !== 0 || numSol % 1 !== 0;
+      const treatAsBox = isBox || hasFractions;
+
+      const formattedDisp = treatAsBox
+        ? formatCleanDecimal(numDisp, 2)
+        : Math.round(numDisp).toString();
+
+      const formattedSol = treatAsBox
+        ? formatCleanDecimal(numSol, 2)
+        : Math.round(numSol).toString();
+
+      return `${p1}${formattedDisp}${p3}${p4}${formattedSol}`;
+    }
+  );
+}
+
+/**
+ * RN-HIST-01: Persiste una venta offline rechazada (quiebre de stock) directamente
+ * en el Historial de Ventas (tablas 'sales' y 'sale_items') sin descontar inventario.
+ */
+export async function persistRejectedSaleToRemote(
+  sale: QueuedSale,
+  errorMessage: string
+): Promise<string | null> {
+  const p = sale.payload;
+  const localId = sale.local_id;
+  const formattedReason = formatStockShortageNotes(errorMessage, p.p_items);
+  const rejectedNotes = `[RECHAZADA_STOCK] local-queue-${localId ?? 'na'} | ${formattedReason}`;
+
+  try {
+    // 1. Intentar inserción con status: 'REJECTED_STOCK'
+    let insertRes = await supabase
+      .from('sales')
+      .insert({
+        inventory_id: p.p_inventory_id,
+        seller_id: p.p_seller_id || null,
+        seller_email: p.p_seller_email || 'offline@pos',
+        total_amount: p.p_total_amount,
+        payment_method: p.p_payment_method || 'CASH',
+        customer_name: p.p_customer_name || null,
+        customer_contact: p.p_customer_contact || null,
+        notes: rejectedNotes,
+        status: 'REJECTED_STOCK',
+        created_at: sale.created_at || new Date().toISOString()
+      })
+      .select('id')
+      .single();
+
+    // 2. Fallback sin columna status si no existe en la base de datos remota
+    if (
+      insertRes.error &&
+      insertRes.error.message?.toLowerCase().includes('column') &&
+      insertRes.error.message?.toLowerCase().includes('status')
+    ) {
+      insertRes = await supabase
+        .from('sales')
+        .insert({
+          inventory_id: p.p_inventory_id,
+          seller_id: p.p_seller_id || null,
+          seller_email: p.p_seller_email || 'offline@pos',
+          total_amount: p.p_total_amount,
+          payment_method: p.p_payment_method || 'CASH',
+          customer_name: p.p_customer_name || null,
+          customer_contact: p.p_customer_contact || null,
+          notes: rejectedNotes,
+          created_at: sale.created_at || new Date().toISOString()
+        })
+        .select('id')
+        .single();
+    }
+
+    if (insertRes.error) {
+      console.warn('[OfflineSync] Error insertando venta rechazada en Supabase sales:', insertRes.error);
+      return null;
+    }
+
+    const saleId = insertRes.data?.id;
+
+    // 3. Persistir sale_items asociados para auditoría e inspección en el modal
+    if (saleId && p.p_items && p.p_items.length > 0) {
+      const itemsData = p.p_items.map((it: any) => ({
+        sale_id: saleId,
+        product_id: it.product_id && !String(it.product_id).startsWith('temp-') ? it.product_id : null,
+        product_name: it.product_name || 'Producto',
+        product_code: it.product_code || 'S/C',
+        quantity: it.quantity || 1,
+        unit_price: it.unit_price || 0,
+        cost_price: it.cost_price || 0,
+        subtotal: it.subtotal || 0
+      }));
+
+      const { error: itemsErr } = await supabase.from('sale_items').insert(itemsData);
+      if (itemsErr) {
+        console.warn('[OfflineSync] Error insertando sale_items para venta rechazada:', itemsErr);
+      }
+    }
+
+    return saleId;
+  } catch (err) {
+    console.warn('[OfflineSync] Excepción al persistir venta rechazada en historial:', err);
+    return null;
   }
 }
 
@@ -405,6 +587,170 @@ export async function markWithdrawalFailed(localId: number, errorMessage: string
 }
 
 // =========================================================
+// MÉTODOS DE COLA DE BARRIDOS / CONTEOS CÍCLICOS (stocktake_queue)
+// =========================================================
+
+/**
+ * Guarda una sesión de barrido completada en stocktake_queue para sincronización diferida.
+ */
+export async function saveStocktakeLocally(payload: QueuedStocktakePayload): Promise<number> {
+  const db = await getDB();
+  const queued: QueuedStocktake = {
+    payload,
+    status: 'PENDING',
+    created_at: new Date().toISOString(),
+    synced_at: null,
+    error_message: null
+  };
+  const localId = await db.add('stocktake_queue', queued);
+  return localId as number;
+}
+
+/**
+ * Retorna todos los barridos de inventario pendientes en orden FIFO.
+ */
+export async function getPendingStocktakes(): Promise<QueuedStocktake[]> {
+  try {
+    const db = await getDB();
+    const all = await db.getAll('stocktake_queue');
+    return all
+      .filter((s) => s.status === 'PENDING')
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  } catch (err) {
+    console.error('[OfflineDB] Error obteniendo barridos pendientes:', err);
+    return [];
+  }
+}
+
+/**
+ * Retorna el número de barridos pendientes de sincronizar.
+ */
+export async function getPendingStocktakesCount(): Promise<number> {
+  const pending = await getPendingStocktakes();
+  return pending.length;
+}
+
+/**
+ * Marca un barrido local como sincronizado.
+ */
+export async function markStocktakeSynced(localId: number): Promise<void> {
+  try {
+    const db = await getDB();
+    const item = await db.get('stocktake_queue', localId);
+    if (item) {
+      item.status = 'SYNCED';
+      item.synced_at = new Date().toISOString();
+      await db.put('stocktake_queue', item);
+    }
+  } catch (err) {
+    console.error(`[OfflineDB] Error marcando barrido #${localId} como sincronizado:`, err);
+  }
+}
+
+/**
+ * Marca un barrido como fallido.
+ */
+export async function markStocktakeFailed(localId: number, errorMessage: string): Promise<void> {
+  try {
+    const db = await getDB();
+    const item = await db.get('stocktake_queue', localId);
+    if (item) {
+      item.status = 'FAILED';
+      item.error_message = errorMessage;
+      await db.put('stocktake_queue', item);
+    }
+  } catch (err) {
+    console.error(`[OfflineDB] Error marcando barrido #${localId} como fallido:`, err);
+  }
+}
+
+/**
+ * Sincroniza los barridos pendientes contra la RPC de Supabase commit_stocktake_session.
+ */
+export async function syncPendingStocktakesSilently(): Promise<{ synced: number; failed: number }> {
+  const pending = await getPendingStocktakes();
+  let synced = 0;
+  let failed = 0;
+
+  for (const st of pending) {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) break;
+
+    try {
+      let sessionId = st.payload.session_id;
+
+      // 1. Si no tiene session_id remoto, crear la sesión
+      if (!sessionId) {
+        const { data: sessionData, error: sessErr } = await supabase.rpc('create_stocktake_session', {
+          p_inventory_id: st.payload.inventory_id,
+          p_location_id: st.payload.location_id,
+          p_user_id: st.payload.user_id || null,
+          p_user_email: st.payload.user_email || null,
+          p_notes: st.payload.notes || null
+        });
+
+        if (sessErr) {
+          if (isNetworkOrOfflineError(sessErr)) break;
+          throw sessErr;
+        }
+        sessionId = sessionData?.session_id;
+      }
+
+      if (!sessionId) {
+        throw new Error('No se pudo inicializar la sesión remota de barrido.');
+      }
+
+      // 2. Insertar ítems contados en stocktake_items
+      if (st.payload.items && st.payload.items.length > 0) {
+        const itemsToInsert = st.payload.items.map((it) => {
+          const resolvedProductId = offlineTempIdMap.get(it.product_id) || it.product_id;
+          return {
+            session_id: sessionId,
+            product_id: resolvedProductId,
+            counted_qty: it.counted_qty,
+            unit_cost_snapshot: it.unit_cost_snapshot || 0
+          };
+        });
+
+        const { error: itemsErr } = await supabase
+          .from('stocktake_items')
+          .upsert(itemsToInsert, { onConflict: 'session_id,product_id' });
+
+        if (itemsErr) {
+          if (isNetworkOrOfflineError(itemsErr)) break;
+          throw itemsErr;
+        }
+      }
+
+      // 3. Ejecutar RPC transaccional commit_stocktake_session
+      const { error: commitErr } = await supabase.rpc('commit_stocktake_session', {
+        p_session_id: sessionId,
+        p_user_id: st.payload.user_id || null,
+        p_user_email: st.payload.user_email || null
+      });
+
+      if (commitErr) {
+        if (isNetworkOrOfflineError(commitErr)) break;
+        throw commitErr;
+      }
+
+      if (st.local_id) {
+        await markStocktakeSynced(st.local_id);
+      }
+      synced++;
+    } catch (err: any) {
+      if (isNetworkOrOfflineError(err)) break;
+      console.warn(`[SyncEngine] Error en barrido #${st.local_id}:`, err);
+      if (st.local_id) {
+        await markStocktakeFailed(st.local_id, err?.message || 'Error desconocido');
+      }
+      failed++;
+    }
+  }
+
+  return { synced, failed };
+}
+
+// =========================================================
 // VALIDACIÓN DE RED Y ERRORES DE CONECTIVIDAD
 // =========================================================
 
@@ -500,21 +846,52 @@ export async function syncPendingSalesSilently(
           }
 
           console.warn(`[OfflineSync] Venta local #${localId} rechazada por base de datos:`, rpcError.message);
-          await markSaleFailed(localId, rpcError.message || 'Error de procesamiento');
+          
+          const formattedErr = formatStockShortageNotes(rpcError.message || 'Sin stock disponible', sale.payload.p_items);
+
+          // RN-HIST-01: Persistir la venta diferida rechazada en el Historial de Ventas
+          await persistRejectedSaleToRemote(sale, formattedErr);
+          await markSaleFailed(localId, formattedErr);
           failedCount++;
+
+          // Alerta al usuario: Notificación discreta de "Sin Stock Disponible"
+          showAppToast('Sin Stock Disponible: Venta rechazada por falta de unidades.', 'error');
+
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('stockly_sales_data_updated'));
+          }
           continue;
         }
 
         await markSaleSynced(localId, rpcRes);
         syncedCount++;
+
+        // Alerta al usuario: Notificación discreta de sincronización
+        showAppToast('Venta sincronizada correctamente.', 'success');
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('stockly_sales_data_updated'));
+        }
       } catch (err: any) {
         if (isNetworkOrOfflineError(err)) {
           break;
         }
         console.warn(`[OfflineSync] Error inesperado en venta #${localId}:`, err);
-        await markSaleFailed(localId, err?.message || 'Error de sincronización');
+        const errMsg = formatStockShortageNotes(err?.message || 'Error de sincronización', sale.payload.p_items);
+        await persistRejectedSaleToRemote(sale, errMsg);
+        await markSaleFailed(localId, errMsg);
         failedCount++;
+
+        showAppToast('Sin Stock Disponible: Venta rechazada por falta de unidades.', 'error');
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('stockly_sales_data_updated'));
+        }
       }
+    }
+
+    if ((syncedCount > 0 || failedCount > 0) && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('stockly_sales_data_updated'));
     }
 
     if (syncedCount > 0 && onBatchSuccess) {
@@ -529,31 +906,34 @@ export async function syncPendingSalesSilently(
 }
 
 /**
- * Sincronizador Integral en Cascada (Fase 1: Productos -> Fase 2: Retiros -> Fase 3: Ventas)
+ * Sincronizador Integral en Cascada (Fase 1: Productos -> Fase 2: Retiros -> Fase 3: Ventas -> Fase 4: Barridos)
  */
 export async function syncAllOfflineDataSilently(
   onSummary?: (summary: {
     syncedProducts: number;
     syncedWithdrawals: number;
     syncedSales: number;
+    syncedStocktakes?: number;
   }) => void
 ): Promise<{
   syncedProducts: number;
   syncedWithdrawals: number;
   syncedSales: number;
+  syncedStocktakes: number;
   errors: number;
 }> {
   if (isSyncInProgress) {
-    return { syncedProducts: 0, syncedWithdrawals: 0, syncedSales: 0, errors: 0 };
+    return { syncedProducts: 0, syncedWithdrawals: 0, syncedSales: 0, syncedStocktakes: 0, errors: 0 };
   }
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    return { syncedProducts: 0, syncedWithdrawals: 0, syncedSales: 0, errors: 0 };
+    return { syncedProducts: 0, syncedWithdrawals: 0, syncedSales: 0, syncedStocktakes: 0, errors: 0 };
   }
 
   isSyncInProgress = true;
   let syncedProducts = 0;
   let syncedWithdrawals = 0;
   let syncedSales = 0;
+  let syncedStocktakes = 0;
   let errors = 0;
 
   try {
@@ -755,12 +1135,20 @@ export async function syncAllOfflineDataSilently(
     syncedSales = salesRes.synced;
     errors += salesRes.failed;
 
-    const totalSynced = syncedProducts + syncedWithdrawals + syncedSales;
+    // =========================================================
+    // FASE 4: Barridos de Inventario (stocktake_queue)
+    // =========================================================
+    const stocktakesRes = await syncPendingStocktakesSilently();
+    syncedStocktakes = stocktakesRes.synced;
+    errors += stocktakesRes.failed;
+
+    const totalSynced = syncedProducts + syncedWithdrawals + syncedSales + syncedStocktakes;
     if (totalSynced > 0 && onSummary) {
       onSummary({
         syncedProducts,
         syncedWithdrawals,
-        syncedSales
+        syncedSales,
+        syncedStocktakes
       });
     }
 
@@ -768,6 +1156,7 @@ export async function syncAllOfflineDataSilently(
       syncedProducts,
       syncedWithdrawals,
       syncedSales,
+      syncedStocktakes,
       errors
     };
   } finally {

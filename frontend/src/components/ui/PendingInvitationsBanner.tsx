@@ -9,27 +9,27 @@ export const PendingInvitationsBanner: React.FC = () => {
   if (!pendingInvitations || pendingInvitations.length === 0) return null;
 
   return (
-    <div className="mb-6 space-y-2 font-mono">
+    <div className="mb-6 space-y-2 font-sans">
       {pendingInvitations.map((inv) => (
         <div
           key={inv.id}
-          className="p-4 bg-[#ffffff] border border-[#E5E7EB] rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs uppercase"
+          className="p-4 bg-white border border-slate-200 rounded-2xl shadow-ui-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#1E3A5F]/10 text-[#1E3A5F] flex items-center justify-center flex-shrink-0">
-              <Mail className="w-5 h-5 text-[#1E3A5F]" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 flex items-center justify-center flex-shrink-0">
+              <Mail className="w-5 h-5" />
             </div>
-            <div>
-              <p className="text-xs font-medium tracking-wide text-[#1E3A5F]">
-                INVITACIÓN PARA COLABORAR EN: <span className="underline decoration-[#E8B4A0]">{inv.inventories?.name || 'INVENTARIO'}</span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-slate-900 truncate">
+                Invitación para colaborar en <span className="underline decoration-slate-300 underline-offset-2">{inv.inventories?.name || 'Inventario'}</span>
               </p>
-              <p className="text-[10px] text-[#616161] tracking-wider mt-0.5">
-                ROL: {inv.role === 'owner' ? 'PROPIETARIO' : 'COLABORADOR'} // ¿Confirmas tu ingreso a este depósito?
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Rol asignado: <span className="font-mono font-medium text-slate-700">{inv.role === 'owner' ? 'Propietario' : 'Colaborador'}</span> · Confirma tu ingreso a este depósito
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
             <button
               onClick={async () => {
                 setProcessingId(inv.id);
@@ -37,9 +37,9 @@ export const PendingInvitationsBanner: React.FC = () => {
                 setProcessingId(null);
               }}
               disabled={processingId === inv.id}
-              className="flex-1 sm:flex-none min-h-[36px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] text-[#616161] hover:text-[#1E3A5F] text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
+              className="flex-1 sm:flex-none min-h-[36px] px-3.5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-medium transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.97] disabled:opacity-50 cursor-pointer inline-flex items-center justify-center gap-1"
             >
-              <X className="w-3.5 h-3.5 inline mr-1" /> Rechazar
+              <X className="w-3.5 h-3.5" /> Rechazar
             </button>
             <button
               onClick={async () => {
@@ -48,7 +48,7 @@ export const PendingInvitationsBanner: React.FC = () => {
                 setProcessingId(null);
               }}
               disabled={processingId === inv.id}
-              className="flex-1 sm:flex-none min-h-[36px] px-5 rounded-full bg-[#1E3A5F] hover:bg-[#152a45] text-white text-xs uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm"
+              className="flex-1 sm:flex-none min-h-[36px] px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-[background-color,transform] duration-150 active:scale-[0.97] disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
             >
               {processingId === inv.id ? (
                 <>
@@ -56,7 +56,7 @@ export const PendingInvitationsBanner: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <Check className="w-3.5 h-3.5 text-[#E8B4A0]" /> Aceptar Invitación
+                  <Check className="w-3.5 h-3.5 text-emerald-400" /> Aceptar invitación
                 </>
               )}
             </button>

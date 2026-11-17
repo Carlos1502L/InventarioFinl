@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { useIsDesktop } from '../hooks/useDevice';
 import {
   Package,
   ArrowUpRight,
@@ -16,7 +17,112 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Product, Sale } from '../types/database';
 import { supabase, formatCurrency, formatDate, formatStockDisplay, formatCleanDecimal } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
+const BarcodeScannerModal = React.lazy(() => import('../components/modals/BarcodeScannerModal').then(m => ({ default: m.BarcodeScannerModal })));
+import { isSaleRejected } from '../lib/supabase';
+import { InventoryCardsSkeleton } from '../components/ui/Skeleton';
+import { LazyModalSlot } from '../components/common/LazyModalSlot';
+import { useBackdropDismiss, useLatestValue, useModalEscape, useModalMotion } from '../components/modals/modalMotion';
+
+interface QuickConsultModalProps {
+  data: { found: boolean; product?: Product; code: string } | null;
+  currency?: string;
+  onClose: () => void;
+}
+
+const QuickConsultModal: React.FC<QuickConsultModalProps> = ({ data, currency, onClose }) => {
+  const activeData = useLatestValue(data);
+  const { backdropMotion, panelMotion } = useModalMotion();
+  const backdropDismiss = useBackdropDismiss(onClose, Boolean(data));
+  useModalEscape(Boolean(data), onClose);
+
+  return (
+    <AnimatePresence>
+      {data && activeData && (
+        <motion.div
+          {...backdropMotion}
+          {...backdropDismiss}
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm"
+        >
+          <motion.div
+            {...panelMotion}
+            onClick={(e) => e.stopPropagation()}
+            className="mobile-dark-modal w-full max-w-sm rounded-[1.75rem] max-h-[85vh] flex flex-col overflow-hidden bg-white shadow-2xl"
+          >
+            <div className="bg-white px-5 pt-5 pb-3.5 border-b border-neutral-100 shrink-0 relative">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-lg font-bold tracking-tight text-neutral-900 truncate">
+                    {activeData.found && activeData.product
+                      ? activeData.product.name
+                      : 'Producto no existente'}
+                  </h3>
+                  <p className="text-xs text-neutral-400 font-normal mt-0.5">
+                    Consulta rápida · Código {activeData.code}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-500 hover:text-neutral-900 flex items-center justify-center flex-shrink-0"
+                  aria-label="Cerrar"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white px-5 py-4 pb-6 overflow-y-auto flex-1 overscroll-contain">
+              {activeData.found && activeData.product ? (
+                <div>
+                  <div className="divide-y divide-neutral-100">
+                    <div className="py-3.5 flex items-center justify-between border-b border-neutral-100">
+                      <span className="text-xs font-semibold text-neutral-700">
+                        Precio unitario
+                      </span>
+                      <span className="text-base font-bold text-neutral-900 tabular-nums">
+                        {formatCurrency(activeData.product.price, currency)}
+                      </span>
+                    </div>
+
+                    <div className="py-3.5 flex items-center justify-between border-b border-neutral-100">
+                      <span className="text-xs font-semibold text-neutral-700">
+                        Cantidad disponible
+                      </span>
+                      <span className="text-base font-bold text-neutral-900 tabular-nums">
+                        {formatStockDisplay(activeData.product)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full py-3.5 bg-neutral-950 text-white font-semibold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-transform mt-4 mb-2"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-neutral-600 py-3.5 border-b border-neutral-100 leading-relaxed">
+                    El código <span className="font-mono font-semibold text-neutral-900">{activeData.code}</span> no se encuentra registrado en este inventario.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full py-3.5 bg-neutral-950 text-white font-semibold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-transform mt-4 mb-2"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
 
 interface HomePageProps {
   products: Product[];
@@ -28,6 +134,8 @@ interface HomePageProps {
   onOpenCreateModal: () => void;
 }
 
+const HomeDesktopView = React.lazy(() => import('./desktop/HomeDesktopView'));
+
 export const HomePage: React.FC<HomePageProps> = ({
   products,
   onNavigateToStock,
@@ -38,6 +146,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onOpenCreateModal
 }) => {
   const { currentInventory, inventories, selectInventory, user, profile } = useAuth();
+  const isDesktop = useIsDesktop();
   const isBusiness = currentInventory?.inventory_type !== 'PERSONAL';
   const [recentSales, setRecentSales] = useState<Sale[]>([]);
   const [loadingSales, setLoadingSales] = useState(false);
@@ -197,15 +306,18 @@ export const HomePage: React.FC<HomePageProps> = ({
     setPeekCardId(null);
   }, [currentInventory?.id]);
 
-  // Construcción de las tarjetas apiladas (Apple Wallet Card Stack)
+  // Construcción de las tarjetas apiladas (Apple Wallet Card Stack) con estilo Glassmorphism
   const walletCards = useMemo(() => {
     const themes = [
-      'bg-neutral-900 border border-neutral-800',
-      'bg-neutral-800 border border-neutral-700/90',
-      'bg-zinc-800 border border-zinc-700/90'
+      // Glassmorphism 1: Frost Ice con borde translúcido y relieve luminoso
+      'bg-white/[0.09] backdrop-blur-2xl border border-white/20 shadow-[0_16px_36px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.35),inset_0_-1px_1px_rgba(0,0,0,0.2)]',
+      // Glassmorphism 2: Frost Cobalt con halo sutil zafiro
+      'bg-sky-500/[0.09] backdrop-blur-2xl border border-sky-300/25 shadow-[0_16px_36px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.35),inset_0_-1px_1px_rgba(0,0,0,0.2)]',
+      // Glassmorphism 3: Frost Emerald con halo sutil esmeralda
+      'bg-emerald-500/[0.09] backdrop-blur-2xl border border-emerald-300/25 shadow-[0_16px_36px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.35),inset_0_-1px_1px_rgba(0,0,0,0.2)]'
     ];
 
-    const list = inventories.length > 0 ? inventories : currentInventory ? [currentInventory] : [];
+    const list = inventories && inventories.length > 0 ? inventories : currentInventory ? [currentInventory] : [];
     const mapped = list.map((inv, idx) => {
       const isActive = inv.id === currentInventory?.id;
       const summary = isActive
@@ -247,6 +359,51 @@ export const HomePage: React.FC<HomePageProps> = ({
   const visibleStackCards = useMemo(() => walletCards.slice(0, 2), [walletCards]);
   const hasMultipleCards = visibleStackCards.length > 1;
 
+  if (isDesktop) {
+    return (
+      <div className="hidden md:block">
+        <Suspense
+          fallback={
+            <div className="p-8 text-center text-xs font-mono text-[#616161]">
+              CARGANDO RESUMEN DE ESCRITORIO...
+            </div>
+          }
+        >
+          <HomeDesktopView
+            metrics={metrics}
+            onQuickScan={onQuickScan}
+            onOpenCreateModal={onOpenCreateModal}
+            onNavigateToStock={onNavigateToStock}
+            onNavigateToSales={onNavigateToSales}
+            onNavigateToHistory={onNavigateToHistory}
+            onSelectProduct={onSelectProduct}
+            isBusiness={isBusiness}
+            loadingSales={loadingSales}
+            recentSales={recentSales}
+            recentProducts={recentProducts}
+            currentInventory={currentInventory}
+          />
+        </Suspense>
+
+        <LazyModalSlot open={homeScannerOpen}>
+          <BarcodeScannerModal
+            isOpen={homeScannerOpen}
+            onClose={() => setHomeScannerOpen(false)}
+            onScanSuccess={handleHomeQuickConsult}
+            title="Consulta Rápida de Producto"
+            instructions="Escanea el código de barras o QR para consultar precio y disponibilidad."
+          />
+        </LazyModalSlot>
+
+        <QuickConsultModal
+          data={consultModalData}
+          currency={currentInventory?.currency}
+          onClose={() => setConsultModalData(null)}
+        />
+      </div>
+    );
+  }
+
   return (
     <>
       {/* =========================================================
@@ -254,17 +411,21 @@ export const HomePage: React.FC<HomePageProps> = ({
           Visible únicamente en dispositivos móviles (< 768px / md:hidden)
          ========================================================= */}
       <div
-        className="md:hidden fixed inset-0 h-[100dvh] max-h-[100dvh] w-full flex flex-col overflow-hidden bg-white text-neutral-900"
+        className="block md:hidden fixed inset-0 h-[100dvh] max-h-[100dvh] w-full flex flex-col overflow-hidden bg-white text-neutral-900"
         onClick={() => {
           if (peekCardId) setPeekCardId(null);
         }}
       >
         
-        {/* CAPA 1: Header Oscuro Principal (Fijo / shrink-0) */}
-        <header className="shrink-0 bg-neutral-950 text-white rounded-b-[2.5rem] z-20 select-none px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-6 transition-all duration-300">
+        {/* CAPA 1: Header Oscuro Principal (Fijo / shrink-0) con Iluminación Ambiental Glassmorphism */}
+        <header className="shrink-0 bg-neutral-950 text-white rounded-b-[2.5rem] z-20 select-none px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-6 transition-all duration-300 relative overflow-hidden">
+          {/* Orbes de luz ambiental de fondo que potencian la refracción del Glassmorphism */}
+          <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full bg-sky-500/20 blur-3xl pointer-events-none" />
+          <div className="absolute top-1/4 -left-12 w-56 h-56 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-8 right-1/4 w-48 h-48 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
           
           {/* Fila superior: Bienvenida + Correo y Acciones mínimas (Cámara y +) */}
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 relative z-10">
             <div className="min-w-0">
               <h1 className="text-lg font-semibold tracking-tight text-white truncate">
                 Hola {displayName}
@@ -280,9 +441,9 @@ export const HomePage: React.FC<HomePageProps> = ({
                 onClick={() => setHomeScannerOpen(true)}
                 aria-label="Consulta rápida por código de barras o QR"
                 title="Consulta rápida de producto"
-                className="w-10 h-10 rounded-full bg-neutral-800/70 hover:bg-neutral-800 text-neutral-200 flex items-center justify-center transition-colors active:scale-95"
+                className="w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white flex items-center justify-center transition-colors active:scale-95 shadow-xs cursor-pointer"
               >
-                <Camera className="w-4 h-4 stroke-[1.75]" />
+                <Camera className="w-4 h-4 stroke-[1.75] text-white" />
               </button>
               <button
                 type="button"
@@ -302,7 +463,10 @@ export const HomePage: React.FC<HomePageProps> = ({
               hasMultipleCards ? 'mt-12' : 'mt-6'
             } transition-all duration-300`}
           >
-            {visibleStackCards.map((card, stackIndex) => {
+            {visibleStackCards.length === 0 ? (
+              <InventoryCardsSkeleton />
+            ) : (
+              visibleStackCards.map((card, stackIndex) => {
               const isFront = stackIndex === 0;
               const isPeeking = !isFront && peekCardId === card.id;
 
@@ -340,30 +504,33 @@ export const HomePage: React.FC<HomePageProps> = ({
                   }}
                   className={`absolute inset-0 ${card.tema} rounded-3xl px-5 ${
                     isFront ? 'pt-4 pb-5' : 'pt-2.5 pb-5'
-                  } shadow-2xl select-none transition-all duration-300 ease-out flex flex-col justify-between ${
+                  } shadow-2xl select-none transition-all duration-300 ease-out flex flex-col justify-between overflow-hidden ${
                     isFront
-                      ? 'opacity-100 brightness-100 cursor-default'
+                      ? 'opacity-100 brightness-100 cursor-default ring-1 ring-white/25'
                       : isPeeking
-                        ? 'opacity-95 brightness-95 cursor-pointer ring-1 ring-white/25'
-                        : 'opacity-80 brightness-75 hover:opacity-90 cursor-pointer'
+                        ? 'opacity-95 brightness-100 cursor-pointer ring-1 ring-white/40 shadow-[0_20px_45px_rgba(0,0,0,0.6)]'
+                        : 'opacity-85 brightness-90 hover:opacity-95 cursor-pointer'
                   }`}
                 >
+                  {/* Reflejo especular diagonal característico de cristal pulido (Glass Specular Sheen) */}
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/[0.14] via-transparent to-transparent pointer-events-none" />
+
                   {/* Fila superior de la tarjeta: Punto indicador Online/Offline + Nombre del inventario + Chip de Tipo */}
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3 relative z-10">
                     <div className="flex items-center gap-2 min-w-0">
                       <span
                         title={isOnline ? 'En línea' : 'Sin conexión (Offline)'}
                         className={`w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-300 ${
                           isOnline
                             ? isFront
-                              ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
+                              ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]'
                               : isPeeking
-                                ? 'bg-emerald-400'
-                                : 'bg-emerald-400/70'
-                            : 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)] animate-pulse'
+                                ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
+                                : 'bg-emerald-400/80'
+                            : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)] animate-pulse'
                         }`}
                       />
-                      <span className="text-xs font-semibold text-white truncate tracking-wide">
+                      <span className="text-xs font-semibold text-white truncate tracking-wide drop-shadow-sm">
                         {card.nombre}
                       </span>
                       {!isOnline && (
@@ -374,10 +541,10 @@ export const HomePage: React.FC<HomePageProps> = ({
                     </div>
 
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider flex-shrink-0 ${
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider flex-shrink-0 backdrop-blur-md shadow-xs ${
                         card.tipo === 'PERSONAL'
-                          ? 'bg-sky-400/15 text-sky-300 border border-sky-400/20'
-                          : 'bg-white/10 text-neutral-200 border border-white/10'
+                          ? 'bg-sky-400/20 text-sky-200 border border-sky-400/30'
+                          : 'bg-white/10 text-white/90 border border-white/20'
                       }`}
                     >
                       {card.tipo === 'PERSONAL' ? (
@@ -395,22 +562,22 @@ export const HomePage: React.FC<HomePageProps> = ({
                   </div>
 
                   {/* Valuación de Stock del Depósito */}
-                  <div className="my-auto pt-1">
-                    <span className="text-[11px] text-neutral-400 font-normal tracking-wide block">
+                  <div className="my-auto pt-1 relative z-10">
+                    <span className="text-[11px] text-neutral-300/80 font-normal tracking-wide block">
                       Valuación de Stock
                     </span>
-                    <p className="text-3xl font-semibold tracking-tight text-white tabular-nums mt-0.5">
+                    <p className="text-3xl font-semibold tracking-tight text-white tabular-nums mt-0.5 drop-shadow-sm">
                       {formatCurrency(card.valuacion, card.currency)}
                     </p>
                   </div>
 
                   {/* Pie de Tarjeta: Alerta de Stock Bajo y Total de SKUs / Existencias */}
-                  <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-3">
+                  <div className="pt-3 border-t border-white/[0.14] flex items-center justify-between gap-3 relative z-10">
                     <div>
-                      <span className="text-[11px] text-neutral-400 block mb-1">
+                      <span className="text-[11px] text-neutral-300/80 block mb-1">
                         Stock Bajo / Alerta
                       </span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-semibold tracking-wider uppercase">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 backdrop-blur-md text-amber-300 border border-amber-400/30 text-[10px] font-semibold tracking-wider uppercase shadow-xs">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                         {card.alertaCount} {card.alertaCount === 1 ? 'ÍTEM' : 'ÍTEMS'}
                       </span>
@@ -418,22 +585,22 @@ export const HomePage: React.FC<HomePageProps> = ({
 
                     <div className="text-right space-y-0.5">
                       <p className="text-xs text-neutral-300">
-                        <span className="font-semibold text-white tabular-nums">
+                        <span className="font-semibold text-white tabular-nums drop-shadow-sm">
                           {card.skusCount.toString().padStart(4, '0')}
                         </span>{' '}
-                        <span className="text-neutral-400">Referencias activas</span>
+                        <span className="text-neutral-300/80">Referencias activas</span>
                       </p>
                       <p className="text-xs text-neutral-300">
-                        <span className="font-semibold text-white tabular-nums">
+                        <span className="font-semibold text-white tabular-nums drop-shadow-sm">
                           {formatCleanDecimal(card.totalUnits, 2)}
                         </span>{' '}
-                        <span className="text-neutral-400">Existencias físicas</span>
+                        <span className="text-neutral-300/80">Existencias físicas</span>
                       </p>
                     </div>
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         </header>
 
@@ -466,8 +633,19 @@ export const HomePage: React.FC<HomePageProps> = ({
                 {/* SUB-CAPA 2B: Contenedor de Datos con Scroll Aislado */}
                 <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 divide-y divide-neutral-100 pb-28">
                   {loadingSales ? (
-                    <div className="py-10 text-center text-xs text-neutral-400">
-                      Cargando transacciones...
+                    <div className="py-2 space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="py-3 flex items-center justify-between gap-3 animate-pulse">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-800 shrink-0" />
+                            <div className="space-y-1.5 min-w-0 flex-1">
+                              <div className="w-32 h-4 rounded bg-neutral-200 dark:bg-neutral-800" />
+                              <div className="w-20 h-3 rounded bg-neutral-100 dark:bg-neutral-850" />
+                            </div>
+                          </div>
+                          <div className="w-16 h-5 rounded bg-neutral-200 dark:bg-neutral-800 shrink-0" />
+                        </div>
+                      ))}
                     </div>
                   ) : recentSales.length === 0 ? (
                     <div className="py-10 text-center text-xs text-neutral-400">
@@ -508,7 +686,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                           </div>
 
                           <div className="text-right flex-shrink-0">
-                            <span className="text-sm font-normal text-neutral-900 tabular-nums">
+                            <span className={`text-sm font-normal tabular-nums ${isSaleRejected(sale) ? 'text-red-600' : 'text-emerald-600'}`}>
                               {formatCurrency(sale.total_amount, currentInventory?.currency)}
                             </span>
                           </div>
@@ -591,421 +769,25 @@ export const HomePage: React.FC<HomePageProps> = ({
         </section>
       </div>
 
-      {/* =========================================================
-          VISTA DE ESCRITORIO (>= 768px / hidden md:block)
-         ========================================================= */}
-      <div className="hidden md:block space-y-6 pb-28 lg:pb-16 max-w-[1440px] mx-auto text-[#1E3A5F]">
-      
-      {/* =========================================================
-          1. CABECERA & BLOQUE DE KPIS (EXCLUSIVO DEL HOME)
-         ========================================================= */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 sm:p-8 shadow-sm">
-        {/* Eyebrow y Título Principal */}
-        <div className="border-b border-[#E5E7EB] pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#1E3A5F] inline-block" />
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#616161]">
-                INVENTORY MANIFEST // SPECIFICATION SHEET
-              </p>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1E3A5F] uppercase">
-              RESUMEN GENERAL & OPERACIONES
-            </h1>
-          </div>
-
-          {/* Accesos rápidos en píldora */}
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <button
-              onClick={onQuickScan}
-              className="min-h-[40px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors bg-white"
-            >
-              <Camera className="w-3.5 h-3.5 stroke-[1.5]" />
-              <span>ESCANEAR</span>
-            </button>
-            <button
-              onClick={onOpenCreateModal}
-              className="min-h-[40px] px-5 rounded-full bg-[#1E3A5F] hover:bg-[#172E4C] text-white text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-[0.98] shadow-sm"
-            >
-              <Plus className="w-4 h-4 stroke-[1.5]" />
-              <span>NUEVO ÍTEM</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Retícula de KPIs 4 columnas en escritorio */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-0 border-t border-[#E5E7EB] sm:divide-x divide-[#E5E7EB] font-mono mt-4 pt-3 sm:pt-0">
-          
-          {/* KPI 1: TOTAL SKUS REGISTRADOS */}
-          <div className="p-3 sm:p-5 bg-[#F8F9FA] sm:bg-transparent rounded-xl sm:rounded-none border sm:border-0 border-[#E5E7EB] flex flex-col justify-between">
-            <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-[0.12em] sm:tracking-[0.15em] block">
-              TOTAL SKUS REGISTRADOS
-            </span>
-            <div className="mt-2 sm:mt-3">
-              <span className="text-2xl sm:text-4xl font-bold tabular-nums text-[#1E3A5F] block tracking-tight">
-                {metrics.totalSkus.toString().padStart(4, '0')}
-              </span>
-              <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-wider block mt-1 font-sans">
-                REFERENCIAS ACTIVAS
-              </span>
-            </div>
-          </div>
-
-          {/* KPI 2: UNIDADES DISPONIBLES */}
-          <div className="p-3 sm:p-5 bg-[#F8F9FA] sm:bg-transparent rounded-xl sm:rounded-none border sm:border-0 border-[#E5E7EB] flex flex-col justify-between">
-            <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-[0.12em] sm:tracking-[0.15em] block">
-              UNIDADES DISPONIBLES
-            </span>
-            <div className="mt-2 sm:mt-3">
-              <span className="text-2xl sm:text-4xl font-bold tabular-nums text-[#1E3A5F] block tracking-tight">
-                {formatCleanDecimal(metrics.totalUnits, 2)} <span className="text-xs sm:text-base text-[#616161] font-normal">STOCK</span>
-              </span>
-              <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-wider block mt-1 font-sans">
-                EXISTENCIAS FÍSICAS
-              </span>
-            </div>
-          </div>
-
-          {/* KPI 3: STOCK BAJO / ALERTA (Con badge píldora en fondo Nude #E8B4A0) */}
-          <div className="p-3 sm:p-5 bg-[#F8F9FA] sm:bg-transparent rounded-xl sm:rounded-none border sm:border-0 border-[#E5E7EB] flex flex-col justify-between">
-            <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-[0.12em] sm:tracking-[0.15em] block">
-              STOCK BAJO / ALERTA
-            </span>
-            <div className="mt-2 sm:mt-3">
-              <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-mono font-bold tracking-wider ${
-                  metrics.lowStockCount > 0
-                    ? 'bg-[#E8B4A0] text-[#1E3A5F] border border-[#1E3A5F]/15'
-                    : 'border border-[#E5E7EB] text-[#1E3A5F]'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${
-                    metrics.lowStockCount > 0 ? 'bg-[#1E3A5F] animate-pulse' : 'bg-[#E5E7EB]'
-                  }`} />
-                  {metrics.lowStockCount} {metrics.lowStockCount === 1 ? 'ÍTEM' : 'ÍTEMS'}
-                </span>
-              </div>
-              <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-wider block mt-2 font-sans">
-                POR REABASTECER
-              </span>
-            </div>
-          </div>
-
-          {/* KPI 4: VALUACIÓN DE STOCK */}
-          <div className="p-3 sm:p-5 bg-[#F8F9FA] sm:bg-transparent rounded-xl sm:rounded-none border sm:border-0 border-[#E5E7EB] flex flex-col justify-between">
-            <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-[0.12em] sm:tracking-[0.15em] block">
-              VALUACIÓN DE STOCK
-            </span>
-            <div className="mt-2 sm:mt-3">
-              <span className="text-xl sm:text-4xl font-bold tabular-nums text-[#1E3A5F] block tracking-tight truncate">
-                {formatCurrency(metrics.totalValue, currentInventory?.currency)}
-              </span>
-              <span className="text-[9px] sm:text-[10px] text-[#616161] uppercase tracking-wider block mt-1 font-sans">
-                VALOR EN DEPÓSITO
-              </span>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* =========================================================
-          2. ACCESOS DIRECTOS // NAVEGACIÓN RÁPIDA (SOLO DESKTOP >= lg)
-         ========================================================= */}
-      <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
-        <button
-          onClick={onNavigateToStock}
-          className="p-5 border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white rounded-2xl flex items-center justify-between text-left transition-all group shadow-sm"
-        >
-          <div>
-            <span className="text-[10px] text-[#E8B4A0] uppercase tracking-[0.15em] block font-semibold">
-              MÓDULO DE STOCK
-            </span>
-            <span className="text-sm font-bold uppercase tracking-wide text-[#1E3A5F] block mt-0.5 group-hover:underline">
-              VER CATÁLOGO COMPLETO // STOCK
-            </span>
-          </div>
-          <div className="w-9 h-9 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] group-hover:bg-[#1E3A5F] group-hover:text-white flex items-center justify-center transition-colors">
-            <ArrowUpRight className="w-4 h-4" />
-          </div>
-        </button>
-
-        {isBusiness && onNavigateToSales && (
-          <button
-            onClick={onNavigateToSales}
-            className="p-5 border border-[#E5E7EB] hover:border-[#1E3A5F] bg-white rounded-2xl flex items-center justify-between text-left transition-all group shadow-sm"
-          >
-            <div>
-              <span className="text-[10px] text-[#E8B4A0] uppercase tracking-[0.15em] block font-semibold">
-                TERMINAL DE COBRO
-              </span>
-              <span className="text-sm font-bold uppercase tracking-wide text-[#1E3A5F] block mt-0.5 group-hover:underline">
-                NUEVA VENTA // REGISTRO RÁPIDO
-              </span>
-            </div>
-            <div className="w-9 h-9 rounded-full bg-[#F8F9FA] border border-[#E5E7EB] group-hover:bg-[#1E3A5F] group-hover:text-white flex items-center justify-center transition-colors">
-              <ShoppingCart className="w-4 h-4" />
-            </div>
-          </button>
-        )}
-      </div>
-
-      {/* =========================================================
-          3. ACTIVIDAD RECIENTE (DESKTOP)
-         ========================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* LISTA A: ÚLTIMAS VENTAS / SALIDAS (Solo en inventarios tipo NEGOCIO) */}
-        {isBusiness && (
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-sm">
-            <div>
-              <div className="flex items-center justify-between pb-3.5 border-b border-[#E5E7EB] font-mono">
-                <div className="flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-[#1E3A5F]" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
-                    ÚLTIMAS VENTAS / SALIDAS
-                  </h3>
-                </div>
-                <button
-                  onClick={onNavigateToHistory}
-                  className="text-[10px] uppercase tracking-wider text-[#616161] hover:text-[#1E3A5F] transition-colors"
-                >
-                  VER TODO &gt;
-                </button>
-              </div>
-
-              {/* Manifiesto de filas en texto puro con bordes de 1px */}
-              <div className="divide-y divide-[#E5E7EB] font-mono text-xs">
-                {loadingSales ? (
-                  <div className="py-8 text-center text-[#616161] uppercase text-xs">
-                    CARGANDO MANIFIESTO DE TRANSACCIONES...
-                  </div>
-                ) : recentSales.length === 0 ? (
-                  <div className="py-8 text-center text-[#616161] uppercase text-xs">
-                    SIN REGISTROS DE VENTAS RECIENTES
-                  </div>
-                ) : (
-                  recentSales.map((sale) => {
-                    const firstItem = sale.items?.[0]?.product_name || 'MERCANCÍA';
-                    const summaryText = sale.items && sale.items.length > 1
-                      ? `${sale.items[0].quantity}X ${firstItem} (+${sale.items.length - 1} MÁS)`
-                      : `${sale.items?.[0]?.quantity || 1}X ${firstItem}`;
-
-                    const receiptCode = `TRX-${sale.id.slice(0, 8).toUpperCase()}`;
-
-                    return (
-                      <div
-                        key={sale.id}
-                        onClick={onNavigateToHistory}
-                        className="py-3 hover:bg-[#F8F9FA] px-1 rounded-lg transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-1 group"
-                      >
-                        <div className="min-w-0 pr-2">
-                          <span className="text-[11px] text-[#1E3A5F] uppercase tracking-wider block truncate group-hover:underline">
-                            <span className="font-mono text-[#616161]">{receiptCode} //</span> <span className="font-bold text-[#1E3A5F]">{summaryText.toUpperCase()}</span>
-                          </span>
-                          <span className="text-[10px] text-[#616161] uppercase tracking-widest block mt-0.5">
-                            {formatDate(sale.created_at)} // MÉTODO: {sale.payment_method?.toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <span className="text-xs sm:text-sm font-bold tabular-nums text-[#1E3A5F] block tracking-tight">
-                            {formatCurrency(sale.total_amount, currentInventory?.currency)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-[#E5E7EB] mt-3">
-              <button
-                onClick={onNavigateToHistory}
-                className="w-full min-h-[38px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors bg-white"
-              >
-                <span>IR AL HISTORIAL DE TRANSACCIONES</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* LISTA B: ÚLTIMOS ÍTEMS AÑADIDOS */}
-        <div
-          className={`bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 flex-col justify-between shadow-sm ${
-            isBusiness ? 'hidden lg:flex' : 'flex lg:col-span-2'
-          }`}
-        >
-          <div>
-            <div className="flex items-center justify-between pb-3.5 border-b border-[#E5E7EB] font-mono">
-              <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-[#1E3A5F]" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F]">
-                  ÚLTIMOS ÍTEMS AÑADIDOS
-                </h3>
-              </div>
-              <button
-                onClick={onNavigateToStock}
-                className="text-[10px] uppercase tracking-wider text-[#616161] hover:text-[#1E3A5F] transition-colors"
-              >
-                VER CATÁLOGO &gt;
-              </button>
-            </div>
-
-            {/* Manifiesto de filas en texto puro con bordes de 1px */}
-            <div className="divide-y divide-[#E5E7EB] font-mono text-xs">
-              {recentProducts.length === 0 ? (
-                <div className="py-8 text-center text-[#616161] uppercase text-xs">
-                  SIN REGISTROS EN CATÁLOGO
-                </div>
-              ) : (
-                recentProducts.map((prod) => {
-                  return (
-                    <div
-                      key={prod.id}
-                      onClick={() => onSelectProduct(prod)}
-                      className="py-3 hover:bg-[#F8F9FA] px-1 rounded-lg transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-1 group"
-                    >
-                      <div className="min-w-0 pr-2">
-                        <span className="text-[11px] text-[#1E3A5F] uppercase tracking-wider block truncate group-hover:underline">
-                          <span className="font-mono text-[#616161]">REF-{prod.code} //</span> <span className="font-bold text-[#1E3A5F]">{prod.name.toUpperCase()}</span>
-                        </span>
-                        <span className="text-[10px] text-[#616161] uppercase tracking-widest block mt-0.5">
-                          {formatDate(prod.created_at)} // CAT: {prod.categories?.name?.toUpperCase() || 'GENERAL'}
-                        </span>
-                      </div>
-                      <div className="text-right flex-shrink-0 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2">
-                        <span className="text-xs font-bold tabular-nums text-[#1E3A5F]">
-                          +{formatStockDisplay(prod)}
-                        </span>
-                        <span className="text-[10px] text-[#616161] tabular-nums font-semibold">
-                          {formatCurrency(prod.price, currentInventory?.currency)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-[#E5E7EB] mt-3">
-            <button
-              onClick={onNavigateToStock}
-              className="w-full min-h-[38px] px-4 rounded-full border border-[#E5E7EB] hover:border-[#1E3A5F] text-[#1E3A5F] text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors bg-white"
-            >
-              <span>EXPLORAR CATÁLOGO COMPLETO</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-      </div>
-
-      </div>
-
       {/* Escáner de Consulta Rápida (Exclusivo Home Mobile) */}
-      <BarcodeScannerModal
-        isOpen={homeScannerOpen}
-        onClose={() => setHomeScannerOpen(false)}
-        onScanSuccess={handleHomeQuickConsult}
-        title="Consulta Rápida de Producto"
-        instructions="Escanea el código de barras o QR para consultar precio y disponibilidad."
-      />
+      <LazyModalSlot open={homeScannerOpen}>
+        <BarcodeScannerModal
+          isOpen={homeScannerOpen}
+          onClose={() => setHomeScannerOpen(false)}
+          onScanSuccess={handleHomeQuickConsult}
+          title="Consulta Rápida de Producto"
+          instructions="Escanea el código de barras o QR para consultar precio y disponibilidad."
+        />
+      </LazyModalSlot>
 
       {/* Modal / Tarjeta Flotante de Resultado de Consulta Rápida */}
-      <AnimatePresence>
-        {consultModalData && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setConsultModalData(null)}
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ scale: 0.94, opacity: 0, y: 10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.96, opacity: 0, y: 8 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              onClick={(e) => e.stopPropagation()}
-              className="mobile-dark-modal w-full max-w-sm rounded-[1.75rem] max-h-[85vh] flex flex-col overflow-hidden bg-white shadow-2xl"
-            >
-              {/* Cabecera Limpia */}
-              <div className="bg-white px-5 pt-5 pb-3.5 border-b border-neutral-100 shrink-0 relative">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="text-lg font-bold tracking-tight text-neutral-900 truncate">
-                      {consultModalData.found && consultModalData.product
-                        ? consultModalData.product.name
-                        : 'Producto no existente'}
-                    </h3>
-                    <p className="text-xs text-neutral-400 font-normal mt-0.5">
-                      Consulta rápida · Código {consultModalData.code}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setConsultModalData(null)}
-                    className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-500 hover:text-neutral-900 flex items-center justify-center flex-shrink-0"
-                    aria-label="Cerrar"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Bloque 2: Cuerpo Operativo Blanco Puro */}
-              <div className="bg-white px-5 py-4 pb-6 overflow-y-auto flex-1 overscroll-contain">
-                {consultModalData.found && consultModalData.product ? (
-                  <div>
-                    <div className="divide-y divide-neutral-100">
-                      <div className="py-3.5 flex items-center justify-between border-b border-neutral-100">
-                        <span className="text-xs font-semibold text-neutral-700">
-                          Precio unitario
-                        </span>
-                        <span className="text-base font-bold text-neutral-900 tabular-nums">
-                          {formatCurrency(consultModalData.product.price, currentInventory?.currency)}
-                        </span>
-                      </div>
-
-                      <div className="py-3.5 flex items-center justify-between border-b border-neutral-100">
-                        <span className="text-xs font-semibold text-neutral-700">
-                          Cantidad disponible
-                        </span>
-                        <span className="text-base font-bold text-neutral-900 tabular-nums">
-                          {formatStockDisplay(consultModalData.product)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setConsultModalData(null)}
-                      className="w-full py-3.5 bg-neutral-950 text-white font-semibold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-transform mt-4 mb-2"
-                    >
-                      Cerrar
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-sm text-neutral-600 py-3.5 border-b border-neutral-100 leading-relaxed">
-                      El código <span className="font-mono font-semibold text-neutral-900">{consultModalData.code}</span> no se encuentra registrado en este inventario.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setConsultModalData(null)}
-                      className="w-full py-3.5 bg-neutral-950 text-white font-semibold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-transform mt-4 mb-2"
-                    >
-                      Cerrar
-                    </button>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <QuickConsultModal
+        data={consultModalData}
+        currency={currentInventory?.currency}
+        onClose={() => setConsultModalData(null)}
+      />
     </>
   );
 };
+
+export default HomePage;

@@ -3,15 +3,193 @@ import { supabaseAdmin } from '../config/supabase.js';
 import { requireAuth, verifyTenantAccess } from '../middlewares/auth.js';
 import { validate } from '../middlewares/validate.js';
 import {
+  exportBackupSchema,
   exportAndSendBackupSchema,
   saveBackupSettingsSchema,
-  restoreBackupSchema
+  restoreBackupSchema,
+  recalculatePricesSchema,
+  sendVerificationCodeSchema,
+  verifyCodeSchema
 } from '../schemas/backupSchemas.js';
 import { backupService } from '../services/backupService.js';
 import { emailService } from '../services/emailService.js';
+import { otpService } from '../services/otpService.js';
 import { calculateNextRunDate } from '../services/backupScheduler.js';
 
 const router = express.Router();
+
+/**
+ * POST /api/backup/send-verification-code
+ * Envía un código OTP numérico de 6 dígitos al correo destino con expiración de 10 minutos.
+ * Restricción estricta: Solo el Propietario (Owner) del inventario.
+ */
+router.post(
+  '/send-verification-code',
+  requireAuth,
+  validate(sendVerificationCodeSchema, 'body'),
+  verifyTenantAccess({ source: 'body', key: 'inventory_id', requiredRole: 'owner' }),
+  async (req, res, next) => {
+    try {
+      const { inventory_id, email } = req.body;
+      const invName = req.inventory?.name || 'Inventario';
+      const cleanEmail = email.trim().toLowerCase();
+
+      // Generar código OTP de 6 dígitos criptográficamente seguro
+      const code = otpService.generateOtp(inventory_id, cleanEmail);
+
+      // Enviar el código al correo mediante emailService
+      const emailResult = await emailService.sendOtpEmail({
+        to: cleanEmail,
+        code,
+        inventoryName: invName
+      });
+
+      if (!emailResult.success) {
+        return res.status(500).json({
+          success: false,
+          code: 'EMAIL_SEND_FAILED',
+          message: emailResult.error || 'No se pudo enviar el código de verificación por correo.',
+          emailResult
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: `Código de verificación de 6 dígitos enviado exitosamente a ${cleanEmail}.`
+      });
+    } catch (err) {
+      console.error('❌ [send-verification-code] Error despachando OTP:', err);
+      return res.status(500).json({
+        success: false,
+        code: 'OTP_DISPATCH_ERROR',
+        message: err.message || 'Error al enviar el código de verificación.',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/backup/verify-code
+ * Valida el código OTP de 6 dígitos y emite un token de verificación firmado.
+ * Restricción estricta: Solo el Propietario (Owner) del inventario.
+ */
+router.post(
+  '/verify-code',
+  requireAuth,
+  validate(verifyCodeSchema, 'body'),
+  verifyTenantAccess({ source: 'body', key: 'inventory_id', requiredRole: 'owner' }),
+  async (req, res, next) => {
+    try {
+      const { inventory_id, email, code } = req.body;
+      const cleanEmail = email.trim().toLowerCase();
+
+      const result = otpService.verifyOtp(inventory_id, cleanEmail, code);
+
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          code: 'INVALID_OR_EXPIRED_CODE',
+          message: result.message
+        });
+      }
+
+      // Persistir correo verificado en la configuración para sincronización entre dispositivos (móvil y web)
+      try {
+        await supabaseAdmin
+          .from('inventory_backup_settings')
+          .upsert(
+            {
+              inventory_id,
+              target_email: cleanEmail,
+              updated_at: new Date().toISOString()
+            },
+            { onConflict: 'inventory_id' }
+          );
+      } catch (upsertErr) {
+        console.warn('⚠️ [verify-code] No se pudo persistir en settings:', upsertErr.message);
+      }
+
+      return res.json({
+        success: true,
+        verified_email: cleanEmail,
+        verification_token: result.verification_token,
+        message: 'Correo verificado exitosamente.'
+      });
+    } catch (err) {
+      console.error('❌ [verify-code] Error validando OTP:', err);
+      return res.status(500).json({
+        success: false,
+        code: 'OTP_VERIFICATION_ERROR',
+        message: err.message || 'Error al validar el código de verificación.',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/backup/export
+ * Genera y descarga el archivo .json localmente en el cliente sin enviar ningún correo electrónico.
+ * Restricción estricta: Solo el Propietario (Owner) del inventario.
+ */
+router.post(
+  '/export',
+  requireAuth,
+  validate(exportBackupSchema, 'body'),
+  verifyTenantAccess({ source: 'body', key: 'inventory_id', requiredRole: 'owner' }),
+  async (req, res, next) => {
+    // Extender timeout HTTP en Express a 3 minutos para prevenir cortes por red
+    req.setTimeout(180000);
+    res.setTimeout(180000);
+
+    try {
+      const { inventory_id } = req.body;
+      const invName = req.inventory?.name || 'Inventario';
+
+      // 1. Extraer los datos relacionales completos (100% SELECT paralelo - RF-1 y RF-3)
+      const payload = await backupService.exportInventoryData(inventory_id);
+
+      const safeName = invName.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const filename = `backup_${safeName}_${dateStr}.json`;
+
+      // 2. Registrar auditoría con esquema correcto (no bloqueante)
+      try {
+        await supabaseAdmin.from('audit_logs').insert({
+          inventory_id,
+          user_id: req.user?.id || null,
+          user_email: req.user?.email || 'propietario',
+          action_type: 'CREATE',
+          details: `Copia de seguridad descargada directamente (${filename})`,
+          metadata: {
+            filename,
+            products_count: payload.data.products?.length || 0,
+            sales_count: payload.data.sales?.length || 0,
+            download_only: true
+          }
+        });
+      } catch (auditErr) {
+        console.warn('⚠️ [export] No se pudo registrar auditoría:', auditErr.message);
+      }
+
+      return res.json({
+        success: true,
+        message: 'Copia de seguridad exportada exitosamente.',
+        filename,
+        payload
+      });
+    } catch (err) {
+      console.error('❌ [export] Error fatal exportando respaldo:', err);
+      return res.status(500).json({
+        success: false,
+        code: 'BACKUP_EXPORT_ERROR',
+        message: err.message || 'Error al exportar la copia de seguridad.',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+);
 
 /**
  * POST /api/backup/export-and-send
@@ -24,12 +202,26 @@ router.post(
   validate(exportAndSendBackupSchema, 'body'),
   verifyTenantAccess({ source: 'body', key: 'inventory_id', requiredRole: 'owner' }),
   async (req, res, next) => {
-    try {
-      const { inventory_id, target_email } = req.body;
-      const invName = req.inventory?.name || 'Inventario';
-      const cleanEmail = target_email.trim().toLowerCase();
+    // Extender timeout HTTP en Express a 3 minutos
+    req.setTimeout(180000);
+    res.setTimeout(180000);
 
-      // 1. Extraer los datos relacionales completos
+    try {
+      const { inventory_id, verification_token } = req.body;
+      const cleanEmail = (req.body.email || req.body.target_email || '').trim().toLowerCase();
+      const invName = req.inventory?.name || 'Inventario';
+
+      // Validación estricta del token de verificación OTP (RF-4)
+      const tokenCheck = otpService.verifyToken(inventory_id, cleanEmail, verification_token);
+      if (!tokenCheck.valid) {
+        return res.status(403).json({
+          success: false,
+          code: 'OTP_VERIFICATION_REQUIRED',
+          message: tokenCheck.error || 'Se requiere validación previa del correo mediante código OTP.'
+        });
+      }
+
+      // 1. Extraer los datos relacionales completos (100% SELECT paralelo - RF-1 y RF-3)
       const payload = await backupService.exportInventoryData(inventory_id);
       const jsonContent = JSON.stringify(payload, null, 2);
 
@@ -38,44 +230,66 @@ router.post(
       const filename = `backup_${safeName}_${dateStr}.json`;
 
       // 2. Enviar por correo con archivo adjunto
-      const emailResult = await emailService.sendBackupEmail({
-        to: cleanEmail,
-        inventoryName: invName,
-        jsonContent,
-        filename,
-        summary: {
-          products: payload.data.products?.length || 0,
-          locations: payload.data.locations?.length || 0,
-          categories: payload.data.categories?.length || 0,
-          sales: payload.data.sales?.length || 0
-        }
-      });
-
-      // 3. Registrar auditoría
-      await supabaseAdmin.from('audit_logs').insert({
-        inventory_id,
-        user_id: req.user.id,
-        user_email: req.user.email,
-        action: 'BACKUP_EXPORTED_AND_SENT',
-        entity_type: 'BACKUP',
-        metadata: {
-          target_email: cleanEmail,
+      let emailResult = { success: false, mode: 'unknown' };
+      try {
+        emailResult = await emailService.sendBackupEmail({
+          to: cleanEmail,
+          inventoryName: invName,
+          jsonContent,
           filename,
-          products_count: payload.data.products?.length || 0,
-          sales_count: payload.data.sales?.length || 0,
-          email_mode: emailResult.mode
-        }
-      });
+          summary: {
+            products: payload.data.products?.length || 0,
+            locations: payload.data.locations?.length || 0,
+            categories: payload.data.categories?.length || 0,
+            sales: payload.data.sales?.length || 0
+          }
+        });
+      } catch (mailErr) {
+        console.error('❌ [export-and-send] Error enviando correo:', mailErr);
+        emailResult = {
+          success: false,
+          error: mailErr.message,
+          mode: 'error'
+        };
+      }
 
-      res.json({
+      // 3. Registrar auditoría con esquema correcto (no bloqueante)
+      try {
+        await supabaseAdmin.from('audit_logs').insert({
+          inventory_id,
+          user_id: req.user?.id || null,
+          user_email: req.user?.email || cleanEmail,
+          action_type: 'CREATE',
+          details: `Copia de seguridad exportada y enviada a ${cleanEmail}`,
+          metadata: {
+            target_email: cleanEmail,
+            filename,
+            products_count: payload.data.products?.length || 0,
+            sales_count: payload.data.sales?.length || 0,
+            email_mode: emailResult?.mode || 'none'
+          }
+        });
+      } catch (auditErr) {
+        console.warn('⚠️ [export-and-send] No se pudo registrar auditoría:', auditErr.message);
+      }
+
+      // RF-2 Estricto: "Generar y Enviar" NO retorna payload ni causa descargas en el cliente
+      return res.json({
         success: true,
-        message: `Respaldo generado y enviado exitosamente a ${cleanEmail}.`,
-        filename,
-        payload, // Se retorna también para permitir descarga local inmediata si el cliente lo desea
+        emailSent: Boolean(emailResult.success),
+        message: emailResult.success
+          ? `Respaldo enviado exitosamente a ${cleanEmail}.`
+          : `Aviso de correo: ${emailResult.error || 'No se pudo enviar el correo'}`,
         emailResult
       });
     } catch (err) {
-      next(err);
+      console.error('❌ [export-and-send] Error fatal exportando respaldo:', err);
+      return res.status(500).json({
+        success: false,
+        code: 'BACKUP_EXPORT_ERROR',
+        message: err.message || 'Error al exportar la copia de seguridad.',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 );
@@ -103,6 +317,16 @@ router.get(
         throw error;
       }
 
+      // Sincronizar estado de verificación para que persista entre móvil y web
+      const verifiedEntry = otpService.getVerifiedEmail(inventory_id);
+      let verifiedEmail = verifiedEntry?.email || null;
+      let verificationToken = verifiedEntry?.token || null;
+
+      if (!verifiedEmail && data?.target_email) {
+        verifiedEmail = data.target_email;
+        verificationToken = otpService.setVerifiedEmail(inventory_id, data.target_email);
+      }
+
       res.json({
         success: true,
         settings: data || {
@@ -114,10 +338,18 @@ router.get(
           timezone: 'America/Lima',
           last_run_at: null,
           next_run_at: null
-        }
+        },
+        verified_email: verifiedEmail,
+        verification_token: verificationToken
       });
     } catch (err) {
-      next(err);
+      console.error('❌ Error restaurando backup:', err);
+      return res.status(err.statusCode || 400).json({
+        success: false,
+        code: 'RESTORE_ERROR',
+        message: err.message || 'Error al restaurar los datos del inventario.',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 );
@@ -134,8 +366,39 @@ router.post(
   verifyTenantAccess({ source: 'body', key: 'inventory_id', requiredRole: 'owner' }),
   async (req, res, next) => {
     try {
-      const { inventory_id, target_email, is_scheduled, interval_days, execution_time, timezone } = req.body;
+      const { inventory_id, target_email, is_scheduled, interval_days, execution_time, timezone, verification_token } = req.body;
       const cleanEmail = target_email.trim().toLowerCase();
+
+      // Validación de seguridad OTP si la programación está activa
+      if (is_scheduled) {
+        const { data: existing } = await supabaseAdmin
+          .from('inventory_backup_settings')
+          .select('target_email, is_scheduled')
+          .eq('inventory_id', inventory_id)
+          .maybeSingle();
+
+        const emailChanged = !existing || existing.target_email?.toLowerCase() !== cleanEmail;
+        const wasNotScheduled = !existing || !existing.is_scheduled;
+
+        if (emailChanged || wasNotScheduled) {
+          if (!verification_token) {
+            return res.status(403).json({
+              success: false,
+              code: 'OTP_VERIFICATION_REQUIRED',
+              message: 'Se requiere validar el correo de destino mediante código OTP antes de activar la programación.'
+            });
+          }
+
+          const tokenCheck = otpService.verifyToken(inventory_id, cleanEmail, verification_token);
+          if (!tokenCheck.valid) {
+            return res.status(403).json({
+              success: false,
+              code: 'INVALID_OTP_TOKEN',
+              message: tokenCheck.error || 'Token de verificación inválido o expirado para el correo de destino.'
+            });
+          }
+        }
+      }
 
       // Formatear execution_time asegurando formato HH:MM:SS
       const formattedTime = execution_time.length === 5 ? `${execution_time}:00` : execution_time;
@@ -163,24 +426,36 @@ router.post(
         .single();
 
       if (error) {
+        if (error.code === '42P01') {
+          return res.status(400).json({
+            success: false,
+            code: 'TABLE_NOT_FOUND',
+            message: 'La tabla inventory_backup_settings no existe en la base de datos. Por favor ejecuta el script backup_module.sql en Supabase.',
+            timestamp: new Date().toISOString()
+          });
+        }
         throw error;
       }
 
-      // Registrar auditoría
-      await supabaseAdmin.from('audit_logs').insert({
-        inventory_id,
-        user_id: req.user.id,
-        user_email: req.user.email,
-        action: 'BACKUP_SETTINGS_UPDATED',
-        entity_type: 'BACKUP',
-        metadata: {
-          is_scheduled,
-          interval_days,
-          execution_time: formattedTime,
-          next_run_at: nextRunAt,
-          target_email: cleanEmail
-        }
-      });
+      // Registrar auditoría con esquema correcto (no bloqueante)
+      try {
+        await supabaseAdmin.from('audit_logs').insert({
+          inventory_id,
+          user_id: req.user?.id || null,
+          user_email: req.user?.email || cleanEmail,
+          action_type: 'UPDATE',
+          details: `Configuración de respaldos programados actualizada (${cleanEmail})`,
+          metadata: {
+            is_scheduled,
+            interval_days,
+            execution_time: formattedTime,
+            next_run_at: nextRunAt,
+            target_email: cleanEmail
+          }
+        });
+      } catch (auditErr) {
+        console.warn('⚠️ No se pudo registrar auditoría de settings:', auditErr.message);
+      }
 
       res.json({
         success: true,
@@ -188,7 +463,13 @@ router.post(
         settings: data
       });
     } catch (err) {
-      next(err);
+      console.error('❌ Error restaurando backup:', err);
+      return res.status(err.statusCode || 400).json({
+        success: false,
+        code: 'RESTORE_ERROR',
+        message: err.message || 'Error al restaurar los datos del inventario.',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 );
@@ -205,9 +486,14 @@ router.post(
   verifyTenantAccess({ source: 'body', key: 'inventory_id', requiredRole: 'owner' }),
   async (req, res, next) => {
     try {
-      const { inventory_id, backup_payload } = req.body;
+      const { inventory_id, backup_payload, currency_conversion } = req.body;
 
-      const result = await backupService.restoreInventoryData(inventory_id, backup_payload, req.user.id);
+      const result = await backupService.restoreInventoryData(
+        inventory_id,
+        backup_payload,
+        req.user.id,
+        currency_conversion
+      );
 
       res.json({
         success: true,
@@ -215,7 +501,53 @@ router.post(
         result
       });
     } catch (err) {
-      next(err);
+      console.error('❌ Error restaurando backup:', err);
+      return res.status(err.statusCode || 400).json({
+        success: false,
+        code: 'RESTORE_ERROR',
+        message: err.message || 'Error al restaurar los datos del inventario.',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/backup/recalculate-prices
+ * Recalcula masivamente los precios y costos de productos según la nueva tasa de cambio (RF-1.2).
+ * Restricción estricta: Solo el Propietario (Owner) del inventario.
+ */
+router.post(
+  '/recalculate-prices',
+  requireAuth,
+  validate(recalculatePricesSchema, 'body'),
+  verifyTenantAccess({ source: 'body', key: 'inventory_id', requiredRole: 'owner' }),
+  async (req, res, next) => {
+    try {
+      const { inventory_id, new_exchange_rate, new_rate, currency, new_currency } = req.body;
+      const targetRate = Number(new_exchange_rate || new_rate);
+      const targetCurrency = currency || new_currency || null;
+
+      const result = await backupService.recalculateInventoryPrices(
+        inventory_id,
+        targetRate,
+        req.user.id,
+        targetCurrency
+      );
+
+      res.json({
+        success: true,
+        message: 'Precios recalculados exitosamente según el nuevo tipo de cambio.',
+        result
+      });
+    } catch (err) {
+      console.error('❌ Error recalculando precios:', err);
+      return res.status(err.statusCode || 400).json({
+        success: false,
+        code: 'RECALCULATE_PRICES_ERROR',
+        message: err.message || 'Error al recalcular los precios del inventario.',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 );

@@ -760,8 +760,12 @@ function buildWhereClause(queryObj, startParamIndex = 1) {
       clauses.push(`"${col}" <= $${idx++}`);
       values.push(expr.slice(4));
     } else if (expr.startsWith('ilike.')) {
-      clauses.push(`"${col}" ILIKE $${idx++}`);
+      clauses.push(`"${col}" ILIKE ${idx++}`);
       values.push(expr.slice(6).replace(/\*/g, '%'));
+    } else if (expr.startsWith('imatch.')) {
+      // RF-SEARCH-016: Soporte de consultas regex insensibles a mayúsculas/diacríticos
+      clauses.push(`"${col}"::text ~* ${idx++}`);
+      values.push(expr.slice(7));
     } else if (expr.startsWith('is.')) {
       const target = expr.slice(3).toLowerCase();
       if (target === 'null') clauses.push(`"${col}" IS NULL`);
