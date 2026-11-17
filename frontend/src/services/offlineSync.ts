@@ -118,6 +118,34 @@ export interface QueuedStocktake {
   error_message?: string | null;
 }
 
+export type QueuedLocationOpType = 'ASSIGN_BATCH' | 'MOVE_STOCK';
+
+export interface QueuedLocationOpPayload {
+  type: QueuedLocationOpType;
+  inventory_id: string;
+  user_id?: string | null;
+  user_email?: string | null;
+  created_at: string;
+  // Campos para ASSIGN_BATCH:
+  location_id?: string;
+  items?: Array<{ product_id: string; quantity: number }>;
+  // Campos para MOVE_STOCK:
+  from_location_id?: string;
+  to_location_id?: string;
+  product_id?: string;
+  quantity?: number;
+  reason?: string | null;
+}
+
+export interface QueuedLocationOp {
+  local_id?: number;
+  payload: QueuedLocationOpPayload;
+  status: 'PENDING' | 'SYNCING' | 'SYNCED' | 'FAILED_VALIDATION' | 'FAILED';
+  created_at: string;
+  synced_at?: string | null;
+  error_message?: string | null;
+}
+
 interface PosOfflineDB extends DBSchema {
   sales_queue: {
     key: number;
@@ -151,10 +179,18 @@ interface PosOfflineDB extends DBSchema {
       'by-created_at': string;
     };
   };
+  location_ops_queue: {
+    key: number;
+    value: QueuedLocationOp;
+    indexes: {
+      'by-status': string;
+      'by-created_at': string;
+    };
+  };
 }
 
 const DB_NAME = 'pos_offline_db';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbPromise: Promise<IDBPDatabase<PosOfflineDB>> | null = null;
 
@@ -198,6 +234,15 @@ export function getDB(): Promise<IDBPDatabase<PosOfflineDB>> {
           });
           stockStore.createIndex('by-status', 'status');
           stockStore.createIndex('by-created_at', 'created_at');
+        }
+
+        if (!db.objectStoreNames.contains('location_ops_queue')) {
+          const locStore = db.createObjectStore('location_ops_queue', {
+            keyPath: 'local_id',
+            autoIncrement: true
+          });
+          locStore.createIndex('by-status', 'status');
+          locStore.createIndex('by-created_at', 'created_at');
         }
       }
     });
@@ -751,6 +796,206 @@ export async function syncPendingStocktakesSilently(): Promise<{ synced: number;
 }
 
 // =========================================================
+// MÉTODOS DE COLA DE OPERACIONES DE UBICACIÓN (location_ops_queue)
+// =========================================================
+
+/**
+ * Guarda una operación de ubicación (Asignar lote o Mover stock) localmente en IndexedDB.
+ */
+export async function saveLocationOpLocally(payload: QueuedLocationOpPayload): Promise<number> {
+  const db = await getDB();
+  const queued: QueuedLocationOp = {
+    payload,
+    status: 'PENDING',
+    created_at: payload.created_at || new Date().toISOString(),
+    synced_at: null,
+    error_message: null
+  };
+  const localId = await db.add('location_ops_queue', queued);
+  return localId as number;
+}
+
+/**
+ * Obtiene todas las operaciones de ubicación pendientes en orden cronológico (FIFO).
+ */
+export async function getPendingLocationOps(): Promise<QueuedLocationOp[]> {
+  try {
+    const db = await getDB();
+    const all = await db.getAll('location_ops_queue');
+    return all
+      .filter((op) => op.status === 'PENDING')
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  } catch (err) {
+    console.error('[OfflineDB] Error obteniendo operaciones de ubicación pendientes:', err);
+    return [];
+  }
+}
+
+/**
+ * Retorna la cantidad de operaciones de ubicación pendientes de sincronizar.
+ */
+export async function getPendingLocationOpsCount(): Promise<number> {
+  const pending = await getPendingLocationOps();
+  return pending.length;
+}
+
+/**
+ * Marca una operación de ubicación local como sincronizada exitosamente.
+ */
+export async function markLocationOpSynced(localId: number): Promise<void> {
+  try {
+    const db = await getDB();
+    const item = await db.get('location_ops_queue', localId);
+    if (item) {
+      item.status = 'SYNCED';
+      item.synced_at = new Date().toISOString();
+      await db.put('location_ops_queue', item);
+    }
+  } catch (err) {
+    console.error(`[OfflineDB] Error marcando operación #${localId} como sincronizada:`, err);
+  }
+}
+
+/**
+ * Marca una operación de ubicación como fallida o rechazada por validación.
+ */
+export async function markLocationOpFailed(
+  localId: number,
+  status: 'FAILED_VALIDATION' | 'FAILED',
+  errorMessage: string
+): Promise<void> {
+  try {
+    const db = await getDB();
+    const item = await db.get('location_ops_queue', localId);
+    if (item) {
+      item.status = status;
+      item.error_message = errorMessage;
+      await db.put('location_ops_queue', item);
+    }
+  } catch (err) {
+    console.error(`[OfflineDB] Error marcando operación #${localId} como fallida:`, err);
+  }
+}
+
+/**
+ * Sincroniza silenciosamente las operaciones de ubicación pendientes.
+ * IMPORTANTE: Realiza validación de existencias en el servidor antes de aplicar traslados (MOVE_STOCK),
+ * protegiendo contra inconsistencias de stock si otro usuario modificó el estante.
+ */
+export async function syncPendingLocationOpsSilently(): Promise<{ synced: number; failed: number }> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return { synced: 0, failed: 0 };
+  }
+
+  const pending = await getPendingLocationOps();
+  let synced = 0;
+  let failed = 0;
+
+  for (const op of pending) {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) break;
+
+    try {
+      if (op.payload.type === 'MOVE_STOCK') {
+        const { from_location_id, to_location_id, product_id, quantity, reason, inventory_id, user_id, user_email } = op.payload;
+        const resolvedProductId = offlineTempIdMap.get(product_id || '') || product_id;
+
+        if (!from_location_id || !to_location_id || !resolvedProductId || !quantity) {
+          throw new Error('Parámetros de traslado incompletos.');
+        }
+
+        // VALIDACIÓN PREVIA EN SERVIDOR: Comprobar que en la base de datos el origen tenga saldo suficiente
+        const { data: stockRow, error: stockCheckErr } = await supabase
+          .from('product_locations')
+          .select('quantity')
+          .eq('location_id', from_location_id)
+          .eq('product_id', resolvedProductId)
+          .maybeSingle();
+
+        if (stockCheckErr) {
+          if (isNetworkOrOfflineError(stockCheckErr)) break;
+          throw stockCheckErr;
+        }
+
+        const serverQty = Number(stockRow?.quantity || 0);
+        if (serverQty < quantity - 0.0001) {
+          const failMsg = `Traslado rechazado por validación de stock: En el servidor solo figuran ${serverQty} unidades en origen (requeridas: ${quantity}).`;
+          console.warn(`[SyncEngine] ${failMsg}`);
+          if (op.local_id) {
+            await markLocationOpFailed(op.local_id, 'FAILED_VALIDATION', failMsg);
+          }
+          failed++;
+          continue;
+        }
+
+        // Ejecutar RPC transaccional
+        const { error: moveErr } = await supabase.rpc('move_product_location', {
+          p_inventory_id: inventory_id,
+          p_product_id: resolvedProductId,
+          p_from_location_id: from_location_id,
+          p_to_location_id: to_location_id,
+          p_quantity: quantity,
+          p_reason: reason || null,
+          p_user_id: user_id || null,
+          p_user_email: user_email || 'usuario@local'
+        });
+
+        if (moveErr) {
+          if (isNetworkOrOfflineError(moveErr)) break;
+          throw moveErr;
+        }
+
+        if (op.local_id) {
+          await markLocationOpSynced(op.local_id);
+        }
+        synced++;
+      } else if (op.payload.type === 'ASSIGN_BATCH') {
+        const { location_id, items, inventory_id, user_id, user_email } = op.payload;
+        if (!location_id || !items || items.length === 0) {
+          throw new Error('Parámetros de asignación por lote incompletos.');
+        }
+
+        // Resolver posibles IDs temporales
+        const resolvedItems = items.map((it) => ({
+          product_id: offlineTempIdMap.get(it.product_id) || it.product_id,
+          quantity: it.quantity
+        }));
+
+        const { error: assignErr } = await supabase.rpc('assign_product_locations_batch', {
+          p_inventory_id: inventory_id,
+          p_location_id: location_id,
+          p_items: resolvedItems,
+          p_user_id: user_id || null,
+          p_user_email: user_email || 'usuario@local'
+        });
+
+        if (assignErr) {
+          if (isNetworkOrOfflineError(assignErr)) break;
+          throw assignErr;
+        }
+
+        if (op.local_id) {
+          await markLocationOpSynced(op.local_id);
+        }
+        synced++;
+      }
+    } catch (err: any) {
+      if (isNetworkOrOfflineError(err)) break;
+      console.warn(`[SyncEngine] Error en operación de ubicación #${op.local_id}:`, err);
+      if (op.local_id) {
+        await markLocationOpFailed(op.local_id, 'FAILED', err?.message || 'Error desconocido');
+      }
+      failed++;
+    }
+  }
+
+  if (synced > 0 && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('stockly:location_ops_synced', { detail: { synced, failed } }));
+  }
+
+  return { synced, failed };
+}
+
+// =========================================================
 // VALIDACIÓN DE RED Y ERRORES DE CONECTIVIDAD
 // =========================================================
 
@@ -906,7 +1151,7 @@ export async function syncPendingSalesSilently(
 }
 
 /**
- * Sincronizador Integral en Cascada (Fase 1: Productos -> Fase 2: Retiros -> Fase 3: Ventas -> Fase 4: Barridos)
+ * Sincronizador Integral en Cascada (Fase 1: Productos -> Fase 2: Retiros -> Fase 3: Ventas -> Fase 4: Ajustes de Inventario -> Fase 5: Operaciones de Ubicación)
  */
 export async function syncAllOfflineDataSilently(
   onSummary?: (summary: {
@@ -914,19 +1159,21 @@ export async function syncAllOfflineDataSilently(
     syncedWithdrawals: number;
     syncedSales: number;
     syncedStocktakes?: number;
+    syncedLocationOps?: number;
   }) => void
 ): Promise<{
   syncedProducts: number;
   syncedWithdrawals: number;
   syncedSales: number;
   syncedStocktakes: number;
+  syncedLocationOps: number;
   errors: number;
 }> {
   if (isSyncInProgress) {
-    return { syncedProducts: 0, syncedWithdrawals: 0, syncedSales: 0, syncedStocktakes: 0, errors: 0 };
+    return { syncedProducts: 0, syncedWithdrawals: 0, syncedSales: 0, syncedStocktakes: 0, syncedLocationOps: 0, errors: 0 };
   }
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    return { syncedProducts: 0, syncedWithdrawals: 0, syncedSales: 0, syncedStocktakes: 0, errors: 0 };
+    return { syncedProducts: 0, syncedWithdrawals: 0, syncedSales: 0, syncedStocktakes: 0, syncedLocationOps: 0, errors: 0 };
   }
 
   isSyncInProgress = true;
@@ -934,6 +1181,7 @@ export async function syncAllOfflineDataSilently(
   let syncedWithdrawals = 0;
   let syncedSales = 0;
   let syncedStocktakes = 0;
+  let syncedLocationOps = 0;
   let errors = 0;
 
   try {
@@ -1136,19 +1384,27 @@ export async function syncAllOfflineDataSilently(
     errors += salesRes.failed;
 
     // =========================================================
-    // FASE 4: Barridos de Inventario (stocktake_queue)
+    // FASE 4: Ajustes de Inventario (stocktake_queue)
     // =========================================================
     const stocktakesRes = await syncPendingStocktakesSilently();
     syncedStocktakes = stocktakesRes.synced;
     errors += stocktakesRes.failed;
 
-    const totalSynced = syncedProducts + syncedWithdrawals + syncedSales + syncedStocktakes;
+    // =========================================================
+    // FASE 5: Operaciones de Ubicación (location_ops_queue)
+    // =========================================================
+    const locationOpsRes = await syncPendingLocationOpsSilently();
+    syncedLocationOps = locationOpsRes.synced;
+    errors += locationOpsRes.failed;
+
+    const totalSynced = syncedProducts + syncedWithdrawals + syncedSales + syncedStocktakes + syncedLocationOps;
     if (totalSynced > 0 && onSummary) {
       onSummary({
         syncedProducts,
         syncedWithdrawals,
         syncedSales,
-        syncedStocktakes
+        syncedStocktakes,
+        syncedLocationOps
       });
     }
 
@@ -1157,6 +1413,7 @@ export async function syncAllOfflineDataSilently(
       syncedWithdrawals,
       syncedSales,
       syncedStocktakes,
+      syncedLocationOps,
       errors
     };
   } finally {

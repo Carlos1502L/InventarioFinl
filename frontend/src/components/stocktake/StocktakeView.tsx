@@ -145,12 +145,12 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
         setSessionModalView('LIST');
         setScannedLocation(null);
         setCountedEntries(new Map());
-        showAppToast(`Barrido ${sessionCode} iniciado en ${location.name}`, 'success', 3000);
+        showAppToast(`Ajuste ${sessionCode} iniciado en ${location.name}`, 'success', 3000);
         return;
       } catch (err: any) {
         if (!isNetworkOrOfflineError(err)) {
-          console.error('Error no-red al iniciar barrido:', err);
-          showAppToast(`Error al iniciar barrido: ${err?.message || 'Error inesperado'}`, 'error', 4000);
+          console.error('Error no-red al iniciar ajuste:', err);
+          showAppToast(`Error al iniciar ajuste: ${err?.message || 'Error inesperado'}`, 'error', 4000);
           return;
         }
         // Falla de red auténtica -> modo offline
@@ -166,7 +166,7 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
     setSessionModalView('LIST');
     setScannedLocation(null);
     setCountedEntries(new Map());
-    showAppToast(`Barrido iniciado sin conexión en ${location.name}`, 'info', 3000);
+    showAppToast(`Ajuste iniciado sin conexión en ${location.name}`, 'info', 3000);
   };
 
   // Procesar escaneo de QR de Ubicación (Obligatorio para iniciar)
@@ -470,12 +470,12 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
         code: activeSession.code,
         user_id: user?.id,
         user_email: user?.email,
-        notes: 'Barrido guardado sin conexión',
+        notes: 'Ajuste guardado sin conexión',
         items: itemsPayload
       });
 
       showAppToast(
-        `Sin conexión: Barrido ${activeSession.code} guardado localmente. Se sincronizará al conectar.`,
+        `Sin conexión: Ajuste ${activeSession.code} guardado localmente. Se sincronizará al conectar.`,
         'info',
         5000
       );
@@ -581,7 +581,7 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
                 className="w-full py-4 px-5 rounded-2xl bg-neutral-950 hover:bg-neutral-900 active:scale-[0.98] text-white text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-amber-400" />
-                <span>Iniciar barrido</span>
+                <span>Iniciar ajuste</span>
                 <ArrowRight className="w-4 h-4 ml-1" />
               </button>
 
@@ -647,7 +647,7 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
                   setSessionModalView('LIST');
                   setSelectedProductForCount(null);
                 } else if (countedEntries.size > 0) {
-                  if (confirm('¿Deseas pausar el barrido? Los artículos contados se conservarán mientras no recargues la página.')) {
+                  if (confirm('¿Deseas pausar el ajuste? Los artículos contados se conservarán mientras no recargues la página.')) {
                     setActiveSession(null);
                   }
                 } else {
@@ -913,7 +913,7 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
                         type="button"
                         onClick={() => {
                           if (countedEntries.size > 0) {
-                            if (confirm('¿Deseas pausar el barrido? Los artículos contados se conservarán mientras no recargues la página.')) {
+                            if (confirm('¿Deseas pausar el ajuste? Los artículos contados se conservarán mientras no recargues la página.')) {
                               setActiveSession(null);
                             }
                           } else {
@@ -1073,7 +1073,7 @@ export const StocktakeView: React.FC<StocktakeViewProps> = ({
                       className="w-full max-w-lg py-3 rounded-2xl bg-neutral-950 hover:bg-neutral-900 text-white font-bold text-xs sm:text-sm shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
                     >
                       <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
-                      <span>Finalizar Barrido ({countedEntries.size} SKUs · {totalCountedUnits} unds)</span>
+                      <span>Finalizar Ajuste ({countedEntries.size} SKUs · {totalCountedUnits} unds)</span>
                     </button>
                   </div>
                 </>

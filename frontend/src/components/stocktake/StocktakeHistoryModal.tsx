@@ -148,7 +148,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
           transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-          className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-neutral-200/80 overflow-hidden z-10 max-h-[80dvh] flex flex-col my-auto"
+          className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-neutral-200/70 overflow-hidden z-10 max-h-[88dvh] sm:max-h-[90dvh] flex flex-col my-auto"
           onClick={e => e.stopPropagation()}
         >
           {/* Manija táctil móvil */}
@@ -162,7 +162,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
               </div>
               <div>
                 <h2 className="text-base font-bold text-neutral-900">
-                  Historial de Barridos
+                  Historial de Ajustes
                 </h2>
                 <p className="text-xs text-neutral-400">
                   Registro de ejecutor, fecha y hora de cada ajuste físico
@@ -183,11 +183,11 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-12 text-neutral-400 gap-2">
                 <Loader2 className="w-6 h-6 animate-spin text-neutral-950" />
-                <span className="text-xs">Cargando historial de barridos...</span>
+                <span className="text-xs">Cargando historial de ajustes...</span>
               </div>
             ) : sessions.length === 0 ? (
               <div className="text-center py-12 text-xs text-neutral-400">
-                Aún no hay barridos físicos registrados en este inventario.
+                Aún no hay ajustes físicos registrados en este inventario.
               </div>
             ) : selectedSessionDetail ? (
               // Vista de detalle de una sesión específica
@@ -252,7 +252,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
                   </span>
 
                   {/* Recuadro con scroll interno para productos verificados */}
-                  <div className="space-y-1.5 max-h-[180px] sm:max-h-[220px] overflow-y-auto overscroll-contain pr-1">
+                  <div className="space-y-1.5 max-h-[340px] sm:max-h-[420px] overflow-y-auto overscroll-contain pr-1">
                     {(selectedSessionDetail.stocktake_items || []).map((item: any) => {
                       const diff = Number(item.difference_qty || 0);
                       const isDeficit = diff < 0;
@@ -287,8 +287,8 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
                 </div>
               </div>
             ) : (
-              // Listado de sesiones con scroll interno limitado a 2 tarjetas visibles
-              <div className="space-y-2.5 max-h-[250px] sm:max-h-[270px] overflow-y-auto overscroll-contain pr-1">
+              // Listado de sesiones con scroll interno
+              <div className="space-y-2.5 max-h-[440px] sm:max-h-[520px] overflow-y-auto overscroll-contain pr-1">
                 {sessions.map((sess) => {
                   const totalItems = sess.stocktake_items?.length || 0;
                   let adjustedCount = 0;
@@ -328,7 +328,7 @@ export const StocktakeHistoryModal: React.FC<StocktakeHistoryModalProps> = ({
                         <ChevronRight className="w-4 h-4 text-neutral-400" />
                       </div>
 
-                      {/* Fila 2: Quién realizó el barrido */}
+                      {/* Fila 2: Quién realizó el ajuste */}
                       <div className="flex items-center gap-1.5 text-xs text-neutral-800">
                         <User className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                         <span className="truncate">

@@ -142,7 +142,7 @@ export const StocktakeReviewModal: React.FC<StocktakeReviewModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-bold">
-                  Conciliación de Barrido · {sessionCode}
+                  Conciliación de Ajuste · {sessionCode}
                 </span>
               </div>
               <h2 className="text-base font-bold text-neutral-900 truncate">

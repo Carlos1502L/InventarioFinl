@@ -19,7 +19,10 @@ import {
   Inbox,
   ChevronDown,
   X,
-  ClipboardList
+  ClipboardList,
+  Wifi,
+  WifiOff,
+  RefreshCw
 } from 'lucide-react';
 import { Product, Location } from '../types/database';
 import {
@@ -36,6 +39,12 @@ import { BarcodeScannerModal } from '../components/modals/BarcodeScannerModal';
 import { MinimalDropdown } from '../components/ui/MinimalDropdown';
 import { showAppToast } from '../components/ui/ToastNotification';
 import { StocktakeView } from '../components/stocktake/StocktakeView';
+import {
+  saveLocationOpLocally,
+  getPendingLocationOpsCount,
+  syncPendingLocationOpsSilently,
+  isNetworkOrOfflineError
+} from '../services/offlineSync';
 
 export type LocationSubTab = 'assign' | 'consult' | 'move' | 'stocktake';
 
@@ -69,6 +78,83 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
   // Sub-módulo activo: 1. Asignar | 2. Consultar | 3. Mover | 4. Estantes QR
   const [subTab, setSubTab] = useState<LocationSubTab>(initialSubTab);
+
+  // ============================================================================
+  // ESTADO DE CONECTIVIDAD OFFLINE / ONLINE Y COLA DE OPERACIONES
+  // ============================================================================
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [pendingLocationOpsCount, setPendingLocationOpsCount] = useState<number>(0);
+  const [isSyncingOps, setIsSyncingOps] = useState<boolean>(false);
+
+  const refreshPendingOpsCount = async () => {
+    try {
+      const count = await getPendingLocationOpsCount();
+      setPendingLocationOpsCount(count);
+    } catch (err) {
+      console.warn('[Locations] Error leyendo operaciones pendientes:', err);
+    }
+  };
+
+  useEffect(() => {
+    refreshPendingOpsCount();
+
+    const handleOnline = async () => {
+      setIsOnline(true);
+      setIsSyncingOps(true);
+      try {
+        const res = await syncPendingLocationOpsSilently();
+        if (res.synced > 0) {
+          showAppToast(`Sincronización: ${res.synced} operaciones de ubicación aplicadas.`, 'success', 3500);
+          onRefresh();
+        }
+      } catch (err) {
+        console.warn('[Locations] Error sincronizando operaciones al reconectar:', err);
+      } finally {
+        setIsSyncingOps(false);
+        refreshPendingOpsCount();
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    const handleOpsSyncedEvent = () => {
+      refreshPendingOpsCount();
+      onRefresh();
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('stockly:location_ops_synced', handleOpsSyncedEvent);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('stockly:location_ops_synced', handleOpsSyncedEvent);
+    };
+  }, [onRefresh]);
+
+  const handleManualSyncOps = async () => {
+    if (!isOnline || isSyncingOps) return;
+    setIsSyncingOps(true);
+    try {
+      const res = await syncPendingLocationOpsSilently();
+      if (res.synced > 0) {
+        showAppToast(`Sincronización completada: ${res.synced} operaciones aplicadas.`, 'success', 3500);
+        onRefresh();
+      } else if (res.failed > 0) {
+        showAppToast(`Sincronización: ${res.failed} operaciones fallaron o fueron rechazadas.`, 'warning', 4000);
+      } else {
+        showAppToast('No hay operaciones pendientes de sincronizar.', 'info', 2500);
+      }
+    } catch (err: any) {
+      showAppToast(`Error al sincronizar: ${err?.message || 'Error inesperado'}`, 'error', 4000);
+    } finally {
+      setIsSyncingOps(false);
+      refreshPendingOpsCount();
+    }
+  };
 
   useEffect(() => {
     if (initialSubTab) {
@@ -545,28 +631,89 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
         product_id: item.product.id,
         quantity: item.quantity
       }));
+      const assignedCount = batchItems.length;
+      const currentOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
-      const { error } = await supabase.rpc('assign_product_locations_batch', {
-        p_inventory_id: currentInventory.id,
-        p_location_id: targetAssignLocationId,
-        p_items: itemsPayload,
-        p_user_id: user.id,
-        p_user_email: user.email || 'usuario@local'
+      if (currentOnline) {
+        try {
+          const { error } = await supabase.rpc('assign_product_locations_batch', {
+            p_inventory_id: currentInventory.id,
+            p_location_id: targetAssignLocationId,
+            p_items: itemsPayload,
+            p_user_id: user.id,
+            p_user_email: user.email || 'usuario@local'
+          });
+
+          if (error) {
+            if (isNetworkOrOfflineError(error)) {
+              throw error; // Ir al flujo offline
+            }
+            throw error;
+          }
+
+          setBatchItems([]);
+          setAssignScanCode('');
+          onRefresh();
+
+          setAssignAlert({
+            type: 'success',
+            message: `Lote confirmado: ${assignedCount} ${assignedCount === 1 ? 'producto asignado' : 'productos asignados'} correctamente a "${targetLoc?.name} (${targetLoc?.code})".`
+          });
+
+          setTimeout(() => {
+            assignScanInputRef.current?.focus();
+          }, 60);
+          return;
+        } catch (onlineErr: any) {
+          if (!isNetworkOrOfflineError(onlineErr)) {
+            throw onlineErr;
+          }
+          console.warn('[Locations] Falla de red en asignación online, guardando en cola local:', onlineErr);
+        }
+      }
+
+      // Flujo Offline (o falla de conectividad verificada)
+      await saveLocationOpLocally({
+        type: 'ASSIGN_BATCH',
+        inventory_id: currentInventory.id,
+        location_id: targetAssignLocationId,
+        items: itemsPayload,
+        user_id: user.id,
+        user_email: user.email || 'usuario@local',
+        created_at: new Date().toISOString()
       });
 
-      if (error) throw error;
+      // Actualización optimista local de existencias en estante
+      itemsPayload.forEach(it => {
+        const prod = products.find(p => p.id === it.product_id);
+        if (prod) {
+          if (!prod.product_locations) prod.product_locations = [];
+          const existingPl = prod.product_locations.find(pl => pl.location_id === targetAssignLocationId);
+          if (existingPl) {
+            existingPl.quantity = Number((Number(existingPl.quantity || 0) + it.quantity).toFixed(4));
+          } else {
+            prod.product_locations.push({
+              id: `local-temp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              product_id: prod.id,
+              location_id: targetAssignLocationId,
+              quantity: it.quantity,
+              created_at: new Date().toISOString(),
+              locations: targetLoc ? { id: targetLoc.id, name: targetLoc.name, code: targetLoc.code } : undefined
+            } as any);
+          }
+        }
+      });
 
-      const assignedCount = batchItems.length;
       setBatchItems([]);
       setAssignScanCode('');
-      onRefresh();
+      await refreshPendingOpsCount();
 
       setAssignAlert({
         type: 'success',
-        message: `Lote confirmado: ${assignedCount} ${assignedCount === 1 ? 'producto asignado' : 'productos asignados'} correctamente a "${targetLoc?.name} (${targetLoc?.code})".`
+        message: `Sin conexión: ${assignedCount} ${assignedCount === 1 ? 'producto guardado' : 'productos guardados'} localmente para asignar a "${targetLoc?.name}". Se validará y sincronizará al reconectar.`
       });
+      showAppToast(`Asignación guardada localmente (sin conexión)`, 'info', 4000);
 
-      // Ergonomía de escaneo: volver a enfocar automáticamente el input de escaneo principal
       setTimeout(() => {
         assignScanInputRef.current?.focus();
       }, 60);
@@ -826,24 +973,94 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
       const fromLoc = locations.find(l => l.id === moveFromLocationId);
       const toLoc = locations.find(l => l.id === moveToLocationId);
-
-      const { error } = await supabase.rpc('move_product_location', {
-        p_inventory_id: currentInventory.id,
-        p_product_id: moveSelectedProduct.id,
-        p_from_location_id: moveFromLocationId,
-        p_to_location_id: moveToLocationId,
-        p_quantity: finalQtyToMove,
-        p_reason: moveReason.trim() || null,
-        p_user_id: user.id,
-        p_user_email: user.email || 'usuario@local'
-      });
-
-      if (error) throw error;
-
       const movedLabel = formatLocationQuantity(finalQtyToMove, moveSelectedProduct);
       const prodName = moveSelectedProduct.name;
+      const currentOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
-      // Limpiar vista tras confirmar traslado y devolver foco al input de escaneo principal
+      if (currentOnline) {
+        try {
+          const { error } = await supabase.rpc('move_product_location', {
+            p_inventory_id: currentInventory.id,
+            p_product_id: moveSelectedProduct.id,
+            p_from_location_id: moveFromLocationId,
+            p_to_location_id: moveToLocationId,
+            p_quantity: finalQtyToMove,
+            p_reason: moveReason.trim() || null,
+            p_user_id: user.id,
+            p_user_email: user.email || 'usuario@local'
+          });
+
+          if (error) {
+            if (isNetworkOrOfflineError(error)) {
+              throw error; // Ir al flujo offline
+            }
+            throw error;
+          }
+
+          // Limpiar vista tras confirmar traslado y devolver foco al input de escaneo principal
+          setMoveProductId(null);
+          setMoveFromLocationId('');
+          setMoveToLocationId('');
+          setMoveDestSearchQuery('');
+          setMoveQuantity('');
+          setMoveBoxes('');
+          setMoveLooseUnits('');
+          setMoveReason('');
+          setMoveScanQuery('');
+          onRefresh();
+
+          setMoveAlert({
+            type: 'success',
+            message: `Traslado completado: ${movedLabel} de "${prodName}" movidos desde "${fromLoc?.name}" hacia "${toLoc?.name}".`
+          });
+
+          setTimeout(() => {
+            moveScanInputRef.current?.focus();
+          }, 60);
+          return;
+        } catch (onlineErr: any) {
+          if (!isNetworkOrOfflineError(onlineErr)) {
+            throw onlineErr;
+          }
+          console.warn('[Locations] Falla de red en traslado online, guardando en cola local:', onlineErr);
+        }
+      }
+
+      // Flujo Offline (o falla de red verificada)
+      await saveLocationOpLocally({
+        type: 'MOVE_STOCK',
+        inventory_id: currentInventory.id,
+        from_location_id: moveFromLocationId,
+        to_location_id: moveToLocationId,
+        product_id: moveSelectedProduct.id,
+        quantity: finalQtyToMove,
+        reason: moveReason.trim() || null,
+        user_id: user.id,
+        user_email: user.email || 'usuario@local',
+        created_at: new Date().toISOString()
+      });
+
+      // Actualización optimista local en memoria
+      if (moveSelectedProduct.product_locations) {
+        const fromPl = moveSelectedProduct.product_locations.find(pl => pl.location_id === moveFromLocationId);
+        if (fromPl) {
+          fromPl.quantity = Math.max(0, Number((Number(fromPl.quantity || 0) - finalQtyToMove).toFixed(4)));
+        }
+        const toPl = moveSelectedProduct.product_locations.find(pl => pl.location_id === moveToLocationId);
+        if (toPl) {
+          toPl.quantity = Number((Number(toPl.quantity || 0) + finalQtyToMove).toFixed(4));
+        } else {
+          moveSelectedProduct.product_locations.push({
+            id: `local-temp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            product_id: moveSelectedProduct.id,
+            location_id: moveToLocationId,
+            quantity: finalQtyToMove,
+            created_at: new Date().toISOString(),
+            locations: toLoc ? { id: toLoc.id, name: toLoc.name, code: toLoc.code } : undefined
+          } as any);
+        }
+      }
+
       setMoveProductId(null);
       setMoveFromLocationId('');
       setMoveToLocationId('');
@@ -853,12 +1070,13 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
       setMoveLooseUnits('');
       setMoveReason('');
       setMoveScanQuery('');
-      onRefresh();
+      await refreshPendingOpsCount();
 
       setMoveAlert({
         type: 'success',
-        message: `Traslado completado: ${movedLabel} de "${prodName}" movidos desde "${fromLoc?.name}" hacia "${toLoc?.name}".`
+        message: `Sin conexión: Traslado de ${movedLabel} de "${prodName}" guardado localmente. Se validará contra el stock del servidor al reconectar.`
       });
+      showAppToast(`Traslado guardado localmente (sin conexión)`, 'info', 4000);
 
       setTimeout(() => {
         moveScanInputRef.current?.focus();
@@ -979,9 +1197,43 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
         <header className="shrink-0 bg-neutral-950 text-white rounded-b-[2.5rem] z-20 select-none px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-5">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl font-semibold tracking-tight text-white">
-                Ubicaciones
-              </h1>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-xl font-semibold tracking-tight text-white">
+                  Ubicaciones
+                </h1>
+                {/* Pill Indicador de Conexión (Online / Offline) */}
+                <div
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors ${
+                    isOnline
+                      ? 'bg-emerald-950/80 border border-emerald-500/40 text-emerald-300'
+                      : 'bg-amber-950/80 border border-amber-500/50 text-amber-300'
+                  }`}
+                  title={isOnline ? 'En línea (Sincronizado)' : 'Sin conexión a internet (Modo Offline activo)'}
+                >
+                  {isOnline ? (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      <span>En línea</span>
+                      {pendingLocationOpsCount > 0 && (
+                        <span className="font-mono text-[10px] bg-amber-400 text-neutral-950 font-bold px-1.5 rounded-full ml-0.5">
+                          {pendingLocationOpsCount} pend.
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="w-3 h-3 text-amber-400" />
+                      <span>Offline</span>
+                      {pendingLocationOpsCount > 0 && (
+                        <span className="font-mono text-[10px] bg-amber-400 text-neutral-950 font-bold px-1.5 rounded-full ml-0.5">
+                          {pendingLocationOpsCount}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
               <div className="flex items-center gap-2 mt-2">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-800/80 text-neutral-300 text-xs font-medium">
                   En Recepción: <strong className="text-amber-300 tabular-nums">{globalSummary.skusWithPending}</strong>
@@ -992,14 +1244,14 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
               </div>
             </div>
 
-            {/* Botón Circular de Barrido (Ajuste de inventario) en el Header */}
+            {/* Botón Circular de Ajuste (Toma / Conteo Cíclico) en el Header */}
             {isBusiness && (
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => handleTabSwitch(subTab === 'stocktake' ? 'assign' : 'stocktake')}
-                  aria-label="Ajuste de inventario (Barrido)"
-                  title="Ajuste de inventario (Barrido)"
+                  aria-label="Ajuste de inventario"
+                  title="Ajuste de inventario"
                   className={`w-10 h-10 rounded-full border flex items-center justify-center transition-colors active:scale-95 cursor-pointer ${
                     subTab === 'stocktake'
                       ? 'bg-white text-neutral-950 border-white shadow-md'
@@ -1867,6 +2119,44 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
 
         {/* Indicadores rápidos y Acciones */}
         <div className="flex flex-wrap items-center gap-2 text-xs shrink-0">
+          {/* Indicador de Conexión Desktop */}
+          <div
+            className={`px-3 py-1.5 rounded-lg border flex items-center gap-2 transition-colors ${
+              isOnline
+                ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
+                : 'bg-amber-50/80 border-amber-200 text-amber-800'
+            }`}
+          >
+            {isOnline ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="font-medium">En línea</span>
+                {pendingLocationOpsCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleManualSyncOps}
+                    disabled={isSyncingOps}
+                    className="ml-1 px-2 py-0.5 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Clic para sincronizar operaciones pendientes"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isSyncingOps ? 'animate-spin' : ''}`} />
+                    <span>{pendingLocationOpsCount} pend.</span>
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <WifiOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span className="font-medium">Modo offline</span>
+                {pendingLocationOpsCount > 0 && (
+                  <span className="ml-1 px-2 py-0.5 rounded bg-amber-200/80 text-amber-950 font-bold text-[11px]">
+                    {pendingLocationOpsCount} pend.
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+
           <div className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 flex items-center gap-2">
             <Inbox className="w-3.5 h-3.5 text-slate-600" />
             <span className="text-slate-600">
@@ -1882,7 +2172,7 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
             </span>
           </div>
 
-          {/* Botón de Barrido Físico en el Header */}
+          {/* Botón de Ajuste Físico en el Header */}
           {isBusiness && (
             <button
               type="button"
@@ -1892,10 +2182,10 @@ export const LocationsPage: React.FC<LocationsPageProps> = ({
                   ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
                   : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 hover:border-slate-300'
               }`}
-              title="Ajuste de inventario físico (Barrido)"
+              title="Ajuste de inventario físico"
             >
               <ClipboardList className="w-4 h-4 stroke-[1.8]" />
-              <span>Barrido físico</span>
+              <span>Ajuste físico</span>
             </button>
           )}
         </div>
